@@ -1,6 +1,0 @@
-{
-    "name": "Build and Attach Release JAR",
-    "description": "Builds and attaches JAR on project releases and naming the packeged project",
-    "iconName": "maven",
-    "categories": ["Continuous integration", "Java", "Maven", "Spring", "JSF"]
-}

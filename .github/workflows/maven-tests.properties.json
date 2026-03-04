@@ -1,6 +1,0 @@
-{
-    "name": "Run tests through maven",
-    "description": "Runs maven tests on pushes on the main branch",
-    "iconName": "maven",
-    "categories": ["Continuous integration", "Java", "Maven", "Spring", "JSF"]
-}
