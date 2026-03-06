@@ -19,7 +19,7 @@ class StockTest {
 
         assertEquals("AAPL", stock.getSymbol());
         assertEquals("Apple Inc.", stock.getCompany());
-        assertEquals(new BigDecimal("100.50"), stock.getLatestPrice());
+        assertEquals(new BigDecimal("100.50"), stock.getSalesPrice());
     }
 
     @Test
@@ -47,8 +47,8 @@ class StockTest {
     }
 
     @Test
-    @DisplayName("getLatestPrice returns last price in list")
-    void testGetLatestPrice() {
+    @DisplayName("getSalesPrice returns last price in list")
+    void testGetSalesPrice() {
         List<BigDecimal> prices = new ArrayList<>(List.of(
                 new BigDecimal("100"),
                 new BigDecimal("0"),
@@ -56,16 +56,15 @@ class StockTest {
         ));
         Stock stock = new Stock("AAPL", "Apple Inc.", prices);
 
-        assertEquals(new BigDecimal("-10"), stock.getLatestPrice());
+        assertEquals(new BigDecimal("-10"), stock.getSalesPrice());
     }
 
-// EVERYTHING BELOW IS NOT PROPERLY REVIEWED
     @Test
-    @DisplayName("getLatestPrice throws when no prices exist")
-    void testGetLatestPriceThrows() {
+    @DisplayName("getSalesPrice throws when no prices exist")
+    void testGetSalesPriceThrows() {
         Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
 
-        assertThrows(IllegalStateException.class, stock::getLatestPrice);
+        assertThrows(IllegalStateException.class, stock::getSalesPrice);
     }
 
     @Test
@@ -76,7 +75,7 @@ class StockTest {
 
         stock.addNewSalesPrice(new BigDecimal("120"));
 
-        assertEquals(new BigDecimal("120"), stock.getLatestPrice());
+        assertEquals(new BigDecimal("120"), stock.getSalesPrice());
         assertEquals(2, prices.size());
     }
 
