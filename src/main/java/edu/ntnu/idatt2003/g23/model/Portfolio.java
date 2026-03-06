@@ -1,5 +1,6 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -8,8 +9,8 @@ public class Portfolio {
     private final List<Share> shares;
 
     // Constructor for creating a new Portfolio instance with the specified list of shares.
-    Portfolio(List<Share> shares) {
-        this.shares = shares;
+    public Portfolio() {
+        this.shares = new ArrayList<>();
     }
 
     /**
