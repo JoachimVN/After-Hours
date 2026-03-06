@@ -2,6 +2,7 @@ package edu.ntnu.idatt2003.g23.transaction;
 
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
+import edu.ntnu.idatt2003.g23.transaction.calculator.SaleCalculator;
 
 /**
  * Class representing a sale transaction

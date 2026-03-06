@@ -45,12 +45,12 @@ public class Stock {
      * @return the latest stock price
      * @throws IllegalStateException if no prices are available for the stock
      */
-    public BigDecimal getLatestPrice() {
+    public BigDecimal getSalesPrice() {
         if (prices == null || prices.isEmpty()) {
             throw new IllegalStateException("No prices available for the stock");
         }
         // Latest price = last element in the list 
-        return prices.getLast(); // CoPilot assisted in informing about getLast()
+        return prices.get(prices.size() - 1);
     }
 
     /**

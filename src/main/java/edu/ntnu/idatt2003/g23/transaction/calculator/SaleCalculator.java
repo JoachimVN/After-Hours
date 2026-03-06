@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.transaction.calculator;
 
 import java.math.BigDecimal;
+
 import edu.ntnu.idatt2003.g23.model.Share;
 
 /**
@@ -20,7 +21,7 @@ public class SaleCalculator implements TransactionCalculator {
      */
     public SaleCalculator(Share share) {
         this.purchasePrice = share.getPurchasePrice();
-        this.salePrice = share.getStock().getSalePrice();
+        this.salePrice = share.getStock().getSalesPrice();
         this.quantity = share.getQuantity();
     }
 
