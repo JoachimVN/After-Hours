@@ -1,4 +1,7 @@
-package IDATT2003.idatt2003_2026_23.src.main.java.edu.ntnu.idatt2003.g23.transaction;
+package edu.ntnu.idatt2003.g23.transaction;
+
+import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.model.Share;
 
 /**
  * Class representing a purchase transaction

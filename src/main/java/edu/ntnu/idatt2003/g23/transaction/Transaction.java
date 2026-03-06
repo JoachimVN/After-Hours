@@ -1,6 +1,8 @@
-package IDATT2003.idatt2003_2026_23.src.main.java.edu.ntnu.idatt2003.g23.transaction;
+package edu.ntnu.idatt2003.g23.transaction;
 
 import edu.ntnu.idatt2003.g23.transaction.calculator.TransactionCalculator;
+import edu.ntnu.idatt2003.g23.player.Player;
+import edu.ntnu.idatt2003.g23.share.Share;
 
 /**
  * Abstract class representing a transaction

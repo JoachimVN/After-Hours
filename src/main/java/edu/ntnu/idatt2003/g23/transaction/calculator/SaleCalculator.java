@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.transaction.calculator;
 
 import java.math.BigDecimal;
+import edu.ntnu.idatt2003.g23.model.Share;
 
 /**
  * Calculator for sales
