@@ -8,6 +8,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 public class Exchange {
@@ -84,5 +85,28 @@ public class Exchange {
         Share share = new Share(stock, quantity, currentPrice);
         return new Purchase(share, this.week);
     }
-    
+
+    public Transaction sell(Share share, Player player) {
+        if (share == null) {
+            throw new IllegalArgumentException("Share cannot be null");
+        }
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+
+        Stock stock = share.getStock();
+        BigDecimal currentPrice = stock.getSalesPrice();
+        Share sellShare = new Share(stock, share.getQuantity(), currentPrice);
+        return new Sale(sellShare, this.week);
+    }
+
+    public void advance() {
+        this.week++;
+        for (Stock stock : stockMap.values()) {
+            BigDecimal currentPrice = stock.getSalesPrice();
+            double percentageChange = (random.nextDouble() * 20) - 10;  // AI - -10% to +10%
+            BigDecimal newPrice = currentPrice.multiply(BigDecimal.valueOf(1 + (percentageChange / 100)));
+            stock.addNewSalesPrice(newPrice);
+        }
+    }
 }
