@@ -1,9 +1,14 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
+
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 public class Exchange {
     private final String name;
@@ -33,6 +38,13 @@ public class Exchange {
         return week;
     }
 
+    public boolean hasStock(String symbol) {
+        if (symbol == null || symbol.isBlank()) {
+            throw new IllegalArgumentException("Stock symbol cannot be null or empty");
+        }
+        return stockMap.containsKey(symbol);
+    }
+
     public Stock getStock(String symbol) {
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException("Stock symbol cannot be null or empty");
@@ -44,6 +56,33 @@ public class Exchange {
         return stock;
     }
 
-    
+    public List<Stock> findStocks(String searchTerm) {
+        List<Stock> result = new ArrayList<>();
+        String lowerSearchTerm = searchTerm.toLowerCase();
+
+        for (Stock stock : stockMap.values()) {
+            if (stock.getSymbol().toLowerCase().contains(lowerSearchTerm) || stock.getCompany().toLowerCase().contains(lowerSearchTerm)) {
+                result.add(stock);
+            }
+        }
+        return result;
+    }
+
+    public Transaction buy(String symbol, BigDecimal quantity, Player player) {
+        if (!hasStock(symbol)) {
+            throw new IllegalArgumentException("Stock with symbol " + symbol + " does not exist on exchange");
+        }
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+
+        Stock stock = getStock(symbol);
+        BigDecimal currentPrice = stock.getSalesPrice();
+        Share share = new Share(stock, quantity, currentPrice);
+        return new Purchase(share, this.week);
+    }
     
 }

@@ -1,8 +1,8 @@
-package edu.ntnu.idatt2003.g23.transaction;
+package edu.ntnu.idatt2003.g23.model.transaction;
 
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
-import edu.ntnu.idatt2003.g23.transaction.calculator.PurchaseCalculator;
+import edu.ntnu.idatt2003.g23.model.transaction.calculator.PurchaseCalculator;
 
 /**
  * Class representing a purchase transaction

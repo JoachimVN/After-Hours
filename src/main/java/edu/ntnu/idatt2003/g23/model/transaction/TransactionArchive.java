@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.transaction;
+package edu.ntnu.idatt2003.g23.model.transaction;
 
 import java.util.ArrayList;
 import java.util.List;

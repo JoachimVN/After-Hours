@@ -2,7 +2,7 @@ package edu.ntnu.idatt2003.g23.model;
 
 import java.math.BigDecimal;
 
-import edu.ntnu.idatt2003.g23.transaction.TransactionArchive;
+import edu.ntnu.idatt2003.g23.model.transaction.TransactionArchive;
 
 // Represents a player in the stock market game.
 public class Player {
