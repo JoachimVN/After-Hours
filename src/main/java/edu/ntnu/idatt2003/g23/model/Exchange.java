@@ -11,12 +11,20 @@ import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
+/**
+ * Class representing a stock exchange.
+ */
 public class Exchange {
     private final String name;
     private int week;
     private Map<String, Stock> stockMap;
     private Random random;
 
+    /**
+     * Constructor for Exchange
+     * @param name of the exchange
+     * @param stocks available on the exchange
+     */
     public Exchange(String name, List<Stock> stocks) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Exchange name cannot be null or empty");
@@ -31,14 +39,27 @@ public class Exchange {
         this.random = new Random();
     }
 
+    /**
+     * Gets the name of the exchange.
+     * @return the name of the exchange
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Gets the current week of the exchange.
+     * @return the current week of the exchange
+     */
     public int getWeek() {
         return week;
     }
 
+    /**
+     * Checks if stock with the given symbol exists on the exchange.
+     * @param symbol of the stock to check
+     * @return true if stock exists, false otherwise
+     */
     public boolean hasStock(String symbol) {
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException("Stock symbol cannot be null or empty");
@@ -46,6 +67,11 @@ public class Exchange {
         return stockMap.containsKey(symbol);
     }
 
+    /**
+     * Gets the stock with the given symbol from the exchange.
+     * @param symbol of the stock to get
+     * @return the stock with the given symbol
+     */
     public Stock getStock(String symbol) {
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException("Stock symbol cannot be null or empty");
@@ -57,6 +83,11 @@ public class Exchange {
         return stock;
     }
 
+    /**
+     * Finds stocks on the exchange that match the given search term in their symbol or company name.
+     * @param searchTerm string to search for in stock symbols and company names
+     * @return a list of stocks that match the search term
+     */
     public List<Stock> findStocks(String searchTerm) {
         List<Stock> result = new ArrayList<>();
         String lowerSearchTerm = searchTerm.toLowerCase();
@@ -69,6 +100,13 @@ public class Exchange {
         return result;
     }
 
+    /**
+     * Creates a purchase transaction
+     * @param symbol of the stock to buy
+     * @param quantity of shares to buy
+     * @param player making the purchase
+     * @return the purchase transaction
+     */
     public Transaction buy(String symbol, BigDecimal quantity, Player player) {
         if (!hasStock(symbol)) {
             throw new IllegalArgumentException("Stock with symbol " + symbol + " does not exist on exchange");
@@ -86,6 +124,12 @@ public class Exchange {
         return new Purchase(share, this.week);
     }
 
+    /**
+     * Creates a sale transaction
+     * @param share to sell
+     * @param player making the sale
+     * @return the sale transaction
+     */
     public Transaction sell(Share share, Player player) {
         if (share == null) {
             throw new IllegalArgumentException("Share cannot be null");
@@ -100,6 +144,9 @@ public class Exchange {
         return new Sale(sellShare, this.week);
     }
 
+    /**
+     * Advances the exchange to the next week, updating stock prices based on a random percentage change.
+     */
     public void advance() {
         this.week++;
         for (Stock stock : stockMap.values()) {
