@@ -58,7 +58,13 @@ public abstract class Transaction {
         return committed;
     }
 
-    public void commit(Player player) {
-        // TODO: Implement commit logic
-    }
+    /**
+     * Commits the transaction for the specified player.
+     * This method executes the transaction, updating the player's portfolio and balance accordingly.
+     * Once committed, the transaction cannot be committed again.
+     *
+     * @param player the player for whom the transaction is being committed
+     * @throws IllegalStateException if the transaction has already been committed
+     */
+    public abstract void commit(Player player);
 }

@@ -1,5 +1,7 @@
 package edu.ntnu.idatt2003.g23.model.transaction;
 
+import java.math.BigDecimal;
+
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.transaction.calculator.PurchaseCalculator;
@@ -17,8 +19,27 @@ public class Purchase extends Transaction {
         super(share, week, new PurchaseCalculator(share));
     }
 
+    /**
+     * Handles logic for completing the transaction
+     *
+     * @param player the player buying the share
+     * @throws IllegalStateException if the transaction has already been committed or if the player does not have enough money
+     */
     @Override
     public void commit(Player player) {
-        // TODO: Implement commit logic for purchase transaction
+        if (isCommitted()) {
+            throw new IllegalStateException("Transaction has already been committed");
+        }
+        
+        BigDecimal cost = getCalculator().calculateTotal();
+
+        if (player.getMoney().compareTo(cost) < 0) {
+            throw new IllegalStateException("Player does not have enough money");
+        }
+
+        player.getPortfolio().addShare(getShare());
+        player.getTransactionArchive().add(this);
+        player.withdrawMoney(cost);
+        committed = true;
     }
 }
