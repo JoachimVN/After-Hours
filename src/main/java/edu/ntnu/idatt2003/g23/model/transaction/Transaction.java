@@ -18,8 +18,18 @@ public abstract class Transaction {
      * @param share being used in the transaction
      * @param week of the transaction
      * @param calculator used to calculate costs for the transaction
+     * @throws IllegalArgumentException if share or calculator is null, or if week is invalid
      */
     protected Transaction(Share share, int week, TransactionCalculator calculator) {
+        if (share == null) {
+            throw new IllegalArgumentException("Share cannot be null");
+        }
+        if (week <= 0) {
+            throw new IllegalArgumentException("Week must be positive");
+        }
+        if (calculator == null) {
+            throw new IllegalArgumentException("Calculator cannot be null");
+        }
         this.share = share;
         this.week = week;
         this.calculator = calculator;
@@ -58,7 +68,13 @@ public abstract class Transaction {
         return committed;
     }
 
-    public void commit(Player player) {
-        // TODO: Implement commit logic
-    }
+    /**
+     * Commits the transaction for the specified player.
+     * This method executes the transaction, updating the player's portfolio and balance accordingly.
+     * Once committed, the transaction cannot be committed again.
+     *
+     * @param player the player for whom the transaction is being committed
+     * @throws IllegalStateException if the transaction has already been committed
+     */
+    public abstract void commit(Player player);
 }
