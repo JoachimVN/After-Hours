@@ -18,8 +18,12 @@ public class SaleCalculator implements TransactionCalculator {
     /**
      * Constructor for SaleCalculator
      * @param share used to calculate costs
+     * @throws IllegalArgumentException if share is null
      */
     public SaleCalculator(Share share) {
+        if (share == null) {
+            throw new IllegalArgumentException("Share cannot be null");
+        }
         this.purchasePrice = share.getPurchasePrice();
         this.salePrice = share.getStock().getSalesPrice();
         this.quantity = share.getQuantity();

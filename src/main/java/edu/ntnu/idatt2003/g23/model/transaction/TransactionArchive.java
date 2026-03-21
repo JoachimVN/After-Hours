@@ -41,9 +41,13 @@ public class TransactionArchive {
      * Gets every transactions from a given week
      * @param week to get transactions from
      * @return a list of transactions from the given week
+     * @throws IllegalArgumentException if week is not positive
      */
     public List<Transaction> getTransactions(int week) {
-        return transactions.stream()                                        // AI
+        if (week <= 0) {
+            throw new IllegalArgumentException("Week must be positive");
+        }
+        return transactions.stream()
                 .filter(t -> t.getWeek() == week)
                 .collect(Collectors.toList());
     }
@@ -52,8 +56,12 @@ public class TransactionArchive {
      * Gets every purchase from a given week
      * @param week to get purchases from
      * @return a list of purchases from the given week
+     * @throws IllegalArgumentException if week is not positive
      */
     public List<Purchase> getPurchases(int week) {
+        if (week <= 0) {
+            throw new IllegalArgumentException("Week must be positive");
+        }
         return transactions.stream()                                        // AI
                 .filter(t -> t instanceof Purchase && t.getWeek() == week)
                 .map(t -> (Purchase) t)
@@ -64,8 +72,12 @@ public class TransactionArchive {
      * Gets every sale from a given week
      * @param week to get sales from
      * @return a list of sales from the given week
+     * @throws IllegalArgumentException if week is not positive
      */
     public List<Sale> getSales(int week) {
+        if (week <= 0) {
+            throw new IllegalArgumentException("Week must be positive");
+        }
         return transactions.stream()                                        // AI
                 .filter(t -> t instanceof Sale && t.getWeek() == week)
                 .map(t -> (Sale) t)

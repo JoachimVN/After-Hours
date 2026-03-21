@@ -14,6 +14,7 @@ public class Purchase extends Transaction {
      * Constructor for Purchase transaction
      * @param share being used in the transaction
      * @param week of the transaction
+     * @throws IllegalArgumentException if share is null or week is invalid
      */
     public Purchase(Share share, int week) {
         super(share, week, new PurchaseCalculator(share));
@@ -23,10 +24,14 @@ public class Purchase extends Transaction {
      * Handles logic for completing the transaction
      *
      * @param player the player buying the share
+     * @throws IllegalArgumentException if player is null
      * @throws IllegalStateException if the transaction has already been committed or if the player does not have enough money
      */
     @Override
     public void commit(Player player) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
         if (isCommitted()) {
             throw new IllegalStateException("Transaction has already been committed");
         }
