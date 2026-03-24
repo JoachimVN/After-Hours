@@ -86,7 +86,7 @@ public class Stock {
         if (prices == null || prices.isEmpty()) {
             throw new IllegalStateException("No prices available for the stock");
         }
-        return prices.stream().max(BigDecimal::compareTo);
+        return prices.stream().max(BigDecimal::compareTo).orElseThrow(() -> new IllegalStateException("No prices available for the stock"));
     }
 
     /**
@@ -98,7 +98,7 @@ public class Stock {
         if (prices == null || prices.isEmpty()) {
             throw new IllegalStateException("No prices available for the stock");
         }
-        return prices.stream().min(BigDecimal::compareTo);
+        return prices.stream().min(BigDecimal::compareTo).orElseThrow(() -> new IllegalStateException("No prices available for the stock"));
     }
 
     /**
