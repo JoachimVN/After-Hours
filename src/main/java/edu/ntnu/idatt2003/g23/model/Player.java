@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionArchive;
 
@@ -11,6 +12,7 @@ public class Player {
     private BigDecimal money;
     private final Portfolio portfolio;
     private final TransactionArchive transactionArchive;
+    private PlayerStatus status;
 
     // Constructor for creating a new Player instance.
     public Player(String name, BigDecimal startingMoney) {
@@ -19,6 +21,7 @@ public class Player {
         this.money = startingMoney;
         this.portfolio = new Portfolio();
         this.transactionArchive = new TransactionArchive();
+        this.status = PlayerStatus.NOVICE;
     }
 
     /**
@@ -119,5 +122,38 @@ public class Player {
             throw new IllegalStateException("Money or portfolio cannot be null");
         }
         return money.add(portfolio.getNetWorth());
+    }
+
+    public int getWeeksTraded() {
+        if (transactionArchive == null) {
+            throw new IllegalStateException("Transaction archive cannot be null");
+        }
+        return transactionArchive.countDistinctWeeks();
+    }
+
+    public void calculateStatus() {
+        int weeks = getWeeksTraded();
+        BigDecimal netWorth = getNetWorth();
+
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            status = PlayerStatus.NOVICE;
+        } else {
+            BigDecimal growth = netWorth.divide(startingMoney, 4, RoundingMode.HALF_UP);
+
+            if (weeks >= 20 &&  growth.compareTo(BigDecimal.valueOf(2.0)) >= 0) {
+                status = PlayerStatus.SPECULATOR;
+            } else if (weeks >= 10 && growth.compareTo(BigDecimal.valueOf(1.2)) >= 0) {
+                status = PlayerStatus.INVESTOR;
+            } else {
+                status = PlayerStatus.NOVICE;
+            }
+        }        
+    }
+
+    public PlayerStatus getStatus() {
+        if (status == null) {
+            throw new IllegalStateException("Player status cannot be null");
+        }
+        return status;
     }
 }
