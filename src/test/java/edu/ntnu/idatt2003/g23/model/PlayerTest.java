@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.model;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -180,5 +181,25 @@ class PlayerTest {
 
         player.withdrawMoney(withdrawAmount);
         assertEquals(new BigDecimal("50.00"), player.getMoney());
+    }
+
+    @Test
+    @DisplayName("getNetWorth includes both cash and portfolio net worth")
+    void testGetNetWorth() {
+        Player player = new Player("Sara", new BigDecimal("1000.00"));
+
+        Stock apple = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("120")));
+        Share appleShare = new Share(apple, new BigDecimal("10"), new BigDecimal("100"));
+        player.getPortfolio().addShare(appleShare);
+
+        assertEquals(new BigDecimal("2131.600"), player.getNetWorth());
+    }
+
+    @Test
+    @DisplayName("getNetWorth equals cash when portfolio is empty")
+    void testGetNetWorthEmptyPortfolio() {
+        Player player = new Player("Tom", new BigDecimal("750.00"));
+
+        assertEquals(new BigDecimal("750.00"), player.getNetWorth());
     }
 }

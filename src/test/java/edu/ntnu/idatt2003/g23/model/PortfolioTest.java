@@ -95,4 +95,28 @@ class PortfolioTest {
 
         assertThrows(IllegalArgumentException.class, () -> portfolio.getShareBySymbol(null));
     }
+
+    @Test
+    @DisplayName("getNetWorth calculates total value from SaleCalculator totals")
+    void testGetNetWorth() {
+        Stock apple = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("120")));
+        Stock tesla = new Stock("TSLA", "Tesla Inc.", List.of(new BigDecimal("70")));
+
+        Share appleShare = new Share(apple, new BigDecimal("10"), new BigDecimal("100"));
+        Share teslaShare = new Share(tesla, new BigDecimal("2"), new BigDecimal("50"));
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.addShare(appleShare);
+        portfolio.addShare(teslaShare);
+
+        assertEquals(new BigDecimal("1258.620"), portfolio.getNetWorth());
+    }
+
+    @Test
+    @DisplayName("getNetWorth is zero for empty portfolio")
+    void testGetNetWorthEmptyPortfolio() {
+        Portfolio portfolio = new Portfolio();
+
+        assertEquals(BigDecimal.ZERO, portfolio.getNetWorth());
+    }
 }
