@@ -156,4 +156,36 @@ public class Exchange {
             stock.addNewSalesPrice(newPrice);
         }
     }
+
+    /**
+     * Gets the top gainers on the exchange based on their current sales price.
+     * @param limit the maximum number of top gainers to return
+     * @return a list of the top gainers on the exchange
+     * @throws IllegalArgumentException if limit is negative
+     */
+    public List<Stock> getGainers(int limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("Limit cannot be negative");
+        }
+        return stockMap.values().stream()
+                .sorted((s1, s2) -> s2.getSalesPrice().compareTo(s1.getSalesPrice()))
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets the top losers on the exchange based on their current sales price.
+     * @param limit the maximum number of top losers to return
+     * @throws IllegalArgumentException if limit is negative
+     * @return a list of the top losers on the exchange
+     */
+    public List<Stock> getLosers(int limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("Limit cannot be negative");
+        }
+        return stockMap.values().stream()
+                .sorted((s1, s2) -> s1.getSalesPrice().compareTo(s2.getSalesPrice()))
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
 }

@@ -332,4 +332,52 @@ class ExchangeTest {
         // Assuming the random change is applied, price should be different unless random gives 0 change, which is rare.
         // But to be safe, just check week.
     }
+    
+    @Test
+    @DisplayName("getGainers returns stocks sorted by highest sales price first")
+    void testGetGainers() {
+        Stock aapl = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Stock msft = createSampleStock("MSFT", "Microsoft", new BigDecimal("250"));
+        Stock tsla = createSampleStock("TSLA", "Tesla", new BigDecimal("100"));
+
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl, msft, tsla));
+        List<Stock> gainers = exchange.getGainers(2);
+
+        assertEquals(2, gainers.size());
+        assertEquals("MSFT", gainers.get(0).getSymbol());
+        assertEquals("AAPL", gainers.get(1).getSymbol());
+    }
+
+    @Test
+    @DisplayName("getLosers returns stocks sorted by lowest sales price first")
+    void testGetLosers() {
+        Stock aapl = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Stock msft = createSampleStock("MSFT", "Microsoft", new BigDecimal("250"));
+        Stock tsla = createSampleStock("TSLA", "Tesla", new BigDecimal("100"));
+
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl, msft, tsla));
+        List<Stock> losers = exchange.getLosers(2);
+
+        assertEquals(2, losers.size());
+        assertEquals("TSLA", losers.get(0).getSymbol());
+        assertEquals("AAPL", losers.get(1).getSymbol());
+    }
+
+    @Test
+    @DisplayName("getGainers throws when limit is negative")
+    void testGetGainersNegativeLimit() {
+        Stock aapl = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl));
+
+        assertThrows(IllegalArgumentException.class, () -> exchange.getGainers(-1));
+    }
+
+    @Test
+    @DisplayName("getLosers throws when limit is negative")
+    void testGetLosersNegativeLimit() {
+        Stock aapl = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl));
+
+        assertThrows(IllegalArgumentException.class, () -> exchange.getLosers(-1));
+    }
 }
