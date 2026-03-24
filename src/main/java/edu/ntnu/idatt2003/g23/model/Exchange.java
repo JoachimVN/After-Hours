@@ -1,12 +1,15 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import edu.ntnu.idatt2003.g23.io.StockCsvExporter;
 import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
@@ -187,5 +190,21 @@ public class Exchange {
                 .sorted((s1, s2) -> s1.getSalesPrice().compareTo(s2.getSalesPrice()))
                 .limit(limit)
                 .collect(Collectors.toList());
+    }
+
+    public List<Stock> getStocks() {
+        if (stockMap == null) {
+            throw new IllegalStateException("Stock map is not initialized");
+        }
+        return new ArrayList<>(stockMap.values());
+    }
+
+    /**
+     * Exports current stock prices to a CSV file.
+     * @param path output file path
+     * @throws IOException if writing to file fails
+     */
+    public void exportCurrentPrices(Path path) throws IOException {
+        StockCsvExporter.writeCurrentPrices(path, stockMap.values());
     }
 }
