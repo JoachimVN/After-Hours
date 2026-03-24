@@ -22,7 +22,7 @@ public class Stock {
      * @throws IllegalStateException if the symbol is null, empty, or invalid
      */
     public String getSymbol() {
-        if (symbol == null || symbol.isEmpty() || !symbol.matches("[A-Z]+")) {
+        if (symbol == null || symbol.isEmpty() || !symbol.matches("[A-Z]+(\\.[A-Z]+)*")) {
             throw new IllegalStateException("Stock symbol is null, empty, or invalid");
         }
         return symbol;
