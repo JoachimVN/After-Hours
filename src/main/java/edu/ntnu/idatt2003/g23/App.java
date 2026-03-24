@@ -5,6 +5,7 @@ import java.util.List;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Stock;
 
+// Test
 public class App 
 {
     public static void main( String[] args )
