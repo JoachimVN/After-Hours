@@ -1,8 +1,11 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import edu.ntnu.idatt2003.g23.model.transaction.calculator.SaleCalculator;
 
 // Represents a portfolio containing a list of shares. Provides methods to add and remove shares, retrieve all shares, and get shares by stock symbol.
 public class Portfolio {
@@ -63,5 +66,10 @@ public class Portfolio {
                      .filter(share -> share.getStock().getSymbol().equals(symbol))
                      .collect(Collectors.toList());
     }
-}
 
+    public BigDecimal getNetWorth() {
+        return shares.stream()
+                     .map(share -> new SaleCalculator(share).calculateTotal())
+                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}

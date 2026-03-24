@@ -108,4 +108,16 @@ public class Player {
         }
         return transactionArchive;
     }
+
+    /**
+     * Gets the player's net worth.
+     * @return the player's net worth
+     * @throws IllegalStateException if the player's money or portfolio is null
+     */
+    public BigDecimal getNetWorth() {
+        if (money == null || portfolio == null) {
+            throw new IllegalStateException("Money or portfolio cannot be null");
+        }
+        return money.add(portfolio.getNetWorth());
+    }
 }
