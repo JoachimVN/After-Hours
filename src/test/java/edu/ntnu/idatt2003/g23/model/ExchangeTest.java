@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -12,12 +15,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 class ExchangeTest {
+
+    @TempDir
+    Path tempDir;
 
     // Helper method to create a sample stock
     private Stock createSampleStock(String symbol, String company, BigDecimal price) {
@@ -332,7 +339,7 @@ class ExchangeTest {
         // Assuming the random change is applied, price should be different unless random gives 0 change, which is rare.
         // But to be safe, just check week.
     }
-    
+
     @Test
     @DisplayName("getGainers returns stocks sorted by highest sales price first")
     void testGetGainers() {
@@ -379,5 +386,27 @@ class ExchangeTest {
         Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl));
 
         assertThrows(IllegalArgumentException.class, () -> exchange.getLosers(-1));
+    }
+
+    @Test
+    @DisplayName("exportCurrentPrices writes a CSV with current prices")
+    void testExportCurrentPricesWritesCsv() throws Exception {
+        Stock aapl = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Stock msft = createSampleStock("MSFT", "Microsoft", new BigDecimal("250"));
+
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl, msft));
+
+        Path out = tempDir.resolve("current-prices.csv");
+        exchange.exportCurrentPrices(out);
+
+        assertTrue(Files.exists(out));
+
+        List<String> lines = Files.readAllLines(out);
+        assertFalse(lines.isEmpty());
+        assertEquals("symbol,company,price", lines.get(0));
+
+        // Order isn't guaranteed -> assert by containment
+        assertTrue(lines.contains("AAPL,Apple Inc.,150"));
+        assertTrue(lines.contains("MSFT,Microsoft,250"));
     }
 }
