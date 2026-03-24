@@ -88,4 +88,91 @@ class StockTest {
         assertThrows(IllegalArgumentException.class, () -> stock.addNewSalesPrice(BigDecimal.ZERO));
         assertThrows(IllegalArgumentException.class, () -> stock.addNewSalesPrice(new BigDecimal("-5")));
     }
+
+    @Test
+    @DisplayName("getHighestPrice returns highest value")
+    void testGetHighestPrice() {
+        Stock stock = new Stock(
+                "AAPL",
+                "Apple Inc.",
+                new ArrayList<>(List.of(
+                        new BigDecimal("100.50"),
+                        new BigDecimal("99.99"),
+                        new BigDecimal("123.45")
+                ))
+        );
+
+        assertEquals(new BigDecimal("123.45"), stock.getHighestPrice());
+    }
+
+    @Test
+    @DisplayName("getHighestPrice throws when no prices exist")
+    void testGetHighestPriceThrows() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
+        assertThrows(IllegalStateException.class, stock::getHighestPrice);
+    }
+
+    @Test
+    @DisplayName("getLowestPrice returns lowest value")
+    void testGetLowestPrice() {
+        Stock stock = new Stock(
+                "AAPL",
+                "Apple Inc.",
+                new ArrayList<>(List.of(
+                        new BigDecimal("100.50"),
+                        new BigDecimal("99.99"),
+                        new BigDecimal("123.45")
+                ))
+        );
+
+        assertEquals(new BigDecimal("99.99"), stock.getLowestPrice());
+    }
+
+    @Test
+    @DisplayName("getLowestPrice throws when no prices exist")
+    void testGetLowestPriceThrows() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
+        assertThrows(IllegalStateException.class, stock::getLowestPrice);
+    }
+
+    @Test
+    @DisplayName("getLatestPriceChange returns zero when only one price exists")
+    void testGetLatestPriceChangeSinglePrice() {
+        Stock stock = new Stock(
+                "AAPL",
+                "Apple Inc.",
+                new ArrayList<>(List.of(new BigDecimal("100.00")))
+        );
+
+        assertEquals(BigDecimal.ZERO, stock.getLatestPriceChange());
+    }
+
+    @Test
+    @DisplayName("getLatestPriceChange returns latest minus previous")
+    void testGetLatestPriceChange() {
+        Stock stock = new Stock(
+                "AAPL",
+                "Apple Inc.",
+                new ArrayList<>(List.of(
+                        new BigDecimal("100.00"),
+                        new BigDecimal("110.50")
+                ))
+        );
+
+        assertEquals(new BigDecimal("10.50"), stock.getLatestPriceChange());
+    }
+
+    @Test
+    @DisplayName("getLatestPriceChange throws when prices is null")
+    void testGetLatestPriceChangeThrowsWhenPricesNull() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", null);
+        assertThrows(IllegalStateException.class, stock::getLatestPriceChange);
+    }
+
+    @Test
+    @DisplayName("getLatestPriceChange throws when prices is empty")
+    void testGetLatestPriceChangeThrowsWhenPricesEmpty() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
+        assertThrows(IllegalStateException.class, stock::getLatestPriceChange);
+    }
 }

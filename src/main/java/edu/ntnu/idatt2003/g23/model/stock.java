@@ -64,4 +64,57 @@ public class Stock {
         }
         prices.add(price);
     }
+
+    /**
+     * Getter for historical prices
+     * @return a list of historical prices for the stock
+     * @throws IllegalStateException if the prices list is null
+     */
+    public List<BigDecimal> getHistoricalPrices() {
+        if (prices == null) {
+            throw new IllegalStateException("Prices cannot be null");
+        }
+        return prices;
+    }
+
+    /**
+     * Gets the highest price of the stock
+     * @return the highest price of the stock
+     * @throws IllegalStateException if no prices are available for the stock
+     */
+    public BigDecimal getHighestPrice() {
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalStateException("No prices available for the stock");
+        }
+        return prices.stream().max(BigDecimal::compareTo);
+    }
+
+    /**
+     * Gets the lowest price of the stock
+     * @return the lowest price of the stock
+     * @throws IllegalStateException if no prices are available for the stock
+     */
+    public BigDecimal getLowestPrice() {
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalStateException("No prices available for the stock");
+        }
+        return prices.stream().min(BigDecimal::compareTo);
+    }
+
+    /**
+     * Calculates the latest price change
+     * @return the difference between the latest price and the previous price, or 0 if only one price available
+     * @throws IllegalStateException if no prices are available for the stock
+     */
+    public BigDecimal getLatestPriceChange() {
+        if (prices == null) {
+            throw new IllegalStateException("Prices cannot be null");
+        }
+        if (prices.size() == 1) {
+            return BigDecimal.ZERO; // No change if there is only one price
+        }
+        BigDecimal latestPrice = getSalesPrice(); // prices.get(prices.size() - 1);
+        BigDecimal previousPrice = prices.get(prices.size() - 2);
+        return latestPrice.subtract(previousPrice);
+    }
 }
