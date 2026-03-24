@@ -1,7 +1,7 @@
 package edu.ntnu.idatt2003.g23;
 
+import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Stock;
-import edu.ntnu.idatt2003.g23.model.StockCsvLoader;
 
 import java.util.List;
 

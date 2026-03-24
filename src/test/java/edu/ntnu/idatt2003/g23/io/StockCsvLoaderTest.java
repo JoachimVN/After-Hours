@@ -1,7 +1,9 @@
-package edu.ntnu.idatt2003.g23.model;
+package edu.ntnu.idatt2003.g23.io;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import edu.ntnu.idatt2003.g23.model.Stock;
 
 import java.io.StringReader;
 import java.util.List;

@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.model;
+package edu.ntnu.idatt2003.g23.io;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
+import edu.ntnu.idatt2003.g23.model.Stock;
 
 // NOTE: Can currently handle multiple stock prices (logs), could be useful later
 
