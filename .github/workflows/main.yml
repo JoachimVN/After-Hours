@@ -9,34 +9,44 @@ on:
 
 jobs:
   update-project-status:
-    runs-on: self-hosted   # will pick any available self-hosted runner
+    runs-on: self-hosted
+
     steps:
-      - name: Determine status
+      # ===== Determine Status: Windows =====
+      - name: Determine status on Windows
+        if: runner.os == 'Windows'
         id: status
-        shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
+        shell: pwsh
         run: |
-          if (${{ runner.os }} -eq 'Windows') {
-            # PowerShell syntax for Windows
-            Write-Output "Event name: ${{ github.event_name }}"
-            if ("${{ github.event_name }}" -eq "create") {
-              Write-Output "status_name=In progress" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-              Write-Output "ref_name=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-            } elseif ("${{ github.event_name }}" -eq "pull_request") {
-              Write-Output "status_name=In review" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-              Write-Output "ref_name=${{ github.head_ref }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-            }
-          } else {
-            # Bash syntax for Mac/Linux
-            echo "Event name: ${{ github.event_name }}"
-            if [ "${{ github.event_name }}" = "create" ]; then
-              echo "status_name=In progress" >> $GITHUB_OUTPUT
-              echo "ref_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            elif [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "status_name=In review" >> $GITHUB_OUTPUT
-              echo "ref_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
-            fi
+          Write-Output "Event: ${{ github.event_name }}"
+          Write-Output "Branch/PR ref: ${{ github.ref_name }} / ${{ github.head_ref }}"
+          
+          if ("${{ github.event_name }}" -eq "create") {
+            Write-Output "status_name=In progress" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            Write-Output "ref_name=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          } elseif ("${{ github.event_name }}" -eq "pull_request") {
+            Write-Output "status_name=In review" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            Write-Output "ref_name=${{ github.head_ref }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           }
 
+      # ===== Determine Status: Mac/Linux =====
+      - name: Determine status on Mac/Linux
+        if: runner.os != 'Windows'
+        id: status
+        shell: bash
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch/PR ref: ${{ github.ref_name }} / ${{ github.head_ref }}"
+
+          if [ "${{ github.event_name }}" = "create" ]; then
+            echo "status_name=In progress" >> $GITHUB_OUTPUT
+            echo "ref_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "status_name=In review" >> $GITHUB_OUTPUT
+            echo "ref_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          fi
+
+      # ===== Update Project V2 Item =====
       - name: Update Project V2 Item
         uses: actions/github-script@v7
         with:
@@ -54,8 +64,16 @@ jobs:
               repo: context.repo.repo
             });
 
-            // Match the issue based on branch naming convention (must include issue number)
-            const issue = issues.data.find(i => branchName.includes(i.number));
+            // Match the issue based on branch-number prefix
+            const issueNumberMatch = branchName.match(/^(\d+)-/);
+            if (!issueNumberMatch) {
+              console.log("No issue number found in branch name:", branchName);
+              return;
+            }
+
+            const issueNumber = parseInt(issueNumberMatch[1], 10);
+            const issue = issues.data.find(i => i.number === issueNumber);
+
             if (!issue) {
               console.log("No linked issue found for branch/PR:", branchName);
               return;
@@ -95,7 +113,7 @@ jobs:
               return;
             }
 
-            // Fetch status field and check option exists
+            // Fetch status field and ensure the option exists
             const fieldsData = await github.graphql(`
               query ($projectId: ID!) {
                 node(id: $projectId) {
@@ -105,10 +123,7 @@ jobs:
                         ... on ProjectV2SingleSelectField {
                           id
                           name
-                          options {
-                            id
-                            name
-                          }
+                          options { id name }
                         }
                       }
                     }
@@ -119,7 +134,7 @@ jobs:
 
             const statusField = fieldsData.node.fields.nodes.find(f => f.name === "Status");
             if (!statusField) {
-              console.log("Status field not found in Project V2. No update will be made.");
+              console.log("Status field not found. No update will be made.");
               return;
             }
 
