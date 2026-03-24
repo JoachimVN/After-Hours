@@ -1,9 +1,9 @@
 package edu.ntnu.idatt2003.g23;
 
+import java.util.List;
+
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Stock;
-
-import java.util.List;
 
 public class App 
 {
