@@ -3,17 +3,14 @@ name: Update Project Status
 on:
   create:
     branches:
-      - '**'   # Trigger on any new branch
+      - '**'
   pull_request:
     types: [opened]
 
 jobs:
   update-project-status:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Set up environment
-        run: echo "Trigger: ${{ github.event_name }}"
-
       - name: Determine status
         id: status
         run: |
