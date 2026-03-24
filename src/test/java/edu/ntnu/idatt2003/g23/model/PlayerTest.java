@@ -202,4 +202,12 @@ class PlayerTest {
 
         assertEquals(new BigDecimal("750.00"), player.getNetWorth());
     }
+
+    @Test
+    @DisplayName("New player has NOVICE status by default")
+    void testDefaultStatusIsNovice() {
+        Player player = new Player("Alice", new BigDecimal("1000"));
+
+        assertEquals(PlayerStatus.NOVICE, player.getStatus());
+    }
 }
