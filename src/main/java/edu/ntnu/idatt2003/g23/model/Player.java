@@ -124,6 +124,11 @@ public class Player {
         return money.add(portfolio.getNetWorth());
     }
 
+    /**
+     * Gets the number of distinct weeks the player has traded
+     * @throws IllegalStateException if the transaction archive is null
+     * @return the number of distinct weeks the player has traded
+     */
     public int getWeeksTraded() {
         if (transactionArchive == null) {
             throw new IllegalStateException("Transaction archive cannot be null");
@@ -131,6 +136,9 @@ public class Player {
         return transactionArchive.countDistinctWeeks();
     }
 
+    /**
+     * Calculates the player's status based on their net worth growth and amount of weeks traded
+     */
     public void calculateStatus() {
         int weeks = getWeeksTraded();
         BigDecimal netWorth = getNetWorth();
@@ -150,6 +158,11 @@ public class Player {
         }        
     }
 
+    /**
+     * Gets the player's status.
+     * @throws IllegalStateException if the player status is null
+     * @return the player's status
+     */
     public PlayerStatus getStatus() {
         if (status == null) {
             throw new IllegalStateException("Player status cannot be null");
