@@ -1,5 +1,13 @@
 /* HelpMeHelp Home Page Styles */
 
+.app-root {
+    -fx-background-color: #111111;
+}
+
+.splash-overlay {
+    -fx-fill: black;
+}
+
 .page-title {
     -fx-font-size: 48;
     -fx-font-weight: bold;

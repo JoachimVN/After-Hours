@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.ui;
+package edu.ntnu.idatt2003.g23.ui.views;
 
 import javafx.scene.layout.BorderPane;
 import javafx.scene.control.Label;

@@ -1,28 +1,22 @@
 package edu.ntnu.idatt2003.g23;
 
-import javafx.animation.FadeTransition;
 import javafx.application.Application;
-import javafx.scene.Parent;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
-import edu.ntnu.idatt2003.g23.ui.HomePageView;
+import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
+import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
+import edu.ntnu.idatt2003.g23.ui.views.HomePageView;
 /**
  * Launches the  JavaFX application and manages top-level scene navigation.
  */
 public class App extends Application {
 
     private Scene scene;
-    private StackPane homePageRoot;
-    private MediaPlayer homePageMusic;
+    private HomePageMusicController homePageMusicController;
 
     /**
      * Starts the primary JavaFX stage and loads the home page.
@@ -31,84 +25,42 @@ public class App extends Application {
      */
     @Override
     public void start(Stage stage) {
-        StackPane root = new StackPane();
-        homePageRoot = root;
-        root.getChildren().add(HomePageView.build(() -> {}));
+        StackPane root = new StackPane(HomePageView.build(() -> {}));
+        root.getStyleClass().add("app-root");
 
-        Rectangle splash = new Rectangle();
-        splash.setFill(Color.BLACK);
-        splash.widthProperty().bind(root.widthProperty());
-        splash.heightProperty().bind(root.heightProperty());
-        root.getChildren().add(splash);
+        homePageMusicController = new HomePageMusicController(root, getClass());
+        SplashOverlayController splashOverlayController = new SplashOverlayController(root);
 
-        scene = new Scene(root, 1024, 768);
+        scene = new Scene(root, AppConfig.DEFAULT_WIDTH, AppConfig.DEFAULT_HEIGHT);
         scene.getStylesheets().add(getClass().getResource("/home.css").toExternalForm());
-        scene.rootProperty().addListener((observable, oldRoot, newRoot) -> handlePageMusic(newRoot));
+        scene.rootProperty().addListener((observable, oldRoot, newRoot) -> homePageMusicController.handleRootChange(newRoot));
 
+        configureStage(stage);
+        stage.show();
+
+        homePageMusicController.play(
+                splashOverlayController::fadeAfterStartup,
+                splashOverlayController::fadeAfterFailure);
+    }
+
+    private void configureStage(Stage stage) {
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-
-        stage.setTitle("App");
+        stage.setTitle(AppConfig.APP_TITLE);
         stage.setScene(scene);
         stage.setX(bounds.getMinX());
         stage.setY(bounds.getMinY());
         stage.setWidth(bounds.getWidth());
         stage.setHeight(bounds.getHeight());
-        stage.setMinWidth(860);
-        stage.setMinHeight(620);
+        stage.setMinWidth(AppConfig.MIN_WIDTH);
+        stage.setMinHeight(AppConfig.MIN_HEIGHT);
         stage.setMaximized(true);
-        stage.show();
-
-        FadeTransition fade = new FadeTransition(Duration.seconds(1.5), splash);
-        fade.setFromValue(1.0);
-        fade.setToValue(0.0);
-        fade.setOnFinished(e -> root.getChildren().remove(splash));
-
-        playHomePageMusic(fade);
-    }
-
-    private void handlePageMusic(Parent currentRoot) {
-        if (currentRoot == homePageRoot) {
-            if (homePageMusic == null) {
-                playHomePageMusic(null);
-            }
-            return;
-        }
-        stopHomePageMusic();
-    }
-
-    private void playHomePageMusic(FadeTransition fade) {
-        stopHomePageMusic();
-        try {
-            String musicPath = getClass().getResource("/audio/music/idatt2003_sound_test2.mp3").toExternalForm();
-            homePageMusic = new MediaPlayer(new Media(musicPath));
-            homePageMusic.setCycleCount(MediaPlayer.INDEFINITE);
-            if (fade != null) {
-                homePageMusic.setOnPlaying(() -> {
-                    fade.setDelay(Duration.seconds(2.0));
-                    fade.play();
-                });
-            }
-            homePageMusic.play();
-        } catch (Exception e) {
-            if (fade != null) {
-                fade.setDelay(Duration.seconds(0.3));
-                fade.play();
-            }
-        }
-    }
-
-    private void stopHomePageMusic() {
-        if (homePageMusic == null) {
-            return;
-        }
-        homePageMusic.stop();
-        homePageMusic.dispose();
-        homePageMusic = null;
     }
 
     @Override
     public void stop() {
-        stopHomePageMusic();
+        if (homePageMusicController != null) {
+            homePageMusicController.stop();
+        }
     }
 
 
