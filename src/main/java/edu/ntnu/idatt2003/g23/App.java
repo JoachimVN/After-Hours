@@ -1,26 +1,8 @@
 package edu.ntnu.idatt2003.g23;
 
-import java.util.List;
-
-import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
-import edu.ntnu.idatt2003.g23.model.Stock;
-
-// public class App 
-// {
-//     public static void main( String[] args )
-//     {
-//         List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
-
-//         System.out.println("Loaded " + stocks.size() + " stocks:");
-//         for (Stock stock : stocks) {
-//             System.out.println(
-//                     stock.getSymbol() + " - " + stock.getCompany() + " (latest: " + stock.getSalesPrice() + ")");
-//         }
-//     }
-// }
-
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.scene.media.Media;
@@ -39,6 +21,8 @@ import edu.ntnu.idatt2003.g23.ui.HomePageView;
 public class App extends Application {
 
     private Scene scene;
+    private StackPane homePageRoot;
+    private MediaPlayer homePageMusic;
 
     /**
      * Starts the primary JavaFX stage and loads the home page.
@@ -48,6 +32,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) {
         StackPane root = new StackPane();
+        homePageRoot = root;
         root.getChildren().add(HomePageView.build(() -> {}));
 
         Rectangle splash = new Rectangle();
@@ -58,6 +43,7 @@ public class App extends Application {
 
         scene = new Scene(root, 1024, 768);
         scene.getStylesheets().add(getClass().getResource("/home.css").toExternalForm());
+        scene.rootProperty().addListener((observable, oldRoot, newRoot) -> handlePageMusic(newRoot));
 
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
@@ -77,19 +63,52 @@ public class App extends Application {
         fade.setToValue(0.0);
         fade.setOnFinished(e -> root.getChildren().remove(splash));
 
-        try {
-            String musicPath = getClass().getResource("/sound/music/idatt2003_sound_test2.mp3").toExternalForm();
-            MediaPlayer mediaPlayer = new MediaPlayer(new Media(musicPath));
-            mediaPlayer.setOnPlaying(() -> {
-                fade.setDelay(Duration.seconds(2.0));
-                fade.play();
-            });
-            mediaPlayer.play();
-        } catch (Exception e) {
-            // fallback: just fade if music fails to load
-            fade.setDelay(Duration.seconds(0.3));
-            fade.play();
+        playHomePageMusic(fade);
+    }
+
+    private void handlePageMusic(Parent currentRoot) {
+        if (currentRoot == homePageRoot) {
+            if (homePageMusic == null) {
+                playHomePageMusic(null);
+            }
+            return;
         }
+        stopHomePageMusic();
+    }
+
+    private void playHomePageMusic(FadeTransition fade) {
+        stopHomePageMusic();
+        try {
+            String musicPath = getClass().getResource("/audio/music/idatt2003_sound_test2.mp3").toExternalForm();
+            homePageMusic = new MediaPlayer(new Media(musicPath));
+            homePageMusic.setCycleCount(MediaPlayer.INDEFINITE);
+            if (fade != null) {
+                homePageMusic.setOnPlaying(() -> {
+                    fade.setDelay(Duration.seconds(2.0));
+                    fade.play();
+                });
+            }
+            homePageMusic.play();
+        } catch (Exception e) {
+            if (fade != null) {
+                fade.setDelay(Duration.seconds(0.3));
+                fade.play();
+            }
+        }
+    }
+
+    private void stopHomePageMusic() {
+        if (homePageMusic == null) {
+            return;
+        }
+        homePageMusic.stop();
+        homePageMusic.dispose();
+        homePageMusic = null;
+    }
+
+    @Override
+    public void stop() {
+        stopHomePageMusic();
     }
 
 
