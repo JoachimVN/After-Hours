@@ -732,7 +732,9 @@
 }
 
 /* ── Trade dialogs (Order Summary + Receipt) ─────────────────────────── */
-
+.dialog-backdrop {
+    -fx-background-color: rgba(2, 4, 18, 0.72);
+}
 .trade-dialog-root {
     -fx-background-color: #06081a;
 }

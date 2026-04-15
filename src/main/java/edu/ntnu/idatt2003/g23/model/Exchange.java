@@ -141,10 +141,7 @@ public class Exchange {
             throw new IllegalArgumentException("Player cannot be null");
         }
 
-        Stock stock = share.getStock();
-        BigDecimal currentPrice = stock.getSalesPrice();
-        Share sellShare = new Share(stock, share.getQuantity(), currentPrice);
-        return new Sale(sellShare, this.week);
+        return new Sale(share, this.week);
     }
 
     /**
