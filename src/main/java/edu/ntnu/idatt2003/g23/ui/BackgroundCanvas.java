@@ -55,7 +55,7 @@ public class BackgroundCanvas extends Canvas {
         gc.clearRect(0, 0, w, h);
 
         // Shared rotation angle drives both gradient and stars — same "looking around" tilt (rotation speed)
-        double angleDeg = 3.5 * Math.sin(t * 0.20) + 0.8 * Math.sin(t * 0.53 + 1.1);
+        double angleDeg = 3.5 * Math.sin(t * 0.5) + 0.8 * Math.sin(t * 1.2 + 1.1);
         double angleRad = Math.toRadians(angleDeg);
 
         // Gradient center: rotate the fixed zenith point (0.5, 0.12) around sky center (0.5, 0.5)

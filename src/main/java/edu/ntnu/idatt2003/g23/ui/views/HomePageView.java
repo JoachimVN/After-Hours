@@ -18,7 +18,7 @@ public final class HomePageView {
         root.getStyleClass().add("home-page");
 
         // Title
-        Label title = new Label("AFTER HOURS");
+        Label title = new Label("After Hours");
         title.getStyleClass().add("title");
 
         // Taglines

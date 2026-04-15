@@ -14,10 +14,11 @@
 
 /* Title */
 .title {
-    -fx-font-size: 72;
+    -fx-font-size: 104;
     -fx-font-weight: bold;
     -fx-text-fill: #e7ac15;
-    -fx-font-family: "Sans Serif";
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 18, 0.2, 6, 6);
 }
 
 /* Taglines */
