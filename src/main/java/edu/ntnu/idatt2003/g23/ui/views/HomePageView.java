@@ -19,9 +19,9 @@ public final class HomePageView {
         title.getStyleClass().add("title");
 
         // Taglines
-        Label tagline = new Label("\u2726  Master the Markets \u2022 Build Your Fortune \u2022 Rule the Game  \u2726");
+        Label tagline = new Label("\u2726  Lorem Ipsum \u2022 Lorem Ipsum \u2022 Lorem Ipsum  \u2726");
         tagline.getStyleClass().add("tagline");
-        Label subTagline = new Label("Next-Generation Stock Trading Simulation");
+        Label subTagline = new Label("Ipsum Dolor Sit Amet");
         subTagline.getStyleClass().add("sub-tagline");
         VBox taglineBlock = new VBox(6, tagline, subTagline);
         taglineBlock.setAlignment(Pos.CENTER);

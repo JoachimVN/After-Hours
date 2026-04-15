@@ -1,7 +1,7 @@
-/* After Hours — Ocean Night palette */
+/* After Hours — Midnight Jazz palette */
 
 .app-root {
-    -fx-background-color: radial-gradient(center 50% 10%, radius 75%, #013c58, #0b1e33);
+    -fx-background-color: #07091f;
 }
 
 .home-page {
@@ -9,21 +9,15 @@
 }
 
 .splash-overlay {
-    -fx-background-color: #0b1e33;
-}
-
-/* Background pulse overlay */
-.bg-pulse {
-    -fx-background-color: radial-gradient(center 50% 40%, radius 30%, #00537a60, transparent);
+    -fx-background-color: #07111f;
 }
 
 /* Title */
 .title {
     -fx-font-size: 72;
     -fx-font-weight: bold;
-    -fx-text-fill: #f5a201;
+    -fx-text-fill: #e7ac15;
     -fx-font-family: "Sans Serif";
-    -fx-effect: dropshadow(gaussian, #f5a20155, 24, 0.4, 0, 0);
 }
 
 /* Taglines */
@@ -35,7 +29,7 @@
 
 .sub-tagline {
     -fx-font-size: 12;
-    -fx-text-fill: #4a8aaa;
+    -fx-text-fill: #4a6899;
 }
 
 /* Buttons */
@@ -55,7 +49,6 @@
     -fx-border-radius: 14;
     -fx-pref-height: 70;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, #f5a20133, 14, 0.3, 0, 2);
 }
 
 .start-button:hover {
@@ -64,15 +57,15 @@
 }
 
 .secondary-button {
-    /* Deep ocean — hover auto-lightens via derive() */
-    ah-secondary: #013c58;
+    /* Midnight blue — hover auto-lightens via derive() */
+    ah-secondary: #0f2d5e;
 
     -fx-font-size: 16;
     -fx-font-weight: bold;
-    -fx-text-fill: #cce8f4;
+    -fx-text-fill: #b8cce8;
     -fx-background-color: ah-secondary;
     -fx-background-radius: 14;
-    -fx-border-color: #00537a80;
+    -fx-border-color: #1e408070;
     -fx-border-width: 1;
     -fx-border-radius: 14;
     -fx-pref-height: 60;
@@ -87,7 +80,7 @@
 /* Back button */
 .back-button {
     -fx-font-size: 14;
-    -fx-text-fill: #4a8aaa;
+    -fx-text-fill: #4a6899;
     -fx-background-color: transparent;
     -fx-cursor: hand;
     -fx-padding: 6 16 6 0;
@@ -108,11 +101,11 @@
 /* Settings */
 .settings-label {
     -fx-font-size: 14;
-    -fx-text-fill: #4a8aaa;
+    -fx-text-fill: #4a6899;
 }
 
 .settings-slider .track {
-    -fx-background-color: #013c58;
+    -fx-background-color: #0f2d5e;
     -fx-pref-height: 6;
     -fx-background-radius: 4;
 }
