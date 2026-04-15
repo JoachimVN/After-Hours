@@ -1,69 +1,98 @@
 package edu.ntnu.idatt2003.g23;
 
-import java.util.List;
-
-import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
-import edu.ntnu.idatt2003.g23.model.Stock;
-
-// public class App 
-// {
-//     public static void main( String[] args )
-//     {
-//         List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
-
-//         System.out.println("Loaded " + stocks.size() + " stocks:");
-//         for (Stock stock : stocks) {
-//             System.out.println(
-//                     stock.getSymbol() + " - " + stock.getCompany() + " (latest: " + stock.getSalesPrice() + ")");
-//         }
-//     }
-// }
-
 import javafx.application.Application;
-import javafx.scene.Scene;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-import edu.ntnu.idatt2003.g23.ui.HomePageView;
+import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
+import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
+import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
+import edu.ntnu.idatt2003.g23.ui.views.GameView;
+import edu.ntnu.idatt2003.g23.ui.views.HomePageView;
+import edu.ntnu.idatt2003.g23.ui.views.ImportCsvView;
+import edu.ntnu.idatt2003.g23.ui.views.SettingsView;
+
 /**
- * Launches the  JavaFX application and manages top-level scene navigation.
+ * Launches the JavaFX application and manages top-level scene navigation.
  */
 public class App extends Application {
 
-    private Scene scene;
+    private StackPane root;
+    private Parent homePage;
+    private HomePageMusicController homePageMusicController;
+    private BackgroundCanvas backgroundCanvas;
 
-    /**
-     * Starts the primary JavaFX stage and loads the home page.
-     *
-     * @param stage the primary application stage
-     */
     @Override
     public void start(Stage stage) {
-        scene = new Scene(HomePageView.build(() -> {}), 1024, 768);
+        homePageMusicController = new HomePageMusicController(getClass());
+
+        homePage = HomePageView.build(
+                () -> navigate(GameView.build(this::goHome)),
+                () -> navigate(ImportCsvView.build(this::goHome)),
+                () -> navigate(SettingsView.build(
+                        this::goHome,
+                        homePageMusicController::setVolume,
+                        homePageMusicController.getVolume()))
+        );
+
+        backgroundCanvas = new BackgroundCanvas();
+        root = new StackPane(backgroundCanvas, homePage);
+        backgroundCanvas.widthProperty().bind(root.widthProperty());
+        backgroundCanvas.heightProperty().bind(root.heightProperty());
+        root.getStyleClass().add("app-root");
+
+        SplashOverlayController splashOverlayController = new SplashOverlayController(root);
+
+        Scene scene = new Scene(root, AppConfig.DEFAULT_WIDTH, AppConfig.DEFAULT_HEIGHT);
         scene.getStylesheets().add(getClass().getResource("/home.css").toExternalForm());
 
-        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+        configureStage(stage, scene);
+        stage.show();
 
-        stage.setTitle("App");
+        homePageMusicController.play(
+                splashOverlayController::fadeAfterStartup,
+                splashOverlayController::fadeAfterFailure);
+    }
+
+    private void navigate(Parent page) {
+        homePageMusicController.fadeOutThenPlayAmbience();
+        root.getChildren().setAll(backgroundCanvas, page);
+    }
+
+    private void goHome() {
+        homePageMusicController.fadeOutThenPlay(null, null);
+        root.getChildren().setAll(backgroundCanvas, homePage);
+    }
+
+    private void configureStage(Stage stage, Scene scene) {
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+        stage.setTitle(AppConfig.APP_TITLE);
         stage.setScene(scene);
         stage.setX(bounds.getMinX());
         stage.setY(bounds.getMinY());
         stage.setWidth(bounds.getWidth());
         stage.setHeight(bounds.getHeight());
-        stage.setMinWidth(860);
-        stage.setMinHeight(620);
+        stage.setMinWidth(AppConfig.MIN_WIDTH);
+        stage.setMinHeight(AppConfig.MIN_HEIGHT);
         stage.setMaximized(true);
-        stage.show();
     }
 
+    @Override
+    public void stop() {
+        if (homePageMusicController != null) {
+            homePageMusicController.stop();
+        }
+        if (backgroundCanvas != null) {
+            backgroundCanvas.stop();
+        }
+    }
 
-    /**
-     * Application entry point.
-     *
-     * @param args command-line arguments
-     */
     public static void main(String[] args) {
         launch(args);
     }
 }
+

@@ -1,6 +1,119 @@
-/* HelpMeHelp Home Page Styles */
+/* After Hours — Midnight Jazz palette */
 
+.app-root {
+    -fx-background-color: #07091f;
+}
+
+.home-page {
+    -fx-background-color: transparent;
+}
+
+.splash-overlay {
+    -fx-background-color: #07111f;
+}
+
+/* Title */
+.title {
+    -fx-font-size: 72;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e7ac15;
+    -fx-font-family: "Sans Serif";
+}
+
+/* Taglines */
+.tagline {
+    -fx-font-size: 15;
+    -fx-text-fill: #e8d8b0;
+    -fx-font-weight: bold;
+}
+
+.sub-tagline {
+    -fx-font-size: 12;
+    -fx-text-fill: #4a6899;
+}
+
+/* Buttons */
+.start-button {
+    /* Amber gradient — hover auto-lightens via derive() */
+    ah-start: #d48a00;
+    ah-mid:   #f5a201;
+    ah-end:   #ffba42;
+
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0b1e33;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, ah-start, ah-mid 55%, ah-end);
+    -fx-background-radius: 14;
+    -fx-border-color: #ffba4270;
+    -fx-border-width: 2;
+    -fx-border-radius: 14;
+    -fx-pref-height: 70;
+    -fx-cursor: hand;
+}
+
+.start-button:hover {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%,
+        derive(ah-start, 15%), derive(ah-mid, 15%) 55%, derive(ah-end, 15%));
+}
+
+.secondary-button {
+    /* Midnight blue — hover auto-lightens via derive() */
+    ah-secondary: #0f2d5e;
+
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-text-fill: #b8cce8;
+    -fx-background-color: ah-secondary;
+    -fx-background-radius: 14;
+    -fx-border-color: #1e408070;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-pref-height: 60;
+    -fx-cursor: hand;
+}
+
+.secondary-button:hover {
+    -fx-background-color: derive(ah-secondary, 25%);
+    -fx-text-fill: white;
+}
+
+/* Back button */
+.back-button {
+    -fx-font-size: 14;
+    -fx-text-fill: #4a6899;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6 16 6 0;
+}
+
+.back-button:hover {
+    -fx-text-fill: #ffba42;
+}
+
+/* Page headings (non-home pages) */
 .page-title {
     -fx-font-size: 48;
     -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-font-family: "Sans Serif";
 }
+
+/* Settings */
+.settings-label {
+    -fx-font-size: 14;
+    -fx-text-fill: #4a6899;
+}
+
+.settings-slider .track {
+    -fx-background-color: #0f2d5e;
+    -fx-pref-height: 6;
+    -fx-background-radius: 4;
+}
+
+.settings-slider .thumb {
+    -fx-background-color: #f5a201;
+    -fx-background-radius: 100;
+    -fx-pref-width: 18;
+    -fx-pref-height: 18;
+}
+
