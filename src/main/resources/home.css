@@ -1,14 +1,120 @@
-/* HelpMeHelp Home Page Styles */
+/* After Hours Home Page Styles */
 
 .app-root {
-    -fx-background-color: #111111;
+    -fx-background-color: radial-gradient(center 50% 15%, radius 80%, #291681, #080611);
+}
+
+.home-page {
+    -fx-background-color: transparent;
 }
 
 .splash-overlay {
-    -fx-fill: black;
+    -fx-background-color: black;
 }
 
+/* Background pulse overlay */
+.bg-pulse {
+    -fx-background-color: radial-gradient(center 50% 40%, radius 30%, #4a1aaa90, transparent);
+}
+
+/* Title */
+.title {
+    -fx-font-size: 72;
+    -fx-font-weight: bold;
+    -fx-text-fill: #00e5ff;
+    -fx-font-family: "Sans Serif";
+}
+
+/* Taglines */
+.tagline {
+    -fx-font-size: 15;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.sub-tagline {
+    -fx-font-size: 12;
+    -fx-text-fill: #7a7aaa;
+}
+
+/* Buttons */
+.start-button {
+    /* Change only these three to retheme; hover auto-lightens via derive() */
+    qt-start: #2406aa;
+    qt-mid:   #1543da;
+    qt-end:   #279fbd;
+
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, qt-start, qt-mid 65%, qt-end);
+    -fx-background-radius: 14;
+    -fx-border-color: #1581da50;
+    -fx-border-width: 2;
+    -fx-border-radius: 14;
+    -fx-pref-height: 70;
+    -fx-cursor: hand;
+}
+
+.start-button:hover {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%,
+        derive(qt-start, 20%), derive(qt-mid, 20%) 65%, derive(qt-end, 20%));
+}
+
+.secondary-button {
+    /* Change only this to retheme; hover auto-lightens via derive() */
+    qt-secondary: #0d2040;
+
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-background-color: qt-secondary;
+    -fx-background-radius: 14;
+    -fx-pref-height: 60;
+    -fx-cursor: hand;
+}
+
+.secondary-button:hover {
+    -fx-background-color: derive(qt-secondary, 20%);
+}
+
+/* Back button */
+.back-button {
+    -fx-font-size: 14;
+    -fx-text-fill: #9090bb;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6 16 6 0;
+}
+
+.back-button:hover {
+    -fx-text-fill: white;
+}
+
+/* Page headings (non-home pages) */
 .page-title {
     -fx-font-size: 48;
     -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-font-family: "Sans Serif";
 }
+
+/* Settings */
+.settings-label {
+    -fx-font-size: 14;
+    -fx-text-fill: #9090bb;
+}
+
+.settings-slider .track {
+    -fx-background-color: #1a1a3a;
+    -fx-pref-height: 6;
+    -fx-background-radius: 4;
+}
+
+.settings-slider .thumb {
+    -fx-background-color: #7c4dff;
+    -fx-background-radius: 100;
+    -fx-pref-width: 18;
+    -fx-pref-height: 18;
+}
+
