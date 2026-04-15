@@ -1,7 +1,7 @@
-/* After Hours Home Page Styles */
+/* After Hours — Ocean Night palette */
 
 .app-root {
-    -fx-background-color: radial-gradient(center 50% 15%, radius 80%, #291681, #080611);
+    -fx-background-color: radial-gradient(center 50% 10%, radius 75%, #013c58, #0b1e33);
 }
 
 .home-page {
@@ -9,110 +9,116 @@
 }
 
 .splash-overlay {
-    -fx-background-color: black;
+    -fx-background-color: #0b1e33;
 }
 
 /* Background pulse overlay */
 .bg-pulse {
-    -fx-background-color: radial-gradient(center 50% 40%, radius 30%, #4a1aaa90, transparent);
+    -fx-background-color: radial-gradient(center 50% 40%, radius 30%, #00537a60, transparent);
 }
 
 /* Title */
 .title {
     -fx-font-size: 72;
     -fx-font-weight: bold;
-    -fx-text-fill: #00e5ff;
+    -fx-text-fill: #f5a201;
     -fx-font-family: "Sans Serif";
+    -fx-effect: dropshadow(gaussian, #f5a20155, 24, 0.4, 0, 0);
 }
 
 /* Taglines */
 .tagline {
     -fx-font-size: 15;
-    -fx-text-fill: white;
+    -fx-text-fill: #e8d8b0;
     -fx-font-weight: bold;
 }
 
 .sub-tagline {
     -fx-font-size: 12;
-    -fx-text-fill: #7a7aaa;
+    -fx-text-fill: #4a8aaa;
 }
 
 /* Buttons */
 .start-button {
-    /* Change only these three to retheme; hover auto-lightens via derive() */
-    qt-start: #2406aa;
-    qt-mid:   #1543da;
-    qt-end:   #279fbd;
+    /* Amber gradient — hover auto-lightens via derive() */
+    ah-start: #d48a00;
+    ah-mid:   #f5a201;
+    ah-end:   #ffba42;
 
     -fx-font-size: 20;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
-    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, qt-start, qt-mid 65%, qt-end);
+    -fx-text-fill: #0b1e33;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, ah-start, ah-mid 55%, ah-end);
     -fx-background-radius: 14;
-    -fx-border-color: #1581da50;
+    -fx-border-color: #ffba4270;
     -fx-border-width: 2;
     -fx-border-radius: 14;
     -fx-pref-height: 70;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, #f5a20133, 14, 0.3, 0, 2);
 }
 
 .start-button:hover {
     -fx-background-color: linear-gradient(from 0% 0% to 100% 0%,
-        derive(qt-start, 20%), derive(qt-mid, 20%) 65%, derive(qt-end, 20%));
+        derive(ah-start, 15%), derive(ah-mid, 15%) 55%, derive(ah-end, 15%));
 }
 
 .secondary-button {
-    /* Change only this to retheme; hover auto-lightens via derive() */
-    qt-secondary: #0d2040;
+    /* Deep ocean — hover auto-lightens via derive() */
+    ah-secondary: #013c58;
 
     -fx-font-size: 16;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
-    -fx-background-color: qt-secondary;
+    -fx-text-fill: #cce8f4;
+    -fx-background-color: ah-secondary;
     -fx-background-radius: 14;
+    -fx-border-color: #00537a80;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
     -fx-pref-height: 60;
     -fx-cursor: hand;
 }
 
 .secondary-button:hover {
-    -fx-background-color: derive(qt-secondary, 20%);
+    -fx-background-color: derive(ah-secondary, 25%);
+    -fx-text-fill: white;
 }
 
 /* Back button */
 .back-button {
     -fx-font-size: 14;
-    -fx-text-fill: #9090bb;
+    -fx-text-fill: #4a8aaa;
     -fx-background-color: transparent;
     -fx-cursor: hand;
     -fx-padding: 6 16 6 0;
 }
 
 .back-button:hover {
-    -fx-text-fill: white;
+    -fx-text-fill: #ffba42;
 }
 
 /* Page headings (non-home pages) */
 .page-title {
     -fx-font-size: 48;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
+    -fx-text-fill: #f5a201;
     -fx-font-family: "Sans Serif";
 }
 
 /* Settings */
 .settings-label {
     -fx-font-size: 14;
-    -fx-text-fill: #9090bb;
+    -fx-text-fill: #4a8aaa;
 }
 
 .settings-slider .track {
-    -fx-background-color: #1a1a3a;
+    -fx-background-color: #013c58;
     -fx-pref-height: 6;
     -fx-background-radius: 4;
 }
 
 .settings-slider .thumb {
-    -fx-background-color: #7c4dff;
+    -fx-background-color: #f5a201;
     -fx-background-radius: 100;
     -fx-pref-width: 18;
     -fx-pref-height: 18;

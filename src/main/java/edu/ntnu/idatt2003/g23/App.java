@@ -9,6 +9,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
+import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
 import edu.ntnu.idatt2003.g23.ui.views.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.HomePageView;
@@ -23,6 +24,7 @@ public class App extends Application {
     private StackPane root;
     private Parent homePage;
     private HomePageMusicController homePageMusicController;
+    private BackgroundCanvas backgroundCanvas;
 
     @Override
     public void start(Stage stage) {
@@ -37,7 +39,10 @@ public class App extends Application {
                         homePageMusicController.getVolume()))
         );
 
-        root = new StackPane(homePage);
+        backgroundCanvas = new BackgroundCanvas();
+        root = new StackPane(backgroundCanvas, homePage);
+        backgroundCanvas.widthProperty().bind(root.widthProperty());
+        backgroundCanvas.heightProperty().bind(root.heightProperty());
         root.getStyleClass().add("app-root");
 
         SplashOverlayController splashOverlayController = new SplashOverlayController(root);
@@ -55,12 +60,12 @@ public class App extends Application {
 
     private void navigate(Parent page) {
         homePageMusicController.fadeOutThenPlayAmbience();
-        root.getChildren().setAll(page);
+        root.getChildren().setAll(backgroundCanvas, page);
     }
 
     private void goHome() {
         homePageMusicController.fadeOutThenPlay(null, null);
-        root.getChildren().setAll(homePage);
+        root.getChildren().setAll(backgroundCanvas, homePage);
     }
 
     private void configureStage(Stage stage, Scene scene) {
@@ -80,6 +85,9 @@ public class App extends Application {
     public void stop() {
         if (homePageMusicController != null) {
             homePageMusicController.stop();
+        }
+        if (backgroundCanvas != null) {
+            backgroundCanvas.stop();
         }
     }
 
