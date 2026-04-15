@@ -30,7 +30,10 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 public final class GameView {
 
@@ -255,104 +258,114 @@ public final class GameView {
         Region hlSpacer = new Region(); HBox.setHgrow(hlSpacer, Priority.ALWAYS);
         HBox hlRow = new HBox(24, hiBox, loBox);
 
-        // Trade panel
-        Label tradeTitle = new Label("Trade " + stock.getSymbol());
-        tradeTitle.getStyleClass().add("trade-title");
-
+        // ── Qty stepper: [−] [field] [+] ─────────────────────────────────────
+        Button decBtn = new Button("\u2212");
+        decBtn.getStyleClass().add("trade-qty-btn");
         TextField qtyField = new TextField("1");
-        qtyField.getStyleClass().add("setup-text-field");
-        qtyField.setMaxWidth(100);
+        qtyField.getStyleClass().add("trade-qty-field");
+        Button incBtn = new Button("+");
+        incBtn.getStyleClass().add("trade-qty-btn");
 
-        // Live amount labels shown on the buttons
-        Label buyAmountLbl  = new Label("—");
-        buyAmountLbl.getStyleClass().add("trade-button-amount");
-        Label sellAmountLbl = new Label("—");
-        sellAmountLbl.getStyleClass().add("trade-button-amount");
-
-        // Recompute displayed amounts whenever qty changes
-        final Runnable updateAmounts = () -> {
-            BigDecimal qty;
-            try { qty = new BigDecimal(qtyField.getText().trim()); }
-            catch (NumberFormatException ex) {
-                buyAmountLbl.setText("—"); sellAmountLbl.setText("—"); return;
-            }
-            // Buy total: price × qty × 1.005  (0.5% commission, no buy tax)
-            buyAmountLbl.setText(fmt(stock.getSalesPrice().multiply(qty)
-                    .multiply(new BigDecimal("1.005"))));
-            // Sell total: mirrors SaleCalculator for the first owned position
-            player.getPortfolio().getShareBySymbol(stock.getSymbol())
-                    .stream().findFirst().ifPresentOrElse(sh -> {
-                BigDecimal gross      = stock.getSalesPrice().multiply(sh.getQuantity());
-                BigDecimal commission = gross.multiply(new BigDecimal("0.01"));
-                BigDecimal rawProfit  = gross.subtract(commission)
-                        .subtract(sh.getPurchasePrice().multiply(sh.getQuantity()));
-                BigDecimal tax = rawProfit.multiply(new BigDecimal("0.3"));
-                sellAmountLbl.setText(fmt(gross.subtract(commission).subtract(tax)));
-            }, () -> sellAmountLbl.setText("—"));
-        };
-        updateAmounts.run();
-        qtyField.textProperty().addListener((obs, old, val) -> updateAmounts.run());
-
-        // BUY button — large green with ↗ icon and live cost
-        Label buyIcon = new Label("\u2197");
-        buyIcon.getStyleClass().add("trade-btn-icon");
-        Label buyLbl = new Label("BUY");
-        buyLbl.getStyleClass().add("trade-btn-label");
-        HBox buyTop = new HBox(6, buyIcon, buyLbl);
-        buyTop.setAlignment(Pos.CENTER_LEFT);
-        VBox buyContent = new VBox(1, buyTop, buyAmountLbl);
-        buyContent.setAlignment(Pos.CENTER_LEFT);
-
-        Button buyBtn = new Button();
-        buyBtn.setGraphic(buyContent);
-        buyBtn.getStyleClass().add("trade-buy-button");
-        buyBtn.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(buyBtn, Priority.ALWAYS);
-        buyBtn.setOnAction(e -> {
-            try {
-                BigDecimal qty = new BigDecimal(qtyField.getText().trim());
-                Transaction tx = exchange.buy(stock.getSymbol(), qty, player);
-                tx.commit(player);
-                refreshRef[0].run();
-            } catch (Exception ex) { showError(ex.getMessage()); }
+        decBtn.setOnAction(e -> {
+            try { int v = Math.max(1, Integer.parseInt(qtyField.getText().trim()) - 1);
+                  qtyField.setText(String.valueOf(v)); }
+            catch (NumberFormatException ignored) { qtyField.setText("1"); }
+        });
+        incBtn.setOnAction(e -> {
+            try { qtyField.setText(String.valueOf(Integer.parseInt(qtyField.getText().trim()) + 1)); }
+            catch (NumberFormatException ignored) { qtyField.setText("1"); }
         });
 
-        // SELL button — large red with ↘ icon and live proceeds
-        Label sellIcon = new Label("\u2198");
-        sellIcon.getStyleClass().add("trade-btn-icon");
-        Label sellLbl = new Label("SELL");
-        sellLbl.getStyleClass().add("trade-btn-label");
-        HBox sellTop = new HBox(6, sellIcon, sellLbl);
-        sellTop.setAlignment(Pos.CENTER_LEFT);
-        VBox sellContent = new VBox(1, sellTop, sellAmountLbl);
-        sellContent.setAlignment(Pos.CENTER_LEFT);
+        HBox stepper = new HBox(0, decBtn, qtyField, incBtn);
+        stepper.getStyleClass().add("trade-qty-stepper");
+        stepper.setAlignment(Pos.CENTER);
+
+        // ── Live cost / proceeds labels ────────────────────────────────────────
+        Label buyAmountLbl  = new Label("\u2014");
+        buyAmountLbl.getStyleClass().add("trade-button-amount");
+        Label sellAmountLbl = new Label("\u2014");
+        sellAmountLbl.getStyleClass().add("trade-button-amount");
+
+        // Buy amount tracks qty field; sell amount reflects actual first owned lot
+        final Runnable updateBuyAmount = () -> {
+            BigDecimal qty;
+            try { qty = new BigDecimal(qtyField.getText().trim()); }
+            catch (NumberFormatException ex) { buyAmountLbl.setText("\u2014"); return; }
+            buyAmountLbl.setText(fmt(stock.getSalesPrice().multiply(qty)
+                    .multiply(new BigDecimal("1.005"))));
+        };
+        player.getPortfolio().getShareBySymbol(stock.getSymbol())
+                .stream().findFirst().ifPresentOrElse(sh -> {
+            BigDecimal sGross  = stock.getSalesPrice().multiply(sh.getQuantity());
+            BigDecimal sFee    = sGross.multiply(new BigDecimal("0.01"));
+            BigDecimal sProfit = sGross.subtract(sFee)
+                    .subtract(sh.getPurchasePrice().multiply(sh.getQuantity()));
+            BigDecimal sTax    = sProfit.max(BigDecimal.ZERO).multiply(new BigDecimal("0.3"));
+            sellAmountLbl.setText(fmt(sGross.subtract(sFee).subtract(sTax)));
+        }, () -> sellAmountLbl.setText("\u2014"));
+        updateBuyAmount.run();
+        qtyField.textProperty().addListener((obs, old, val) -> updateBuyAmount.run());
+
+        // ── BUY button (primary — flex) ────────────────────────────────────────
+        Label buyTopLbl = new Label("\u2197  BUY");
+        buyTopLbl.getStyleClass().add("trade-btn-label");
+        VBox buyGraphic = new VBox(3, buyTopLbl, buyAmountLbl);
+        buyGraphic.setAlignment(Pos.CENTER);
+
+        Button buyBtn = new Button();
+        buyBtn.setGraphic(buyGraphic);
+        buyBtn.getStyleClass().add("trade-buy-button");
+        buyBtn.setOnAction(e -> {
+            BigDecimal parsedQty;
+            try { parsedQty = new BigDecimal(qtyField.getText().trim()); }
+            catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
+            BigDecimal qty   = parsedQty;
+            BigDecimal gross = stock.getSalesPrice().multiply(qty);
+            BigDecimal fee   = gross.multiply(new BigDecimal("0.005"));
+            BigDecimal total = gross.add(fee);
+            showTradeConfirm("BUY", stock, qty, gross, fee, BigDecimal.ZERO, total, () -> {
+                try {
+                    Transaction tx = exchange.buy(stock.getSymbol(), qty, player);
+                    tx.commit(player);
+                    showReceipt("BUY", stock, qty, total, fee, BigDecimal.ZERO, player.getMoney());
+                    refreshRef[0].run();
+                } catch (Exception ex) { showError(ex.getMessage()); }
+            });
+        });
+
+        // ── SELL button (secondary — fixed width) ──────────────────────────────
+        Label sellTopLbl = new Label("\u2198  SELL");
+        sellTopLbl.getStyleClass().add("trade-btn-label-sell");
+        VBox sellGraphic = new VBox(3, sellTopLbl, sellAmountLbl);
+        sellGraphic.setAlignment(Pos.CENTER);
 
         Button sellBtn = new Button();
-        sellBtn.setGraphic(sellContent);
+        sellBtn.setGraphic(sellGraphic);
         sellBtn.getStyleClass().add("trade-sell-button");
-        sellBtn.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(sellBtn, Priority.ALWAYS);
         sellBtn.setOnAction(e -> {
             player.getPortfolio().getShareBySymbol(stock.getSymbol())
                     .stream().findFirst().ifPresentOrElse(sh -> {
-                try {
-                    Transaction tx = exchange.sell(sh, player);
-                    tx.commit(player);
-                    refreshRef[0].run();
-                } catch (Exception ex) { showError(ex.getMessage()); }
+                BigDecimal gross   = stock.getSalesPrice().multiply(sh.getQuantity());
+                BigDecimal fee     = gross.multiply(new BigDecimal("0.01"));
+                BigDecimal profit  = gross.subtract(fee)
+                        .subtract(sh.getPurchasePrice().multiply(sh.getQuantity()));
+                BigDecimal tax     = profit.max(BigDecimal.ZERO).multiply(new BigDecimal("0.3"));
+                BigDecimal proceeds = gross.subtract(fee).subtract(tax);
+                showTradeConfirm("SELL", stock, sh.getQuantity(), gross, fee, tax, proceeds, () -> {
+                    try {
+                        Transaction tx = exchange.sell(sh, player);
+                        tx.commit(player);
+                        showReceipt("SELL", stock, sh.getQuantity(), proceeds, fee, tax, player.getMoney());
+                        refreshRef[0].run();
+                    } catch (Exception ex) { showError(ex.getMessage()); }
+                });
             }, () -> showError("You don't own any shares of " + stock.getSymbol()));
         });
 
-        Label qtyLabel = new Label("Quantity");
-        qtyLabel.getStyleClass().add("setup-field-label");
-        HBox qtyRow = new HBox(8, qtyLabel, qtyField);
-        qtyRow.setAlignment(Pos.CENTER_LEFT);
+        HBox tradeRow = new HBox(8, stepper, buyBtn, sellBtn);
+        tradeRow.setAlignment(Pos.CENTER_LEFT);
 
-        HBox tradeButtons = new HBox(10, buyBtn, sellBtn);
-        HBox.setHgrow(buyBtn, Priority.ALWAYS);
-        HBox.setHgrow(sellBtn, Priority.ALWAYS);
-
-        VBox tradePanel = new VBox(10, tradeTitle, qtyRow, tradeButtons);
+        VBox tradePanel = new VBox(0, tradeRow);
         tradePanel.getStyleClass().add("trade-panel");
 
         VBox header = new VBox(4, sym, comp, priceRow, hlRow, tradePanel);
@@ -407,11 +420,20 @@ public final class GameView {
               btn.setOnAction(e -> {
                   Share sh = getTableRow().getItem();
                   if (sh == null) return;
-                  try {
-                      Transaction tx = exchange.sell(sh, player);
-                      tx.commit(player);
-                      refreshRef[0].run();
-                  } catch (Exception ex) { showError(ex.getMessage()); }
+                  BigDecimal gross   = sh.getStock().getSalesPrice().multiply(sh.getQuantity());
+                  BigDecimal fee     = gross.multiply(new BigDecimal("0.01"));
+                  BigDecimal profit  = gross.subtract(fee)
+                          .subtract(sh.getPurchasePrice().multiply(sh.getQuantity()));
+                  BigDecimal tax     = profit.max(BigDecimal.ZERO).multiply(new BigDecimal("0.3"));
+                  BigDecimal proceeds = gross.subtract(fee).subtract(tax);
+                  showTradeConfirm("SELL", sh.getStock(), sh.getQuantity(), gross, fee, tax, proceeds, () -> {
+                      try {
+                          Transaction tx = exchange.sell(sh, player);
+                          tx.commit(player);
+                          showReceipt("SELL", sh.getStock(), sh.getQuantity(), proceeds, fee, tax, player.getMoney());
+                          refreshRef[0].run();
+                      } catch (Exception ex) { showError(ex.getMessage()); }
+                  });
               }); }
             @Override protected void updateItem(Void v, boolean empty) {
                 super.updateItem(v, empty);
@@ -460,6 +482,122 @@ public final class GameView {
 
     private static String fmt(BigDecimal value) {
         return String.format("$%,.2f", value.doubleValue());
+    }
+
+    private static void showTradeConfirm(String action, Stock stock, BigDecimal qty,
+            BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total, Runnable onConfirm) {
+        boolean isBuy = "BUY".equals(action);
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle(isBuy ? "Confirm Purchase" : "Confirm Sale");
+        dialog.setResizable(false);
+
+        Label iconLbl  = new Label(isBuy ? "\u2197" : "\u2198");
+        iconLbl.getStyleClass().add(isBuy ? "dialog-action-icon-buy" : "dialog-action-icon-sell");
+        Label titleLbl = new Label("ORDER SUMMARY");
+        titleLbl.getStyleClass().add("dialog-title");
+        HBox header = new HBox(10, iconLbl, titleLbl);
+        header.getStyleClass().add("dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox rows = new VBox(0,
+            dialogRow("Action",   action,                               isBuy ? "dialog-val-buy" : "dialog-val-sell"),
+            dialogRow("Symbol",   stock.getSymbol(),                    null),
+            dialogRow("Company",  stock.getCompany(),                   null),
+            dialogRow("Qty",      qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Price",    fmt(stock.getSalesPrice()),           null),
+            dialogRow("Subtotal", fmt(gross),                          null),
+            dialogRow(isBuy ? "Fee (0.5%)" : "Fee (1%)", fmt(fee),    "dialog-val-fee"),
+            dialogRow("Tax",      fmt(tax),                            "dialog-val-fee")
+        );
+        rows.getStyleClass().add("dialog-rows");
+
+        Label totalKey = new Label(isBuy ? "TOTAL COST" : "YOU RECEIVE");
+        totalKey.getStyleClass().add("dialog-total-key");
+        Label totalVal = new Label(fmt(total));
+        totalVal.getStyleClass().add(isBuy ? "dialog-total-val-buy" : "dialog-total-val-sell");
+        VBox totalSection = new VBox(4, totalKey, totalVal);
+        totalSection.getStyleClass().add("dialog-total-section");
+
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.getStyleClass().add("dialog-cancel-btn");
+        cancelBtn.setOnAction(ev -> dialog.close());
+
+        Button confirmBtn = new Button(isBuy ? "Confirm Buy" : "Confirm Sell");
+        confirmBtn.getStyleClass().add(isBuy ? "dialog-confirm-buy-btn" : "dialog-confirm-sell-btn");
+        confirmBtn.setOnAction(ev -> { dialog.close(); onConfirm.run(); });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox btnRow = new HBox(10, cancelBtn, spacer, confirmBtn);
+        btnRow.getStyleClass().add("dialog-btn-row");
+
+        VBox root = new VBox(0, header, rows, totalSection, btnRow);
+        root.getStyleClass().add("trade-dialog-root");
+        root.setPrefWidth(340);
+
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(GameView.class.getResource("/home.css").toExternalForm());
+        dialog.setScene(scene);
+        dialog.showAndWait();
+    }
+
+    private static void showReceipt(String action, Stock stock, BigDecimal qty,
+            BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
+        boolean isBuy = "BUY".equals(action);
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Receipt");
+        dialog.setResizable(false);
+
+        Label checkLbl = new Label("\u2713");
+        checkLbl.getStyleClass().add("receipt-check");
+        Label titleLbl = new Label("ORDER COMPLETE");
+        titleLbl.getStyleClass().add("dialog-title");
+        HBox header = new HBox(10, checkLbl, titleLbl);
+        header.getStyleClass().add("dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox rows = new VBox(0,
+            dialogRow("Action",      action,                               isBuy ? "dialog-val-buy" : "dialog-val-sell"),
+            dialogRow("Symbol",      stock.getSymbol(),                    null),
+            dialogRow("Qty",         qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Price",       fmt(stock.getSalesPrice()),           null),
+            dialogRow(isBuy ? "Fee (0.5%)" : "Fee (1%)", fmt(fee),       "dialog-val-fee"),
+            dialogRow("Tax",         fmt(tax),                            "dialog-val-fee"),
+            dialogRow(isBuy ? "Total Paid" : "Received", fmt(total),     null),
+            dialogRow("New Balance", fmt(newCash),                        "dialog-val-cash")
+        );
+        rows.getStyleClass().add("dialog-rows");
+
+        Button doneBtn = new Button("Done");
+        doneBtn.getStyleClass().add("dialog-confirm-buy-btn");
+        doneBtn.setOnAction(ev -> dialog.close());
+        HBox btnRow = new HBox(doneBtn);
+        btnRow.setAlignment(Pos.CENTER_RIGHT);
+        btnRow.getStyleClass().add("dialog-btn-row");
+
+        VBox root = new VBox(0, header, rows, btnRow);
+        root.getStyleClass().add("trade-dialog-root");
+        root.setPrefWidth(320);
+
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(GameView.class.getResource("/home.css").toExternalForm());
+        dialog.setScene(scene);
+        dialog.showAndWait();
+    }
+
+    private static HBox dialogRow(String key, String val, String valStyle) {
+        Label kLbl = new Label(key);
+        kLbl.getStyleClass().add("dialog-row-key");
+        Label vLbl = new Label(val);
+        vLbl.getStyleClass().add("dialog-row-val");
+        if (valStyle != null) vLbl.getStyleClass().add(valStyle);
+        Region sp = new Region();
+        HBox.setHgrow(sp, Priority.ALWAYS);
+        HBox row = new HBox(8, kLbl, sp, vLbl);
+        row.getStyleClass().add("dialog-row");
+        return row;
     }
 
     private static void showError(String message) {
