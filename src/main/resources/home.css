@@ -117,3 +117,571 @@
     -fx-pref-height: 18;
 }
 
+/* ── Setup Page ──────────────────────────────────────────────────────────── */
+
+.setup-card {
+    -fx-background-color: #07152cc0;
+    -fx-background-radius: 18;
+    -fx-border-color: #1e408055;
+    -fx-border-width: 1;
+    -fx-border-radius: 18;
+}
+
+.setup-field-label {
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+    -fx-letter-spacing: 1;
+}
+
+.setup-text-field {
+    -fx-font-size: 15;
+    -fx-text-fill: #e8d8b0;
+    -fx-background-color: #050d1a;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 14;
+    -fx-prompt-text-fill: #2c4a6a;
+}
+
+.setup-text-field:focused {
+    -fx-border-color: #f5a201;
+}
+
+.cash-preset-button {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-text-fill: #b8cce8;
+    -fx-background-color: #0f2d5e;
+    -fx-background-radius: 8;
+    -fx-border-color: #1e408050;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-pref-height: 38;
+    -fx-cursor: hand;
+}
+
+.cash-preset-button:hover {
+    -fx-background-color: derive(#0f2d5e, 20%);
+    -fx-text-fill: white;
+}
+
+.cash-preset-button:selected {
+    -fx-text-fill: #0b1e33;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, #d48a00, #f5a201 55%, #ffba42);
+    -fx-border-color: #ffba4270;
+}
+
+.data-toggle-button {
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+    -fx-text-fill: #b8cce8;
+    -fx-background-color: #0f2d5e;
+    -fx-background-radius: 10;
+    -fx-border-color: #1e408060;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-pref-height: 52;
+    -fx-cursor: hand;
+}
+
+.data-toggle-button:hover {
+    -fx-background-color: derive(#0f2d5e, 20%);
+    -fx-text-fill: white;
+}
+
+.data-toggle-button:selected {
+    -fx-text-fill: #0b1e33;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, #d48a00, #f5a201 55%, #ffba42);
+    -fx-border-color: #ffba4270;
+}
+
+/* ── Import CSV Page ─────────────────────────────────────────────────────── */
+
+.drop-zone {
+    -fx-border-color: #1e408080;
+    -fx-border-width: 2;
+    -fx-border-style: dashed;
+    -fx-border-radius: 14;
+    -fx-background-color: #07152c;
+    -fx-background-radius: 14;
+    -fx-padding: 28;
+}
+
+.drop-zone.drag-over {
+    -fx-border-color: #f5a201;
+    -fx-background-color: #0e2040;
+}
+
+.drop-zone-label {
+    -fx-font-size: 16;
+    -fx-text-fill: #5a7aaa;
+}
+
+.csv-req-panel {
+    -fx-background-color: #07152c;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e408050;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+/* ── Game UI ─────────────────────────────────────────────────────────────── */
+
+/* Top bar */
+.game-top-bar {
+    -fx-background-color: rgba(5, 8, 24, 0.95);
+    -fx-padding: 10 20 10 16;
+    -fx-border-color: rgba(30, 64, 128, 0.35);
+    -fx-border-width: 0 0 1 0;
+}
+
+.game-app-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-padding: 0 0 0 8;
+}
+
+.game-icon-button {
+    -fx-background-color: rgba(15, 45, 94, 0.70);
+    -fx-text-fill: #7a9fc8;
+    -fx-font-size: 15px;
+    -fx-background-radius: 50%;
+    -fx-min-width: 34px;
+    -fx-min-height: 34px;
+    -fx-max-width: 34px;
+    -fx-max-height: 34px;
+    -fx-border-color: rgba(30, 64, 128, 0.5);
+    -fx-border-radius: 50%;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.game-icon-button:hover {
+    -fx-background-color: rgba(245, 162, 1, 0.20);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: #f5a20150;
+}
+
+/* Stat pills */
+.stat-pill {
+    -fx-background-color: rgba(15, 28, 60, 0.85);
+    -fx-border-color: rgba(30, 64, 128, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6 14 6 14;
+}
+
+.stat-pill-key {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+}
+
+.stat-pill-value {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+}
+
+/* Sub-bar (week + next week) */
+.game-sub-bar {
+    -fx-background-color: rgba(7, 9, 31, 0.80);
+    -fx-padding: 10 24 10 16;
+    -fx-border-color: rgba(30, 64, 128, 0.25);
+    -fx-border-width: 0 0 1 0;
+}
+
+.week-card {
+    -fx-background-color: linear-gradient(to bottom right, #0d26467a, #0a204280);
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 6 16 6 16;
+    -fx-min-width: 60px;
+}
+
+.week-number {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+}
+
+.game-week-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffba42;
+}
+
+.next-week-button {
+    -fx-background-color: linear-gradient(to right, #1a8c40, #22a34e);
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 28 9 28;
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(34, 163, 78, 0.5);
+    -fx-border-width: 1;
+    -fx-border-radius: 8px;
+    -fx-cursor: hand;
+}
+
+.next-week-button:hover {
+    -fx-background-color: linear-gradient(to right, #22a34e, #29c45f);
+}
+
+/* Left panel */
+.game-left-panel {
+    -fx-background-color: rgba(6, 10, 28, 0.95);
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 14 8 14 8;
+}
+
+.game-right-panel {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.game-panel-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7a9fc8;
+    -fx-padding: 4 8 4 8;
+}
+
+.game-search-field {
+    -fx-background-color: rgba(10, 20, 50, 0.80);
+    -fx-border-color: rgba(30, 64, 128, 0.6);
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-text-fill: #e8d8b0;
+    -fx-prompt-text-fill: #344e72;
+    -fx-font-size: 12px;
+    -fx-padding: 6 10 6 10;
+}
+
+.game-search-field:focused {
+    -fx-border-color: #f5a20170;
+}
+
+.game-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.game-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.game-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 6px;
+}
+
+.game-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(30, 64, 128, 0.5);
+    -fx-background-radius: 3px;
+}
+
+.game-stock-list {
+    -fx-background-color: transparent;
+    -fx-padding: 2 2 2 2;
+}
+
+/* Stock cards */
+.stock-card {
+    -fx-background-color: rgba(12, 24, 52, 0.80);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+}
+
+.stock-card:hover {
+    -fx-background-color: rgba(20, 38, 78, 0.90);
+    -fx-border-color: rgba(245, 162, 1, 0.25);
+}
+
+.stock-card-selected {
+    -fx-background-color: rgba(25, 45, 95, 0.95);
+    -fx-border-color: rgba(245, 162, 1, 0.55);
+}
+
+.stock-card-symbol {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #d4e4f8;
+}
+
+.stock-card-company {
+    -fx-font-size: 10px;
+    -fx-text-fill: #4a6899;
+}
+
+.stock-card-price {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+}
+
+.stock-pct-up {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+    -fx-background-color: rgba(20, 140, 60, 0.20);
+    -fx-background-radius: 4;
+    -fx-padding: 1 5 1 5;
+}
+
+.stock-pct-down {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e05a5a;
+    -fx-background-color: rgba(160, 30, 30, 0.20);
+    -fx-background-radius: 4;
+    -fx-padding: 1 5 1 5;
+}
+
+/* Detail panel */
+.game-detail-area {
+    -fx-padding: 0;
+}
+
+.game-detail-header {
+    -fx-background-color: rgba(8, 14, 36, 0.92);
+    -fx-padding: 20 24 16 24;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 0 0 1 0;
+}
+
+.detail-symbol {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+}
+
+.detail-company {
+    -fx-font-size: 12px;
+    -fx-text-fill: #4a6899;
+}
+
+.detail-price {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+}
+
+.detail-badge-up {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+    -fx-background-color: rgba(20, 140, 60, 0.25);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(20, 140, 60, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 3 10 3 10;
+}
+
+.detail-badge-down {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e05a5a;
+    -fx-background-color: rgba(160, 30, 30, 0.25);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(160, 30, 30, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 3 10 3 10;
+}
+
+.stat-hl-value-up {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.stat-hl-value-down {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e05a5a;
+}
+
+/* Trade panel */
+.trade-panel {
+    -fx-background-color: rgba(12, 22, 50, 0.80);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(245, 162, 1, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 12 16 12 16;
+    -fx-spacing: 8;
+}
+
+.trade-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+}
+
+/* Buy / Sell buttons */
+.buy-button {
+    -fx-background-color: linear-gradient(to bottom, #19813cb9, #15703380);
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 18 6 18;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.buy-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #19813c, #15703380);
+}
+
+.sell-button {
+    -fx-background-color: linear-gradient(to bottom, #8a1c1cd5, #7a181880);
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 18 6 18;
+    -fx-background-radius: 6px;
+    -fx-border-color: rgba(200, 40, 40, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.sell-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #8a1c1c, #7a1818);
+}
+
+/* Portfolio table */
+.game-table {
+    -fx-background-color: transparent, transparent;
+    -fx-control-inner-background: rgba(8, 14, 36, 0.92);
+    -fx-control-inner-background-alt: rgba(11, 20, 46, 0.92);
+    -fx-table-cell-border-color: rgba(30, 64, 128, 0.18);
+    -fx-selection-bar: rgba(245, 162, 1, 0.18);
+    -fx-selection-bar-non-focused: rgba(245, 162, 1, 0.09);
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 1 0 0 0;
+}
+
+.game-table .column-header-background {
+    -fx-background-color: rgba(5, 8, 24, 0.95);
+}
+
+.game-table .column-header,
+.game-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(30, 64, 128, 0.35);
+    -fx-border-width: 0 0 1 0;
+    -fx-size: 30px;
+}
+
+.game-table .column-header .label {
+    -fx-text-fill: #4a6899;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-alignment: center-left;
+}
+
+.game-table .table-row-cell:filled {
+    -fx-background-color: rgba(8, 14, 36, 0.92);
+    -fx-border-color: transparent;
+}
+
+.game-table .table-row-cell:filled:odd {
+    -fx-background-color: rgba(11, 20, 46, 0.92);
+}
+
+.game-table .table-row-cell:filled:selected {
+    -fx-background-color: rgba(245, 162, 1, 0.16);
+}
+
+.game-table .table-row-cell:filled:selected .table-cell {
+    -fx-text-fill: #ffdb88;
+}
+
+.game-table .table-row-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.game-table .table-cell {
+    -fx-text-fill: #c8d8ee;
+    -fx-font-size: 11px;
+    -fx-padding: 4 6 4 6;
+    -fx-border-color: transparent;
+}
+
+.game-table .placeholder .label {
+    -fx-text-fill: #344e72;
+}
+
+/* Stat keys (reused in multiple places) */
+.game-stat-key {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #344e72;
+}
+
+/* ── Large trade action buttons (BUY / SELL in detail panel) ────────────── */
+
+.trade-buy-button {
+    -fx-background-color: linear-gradient(to bottom, #1a8c40, #135e2b);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(34, 163, 78, 0.55);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 12 20 12 20;
+    -fx-cursor: hand;
+}
+
+.trade-buy-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #22a34e, #1a8c40);
+    -fx-border-color: rgba(34, 163, 78, 0.80);
+}
+
+.trade-sell-button {
+    -fx-background-color: linear-gradient(to bottom, #8a1c1c, #6b1414);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(200, 40, 40, 0.55);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 12 20 12 20;
+    -fx-cursor: hand;
+}
+
+.trade-sell-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #a82222, #8a1c1c);
+    -fx-border-color: rgba(200, 40, 40, 0.80);
+}
+
+.trade-btn-icon {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.trade-btn-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.trade-button-amount {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255, 255, 255, 0.75);
+}
+
+
