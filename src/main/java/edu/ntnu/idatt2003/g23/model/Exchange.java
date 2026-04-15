@@ -10,9 +10,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 import edu.ntnu.idatt2003.g23.io.StockCsvExporter;
-import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
-import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
+import edu.ntnu.idatt2003.g23.model.transaction.TransactionFactory;
 
 /**
  * Class representing a stock exchange.
@@ -124,7 +123,7 @@ public class Exchange {
         Stock stock = getStock(symbol);
         BigDecimal currentPrice = stock.getSalesPrice();
         Share share = new Share(stock, quantity, currentPrice);
-        return new Purchase(share, this.week);
+        return TransactionFactory.createPurchase(share, this.week);
     }
 
     /**
@@ -141,7 +140,10 @@ public class Exchange {
             throw new IllegalArgumentException("Player cannot be null");
         }
 
-        return new Sale(share, this.week);
+        Stock stock = share.getStock();
+        BigDecimal currentPrice = stock.getSalesPrice();
+        Share sellShare = new Share(stock, share.getQuantity(), currentPrice);
+        return TransactionFactory.createSale(sellShare, this.week);
     }
 
     /**
