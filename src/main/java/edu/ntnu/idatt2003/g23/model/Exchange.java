@@ -26,6 +26,23 @@ public class Exchange {
     private Random random;
 
     /**
+     * Transition weight matrix for volatility phases.
+     * Rows/columns ordered by Volatility.ordinal():
+     * 0=STABLE, 1=FAST, 2=CHAOTIC, 3=SLOW_RISE, 4=SLOW_FALL, 5=NORMAL_RISE, 6=NORMAL_FALL
+     * Higher weight = more likely transition. Diagonal is 0 (no self-transition).
+     */
+    private static final double[][] VOLATILITY_TRANSITIONS = {
+        //       ST    FA    CH    SR    SF    NR    NF
+        /* ST */ {  0,   5,   2,  30,  30,  15,  15 },
+        /* FA */ {  8,   0,  10,   5,   5,  25,  25 },
+        /* CH */ {  5,  35,   0,   5,   5,   8,   8 },
+        /* SR */ { 20,   5,   3,   0,  12,  35,   5 },
+        /* SF */ { 20,   5,   3,  12,   0,   5,  35 },
+        /* NR */ { 10,  18,   3,  28,   5,   0,   8 },
+        /* NF */ { 10,  18,   3,   5,  28,   8,   0 },
+    };
+
+    /**
      * Constructor for Exchange
      * @param name of the exchange
      * @param stocks available on the exchange
@@ -202,6 +219,27 @@ public class Exchange {
             BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
             stock.addNewSalesPrice(newPrice);
         }
+
+        // Per-stock volatility phase transitions — each stock independently has ~25% chance to shift phase each week
+        for (Stock s : stockMap.values()) {
+            if (random.nextDouble() < 0.25) {
+                s.setVolatility(pickNextVolatility(s.getVolatility()));
+            }
+        }
+    }
+
+    private Volatility pickNextVolatility(Volatility current) {
+        double[] weights = VOLATILITY_TRANSITIONS[current.ordinal()];
+        double total = 0;
+        for (double w : weights) total += w;
+        double pick = random.nextDouble() * total;
+        double cumulative = 0;
+        Volatility[] vals = Volatility.values();
+        for (int i = 0; i < weights.length; i++) {
+            cumulative += weights[i];
+            if (pick < cumulative) return vals[i];
+        }
+        return vals[0];
     }
 
     /**

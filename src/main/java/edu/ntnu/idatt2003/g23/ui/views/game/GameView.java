@@ -45,8 +45,16 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.GaussianBlur;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+import java.util.function.Consumer;
 
 public final class GameView {
 
@@ -251,7 +259,20 @@ public final class GameView {
 
         Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
         marketMoversBtn.getStyleClass().add("market-movers-button");
-        marketMoversBtn.setOnAction(e -> showMarketMovers(overlayRef[0], exchange, rootRef[0]));
+        marketMoversBtn.setOnAction(e -> {
+            Consumer<Stock> selectStock = s -> {
+                String sym = s.getSymbol();
+                if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
+                    searchField.setText("");
+                }
+                Stock target = allStocks.stream()
+                        .filter(st -> st.getSymbol().equals(sym))
+                        .findFirst().orElse(s);
+                selectedStock.set(target);
+                focusStockCardInList(sym, stockListBox, selectedCardRef, stockScroll);
+            };
+            showMarketMovers(overlayRef[0], exchange, rootRef[0], selectStock);
+        });
         VBox nextWeekStack = new VBox(2, calmDownLbl, nextWeekBtn);
         nextWeekStack.setAlignment(Pos.BOTTOM_CENTER);
         Region subSpacer = new Region(); HBox.setHgrow(subSpacer, Priority.ALWAYS);
@@ -698,8 +719,7 @@ public final class GameView {
         VBox tradePanel = new VBox(0, tradeRow);
         tradePanel.getStyleClass().add("trade-panel");
 
-        Region graphPlaceholder = new Region();
-        graphPlaceholder.getStyleClass().add("price-chart-placeholder");
+        Pane graphPlaceholder = buildPriceChart(stock, player);
         VBox.setVgrow(graphPlaceholder, Priority.ALWAYS);
 
         VBox header = new VBox(4, sym, comp, priceRow, hlRow, graphPlaceholder, tradePanel);
@@ -1123,7 +1143,7 @@ public final class GameView {
         overlay.getChildren().add(popup);
     }
 
-    private static void showMarketMovers(StackPane overlay, Exchange exchange, Node background) {
+    private static void showMarketMovers(StackPane overlay, Exchange exchange, Node background, Consumer<Stock> onSelectStock) {
         List<Stock> all = exchange.getStocks();
         List<Stock> gainers = all.stream()
                 .sorted((a, b) -> pctChange(b).compareTo(pctChange(a)))
@@ -1149,8 +1169,9 @@ public final class GameView {
         titleRow.getStyleClass().add("market-movers-header");
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
-        VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true);
-        VBox losersCol  = buildMoversColumn("\u25BC  TOP LOSERS",  losers,  false);
+        Runnable[] dismissRef = {null};
+        VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true, dismissRef, onSelectStock);
+        VBox losersCol  = buildMoversColumn("\u25BC  TOP LOSERS",  losers,  false, dismissRef, onSelectStock);
         HBox.setHgrow(gainersCol, Priority.ALWAYS);
         HBox.setHgrow(losersCol,  Priority.ALWAYS);
         HBox columns = new HBox(0, gainersCol, losersCol);
@@ -1192,14 +1213,17 @@ public final class GameView {
                 background.setEffect(null);
             });
         };
+        dismissRef[0] = dismiss;
 
         closeBtn.setOnAction(ev -> dismiss.run());
         dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
     }
 
-    private static VBox buildMoversColumn(String title, List<Stock> stocks, boolean isGainers) {
+    private static VBox buildMoversColumn(String title, List<Stock> stocks, boolean isGainers,
+                                           Runnable[] dismissRef, Consumer<Stock> onSelectStock) {
         Label colTitle = new Label(title);
         colTitle.getStyleClass().add("market-movers-col-title");
+        colTitle.getStyleClass().add(isGainers ? "market-movers-col-title-gainers" : "market-movers-col-title-losers");
 
         VBox rows = new VBox(0);
         for (int i = 0; i < stocks.size(); i++) {
@@ -1209,6 +1233,9 @@ public final class GameView {
 
             Label rankLbl = new Label("#" + (i + 1));
             rankLbl.getStyleClass().add("movers-rank");
+            if (i == 0)      rankLbl.getStyleClass().add("movers-rank-gold");
+            else if (i == 1) rankLbl.getStyleClass().add("movers-rank-silver");
+            else if (i == 2) rankLbl.getStyleClass().add("movers-rank-bronze");
 
             Label symLbl  = new Label(s.getSymbol());
             symLbl.getStyleClass().add("movers-symbol");
@@ -1227,13 +1254,207 @@ public final class GameView {
             HBox.setHgrow(spacer, Priority.ALWAYS);
             HBox row = new HBox(8, rankLbl, textBox, spacer, rightBox);
             row.getStyleClass().add("movers-row");
+            row.getStyleClass().add(isGainers ? "movers-row-up" : "movers-row-down");
             row.setAlignment(Pos.CENTER_LEFT);
+
+            final Stock stockRef = s;
+            row.setOnMouseClicked(ev -> {
+                if (dismissRef[0] != null) dismissRef[0].run();
+                onSelectStock.accept(stockRef);
+            });
+
             rows.getChildren().add(row);
         }
 
         VBox col = new VBox(8, colTitle, rows);
         col.getStyleClass().add("market-movers-col");
+        col.getStyleClass().add(isGainers ? "market-movers-col-gainers" : "market-movers-col-losers");
         return col;
+    }
+
+    private static Pane buildPriceChart(Stock stock, Player player) {
+        Canvas canvas = new Canvas();
+        Pane pane = new Pane(canvas);
+        pane.getStyleClass().add("price-chart-placeholder");
+
+        canvas.widthProperty().bind(pane.widthProperty());
+        canvas.heightProperty().bind(pane.heightProperty());
+
+        List<BigDecimal> prices = stock.getHistoricalPrices();
+
+        record TradeDot(int week, BigDecimal qty, BigDecimal price, boolean isSell) {}
+
+        String sym = stock.getSymbol();
+        List<TradeDot> tradeDots = new ArrayList<>();
+        player.getTransactionArchive().getAllPurchases().stream()
+                .filter(p -> p.getShare().getStock().getSymbol().equals(sym))
+                .map(p -> new TradeDot(p.getWeek(), p.getShare().getQuantity(), p.getShare().getPurchasePrice(), false))
+                .forEach(tradeDots::add);
+        player.getTransactionArchive().getAllSales().stream()
+                .filter(s -> s.getShare().getStock().getSymbol().equals(sym))
+                .map(s -> new TradeDot(s.getWeek(), s.getShare().getQuantity(), s.getShare().getPurchasePrice(), true))
+                .forEach(tradeDots::add);
+
+        // dots: {cx, cy, week, qty, price, type}  type=0 buy, type=1 sell — rebuilt each draw
+        List<double[]> drawnDots = new ArrayList<>();
+
+        // Tooltip node
+        VBox tooltip = new VBox(3);
+        tooltip.getStyleClass().add("chart-tooltip");
+        tooltip.setVisible(false);
+        tooltip.setMouseTransparent(true);
+        pane.getChildren().add(tooltip);
+
+        Runnable draw = () -> {
+            double w = canvas.getWidth();
+            double h = canvas.getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            GraphicsContext gc = canvas.getGraphicsContext2D();
+            gc.clearRect(0, 0, w, h);
+            drawnDots.clear();
+
+            if (prices == null || prices.size() < 2) {
+                gc.setFill(Color.web("#4a6899", 0.55));
+                gc.setFont(javafx.scene.text.Font.font(12));
+                gc.fillText("No price history yet", w / 2 - 60, h / 2);
+                return;
+            }
+
+            BigDecimal minVal = prices.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            BigDecimal maxVal = prices.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ONE);
+            BigDecimal range  = maxVal.subtract(minVal);
+            if (range.compareTo(BigDecimal.ZERO) == 0) range = BigDecimal.ONE;
+
+            double padL = 10, padR = 10, padT = 14, padB = 10;
+            double cW = w - padL - padR;
+            double cH = h - padT - padB;
+
+            boolean up = prices.get(prices.size() - 1).compareTo(prices.get(0)) >= 0;
+            String lineHex = up ? "#4ecb71" : "#e05a5a";
+
+            // Horizontal grid lines
+            gc.setStroke(Color.web("#1e4080", 0.22));
+            gc.setLineWidth(1);
+            for (int g = 1; g < 4; g++) {
+                double y = padT + (cH * g / 4.0);
+                gc.strokeLine(padL, y, padL + cW, y);
+            }
+
+            int n = prices.size();
+            double[] xs = new double[n];
+            double[] ys = new double[n];
+            double innerH   = cH * 0.82;
+            double innerOff = cH * 0.09;
+            for (int i = 0; i < n; i++) {
+                xs[i] = padL + (n == 1 ? 0 : (i / (double)(n - 1)) * cW);
+                double norm = prices.get(i).subtract(minVal).divide(range, 6, RoundingMode.HALF_UP).doubleValue();
+                ys[i] = padT + innerH + innerOff - (norm * innerH);
+            }
+
+            // Gradient fill under the line
+            LinearGradient fillGrad = new LinearGradient(0, padT, 0, padT + cH, false, CycleMethod.NO_CYCLE,
+                    new Stop(0, Color.web(lineHex, 0.28)),
+                    new Stop(1, Color.web(lineHex, 0.03)));
+            gc.setFill(fillGrad);
+            gc.beginPath();
+            gc.moveTo(xs[0], padT + cH);
+            gc.lineTo(xs[0], ys[0]);
+            for (int i = 1; i < n; i++) gc.lineTo(xs[i], ys[i]);
+            gc.lineTo(xs[n - 1], padT + cH);
+            gc.closePath();
+            gc.fill();
+
+            // Line
+            gc.setStroke(Color.web(lineHex, 0.90));
+            gc.setLineWidth(2);
+            gc.beginPath();
+            gc.moveTo(xs[0], ys[0]);
+            for (int i = 1; i < n; i++) gc.lineTo(xs[i], ys[i]);
+            gc.stroke();
+
+            // Trade dots — buys first (behind), then sells (on top)
+            for (int pass = 0; pass < 2; pass++) {
+                boolean drawingSells = (pass == 1);
+                for (TradeDot dot : tradeDots) {
+                    if (dot.isSell() != drawingSells) continue;
+                    int idx = dot.week() - 1;
+                    if (idx < 0 || idx >= n) continue;
+                    double cx = xs[idx], cy = ys[idx];
+                    if (dot.isSell()) {
+                        // Red halo + dot for sells
+                        gc.setFill(Color.web("#e05a5a", 0.28));
+                        gc.fillOval(cx - 7, cy - 7, 14, 14);
+                        gc.setFill(Color.web("#e05a5a"));
+                        gc.fillOval(cx - 4, cy - 4, 8, 8);
+                    } else {
+                        // Amber halo + dot for buys
+                        gc.setFill(Color.web("#f5a201", 0.30));
+                        gc.fillOval(cx - 7, cy - 7, 14, 14);
+                        gc.setFill(Color.web("#f5a201"));
+                        gc.fillOval(cx - 4, cy - 4, 8, 8);
+                    }
+                    drawnDots.add(new double[]{cx, cy, dot.week(), dot.qty().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
+                }
+            }
+
+            // Last price dot
+            double lx = xs[n - 1], ly = ys[n - 1];
+            gc.setFill(Color.web(lineHex));
+            gc.fillOval(lx - 3.5, ly - 3.5, 7, 7);
+
+            // Last price label
+            String lastTxt = fmt(prices.get(n - 1));
+            double lblX = Math.min(lx + 8, w - lastTxt.length() * 6.5);
+            gc.setFill(Color.web("#e8d8b0", 0.85));
+            gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
+            gc.fillText(lastTxt, lblX, ly + 4);
+        };
+
+        // Hover: show tooltip near any trade dot
+        pane.setOnMouseMoved(e -> {
+            double mx = e.getX(), my = e.getY();
+            double[] hit = null;
+            for (double[] dot : drawnDots) {
+                double dx = mx - dot[0], dy = my - dot[1];
+                if (dx * dx + dy * dy <= 64) { hit = dot; break; }
+            }
+            if (hit != null) {
+                final double[] h = hit;
+                boolean isSell = h[5] == 1;
+                tooltip.getChildren().clear();
+                Label weekLbl = new Label((isSell ? "Sold" : "Bought") + " · Week " + (int) h[2]);
+                weekLbl.getStyleClass().add(isSell ? "chart-tooltip-sell-week" : "chart-tooltip-week");
+                Label qtyLbl = new Label("Qty: " + BigDecimal.valueOf(h[3]).stripTrailingZeros().toPlainString());
+                qtyLbl.getStyleClass().add("chart-tooltip-row");
+                Label priceLbl = new Label("Price: " + fmt(BigDecimal.valueOf(h[4])));
+                priceLbl.getStyleClass().add("chart-tooltip-row");
+                tooltip.getChildren().addAll(weekLbl, qtyLbl, priceLbl);
+                if (!isSell) {
+                    BigDecimal gain = stock.getSalesPrice().subtract(BigDecimal.valueOf(h[4]))
+                            .multiply(BigDecimal.valueOf(h[3]));
+                    String sign = gain.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+                    Label gainLbl = new Label("P&L: " + sign + fmt(gain));
+                    gainLbl.getStyleClass().add(gain.compareTo(BigDecimal.ZERO) >= 0 ? "chart-tooltip-gain" : "chart-tooltip-loss");
+                    tooltip.getChildren().add(gainLbl);
+                }
+                double tx = h[0] + 12;
+                double ty = h[1] - 70;
+                if (ty < 4) ty = h[1] + 14;
+                if (tx + 150 > pane.getWidth()) tx = h[0] - 155;
+                tooltip.setLayoutX(tx);
+                tooltip.setLayoutY(ty);
+                tooltip.setVisible(true);
+            } else {
+                tooltip.setVisible(false);
+            }
+        });
+        pane.setOnMouseExited(e -> tooltip.setVisible(false));
+
+        canvas.widthProperty().addListener((obs, o, nv) -> draw.run());
+        canvas.heightProperty().addListener((obs, o, nv) -> draw.run());
+        Platform.runLater(draw);
+        return pane;
     }
 
     private static void showError(String message) {
