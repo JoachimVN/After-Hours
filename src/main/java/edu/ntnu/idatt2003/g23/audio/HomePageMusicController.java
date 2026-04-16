@@ -13,7 +13,7 @@ import javafx.util.Duration;
 
 public class HomePageMusicController {
 
-    private static final String HOME_PAGE_MUSIC = "/audio/music/idatt2003_sound_test2.mp3";
+    private static final String HOME_PAGE_MUSIC = "/audio/music/After_Hours_Theme.mp3";
     private static final List<String> AMBIENCE_TRACKS = List.of(
             "/audio/music/ambience/After_Hours_Ambience2_demo.mp3",
             "/audio/music/ambience/After_Hours_Ambience1_demo.mp3"
