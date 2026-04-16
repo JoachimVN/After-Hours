@@ -3,12 +3,15 @@ package edu.ntnu.idatt2003.g23.ui.views.game;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -25,6 +28,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
@@ -40,13 +44,14 @@ public final class GameView {
 
     public static StackPane build(Runnable onBack, Runnable onSettings,
                                    Player player, Exchange exchange) {
+    GameController gameController = new GameController(player);
 
         StackPane[] overlayRef = {null};
 
         // ── Observable data ──────────────────────────────────────────────────
         ObservableList<Stock> allStocks        = FXCollections.observableArrayList(exchange.getStocks());
         FilteredList<Stock>   filteredStocks   = new FilteredList<>(allStocks, s -> true);
-        ObservableList<Share> portfolioItems   = FXCollections.observableArrayList(player.getPortfolio().getShares());
+        ObservableList<Share> portfolioItems   = FXCollections.observableArrayList(gameController.getOwnedShares());
         ObjectProperty<Stock> selectedStock    = new SimpleObjectProperty<>(allStocks.isEmpty() ? null : allStocks.get(0));
 
         // ── Stat pill labels ─────────────────────────────────────────────────
@@ -76,22 +81,22 @@ public final class GameView {
             cashVal.setText(fmt(player.getMoney()));
             portVal.setText(fmt(player.getPortfolio().getNetWorth()));
             nwVal.setText(fmt(player.getNetWorth()));
-            portfolioItems.setAll(player.getPortfolio().getShares());
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, refreshRef);
-            rebuildDetail(detailArea, selectedStock.get(), player, exchange, portfolioItems, refreshRef, overlayRef);
+            portfolioItems.setAll(gameController.getOwnedShares());
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
+            rebuildDetail(detailArea, selectedStock.get(), player, exchange, refreshRef, overlayRef);
         };
 
         // Initial stock list population
-        rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, refreshRef);
+        rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
 
         // Rebuild detail when selection changes
         selectedStock.addListener((obs, old, stock) -> {
-            rebuildDetail(detailArea, stock, player, exchange, portfolioItems, refreshRef, overlayRef);
+            rebuildDetail(detailArea, stock, player, exchange, refreshRef, overlayRef);
         });
 
         // Show detail immediately for first stock
         if (selectedStock.get() != null) {
-            rebuildDetail(detailArea, selectedStock.get(), player, exchange, portfolioItems, refreshRef, overlayRef);
+            rebuildDetail(detailArea, selectedStock.get(), player, exchange, refreshRef, overlayRef);
         }
 
         // ── Search field ─────────────────────────────────────────────────────
@@ -104,7 +109,7 @@ public final class GameView {
                     lower.isEmpty()
                     || s.getSymbol().toLowerCase().contains(lower)
                     || s.getCompany().toLowerCase().contains(lower));
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, refreshRef);
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
         });
 
         Label marketTitle = new Label("Market Stocks");
@@ -126,7 +131,25 @@ public final class GameView {
         Label portTitle = new Label("Portfolio");
         portTitle.getStyleClass().add("game-panel-title");
 
-        TableView<Share> portfolioTable = buildPortfolioTable(portfolioItems, player, exchange, refreshRef);
+        TableView<Share> portfolioTable = buildPortfolioTable(portfolioItems, selectedShareStock -> {
+            if (selectedShareStock == null) {
+                return;
+            }
+
+            String symbol = selectedShareStock.getSymbol();
+            boolean existsInFiltered = filteredStocks.stream().anyMatch(s -> s.getSymbol().equals(symbol));
+            if (!existsInFiltered) {
+                searchField.setText("");
+            }
+
+            Stock target = allStocks.stream()
+                    .filter(s -> s.getSymbol().equals(symbol))
+                    .findFirst()
+                    .orElse(selectedShareStock);
+
+            selectedStock.set(target);
+            focusStockCardInList(symbol, stockListBox, selectedCardRef, stockScroll);
+        });
         portfolioTable.setPrefHeight(180);
         portfolioTable.setMaxHeight(220);
 
@@ -153,8 +176,45 @@ public final class GameView {
             refreshRef[0].run();
         });
 
+        Button sellAllHoldingsBtn = new Button("\u2198  Sell All Holdings");
+        sellAllHoldingsBtn.getStyleClass().addAll("next-week-button", "sell-all-holdings-button");
+        sellAllHoldingsBtn.setOnAction(e -> {
+            BigDecimal totalOwnedQty = player.getPortfolio().getShares().stream()
+                    .map(Share::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (totalOwnedQty.compareTo(BigDecimal.ZERO) <= 0) {
+                showError("You don't own any shares to sell.");
+                return;
+            }
+
+            BigDecimal[] preview = previewSellAll(player);
+            showBulkTradeConfirm(overlayRef[0],
+                    "SELL ALL HOLDINGS",
+                    preview[4],
+                    preview[0],
+                    preview[1],
+                    preview[2],
+                    preview[3],
+                    () -> {
+                        try {
+                            BigDecimal[] result = executeSellAll(player, exchange);
+                            showBulkReceipt(overlayRef[0],
+                                    "SELL ALL HOLDINGS",
+                                    result[4],
+                                    result[3],
+                                    result[1],
+                                    result[2],
+                                    player.getMoney());
+                            refreshRef[0].run();
+                        } catch (Exception ex) {
+                            showError(ex.getMessage());
+                        }
+                    });
+        });
+
         Region subSpacer = new Region(); HBox.setHgrow(subSpacer, Priority.ALWAYS);
-        HBox subBar = new HBox(16, weekCard, nextWeekBtn, subSpacer);
+        HBox subBar = new HBox(16, weekCard, nextWeekBtn, sellAllHoldingsBtn, subSpacer);
         subBar.getStyleClass().add("game-sub-bar");
         subBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -205,17 +265,17 @@ public final class GameView {
     private static void rebuildStockList(VBox box, FilteredList<Stock> stocks,
                                          ObjectProperty<Stock> selectedStock,
                                          Node[] selectedCardRef,
-                                         Runnable[] refreshRef) {
+                                         Player player) {
         box.getChildren().clear();
         selectedCardRef[0] = null;
         for (Stock stock : stocks) {
-            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, refreshRef));
+            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, player));
         }
     }
 
     private static Node buildStockCard(Stock stock, ObjectProperty<Stock> selectedStock,
                                         Node[] selectedCardRef,
-                                        Runnable[] refreshRef) {
+                                        Player player) {
         Label symLbl    = new Label(stock.getSymbol());
         symLbl.getStyleClass().add("stock-card-symbol");
 
@@ -230,7 +290,20 @@ public final class GameView {
         Label pctLbl    = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
         pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
 
-        VBox left  = new VBox(2, symLbl, compLbl, pctLbl);
+        BigDecimal ownedQty = player.getPortfolio().getShareBySymbol(stock.getSymbol())
+                .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+        Label ownedLbl = null;
+        if (ownedQty.compareTo(BigDecimal.ZERO) > 0) {
+            ownedLbl = new Label("Owned: " + ownedQty.stripTrailingZeros().toPlainString());
+            ownedLbl.getStyleClass().add("stock-owned-label");
+        }
+
+        VBox left;
+        if (ownedLbl != null) {
+            left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl);
+        } else {
+            left = new VBox(2, symLbl, compLbl, pctLbl);
+        }
         VBox right = new VBox();
         right.setAlignment(Pos.TOP_RIGHT);
         right.getChildren().add(priceLbl);
@@ -240,6 +313,7 @@ public final class GameView {
         card.getStyleClass().add("stock-card");
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(12, 14, 12, 14));
+        card.setUserData(stock.getSymbol());
 
         if (stock.equals(selectedStock.get())) {
             card.getStyleClass().add("stock-card-selected");
@@ -259,10 +333,31 @@ public final class GameView {
         return card;
     }
 
+    private static void focusStockCardInList(String symbol, VBox stockListBox, Node[] selectedCardRef, ScrollPane stockScroll) {
+        Platform.runLater(() -> {
+            int total = stockListBox.getChildren().size();
+            for (int i = 0; i < total; i++) {
+                Node n = stockListBox.getChildren().get(i);
+                Object data = n.getUserData();
+                if (data instanceof String cardSymbol && cardSymbol.equals(symbol)) {
+                    if (selectedCardRef[0] != null) {
+                        selectedCardRef[0].getStyleClass().remove("stock-card-selected");
+                    }
+                    if (!n.getStyleClass().contains("stock-card-selected")) {
+                        n.getStyleClass().add("stock-card-selected");
+                    }
+                    selectedCardRef[0] = n;
+                    stockScroll.setVvalue(total <= 1 ? 0 : (double) i / (double) (total - 1));
+                    break;
+                }
+            }
+        });
+    }
+
     // ── Detail panel builder ──────────────────────────────────────────────────
 
     private static void rebuildDetail(VBox area, Stock stock, Player player, Exchange exchange,
-                                       ObservableList<Share> portfolioItems, Runnable[] refreshRef,
+                                       Runnable[] refreshRef,
                                        StackPane[] overlayRef) {
         area.getChildren().clear();
         if (stock == null) return;
@@ -296,14 +391,54 @@ public final class GameView {
         Button incBtn = new Button("+");
         incBtn.getStyleClass().add("trade-qty-btn");
 
+        TextField amountField = new TextField();
+        amountField.setPromptText("Enter amount ($)");
+        amountField.getStyleClass().add("trade-amount-field");
+        Button maxBuyBtn = new Button("MAX BUY");
+        maxBuyBtn.getStyleClass().add("trade-max-buy-button");
+        Button maxSellBtn = new Button("MAX SELL");
+        maxSellBtn.getStyleClass().add("trade-max-sell-button");
+
+        final boolean[] syncingFields = {false};
+        final boolean[] amountTracksSell = {false};
+
+        final Runnable normalizeQtyAndAmount = () -> {
+            BigDecimal unitCostWithFee = stock.getSalesPrice().multiply(new BigDecimal("1.005"));
+
+            int qty;
+            try {
+                qty = Integer.parseInt(qtyField.getText().trim());
+            } catch (NumberFormatException ex) {
+                qty = 1;
+            }
+            if (qty < 0) {
+                qty = 0;
+            }
+
+            syncingFields[0] = true;
+            qtyField.setText(String.valueOf(qty));
+            amountField.setText(unitCostWithFee.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP).toPlainString());
+            syncingFields[0] = false;
+        };
+
         decBtn.setOnAction(e -> {
-            try { int v = Math.max(1, Integer.parseInt(qtyField.getText().trim()) - 1);
-                  qtyField.setText(String.valueOf(v)); }
-            catch (NumberFormatException ignored) { qtyField.setText("1"); }
+            amountTracksSell[0] = false;
+            try {
+                int v = Math.max(0, Integer.parseInt(qtyField.getText().trim()) - 1);
+                qtyField.setText(String.valueOf(v));
+            } catch (NumberFormatException ignored) {
+                qtyField.setText("1");
+            }
+            normalizeQtyAndAmount.run();
         });
         incBtn.setOnAction(e -> {
-            try { qtyField.setText(String.valueOf(Integer.parseInt(qtyField.getText().trim()) + 1)); }
-            catch (NumberFormatException ignored) { qtyField.setText("1"); }
+            amountTracksSell[0] = false;
+            try {
+                qtyField.setText(String.valueOf(Integer.parseInt(qtyField.getText().trim()) + 1));
+            } catch (NumberFormatException ignored) {
+                qtyField.setText("1");
+            }
+            normalizeQtyAndAmount.run();
         });
 
         HBox stepper = new HBox(0, decBtn, qtyField, incBtn);
@@ -318,22 +453,116 @@ public final class GameView {
 
         // Both labels track the qty field
         final Runnable updateBuyAmount = () -> {
-            BigDecimal qty;
-            try { qty = new BigDecimal(qtyField.getText().trim()); }
+            int qty;
+            try { qty = Integer.parseInt(qtyField.getText().trim()); }
             catch (NumberFormatException ex) { buyAmountLbl.setText("\u2014"); return; }
-            buyAmountLbl.setText(fmt(stock.getSalesPrice().multiply(qty)
+            if (qty < 1) {
+                buyAmountLbl.setText("\u2014");
+                return;
+            }
+            buyAmountLbl.setText(fmt(stock.getSalesPrice().multiply(BigDecimal.valueOf(qty))
                     .multiply(new BigDecimal("1.005"))));
         };
         final Runnable updateSellAmount = () -> {
-            BigDecimal qty;
-            try { qty = new BigDecimal(qtyField.getText().trim()); }
+            int qty;
+            try { qty = Integer.parseInt(qtyField.getText().trim()); }
             catch (NumberFormatException ex) { sellAmountLbl.setText("\u2014"); return; }
-            BigDecimal[] p = previewSell(player, stock, qty);
+            if (qty < 1) {
+                sellAmountLbl.setText("\u2014");
+                return;
+            }
+            BigDecimal[] p = previewSell(player, stock, BigDecimal.valueOf(qty));
             sellAmountLbl.setText(p == null ? "\u2014" : fmt(p[3]));
         };
+        final Runnable applyMaxForBuy = () -> {
+            BigDecimal unitCostWithFee = stock.getSalesPrice().multiply(new BigDecimal("1.005"));
+            int maxBuyQty = player.getMoney().divide(unitCostWithFee, 0, RoundingMode.DOWN).intValue();
+            maxBuyQty = Math.max(0, maxBuyQty);
+            amountTracksSell[0] = false;
+            syncingFields[0] = true;
+                qtyField.setText(String.valueOf(maxBuyQty));
+                amountField.setText(unitCostWithFee.multiply(BigDecimal.valueOf(maxBuyQty))
+                    .setScale(2, RoundingMode.HALF_UP).toPlainString());
+            syncingFields[0] = false;
+            updateBuyAmount.run();
+            updateSellAmount.run();
+        };
+        final Runnable applyMaxForSell = () -> {
+            BigDecimal totalOwned = player.getPortfolio().getShareBySymbol(stock.getSymbol())
+                    .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+            int maxSellQty = totalOwned.setScale(0, RoundingMode.DOWN).intValue();
+            maxSellQty = Math.max(0, maxSellQty);
+            amountTracksSell[0] = true;
+            syncingFields[0] = true;
+                qtyField.setText(String.valueOf(maxSellQty));
+                BigDecimal[] sellPreview = previewSell(player, stock, BigDecimal.valueOf(maxSellQty));
+                amountField.setText((sellPreview == null ? BigDecimal.ZERO : sellPreview[3])
+                        .setScale(2, RoundingMode.HALF_UP).toPlainString());
+            syncingFields[0] = false;
+            updateBuyAmount.run();
+            updateSellAmount.run();
+        };
+
+        maxBuyBtn.setOnAction(e -> applyMaxForBuy.run());
+        maxSellBtn.setOnAction(e -> applyMaxForSell.run());
+
         updateBuyAmount.run();
         updateSellAmount.run();
-        qtyField.textProperty().addListener((obs, old, val) -> { updateBuyAmount.run(); updateSellAmount.run(); });
+        qtyField.textProperty().addListener((obs, old, val) -> {
+            if (syncingFields[0]) {
+                return;
+            }
+            int qty;
+            try {
+                qty = Integer.parseInt(val.trim());
+            } catch (NumberFormatException ex) {
+                qty = 1;
+            }
+            qty = Math.max(0, qty);
+            syncingFields[0] = true;
+            qtyField.setText(String.valueOf(qty));
+            if (amountTracksSell[0]) {
+                BigDecimal[] sellPreview = previewSell(player, stock, BigDecimal.valueOf(qty));
+                amountField.setText((sellPreview == null ? BigDecimal.ZERO : sellPreview[3])
+                        .setScale(2, RoundingMode.HALF_UP).toPlainString());
+            } else {
+                amountField.setText(stock.getSalesPrice().multiply(new BigDecimal("1.005")).multiply(BigDecimal.valueOf(qty))
+                        .setScale(2, RoundingMode.HALF_UP).toPlainString());
+            }
+            syncingFields[0] = false;
+            updateBuyAmount.run();
+            updateSellAmount.run();
+        });
+        amountField.textProperty().addListener((obs, old, val) -> {
+            if (syncingFields[0]) {
+                return;
+            }
+            amountTracksSell[0] = false;
+            BigDecimal amount;
+            try {
+                amount = new BigDecimal(val.trim());
+            } catch (NumberFormatException ex) {
+                return;
+            }
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                syncingFields[0] = true;
+                qtyField.setText("0");
+                amountField.setText("0.00");
+                syncingFields[0] = false;
+                updateBuyAmount.run();
+                updateSellAmount.run();
+                return;
+            }
+            BigDecimal unitCostWithFee = stock.getSalesPrice().multiply(new BigDecimal("1.005"));
+            int qty = amount.divide(unitCostWithFee, 0, RoundingMode.DOWN).intValue();
+            qty = Math.max(0, qty);
+            syncingFields[0] = true;
+            qtyField.setText(String.valueOf(qty));
+            amountField.setText(unitCostWithFee.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP).toPlainString());
+            syncingFields[0] = false;
+            updateBuyAmount.run();
+            updateSellAmount.run();
+        });
 
         // ── BUY button (primary — flex) ────────────────────────────────────────
         Label buyTopLbl = new Label("\u2197  BUY");
@@ -345,10 +574,16 @@ public final class GameView {
         buyBtn.setGraphic(buyGraphic);
         buyBtn.getStyleClass().add("trade-buy-button");
         buyBtn.setOnAction(e -> {
-            BigDecimal parsedQty;
-            try { parsedQty = new BigDecimal(qtyField.getText().trim()); }
+            int parsedQty;
+            try { parsedQty = Integer.parseInt(qtyField.getText().trim()); }
             catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
-            BigDecimal qty   = parsedQty;
+
+            if (parsedQty < 1) {
+                showError("Quantity must be at least 1 whole share.");
+                return;
+            }
+
+            BigDecimal qty   = BigDecimal.valueOf(parsedQty);
             BigDecimal gross = stock.getSalesPrice().multiply(qty);
             BigDecimal fee   = gross.multiply(new BigDecimal("0.005"));
             BigDecimal total = gross.add(fee);
@@ -372,10 +607,16 @@ public final class GameView {
         sellBtn.setGraphic(sellGraphic);
         sellBtn.getStyleClass().add("trade-sell-button");
         sellBtn.setOnAction(e -> {
-            BigDecimal parsedQty;
-            try { parsedQty = new BigDecimal(qtyField.getText().trim()); }
+            int parsedQty;
+            try { parsedQty = Integer.parseInt(qtyField.getText().trim()); }
             catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
-            BigDecimal sellQty = parsedQty;
+
+            if (parsedQty < 1) {
+                showError("Quantity must be at least 1 whole share.");
+                return;
+            }
+
+            BigDecimal sellQty = BigDecimal.valueOf(parsedQty);
             BigDecimal totalOwned = player.getPortfolio().getShareBySymbol(stock.getSymbol())
                     .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (totalOwned.compareTo(BigDecimal.ZERO) == 0) {
@@ -397,7 +638,18 @@ public final class GameView {
             });
         });
 
-        HBox tradeRow = new HBox(8, stepper, buyBtn, sellBtn);
+        VBox selectorColumn = new VBox(6, stepper, amountField);
+        selectorColumn.getStyleClass().add("trade-selector-column");
+
+        VBox buyColumn = new VBox(6, buyBtn, maxBuyBtn);
+        buyColumn.getStyleClass().add("trade-action-column");
+        buyColumn.getStyleClass().add("trade-buy-column");
+
+        VBox sellColumn = new VBox(6, sellBtn, maxSellBtn);
+        sellColumn.getStyleClass().add("trade-action-column");
+        sellColumn.getStyleClass().add("trade-sell-column");
+
+        HBox tradeRow = new HBox(8, selectorColumn, buyColumn, sellColumn);
         tradeRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox tradePanel = new VBox(0, tradeRow);
@@ -412,21 +664,30 @@ public final class GameView {
 
     // ── Portfolio table ───────────────────────────────────────────────────────
 
-    private static TableView<Share> buildPortfolioTable(ObservableList<Share> items, Player player,
-                                                         Exchange exchange, Runnable[] refreshRef) {
+    private static TableView<Share> buildPortfolioTable(ObservableList<Share> items,
+            java.util.function.Consumer<Stock> onSelectStock) {
         TableView<Share> table = new TableView<>(items);
         table.getStyleClass().add("game-table");
         table.setPlaceholder(new Label("No shares owned yet"));
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        table.setRowFactory(tv -> {
+            TableRow<Share> row = new TableRow<>();
+            row.setOnMouseClicked(e -> {
+                if (!row.isEmpty() && row.getItem() != null) {
+                    onSelectStock.accept(row.getItem().getStock());
+                }
+            });
+            return row;
+        });
 
         TableColumn<Share, String> symCol = col("Symbol", c ->
                 c.getStock().getSymbol(), 70, 85);
         TableColumn<Share, String> qtyCol = col("Qty", c ->
                 c.getQuantity().stripTrailingZeros().toPlainString(), 45, 65);
-        TableColumn<Share, String> boughtCol = col("Bought @", c ->
-                fmt(c.getPurchasePrice()), 85, 110);
-        TableColumn<Share, String> nowCol = col("Now @", c ->
-                fmt(c.getStock().getSalesPrice()), 85, 110);
+        TableColumn<Share, String> boughtCol = col("Bought", c ->
+            fmt(c.getPurchasePrice().multiply(c.getQuantity())), 85, 110);
+        TableColumn<Share, String> nowCol = col("Now", c ->
+            fmt(c.getStock().getSalesPrice().multiply(c.getQuantity())), 85, 110);
 
         TableColumn<Share, String> plCol = new TableColumn<>("P&L");
         plCol.setMinWidth(90);
@@ -447,7 +708,11 @@ public final class GameView {
             }
         });
 
-        table.getColumns().addAll(symCol, qtyCol, boughtCol, nowCol, plCol);
+        table.getColumns().add(symCol);
+        table.getColumns().add(qtyCol);
+        table.getColumns().add(boughtCol);
+        table.getColumns().add(nowCol);
+        table.getColumns().add(plCol);
         return table;
     }
 
@@ -540,7 +805,7 @@ public final class GameView {
 
     private static void showTradeConfirm(StackPane overlay, String action, Stock stock, BigDecimal qty,
             BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total, Runnable onConfirm) {
-        boolean isBuy = "BUY".equals(action);
+        boolean isBuy = action != null && action.startsWith("BUY");
 
         Label iconLbl  = new Label(isBuy ? "\u2197" : "\u2198");
         iconLbl.getStyleClass().add(isBuy ? "dialog-action-icon-buy" : "dialog-action-icon-sell");
@@ -600,7 +865,7 @@ public final class GameView {
 
     private static void showReceipt(StackPane overlay, String action, Stock stock, BigDecimal qty,
             BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
-        boolean isBuy = "BUY".equals(action);
+        boolean isBuy = action != null && action.startsWith("BUY");
 
         Label checkLbl = new Label("\u2713");
         checkLbl.getStyleClass().add("receipt-check");
@@ -657,6 +922,158 @@ public final class GameView {
         HBox row = new HBox(8, kLbl, sp, vLbl);
         row.getStyleClass().add("dialog-row");
         return row;
+    }
+
+    private static BigDecimal[] previewSellAll(Player player) {
+        BigDecimal tGross = BigDecimal.ZERO;
+        BigDecimal tFee = BigDecimal.ZERO;
+        BigDecimal tTax = BigDecimal.ZERO;
+        BigDecimal totalQty = BigDecimal.ZERO;
+
+        for (Share lot : player.getPortfolio().getShares()) {
+            BigDecimal qty = lot.getQuantity();
+            BigDecimal gross = lot.getStock().getSalesPrice().multiply(qty);
+            BigDecimal fee = gross.multiply(new BigDecimal("0.01"));
+            BigDecimal profit = gross.subtract(fee).subtract(lot.getPurchasePrice().multiply(qty));
+            BigDecimal tax = profit.max(BigDecimal.ZERO).multiply(new BigDecimal("0.3"));
+
+            tGross = tGross.add(gross);
+            tFee = tFee.add(fee);
+            tTax = tTax.add(tax);
+            totalQty = totalQty.add(qty);
+        }
+
+        return new BigDecimal[]{tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax), totalQty};
+    }
+
+    private static BigDecimal[] executeSellAll(Player player, Exchange exchange) {
+        Map<String, BigDecimal> qtyBySymbol = new LinkedHashMap<>();
+        Map<String, Stock> stockBySymbol = new LinkedHashMap<>();
+
+        for (Share share : new ArrayList<>(player.getPortfolio().getShares())) {
+            String symbol = share.getStock().getSymbol();
+            qtyBySymbol.merge(symbol, share.getQuantity(), BigDecimal::add);
+            stockBySymbol.putIfAbsent(symbol, share.getStock());
+        }
+
+        BigDecimal tGross = BigDecimal.ZERO;
+        BigDecimal tFee = BigDecimal.ZERO;
+        BigDecimal tTax = BigDecimal.ZERO;
+        BigDecimal totalQty = BigDecimal.ZERO;
+
+        for (Map.Entry<String, BigDecimal> entry : qtyBySymbol.entrySet()) {
+            String symbol = entry.getKey();
+            BigDecimal qty = entry.getValue();
+            Stock stock = stockBySymbol.get(symbol);
+            BigDecimal[] result = executeSell(player, exchange, stock, qty);
+            tGross = tGross.add(result[0]);
+            tFee = tFee.add(result[1]);
+            tTax = tTax.add(result[2]);
+            totalQty = totalQty.add(qty);
+        }
+
+        return new BigDecimal[]{tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax), totalQty};
+    }
+
+    private static void showBulkTradeConfirm(StackPane overlay, String action, BigDecimal qty,
+            BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total, Runnable onConfirm) {
+        Label iconLbl  = new Label("\u2198");
+        iconLbl.getStyleClass().add("dialog-action-icon-sell");
+        Label titleLbl = new Label("ORDER SUMMARY");
+        titleLbl.getStyleClass().add("dialog-title");
+        HBox header = new HBox(10, iconLbl, titleLbl);
+        header.getStyleClass().add("dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox rows = new VBox(0,
+            dialogRow("Action", action, "dialog-val-sell"),
+            dialogRow("Symbols", "ALL", null),
+            dialogRow("Qty", qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Subtotal", fmt(gross), null),
+            dialogRow("Fee (1%)", fmt(fee), "dialog-val-fee"),
+            dialogRow("Tax", fmt(tax), "dialog-val-fee")
+        );
+        rows.getStyleClass().add("dialog-rows");
+
+        Label totalKey = new Label("YOU RECEIVE");
+        totalKey.getStyleClass().add("dialog-total-key");
+        Label totalVal = new Label(fmt(total));
+        totalVal.getStyleClass().add("dialog-total-val-sell");
+        VBox totalSection = new VBox(4, totalKey, totalVal);
+        totalSection.getStyleClass().add("dialog-total-section");
+
+        Button cancelBtn  = new Button("Cancel");
+        cancelBtn.getStyleClass().add("dialog-cancel-btn");
+        Button confirmBtn = new Button("Confirm Sell All");
+        confirmBtn.getStyleClass().add("dialog-confirm-sell-btn");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox btnRow = new HBox(10, cancelBtn, spacer, confirmBtn);
+        btnRow.getStyleClass().add("dialog-btn-row");
+
+        VBox card = new VBox(0, header, rows, totalSection, btnRow);
+        card.getStyleClass().add("trade-dialog-root");
+        card.setMaxWidth(360);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+
+        Region backdrop = new Region();
+        backdrop.getStyleClass().add("dialog-backdrop");
+
+        StackPane popup = new StackPane(backdrop, card);
+        StackPane.setAlignment(card, Pos.CENTER);
+
+        Runnable dismiss = () -> overlay.getChildren().remove(popup);
+        cancelBtn.setOnAction(ev  -> dismiss.run());
+        confirmBtn.setOnAction(ev -> { dismiss.run(); onConfirm.run(); });
+        backdrop.setOnMouseClicked(ev -> dismiss.run());
+
+        overlay.getChildren().add(popup);
+    }
+
+    private static void showBulkReceipt(StackPane overlay, String action, BigDecimal qty,
+            BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
+        Label checkLbl = new Label("\u2713");
+        checkLbl.getStyleClass().add("receipt-check");
+        Label titleLbl = new Label("ORDER COMPLETE");
+        titleLbl.getStyleClass().add("dialog-title");
+        HBox header = new HBox(10, checkLbl, titleLbl);
+        header.getStyleClass().add("dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox rows = new VBox(0,
+            dialogRow("Action", action, "dialog-val-sell"),
+            dialogRow("Symbols", "ALL", null),
+            dialogRow("Qty", qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Fee (1%)", fmt(fee), "dialog-val-fee"),
+            dialogRow("Tax", fmt(tax), "dialog-val-fee"),
+            dialogRow("Received", fmt(total), null),
+            dialogRow("New Balance", fmt(newCash), "dialog-val-cash")
+        );
+        rows.getStyleClass().add("dialog-rows");
+
+        Button doneBtn = new Button("Done");
+        doneBtn.getStyleClass().add("dialog-confirm-buy-btn");
+        HBox btnRow = new HBox(doneBtn);
+        btnRow.setAlignment(Pos.CENTER_RIGHT);
+        btnRow.getStyleClass().add("dialog-btn-row");
+
+        VBox card = new VBox(0, header, rows, btnRow);
+        card.getStyleClass().add("trade-dialog-root");
+        card.setMaxWidth(340);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+
+        Region backdrop = new Region();
+        backdrop.getStyleClass().add("dialog-backdrop");
+
+        StackPane popup = new StackPane(backdrop, card);
+        StackPane.setAlignment(card, Pos.CENTER);
+
+        Runnable dismiss = () -> overlay.getChildren().remove(popup);
+        doneBtn.setOnAction(ev -> dismiss.run());
+        backdrop.setOnMouseClicked(ev -> dismiss.run());
+
+        overlay.getChildren().add(popup);
     }
 
     private static void showError(String message) {

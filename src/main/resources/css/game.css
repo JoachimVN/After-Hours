@@ -194,6 +194,18 @@
     -fx-text-fill: #4a6899;
 }
 
+.stock-owned-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8ff0b0;
+    -fx-background-color: rgba(30, 158, 74, 0.18);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(46, 184, 92, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 1 6 1 6;
+}
+
 .stock-card-price {
     -fx-font-size: 13px;
     -fx-font-weight: bold;
@@ -256,7 +268,9 @@
     -fx-border-color: rgba(20, 140, 60, 0.40);
     -fx-border-width: 1;
     -fx-border-radius: 6;
-    -fx-padding: 3 10 3 10;
+    -fx-padding: 3 12 3 12;
+    -fx-min-width: 82px;
+    -fx-alignment: center;
 }
 
 .detail-badge-down {
@@ -268,7 +282,9 @@
     -fx-border-color: rgba(160, 30, 30, 0.40);
     -fx-border-width: 1;
     -fx-border-radius: 6;
-    -fx-padding: 3 10 3 10;
+    -fx-padding: 3 12 3 12;
+    -fx-min-width: 82px;
+    -fx-alignment: center;
 }
 
 .stat-hl-value-up {
@@ -300,24 +316,84 @@
     -fx-border-color: rgba(30, 64, 128, 0.55);
     -fx-border-width: 1;
     -fx-border-radius: 8;
+    -fx-pref-width: 140px;
+    -fx-max-width: 140px;
 }
 
 .trade-qty-btn {
-    -fx-background-color: rgba(15, 40, 90, 0.80);
-    -fx-text-fill: #b8cce8;
-    -fx-font-size: 16px;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-alignment: center;
+    -fx-content-display: center;
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-background-radius: 0;
     -fx-border-color: transparent;
     -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-pref-width: 32px;
     -fx-min-width: 32px;
+    -fx-pref-height: 40px;
     -fx-min-height: 40px;
+    -fx-max-height: 40px;
     -fx-cursor: hand;
 }
 
 .trade-qty-btn:hover {
-    -fx-background-color: rgba(245, 162, 1, 0.18);
     -fx-text-fill: #f5a201;
+}
+
+.trade-selector-column,
+.trade-action-column {
+    -fx-alignment: top-left;
+}
+
+.trade-selector-column {
+    -fx-min-width: 140px;
+    -fx-max-width: 140px;
+}
+
+.trade-buy-column,
+.trade-sell-column {
+    -fx-alignment: center;
+}
+
+.trade-action-column .trade-buy-button,
+.trade-action-column .trade-sell-button {
+    -fx-pref-width: 140px;
+}
+
+.trade-max-buy-button,
+.trade-max-sell-button {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-min-height: 30px;
+    -fx-pref-width: 110px;
+    -fx-padding: 4 10 4 10;
+    -fx-border-width: 1;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+    -fx-cursor: hand;
+}
+
+.trade-max-buy-button {
+    -fx-background-color: linear-gradient(to bottom, rgba(30, 158, 74, 0.12), rgba(21, 120, 56, 0.18));
+    -fx-text-fill: rgba(143, 240, 176, 0.88);
+    -fx-border-color: rgba(46, 184, 92, 0.28);
+}
+
+.trade-max-buy-button:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(37, 184, 85, 0.20), rgba(30, 158, 74, 0.28));
+}
+
+.trade-max-sell-button {
+    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.12), rgba(122, 28, 28, 0.18));
+    -fx-text-fill: rgba(255, 176, 176, 0.88);
+    -fx-border-color: rgba(180, 40, 40, 0.28);
+}
+
+.trade-max-sell-button:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.20), rgba(122, 28, 28, 0.28));
 }
 
 .trade-qty-field {
@@ -328,10 +404,31 @@
     -fx-alignment: center;
     -fx-border-color: transparent rgba(30, 64, 128, 0.45) transparent rgba(30, 64, 128, 0.45);
     -fx-border-width: 0 1 0 1;
+    -fx-border-insets: 6 0 6 0;
     -fx-background-radius: 0;
-    -fx-pref-width: 48px;
+    -fx-pref-width: 76px;
     -fx-min-height: 40px;
     -fx-padding: 0 6 0 6;
+}
+
+.trade-amount-field {
+    -fx-background-color: linear-gradient(to bottom, rgba(8, 16, 40, 0.98), rgba(6, 12, 30, 0.95));
+    -fx-text-fill: #e0bd66;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(245, 162, 1, 0.30);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-pref-width: 140px;
+    -fx-max-width: 140px;
+    -fx-min-height: 40px;
+    -fx-padding: 0 12 0 12;
+    -fx-prompt-text-fill: #e8d8b0;
+}
+
+.trade-amount-field:focused {
+    -fx-border-color: rgba(245, 162, 1, 0.70);
 }
 
 /* Buy / Sell buttons */
@@ -446,7 +543,9 @@
     -fx-border-radius: 8;
     -fx-padding: 6 20 6 20;
     -fx-pref-width: 140px;
+    -fx-min-height: 42px;
     -fx-pref-height: 42px;
+    -fx-max-height: 42px;
     -fx-effect: dropshadow(gaussian, rgba(30, 158, 74, 0.40), 6, 0, 0, 2);
     -fx-cursor: hand;
 }
@@ -469,8 +568,10 @@
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-padding: 6 20 6 20;
-    -fx-pref-width: 120px;
+    -fx-pref-width: 140px;
+    -fx-min-height: 42px;
     -fx-pref-height: 42px;
+    -fx-max-height: 42px;
     -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.30), 6, 0, 0, 2);
     -fx-cursor: hand;
 }
@@ -484,6 +585,19 @@
 .trade-sell-button:pressed {
     -fx-background-color: linear-gradient(to bottom, #5e1414, #440e0e);
     -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.15), 3, 0, 0, 1);
+}
+
+.trade-sell-all-button {
+    -fx-pref-width: 140px;
+}
+
+.sell-all-holdings-button {
+    -fx-background-color: linear-gradient(to right, #7a1c1c, #5e1414);
+    -fx-border-color: rgba(180, 40, 40, 0.50);
+}
+
+.sell-all-holdings-button:hover {
+    -fx-background-color: linear-gradient(to right, #9e2222, #7a1c1c);
 }
 
 .trade-btn-label {
