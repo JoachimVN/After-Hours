@@ -163,7 +163,7 @@ public final class GameView {
         backBtn.setOnAction(e -> onBack.run());
 
         ImageView appTitle;
-        var logoUrl = GameView.class.getResource("/images/After_Hours_Logo.png");
+        var logoUrl = GameView.class.getResource("/images/logos/After_Hours_Logo.png");
         if (logoUrl != null) {
             Image logoImg = new Image(logoUrl.toExternalForm());
             appTitle = new ImageView(logoImg);

@@ -38,7 +38,7 @@ public class SplashOverlayController {
         ColorAdjust colorAdjust = new ColorAdjust();
         colorAdjust.setBrightness(0.125); // Range -1.0 to 1.0
 
-        var logoUrl = SplashOverlayController.class.getResource("/images/After_Hours_Logo_Black.png");
+        var logoUrl = SplashOverlayController.class.getResource("/images/logos/After_Hours_Logo_Centered_Black.png");
         if (logoUrl != null) {
             ImageView logo = new ImageView(new Image(logoUrl.toExternalForm()));
             logo.setPreserveRatio(true);
