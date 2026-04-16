@@ -23,6 +23,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -160,8 +162,16 @@ public final class GameView {
         backBtn.getStyleClass().add("game-icon-button");
         backBtn.setOnAction(e -> onBack.run());
 
-        Label appTitle = new Label("After Hours");
-        appTitle.getStyleClass().add("game-app-title");
+        ImageView appTitle;
+        var logoUrl = GameView.class.getResource("/images/After_Hours_Logo.png");
+        if (logoUrl != null) {
+            Image logoImg = new Image(logoUrl.toExternalForm());
+            appTitle = new ImageView(logoImg);
+            appTitle.setPreserveRatio(true);
+            appTitle.setFitHeight(40);
+        } else {
+            appTitle = new ImageView();
+        }
 
         Node cashPill  = statPill("Available Cash",   cashVal);
         Node portPill  = statPill("Portfolio Value",  portVal);
