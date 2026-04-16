@@ -12,6 +12,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 import edu.ntnu.idatt2003.g23.io.StockCsvExporter;
+import edu.ntnu.idatt2003.g23.model.Stock.Volatility;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionFactory;
 
@@ -47,14 +48,21 @@ public class Exchange {
     private void assignVolatilities(List<Stock> stocks) {
         int total = stocks.size();
         Collections.shuffle(stocks, random);
-        int nChaotic = Math.max(1, (int) Math.round(total * 0.02)); // 2% of total stocks, ensure at least 1 chaotic stock
-        int nFast    = (int) Math.round(total * 0.13);                // 13% total for FAST
-        int nNormal  = (int) Math.round(total * 0.60);                // 60% total for NORMAL, remainder will be STABLE (25%)
+        int nChaotic   = Math.max(1, (int) Math.round(total * 0.01)); // 2% of total stocks, ensure at least 1 chaotic stock
+        int nFast      = (int) Math.round(total * 0.10); // 10% of total stocks
+        int nSlowRise  = (int) Math.round(total * 0.19); // 18% of total stocks
+        int nSlowFall  = (int) Math.round(total * 0.12); // 12% of total stocks
+        int nNormRise  = (int) Math.round(total * 0.25); // 25% of total stocks
+        int nNormFall  = (int) Math.round(total * 0.18); // 18% of total stocks
+        // total percentage assigned: 85%, remaining 15% will be stable
         int i = 0;
-        for (int c = 0; c < nChaotic && i < total; c++, i++) stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
-        for (int f = 0; f < nFast    && i < total; f++, i++) stocks.get(i).setVolatility(Stock.Volatility.FAST);
-        for (int n = 0; n < nNormal  && i < total; n++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL);
-        while (i < total) stocks.get(i++).setVolatility(Stock.Volatility.STABLE);
+        for (int c = 0; c < nChaotic  && i < total; c++, i++) stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
+        for (int f = 0; f < nFast     && i < total; f++, i++) stocks.get(i).setVolatility(Stock.Volatility.FAST);
+        for (int r = 0; r < nSlowRise && i < total; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_RISE);
+        for (int d = 0; d < nSlowFall && i < total; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_FALL);
+        for (int r = 0; r < nNormRise && i < total; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_RISE);
+        for (int d = 0; d < nNormFall && i < total; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_FALL);
+        while (i < total) stocks.get(i++).setVolatility(Stock.Volatility.STABLE); // Remaining stocks are stable
     }
 
     /**
@@ -170,22 +178,28 @@ public class Exchange {
 
             double min, max;
             switch (stock.getVolatility()) {
-                case STABLE  -> { min =  0; max =  5; }
-                case FAST    -> { min =  6; max = 20; }
-                case CHAOTIC -> { min = 15; max = 60; }
-                default      -> { min =  2; max = 10; } // NORMAL
+                case SLOW_RISE   -> { min =  0.0; max =  4.0; } // 18%:
+                case SLOW_FALL   -> { min = -4.0; max =  0.0; } // 12%: 
+                case NORMAL_RISE -> { min =  2.0; max = 5.0; } // 25%: 
+                case NORMAL_FALL -> { min = -5.0; max = -2.0; } // 18%: 
+                case FAST        -> { min =  3.0; max = 10.0; } // 10%: 
+                case CHAOTIC     -> { min = 7.0; max = 15.0; } //  1%: 
+                default          -> { min =  0.0; max =  3.0; } // 15%: 
             }
 
-            double percentageChange = (random.nextDouble() * (max - min)) + min; // 0 to 5, 6 to 20, 15 to 60, or 2 to 10
+            double percentageChange = (random.nextDouble() * (max - min)) + min;
             BigDecimal multiplicativeChange = BigDecimal.valueOf(1 + (percentageChange / 100));  // 1 to 1.10
 
             boolean randomBool = Math.random() < 0.5; // 50% chance to be negative
-            if (randomBool) {
-                multiplicativeChange = BigDecimal.ONE.divide(multiplicativeChange, 4, RoundingMode.HALF_UP); // Invert to get a negative change
+            boolean directional = stock.getVolatility() == Volatility.SLOW_FALL
+                    || stock.getVolatility() == Volatility.NORMAL_FALL
+                    || stock.getVolatility() == Volatility.SLOW_RISE
+                    || stock.getVolatility() == Volatility.NORMAL_RISE;
+            if (!directional && randomBool) {
+                multiplicativeChange = BigDecimal.ONE.divide(multiplicativeChange, 4, RoundingMode.HALF_UP); // Randomly invert to add unpredictability
             }
 
             BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
-
             stock.addNewSalesPrice(newPrice);
         }
     }

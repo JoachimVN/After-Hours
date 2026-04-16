@@ -624,3 +624,125 @@
     -fx-font-weight: bold;
     -fx-text-fill: rgba(255, 255, 255, 0.65);
 }
+
+/* ── Market Movers Panel ─────────────────────────────────────────────────── */
+
+.market-movers-button {
+    -fx-background-color: rgba(15, 45, 94, 0.70);
+    -fx-text-fill: #7a9fc8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 18 8 18;
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(30, 64, 128, 0.5);
+    -fx-border-width: 1;
+    -fx-border-radius: 8px;
+    -fx-cursor: hand;
+}
+
+.market-movers-button:hover {
+    -fx-background-color: rgba(245, 162, 1, 0.20);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: rgba(245, 162, 1, 0.35);
+}
+
+.market-movers-backdrop {
+    -fx-background-color: rgba(2, 4, 14, 0.72);
+}
+
+.market-movers-card {
+    -fx-background-color: rgba(7, 12, 32, 0.98);
+    -fx-border-color: rgba(30, 64, 128, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.85), 48, 0, 0, 10);
+}
+
+.market-movers-header {
+    -fx-padding: 18 20 14 20;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 0 0 1 0;
+}
+
+.market-movers-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+}
+
+.market-movers-close-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4a6899;
+    -fx-font-size: 14px;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-background-radius: 6;
+}
+
+.market-movers-close-btn:hover {
+    -fx-text-fill: #e8d8b0;
+    -fx-background-color: rgba(30, 64, 128, 0.30);
+}
+
+.market-movers-columns {
+    -fx-padding: 0;
+}
+
+.market-movers-col {
+    -fx-padding: 14 20 18 20;
+    -fx-border-color: rgba(30, 64, 128, 0.20);
+    -fx-border-width: 0 1 0 0;
+}
+
+.market-movers-col-title {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+    -fx-padding: 0 0 4 0;
+}
+
+.movers-row {
+    -fx-padding: 7 4 7 4;
+    -fx-border-color: rgba(30, 64, 128, 0.10);
+    -fx-border-width: 0 0 1 0;
+}
+
+.movers-rank {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #344e72;
+    -fx-min-width: 26px;
+}
+
+.movers-symbol {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #d4e4f8;
+}
+
+.movers-company {
+    -fx-font-size: 10px;
+    -fx-text-fill: #4a6899;
+}
+
+.movers-price {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+}
+
+.movers-pct-up {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+    -fx-alignment: center-right;
+}
+
+.movers-pct-down {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e05a5a;
+    -fx-alignment: center-right;
+}

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
@@ -13,6 +14,10 @@ import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import javafx.application.Platform;
 import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.util.Duration;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -40,6 +45,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.VBox;
 
 public final class GameView {
@@ -49,6 +55,7 @@ public final class GameView {
     GameController gameController = new GameController(player);
 
         StackPane[] overlayRef = {null};
+        Node[] rootRef = {null};
 
         // ── Observable data ──────────────────────────────────────────────────
         ObservableList<Stock> allStocks        = FXCollections.observableArrayList(exchange.getStocks());
@@ -242,8 +249,11 @@ public final class GameView {
                     });
         });
 
+        Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
+        marketMoversBtn.getStyleClass().add("market-movers-button");
+        marketMoversBtn.setOnAction(e -> showMarketMovers(overlayRef[0], exchange, rootRef[0]));
         Region subSpacer = new Region(); HBox.setHgrow(subSpacer, Priority.ALWAYS);
-        HBox subBar = new HBox(16, weekCard, nextWeekBtn, calmDownLbl, sellAllHoldingsBtn, subSpacer);
+        HBox subBar = new HBox(16, weekCard, nextWeekBtn, calmDownLbl, sellAllHoldingsBtn, subSpacer, marketMoversBtn);
         subBar.getStyleClass().add("game-sub-bar");
         subBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -278,6 +288,7 @@ public final class GameView {
 
         // ── Root ─────────────────────────────────────────────────────────────
         BorderPane root = new BorderPane();
+        rootRef[0] = root;
         root.getStyleClass().add("home-page");
 
         VBox topSection = new VBox(0, topBar, subBar);
@@ -1101,6 +1112,119 @@ public final class GameView {
         backdrop.setOnMouseClicked(ev -> dismiss.run());
 
         overlay.getChildren().add(popup);
+    }
+
+    private static void showMarketMovers(StackPane overlay, Exchange exchange, Node background) {
+        List<Stock> all = exchange.getStocks();
+        List<Stock> gainers = all.stream()
+                .sorted((a, b) -> pctChange(b).compareTo(pctChange(a)))
+                .limit(10).toList();
+        List<Stock> losers = all.stream()
+                .sorted((a, b) -> pctChange(a).compareTo(pctChange(b)))
+                .limit(10).toList();
+
+        GaussianBlur blur = new GaussianBlur(0);
+        background.setEffect(blur);
+
+        Region dimBackdrop = new Region();
+        dimBackdrop.getStyleClass().add("market-movers-backdrop");
+        dimBackdrop.setOpacity(0);
+
+        Label titleLbl = new Label("\uD83D\uDCC8  Market Movers");
+        titleLbl.getStyleClass().add("market-movers-title");
+        Button closeBtn = new Button("\u2715");
+        closeBtn.getStyleClass().add("market-movers-close-btn");
+        Region titleSpacer = new Region();
+        HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+        HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+        titleRow.getStyleClass().add("market-movers-header");
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true);
+        VBox losersCol  = buildMoversColumn("\u25BC  TOP LOSERS",  losers,  false);
+        HBox.setHgrow(gainersCol, Priority.ALWAYS);
+        HBox.setHgrow(losersCol,  Priority.ALWAYS);
+        HBox columns = new HBox(0, gainersCol, losersCol);
+        columns.getStyleClass().add("market-movers-columns");
+
+        VBox card = new VBox(0, titleRow, columns);
+        card.getStyleClass().add("market-movers-card");
+        card.setMaxWidth(720);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+        card.setOpacity(0);
+
+        StackPane popup = new StackPane(dimBackdrop, card);
+        StackPane.setAlignment(card, Pos.CENTER);
+        overlay.getChildren().add(popup);
+
+        Timeline blurIn = new Timeline(
+            new KeyFrame(Duration.ZERO,        new KeyValue(blur.radiusProperty(), 0)),
+            new KeyFrame(Duration.millis(300),  new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT))
+        );
+        FadeTransition dimIn  = new FadeTransition(Duration.millis(300), dimBackdrop);
+        dimIn.setFromValue(0); dimIn.setToValue(1);
+        FadeTransition cardIn = new FadeTransition(Duration.millis(220), card);
+        cardIn.setFromValue(0); cardIn.setToValue(1);
+        cardIn.setDelay(Duration.millis(80));
+        blurIn.play(); dimIn.play(); cardIn.play();
+
+        Runnable dismiss = () -> {
+            Timeline blurOut = new Timeline(
+                new KeyFrame(Duration.ZERO,        new KeyValue(blur.radiusProperty(), 8)),
+                new KeyFrame(Duration.millis(250),  new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
+            );
+            FadeTransition dimOut  = new FadeTransition(Duration.millis(250), dimBackdrop);
+            dimOut.setFromValue(1); dimOut.setToValue(0);
+            FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+            cardOut.setFromValue(1); cardOut.setToValue(0);
+            blurOut.play(); dimOut.play(); cardOut.play();
+            blurOut.setOnFinished(ev -> {
+                overlay.getChildren().remove(popup);
+                background.setEffect(null);
+            });
+        };
+
+        closeBtn.setOnAction(ev -> dismiss.run());
+        dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    }
+
+    private static VBox buildMoversColumn(String title, List<Stock> stocks, boolean isGainers) {
+        Label colTitle = new Label(title);
+        colTitle.getStyleClass().add("market-movers-col-title");
+
+        VBox rows = new VBox(0);
+        for (int i = 0; i < stocks.size(); i++) {
+            Stock s = stocks.get(i);
+            BigDecimal pct = pctChange(s);
+            String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+
+            Label rankLbl = new Label("#" + (i + 1));
+            rankLbl.getStyleClass().add("movers-rank");
+
+            Label symLbl  = new Label(s.getSymbol());
+            symLbl.getStyleClass().add("movers-symbol");
+            Label compLbl = new Label(s.getCompany());
+            compLbl.getStyleClass().add("movers-company");
+            VBox textBox  = new VBox(1, symLbl, compLbl);
+
+            Label priceLbl = new Label(fmt(s.getSalesPrice()));
+            priceLbl.getStyleClass().add("movers-price");
+            Label pctLbl   = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+            pctLbl.getStyleClass().add(isGainers ? "movers-pct-up" : "movers-pct-down");
+            VBox rightBox  = new VBox(2, priceLbl, pctLbl);
+            rightBox.setAlignment(Pos.CENTER_RIGHT);
+
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            HBox row = new HBox(8, rankLbl, textBox, spacer, rightBox);
+            row.getStyleClass().add("movers-row");
+            row.setAlignment(Pos.CENTER_LEFT);
+            rows.getChildren().add(row);
+        }
+
+        VBox col = new VBox(8, colTitle, rows);
+        col.getStyleClass().add("market-movers-col");
+        return col;
     }
 
     private static void showError(String message) {
