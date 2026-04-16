@@ -2,6 +2,7 @@ package edu.ntnu.idatt2003.g23.ui.overlay;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import javafx.animation.FadeTransition;
+import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
@@ -33,11 +34,16 @@ public class SplashOverlayController {
         bg.heightProperty().bind(root.heightProperty());
 
         StackPane splashPane = new StackPane(bg);
-        var logoUrl = SplashOverlayController.class.getResource("/images/After_Hours_Logo_DarkGray.png");
+
+        ColorAdjust colorAdjust = new ColorAdjust();
+        colorAdjust.setBrightness(0.125); // Range -1.0 to 1.0
+
+        var logoUrl = SplashOverlayController.class.getResource("/images/After_Hours_Logo_Black.png");
         if (logoUrl != null) {
             ImageView logo = new ImageView(new Image(logoUrl.toExternalForm()));
             logo.setPreserveRatio(true);
             logo.setFitWidth(512);
+            logo.setEffect(colorAdjust);
             splashPane.getChildren().add(logo);
         }
 
