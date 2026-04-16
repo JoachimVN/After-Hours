@@ -1,5 +1,7 @@
 package edu.ntnu.idatt2003.g23.ui.views;
 
+import java.util.Locale;
+
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -67,7 +69,7 @@ public final class HomePageView {
                 double sp   = 50 + 80 * Math.sin(t * 0.52);          // −30→130, ~12 s cycle
                 double tiltY = 5 * Math.sin(t * 0.29);               // ±5% diagonal drift
 
-                StringBuilder sb = new StringBuilder(String.format(
+                StringBuilder sb = new StringBuilder(String.format(Locale.US,
                     "linear-gradient(from 0%% %.1f%% to 100%% %.1f%%",
                     50 - tiltY, 50 + tiltY));
                 for (int p : stops) {
