@@ -320,6 +320,42 @@
     -fx-text-fill: #f5a201;
 }
 
+.trade-max-buttons {
+    -fx-alignment: center-left;
+}
+
+.trade-max-buy-button,
+.trade-max-sell-button {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-min-height: 30px;
+    -fx-padding: 4 10 4 10;
+    -fx-border-width: 1;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+    -fx-cursor: hand;
+}
+
+.trade-max-buy-button {
+    -fx-background-color: linear-gradient(to bottom, rgba(30, 158, 74, 0.26), rgba(21, 120, 56, 0.35));
+    -fx-text-fill: #8ff0b0;
+    -fx-border-color: rgba(46, 184, 92, 0.55);
+}
+
+.trade-max-buy-button:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(37, 184, 85, 0.35), rgba(30, 158, 74, 0.45));
+}
+
+.trade-max-sell-button {
+    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.25), rgba(122, 28, 28, 0.35));
+    -fx-text-fill: #ffb0b0;
+    -fx-border-color: rgba(180, 40, 40, 0.55);
+}
+
+.trade-max-sell-button:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.35), rgba(122, 28, 28, 0.48));
+}
+
 .trade-qty-field {
     -fx-background-color: transparent;
     -fx-text-fill: #e8d8b0;
@@ -332,6 +368,25 @@
     -fx-pref-width: 48px;
     -fx-min-height: 40px;
     -fx-padding: 0 6 0 6;
+}
+
+.trade-amount-field {
+    -fx-background-color: linear-gradient(to bottom, rgba(8, 16, 40, 0.98), rgba(6, 12, 30, 0.95));
+    -fx-text-fill: #e8d8b0;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(245, 162, 1, 0.30);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-pref-width: 126px;
+    -fx-min-height: 40px;
+    -fx-padding: 0 10 0 10;
+    -fx-prompt-text-fill: #6d87b0;
+}
+
+.trade-amount-field:focused {
+    -fx-border-color: rgba(245, 162, 1, 0.70);
 }
 
 /* Buy / Sell buttons */
@@ -484,6 +539,19 @@
 .trade-sell-button:pressed {
     -fx-background-color: linear-gradient(to bottom, #5e1414, #440e0e);
     -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.15), 3, 0, 0, 1);
+}
+
+.trade-sell-all-button {
+    -fx-pref-width: 140px;
+}
+
+.sell-all-holdings-button {
+    -fx-background-color: linear-gradient(to right, #7a1c1c, #5e1414);
+    -fx-border-color: rgba(180, 40, 40, 0.50);
+}
+
+.sell-all-holdings-button:hover {
+    -fx-background-color: linear-gradient(to right, #9e2222, #7a1c1c);
 }
 
 .trade-btn-label {
