@@ -252,10 +252,12 @@ public final class GameView {
         Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
         marketMoversBtn.getStyleClass().add("market-movers-button");
         marketMoversBtn.setOnAction(e -> showMarketMovers(overlayRef[0], exchange, rootRef[0]));
+        VBox nextWeekStack = new VBox(2, calmDownLbl, nextWeekBtn);
+        nextWeekStack.setAlignment(Pos.BOTTOM_CENTER);
         Region subSpacer = new Region(); HBox.setHgrow(subSpacer, Priority.ALWAYS);
-        HBox subBar = new HBox(16, weekCard, nextWeekBtn, calmDownLbl, sellAllHoldingsBtn, subSpacer, marketMoversBtn);
+        HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllHoldingsBtn, subSpacer, marketMoversBtn);
         subBar.getStyleClass().add("game-sub-bar");
-        subBar.setAlignment(Pos.CENTER_LEFT);
+        subBar.setAlignment(Pos.BOTTOM_LEFT);
 
         // ── Top bar ──────────────────────────────────────────────────────────
         Button backBtn = new Button("\u2190");
@@ -678,22 +680,29 @@ public final class GameView {
 
         VBox selectorColumn = new VBox(6, stepper, amountField);
         selectorColumn.getStyleClass().add("trade-selector-column");
+        selectorColumn.setAlignment(Pos.CENTER);
 
         VBox buyColumn = new VBox(6, buyBtn, maxBuyBtn);
         buyColumn.getStyleClass().add("trade-action-column");
         buyColumn.getStyleClass().add("trade-buy-column");
+        buyColumn.setAlignment(Pos.CENTER_RIGHT);
 
         VBox sellColumn = new VBox(6, sellBtn, maxSellBtn);
         sellColumn.getStyleClass().add("trade-action-column");
         sellColumn.getStyleClass().add("trade-sell-column");
+        sellColumn.setAlignment(Pos.CENTER_LEFT);
 
-        HBox tradeRow = new HBox(8, selectorColumn, buyColumn, sellColumn);
-        tradeRow.setAlignment(Pos.CENTER_LEFT);
+        HBox tradeRow = new HBox(8, buyColumn, selectorColumn, sellColumn);
+        tradeRow.setAlignment(Pos.CENTER);
 
         VBox tradePanel = new VBox(0, tradeRow);
         tradePanel.getStyleClass().add("trade-panel");
 
-        VBox header = new VBox(4, sym, comp, priceRow, hlRow, tradePanel);
+        Region graphPlaceholder = new Region();
+        graphPlaceholder.getStyleClass().add("price-chart-placeholder");
+        VBox.setVgrow(graphPlaceholder, Priority.ALWAYS);
+
+        VBox header = new VBox(4, sym, comp, priceRow, hlRow, graphPlaceholder, tradePanel);
         header.getStyleClass().add("game-detail-header");
 
         area.getChildren().add(header);

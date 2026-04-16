@@ -316,6 +316,16 @@
     -fx-padding: 10 14 10 14;
 }
 
+/* Price chart placeholder */
+.price-chart-placeholder {
+    -fx-background-color: rgba(5, 12, 32, 0.60);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(30, 64, 128, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-min-height: 80px;
+}
+
 /* Qty stepper */
 .trade-qty-stepper {
     -fx-background-color: rgba(5, 12, 32, 0.90);
@@ -323,8 +333,8 @@
     -fx-border-color: rgba(30, 64, 128, 0.55);
     -fx-border-width: 1;
     -fx-border-radius: 8;
-    -fx-pref-width: 140px;
-    -fx-max-width: 140px;
+    -fx-pref-width: 420px;
+    -fx-max-width: 420px;
 }
 
 .trade-qty-btn {
@@ -356,13 +366,17 @@
 }
 
 .trade-selector-column {
-    -fx-min-width: 140px;
-    -fx-max-width: 140px;
+    -fx-min-width: 420px;
+    -fx-max-width: 420px;
+    -fx-alignment: center;
 }
 
-.trade-buy-column,
+.trade-buy-column {
+    -fx-alignment: center-right;
+}
+
 .trade-sell-column {
-    -fx-alignment: center;
+    -fx-alignment: center-left;
 }
 
 .trade-action-column .trade-buy-button,
@@ -413,7 +427,7 @@
     -fx-border-width: 0 1 0 1;
     -fx-border-insets: 6 0 6 0;
     -fx-background-radius: 0;
-    -fx-pref-width: 76px;
+    -fx-pref-width: 356px;
     -fx-min-height: 40px;
     -fx-padding: 0 6 0 6;
 }
@@ -427,8 +441,8 @@
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-pref-width: 140px;
-    -fx-max-width: 140px;
+    -fx-pref-width: 420px;
+    -fx-max-width: 420px;
     -fx-min-height: 40px;
     -fx-padding: 0 12 0 12;
     -fx-prompt-text-fill: #e8d8b0;
