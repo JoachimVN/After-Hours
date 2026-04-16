@@ -20,6 +20,7 @@ import edu.ntnu.idatt2003.g23.ui.views.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.SetupView;
 import edu.ntnu.idatt2003.g23.ui.views.SettingsView;
 import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
 import javafx.application.Application;
 import javafx.scene.control.Alert;
 import javafx.geometry.Rectangle2D;
@@ -172,21 +173,37 @@ public class App extends Application {
     /** Fade a page in from opacity 0 — use only when coming from the home page. */
     private void fadeInPage(Parent page) {
         page.setOpacity(0);
-        FadeTransition ft = new FadeTransition(Duration.millis(350), page);
+        FadeTransition ft = new FadeTransition(Duration.millis(500), page);
         ft.setFromValue(0);
         ft.setToValue(1);
+        ft.setInterpolator(Interpolator.EASE_OUT);
+        ft.play();
+    }
+
+    /** Fade the current page out, then run the navigation action. */
+    private void fadeOutThenNavigate(Runnable navigate) {
+        if (root.getChildren().size() < 2) {
+            navigate.run();
+            return;
+        }
+        Parent current = (Parent) root.getChildren().get(root.getChildren().size() - 1);
+        FadeTransition ft = new FadeTransition(Duration.millis(350), current);
+        ft.setFromValue(current.getOpacity());
+        ft.setToValue(0);
+        ft.setInterpolator(Interpolator.EASE_IN);
+        ft.setOnFinished(e -> navigate.run());
         ft.play();
     }
 
     /** Return home from game: fade ambience out, restart home music. */
     private void goHome() {
         homePageMusicController.fadeOutThenPlay(null, null);
-        root.getChildren().setAll(backgroundCanvas, homePage);
+        fadeOutThenNavigate(() -> root.getChildren().setAll(backgroundCanvas, homePage));
     }
 
     /** Return home from non-game pages: no music change. */
     private void goHomeKeepMusic() {
-        root.getChildren().setAll(backgroundCanvas, homePage);
+        fadeOutThenNavigate(() -> root.getChildren().setAll(backgroundCanvas, homePage));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
