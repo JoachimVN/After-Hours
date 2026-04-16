@@ -26,7 +26,7 @@ public final class SetupView {
             BiConsumer<String, Double> onStartCsv) {
 
         BorderPane root = new BorderPane();
-        root.getStyleClass().add("home-page");
+        root.getStyleClass().addAll("home-page", "background-overlay");
 
         // ── Top bar ──────────────────────────────────────────────────────────
         Button backButton = new Button("\u2190 Back");

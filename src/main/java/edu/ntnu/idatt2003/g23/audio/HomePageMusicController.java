@@ -22,7 +22,7 @@ public class HomePageMusicController {
 
     private final Class<?> resourceOwner;
     private MediaPlayer mediaPlayer;
-    private double volume = 0.75;
+    private double volume = 0.50;
     private Timeline fadeTimeline;
 
     private List<String> ambienceQueue = new ArrayList<>();

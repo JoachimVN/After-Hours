@@ -19,6 +19,7 @@ import edu.ntnu.idatt2003.g23.ui.views.HomePageView;
 import edu.ntnu.idatt2003.g23.ui.views.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.SetupView;
 import edu.ntnu.idatt2003.g23.ui.views.SettingsView;
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.scene.control.Alert;
 import javafx.geometry.Rectangle2D;
@@ -27,6 +28,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 /**
  * Launches the JavaFX application and manages top-level scene navigation.
@@ -50,6 +52,8 @@ public class App extends Application {
     private Parent currentSetupPage;
     /** Retained so Settings can return to the game without recreating it. */
     private Parent currentGamePage;
+    private boolean animationsEnabled = true;
+    private double sfxVolume = 0.5;
 
     @Override
     public void start(Stage stage) {
@@ -57,7 +61,7 @@ public class App extends Application {
 
         homePage = HomePageView.build(
                 this::goToSetup,
-                () -> navigateKeepMusic(buildSettingsView(this::goHomeKeepMusic))
+                () -> { Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); }
         );
 
         backgroundCanvas = new BackgroundCanvas();
@@ -69,7 +73,14 @@ public class App extends Application {
         SplashOverlayController splashOverlayController = new SplashOverlayController(root);
 
         Scene scene = new Scene(root, AppConfig.DEFAULT_WIDTH, AppConfig.DEFAULT_HEIGHT);
-        scene.getStylesheets().add(getClass().getResource("/home.css").toExternalForm());
+        scene.getStylesheets().addAll(
+                getClass().getResource("/css/base.css").toExternalForm(),
+                getClass().getResource("/css/settings.css").toExternalForm(),
+                getClass().getResource("/css/setup.css").toExternalForm(),
+                getClass().getResource("/css/import-csv.css").toExternalForm(),
+                getClass().getResource("/css/game.css").toExternalForm(),
+                getClass().getResource("/css/dialogs.css").toExternalForm()
+        );
 
         configureStage(stage, scene);
         stage.show();
@@ -88,6 +99,7 @@ public class App extends Application {
                 (name, cash) -> goToImportCsv(name, cash)
         );
         navigateKeepMusic(currentSetupPage);
+        fadeInPage(currentSetupPage);
     }
 
     private void goToImportCsv(String name, double cash) {
@@ -134,8 +146,13 @@ public class App extends Application {
     private Parent buildSettingsView(Runnable onBack) {
         return SettingsView.build(
                 onBack,
-                homePageMusicController::setVolume,
-                homePageMusicController.getVolume()
+                homePageMusicController::setVolume, homePageMusicController.getVolume(),
+                v -> sfxVolume = v, sfxVolume,
+                enabled -> {
+                    animationsEnabled = enabled;
+                    backgroundCanvas.setAnimationsEnabled(enabled);
+                },
+                animationsEnabled
         );
     }
 
@@ -150,6 +167,15 @@ public class App extends Application {
     /** Swap page without touching music (home, setup, CSV, settings contexts). */
     private void navigateKeepMusic(Parent page) {
         root.getChildren().setAll(backgroundCanvas, page);
+    }
+
+    /** Fade a page in from opacity 0 — use only when coming from the home page. */
+    private void fadeInPage(Parent page) {
+        page.setOpacity(0);
+        FadeTransition ft = new FadeTransition(Duration.millis(350), page);
+        ft.setFromValue(0);
+        ft.setToValue(1);
+        ft.play();
     }
 
     /** Return home from game: fade ambience out, restart home music. */

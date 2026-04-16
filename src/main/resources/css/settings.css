@@ -1,0 +1,41 @@
+/* ── Settings Page ───────────────────────────────────────────────────────── */
+
+.settings-label {
+    -fx-font-size: 14;
+    -fx-text-fill: #4a6899;
+}
+
+.settings-slider .track {
+    -fx-background-color: #0f2d5e;
+    -fx-pref-height: 6;
+    -fx-background-radius: 4;
+}
+
+.settings-slider .thumb {
+    -fx-background-color: #f5a201;
+    -fx-background-radius: 100;
+    -fx-pref-width: 18;
+    -fx-pref-height: 18;
+}
+
+.settings-mute-button {
+    -fx-background-color: #0f2d5e;
+    -fx-text-fill: #f5a201;
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 4 14 4 14;
+}
+
+.settings-mute-button:hover {
+    -fx-background-color: #1e4080;
+}
+
+.settings-mute-button:selected {
+    -fx-background-color: #f5a201;
+    -fx-text-fill: #07091f;
+}

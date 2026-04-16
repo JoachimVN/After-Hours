@@ -25,6 +25,8 @@ public class BackgroundCanvas extends Canvas {
     private final double[][] stars = new double[STAR_COUNT][5];
 
     private final AnimationTimer timer;
+    private long pausedAt  = -1;   // wall-clock ns when paused
+    private long totalPausedNs = 0; // cumulative ns spent paused
 
     public BackgroundCanvas() {
         Random rng = new Random(7L);
@@ -39,7 +41,7 @@ public class BackgroundCanvas extends Canvas {
         timer = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                draw(now / 1_000_000_000.0);
+                draw((now - totalPausedNs) / 1_000_000_000.0);
             }
         };
         timer.start();
@@ -106,5 +108,18 @@ public class BackgroundCanvas extends Canvas {
 
     public void stop() {
         timer.stop();
+    }
+
+    public void setAnimationsEnabled(boolean enabled) {
+        if (enabled) {
+            if (pausedAt >= 0) {
+                totalPausedNs += System.nanoTime() - pausedAt;
+                pausedAt = -1;
+            }
+            timer.start();
+        } else {
+            timer.stop();
+            pausedAt = System.nanoTime();
+        }
     }
 }

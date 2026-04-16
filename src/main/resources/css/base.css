@@ -1,0 +1,99 @@
+/* ── Base / Global ───────────────────────────────────────────────────────── */
+
+.app-root {
+    -fx-background-color: #07091f;
+}
+
+.home-page {
+    -fx-background-color: transparent;
+}
+
+.splash-overlay {
+    -fx-background-color: #07111f;
+}
+
+.background-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Title */
+.title {
+    -fx-font-size: 104;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e7ac15;
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 18, 0.2, 6, 6);
+}
+
+/* Taglines */
+.tagline {
+    -fx-font-size: 15;
+    -fx-text-fill: #e8d8b0;
+    -fx-font-weight: bold;
+}
+
+.sub-tagline {
+    -fx-font-size: 12;
+    -fx-text-fill: #4a6899;
+}
+
+/* Page headings (non-home pages) */
+.page-title {
+    -fx-font-size: 48;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-font-family: "Sans Serif";
+}
+
+/* Shared overlay tint */
+.settings-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* Shared buttons */
+.start-button {
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0b1e33;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, #d48a00, #f5a201 55%, #ffba42);
+    -fx-background-radius: 14;
+    -fx-border-color: #ffba4270;
+    -fx-border-width: 2;
+    -fx-border-radius: 14;
+    -fx-pref-height: 70;
+    -fx-cursor: hand;
+}
+
+.start-button:hover {
+    -fx-opacity: 0.88;
+}
+
+.secondary-button {
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-text-fill: #b8cce8;
+    -fx-background-color: #0f2d5e;
+    -fx-background-radius: 14;
+    -fx-border-color: #1e408070;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-pref-height: 60;
+    -fx-cursor: hand;
+}
+
+.secondary-button:hover {
+    -fx-background-color: derive(#0f2d5e, 25%);
+    -fx-text-fill: white;
+}
+
+.back-button {
+    -fx-font-size: 14;
+    -fx-text-fill: #4a6899;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6 16 6 0;
+}
+
+.back-button:hover {
+    -fx-text-fill: #ffba42;
+}

@@ -168,7 +168,7 @@ public final class GameView {
             Image logoImg = new Image(logoUrl.toExternalForm());
             appTitle = new ImageView(logoImg);
             appTitle.setPreserveRatio(true);
-            appTitle.setFitHeight(40);
+            appTitle.setFitHeight(48);
         } else {
             appTitle = new ImageView();
         }
