@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.ui.views;
+package edu.ntnu.idatt2003.g23.ui.views.landingpage;
 
 import java.util.Locale;
 
@@ -13,7 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
-public final class HomePageView {
+public final class LandingPageView {
 
     public static BorderPane build(Runnable onPlay, Runnable onSettings) {
         BorderPane root = new BorderPane();
