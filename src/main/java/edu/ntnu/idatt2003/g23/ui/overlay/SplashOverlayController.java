@@ -33,11 +33,11 @@ public class SplashOverlayController {
         bg.heightProperty().bind(root.heightProperty());
 
         StackPane splashPane = new StackPane(bg);
-        var logoUrl = SplashOverlayController.class.getResource("/images/After_Hours_Logo_White.png");
+        var logoUrl = SplashOverlayController.class.getResource("/images/After_Hours_Logo_DarkGray.png");
         if (logoUrl != null) {
             ImageView logo = new ImageView(new Image(logoUrl.toExternalForm()));
             logo.setPreserveRatio(true);
-            logo.setFitWidth(400);
+            logo.setFitWidth(512);
             splashPane.getChildren().add(logo);
         }
 
