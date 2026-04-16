@@ -103,6 +103,13 @@
     -fx-background-color: linear-gradient(to right, #22a34e, #29c45f);
 }
 
+.calm-down-label {
+    -fx-text-fill: #f5a201;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+    -fx-padding: 0 4 0 0;
+}
+
 /* Left panel */
 .game-left-panel {
     -fx-background-color: rgba(6, 10, 28, 0.95);

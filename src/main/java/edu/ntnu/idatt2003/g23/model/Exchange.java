@@ -2,8 +2,10 @@ package edu.ntnu.idatt2003.g23.model;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -39,6 +41,20 @@ public class Exchange {
         this.week = 1;
         this.stockMap = stocks.stream().collect(Collectors.toMap(Stock::getSymbol, stock -> stock));
         this.random = new Random();
+        assignVolatilities(new ArrayList<>(stocks));
+    }
+
+    private void assignVolatilities(List<Stock> stocks) {
+        int total = stocks.size();
+        Collections.shuffle(stocks, random);
+        int nChaotic = Math.max(1, (int) Math.round(total * 0.02)); // 2% of total stocks, ensure at least 1 chaotic stock
+        int nFast    = (int) Math.round(total * 0.13);                // 13% total for FAST
+        int nNormal  = (int) Math.round(total * 0.60);                // 60% total for NORMAL, remainder will be STABLE (25%)
+        int i = 0;
+        for (int c = 0; c < nChaotic && i < total; c++, i++) stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
+        for (int f = 0; f < nFast    && i < total; f++, i++) stocks.get(i).setVolatility(Stock.Volatility.FAST);
+        for (int n = 0; n < nNormal  && i < total; n++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL);
+        while (i < total) stocks.get(i++).setVolatility(Stock.Volatility.STABLE);
     }
 
     /**
@@ -151,8 +167,25 @@ public class Exchange {
         this.week++;
         for (Stock stock : stockMap.values()) {
             BigDecimal currentPrice = stock.getSalesPrice();
-            double percentageChange = (random.nextDouble() * 20) - 10;  // AI - -10% to +10%
-            BigDecimal newPrice = currentPrice.multiply(BigDecimal.valueOf(1 + (percentageChange / 100)));
+
+            double min, max;
+            switch (stock.getVolatility()) {
+                case STABLE  -> { min =  0; max =  5; }
+                case FAST    -> { min =  6; max = 20; }
+                case CHAOTIC -> { min = 15; max = 60; }
+                default      -> { min =  2; max = 10; } // NORMAL
+            }
+
+            double percentageChange = (random.nextDouble() * (max - min)) + min; // 0 to 5, 6 to 20, 15 to 60, or 2 to 10
+            BigDecimal multiplicativeChange = BigDecimal.valueOf(1 + (percentageChange / 100));  // 1 to 1.10
+
+            boolean randomBool = Math.random() < 0.5; // 50% chance to be negative
+            if (randomBool) {
+                multiplicativeChange = BigDecimal.ONE.divide(multiplicativeChange, 4, RoundingMode.HALF_UP); // Invert to get a negative change
+            }
+
+            BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
+
             stock.addNewSalesPrice(newPrice);
         }
     }

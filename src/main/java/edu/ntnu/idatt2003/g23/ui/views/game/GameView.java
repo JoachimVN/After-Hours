@@ -12,6 +12,8 @@ import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import javafx.application.Platform;
+import javafx.animation.FadeTransition;
+import javafx.util.Duration;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -171,7 +173,34 @@ public final class GameView {
 
         Button nextWeekBtn = new Button("\u25B6  Next Week");
         nextWeekBtn.getStyleClass().add("next-week-button");
+
+        Label calmDownLbl = new Label("\uD83D\uDE0C Calm down");
+        calmDownLbl.getStyleClass().add("calm-down-label");
+        calmDownLbl.setOpacity(0);
+        calmDownLbl.setMouseTransparent(true);
+
+        FadeTransition[] calmFade = {null};
+
+        // Rate-limit: max 6 advances per second (sliding window)
+        long[] advanceTimes = new long[6];
+        int[] advanceHead = {0};
+
         nextWeekBtn.setOnAction(e -> {
+            long now = System.currentTimeMillis();
+            long oldest = advanceTimes[advanceHead[0]];
+            if (now - oldest < 1000) {
+                if (calmFade[0] != null) calmFade[0].stop();
+                calmDownLbl.setOpacity(1);
+                FadeTransition ft = new FadeTransition(Duration.millis(600), calmDownLbl);
+                ft.setFromValue(1);
+                ft.setToValue(0);
+                ft.setDelay(Duration.millis(700));
+                calmFade[0] = ft;
+                ft.play();
+                return;
+            }
+            advanceTimes[advanceHead[0]] = now;
+            advanceHead[0] = (advanceHead[0] + 1) % 6;
             exchange.advance();
             refreshRef[0].run();
         });
@@ -214,7 +243,7 @@ public final class GameView {
         });
 
         Region subSpacer = new Region(); HBox.setHgrow(subSpacer, Priority.ALWAYS);
-        HBox subBar = new HBox(16, weekCard, nextWeekBtn, sellAllHoldingsBtn, subSpacer);
+        HBox subBar = new HBox(16, weekCard, nextWeekBtn, calmDownLbl, sellAllHoldingsBtn, subSpacer);
         subBar.getStyleClass().add("game-sub-bar");
         subBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -547,7 +576,6 @@ public final class GameView {
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
                 syncingFields[0] = true;
                 qtyField.setText("0");
-                amountField.setText("0.00");
                 syncingFields[0] = false;
                 updateBuyAmount.run();
                 updateSellAmount.run();
@@ -558,7 +586,6 @@ public final class GameView {
             qty = Math.max(0, qty);
             syncingFields[0] = true;
             qtyField.setText(String.valueOf(qty));
-            amountField.setText(unitCostWithFee.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP).toPlainString());
             syncingFields[0] = false;
             updateBuyAmount.run();
             updateSellAmount.run();
