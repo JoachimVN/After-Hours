@@ -14,18 +14,18 @@ import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
-import edu.ntnu.idatt2003.g23.ui.views.GameView;
-import edu.ntnu.idatt2003.g23.ui.views.HomePageView;
-import edu.ntnu.idatt2003.g23.ui.views.ImportCsvView;
-import edu.ntnu.idatt2003.g23.ui.views.SetupView;
-import edu.ntnu.idatt2003.g23.ui.views.SettingsView;
+import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
+import edu.ntnu.idatt2003.g23.ui.views.importcsv.ImportCsvView;
+import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
+import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
+import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.application.Application;
-import javafx.scene.control.Alert;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -60,7 +60,7 @@ public class App extends Application {
     public void start(Stage stage) {
         homePageMusicController = new HomePageMusicController(getClass());
 
-        homePage = HomePageView.build(
+        homePage = LandingPageView.build(
                 this::goToSetup,
                 () -> { Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); }
         );
