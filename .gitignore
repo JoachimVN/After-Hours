@@ -26,5 +26,6 @@ replay_pid*
 target/
 
 .vscode/
-.github/
 .idea/
+/.github
+
