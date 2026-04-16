@@ -30,6 +30,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 /**
@@ -72,6 +73,9 @@ public class App extends Application {
         backgroundCanvas.widthProperty().bind(root.widthProperty());
         backgroundCanvas.heightProperty().bind(root.heightProperty());
         root.getStyleClass().add("app-root");
+
+        Font.loadFont(getClass().getResourceAsStream("/fonts/HARLOWSI.TTF"), 14);
+        Font.loadFont(getClass().getResourceAsStream("/fonts/SANSSERIFCOLLECTION.TTF"), 14);
 
         SplashOverlayController splashOverlayController = new SplashOverlayController(root);
 
@@ -178,7 +182,7 @@ public class App extends Application {
         FadeTransition ft = new FadeTransition(Duration.millis(500), page);
         ft.setFromValue(0);
         ft.setToValue(1);
-        ft.setInterpolator(Interpolator.EASE_OUT);
+        ft.setInterpolator(Interpolator.EASE_BOTH);
         ft.play();
     }
 
@@ -189,10 +193,10 @@ public class App extends Application {
             return;
         }
         Parent current = (Parent) root.getChildren().get(root.getChildren().size() - 1);
-        FadeTransition ft = new FadeTransition(Duration.millis(350), current);
+        FadeTransition ft = new FadeTransition(Duration.millis(500), current);
         ft.setFromValue(current.getOpacity());
         ft.setToValue(0);
-        ft.setInterpolator(Interpolator.EASE_IN);
+        ft.setInterpolator(Interpolator.EASE_BOTH);
         ft.setOnFinished(e -> navigate.run());
         ft.play();
     }

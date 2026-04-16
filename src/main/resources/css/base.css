@@ -1,5 +1,15 @@
 /* ── Base / Global ───────────────────────────────────────────────────────── */
 
+@font-face {
+    font-family: "Harlow Solid Italic";
+    src: url("/fonts/HARLOWSI.TTF");
+}
+
+@font-face {
+    font-family: "Sans Serif";
+    src: url("/fonts/SANSSERIFCOLLECTION.TTF");
+}
+
 .app-root {
     -fx-background-color: #07091f;
 }
