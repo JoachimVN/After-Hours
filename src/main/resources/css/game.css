@@ -176,7 +176,6 @@
 
 .stock-card:hover {
     -fx-background-color: rgba(20, 38, 78, 0.90);
-    -fx-border-color: rgba(245, 162, 1, 0.25);
 }
 
 .stock-card-selected {
