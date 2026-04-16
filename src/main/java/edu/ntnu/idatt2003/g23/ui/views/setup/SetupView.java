@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.ui.views;
+package edu.ntnu.idatt2003.g23.ui.views.setup;
 
 import java.util.function.BiConsumer;
 
