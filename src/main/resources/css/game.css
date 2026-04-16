@@ -339,11 +339,12 @@
 
 .trade-selector-column,
 .trade-action-column {
-    -fx-alignment: center-left;
+    -fx-alignment: top-left;
 }
 
 .trade-selector-column {
-    -fx-min-width: 190px;
+    -fx-min-width: 140px;
+    -fx-max-width: 140px;
 }
 
 .trade-buy-column,
@@ -406,7 +407,7 @@
 
 .trade-amount-field {
     -fx-background-color: linear-gradient(to bottom, rgba(8, 16, 40, 0.98), rgba(6, 12, 30, 0.95));
-    -fx-text-fill: #e8d8b0;
+    -fx-text-fill: #e0bd66;
     -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-border-color: rgba(245, 162, 1, 0.30);
@@ -417,7 +418,7 @@
     -fx-max-width: 140px;
     -fx-min-height: 40px;
     -fx-padding: 0 12 0 12;
-    -fx-prompt-text-fill: #6d87b0;
+    -fx-prompt-text-fill: #e8d8b0;
 }
 
 .trade-amount-field:focused {
@@ -536,7 +537,9 @@
     -fx-border-radius: 8;
     -fx-padding: 6 20 6 20;
     -fx-pref-width: 140px;
+    -fx-min-height: 42px;
     -fx-pref-height: 42px;
+    -fx-max-height: 42px;
     -fx-effect: dropshadow(gaussian, rgba(30, 158, 74, 0.40), 6, 0, 0, 2);
     -fx-cursor: hand;
 }
@@ -559,8 +562,10 @@
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-padding: 6 20 6 20;
-    -fx-pref-width: 120px;
+    -fx-pref-width: 140px;
+    -fx-min-height: 42px;
     -fx-pref-height: 42px;
+    -fx-max-height: 42px;
     -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.30), 6, 0, 0, 2);
     -fx-cursor: hand;
 }

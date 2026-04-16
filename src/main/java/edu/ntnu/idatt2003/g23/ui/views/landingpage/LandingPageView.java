@@ -11,6 +11,7 @@ import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
@@ -27,8 +28,10 @@ public final class LandingPageView {
         // Taglines
         Label tagline = new Label("\u2726  Lorem Ipsum \u2022 Lorem Ipsum \u2022 Lorem Ipsum  \u2726");
         tagline.getStyleClass().add("tagline");
+        tagline.setPadding(new Insets(2, 14, 4, 14));
         Label subTagline = new Label("Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
         subTagline.getStyleClass().add("sub-tagline");
+        subTagline.setPadding(new Insets(2, 14, 4, 14));
         VBox taglineBlock = new VBox(6, tagline, subTagline);
         taglineBlock.setAlignment(Pos.CENTER);
 
@@ -100,12 +103,16 @@ public final class LandingPageView {
         quitButton.getStyleClass().addAll("secondary-button", "quit-button");
         quitButton.setOnAction(e -> onQuit.run());
 
-        settingsButton.prefWidthProperty().bind(startButton.widthProperty().multiply(0.25));
-        quitButton.prefWidthProperty().bind(startButton.widthProperty().multiply(0.25));
+        settingsButton.setMaxWidth(Double.MAX_VALUE);
+        quitButton.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(settingsButton, Priority.ALWAYS);
+        HBox.setHgrow(quitButton, Priority.ALWAYS);
 
         HBox secondaryRow = new HBox(12, settingsButton, quitButton);
         secondaryRow.getStyleClass().add("landing-secondary-row");
         secondaryRow.setAlignment(Pos.CENTER);
+        secondaryRow.prefWidthProperty().bind(startButton.widthProperty().multiply(0.75));
+        secondaryRow.maxWidthProperty().bind(startButton.widthProperty().multiply(0.75));
 
         VBox buttonBlock = new VBox(12, startButton, secondaryRow);
         buttonBlock.setAlignment(Pos.CENTER);

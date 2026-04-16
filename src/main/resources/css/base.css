@@ -30,11 +30,13 @@
     -fx-font-size: 15;
     -fx-text-fill: #e8d8b0;
     -fx-font-weight: bold;
+    -fx-padding: 2 12 4 12;
 }
 
 .sub-tagline {
     -fx-font-size: 12;
     -fx-text-fill: #4a6899;
+    -fx-padding: 2 12 4 12;
 }
 
 /* Page headings (non-home pages) */

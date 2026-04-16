@@ -392,7 +392,7 @@ public final class GameView {
         incBtn.getStyleClass().add("trade-qty-btn");
 
         TextField amountField = new TextField();
-        amountField.setPromptText("Type amount ($)");
+        amountField.setPromptText("Enter amount ($)");
         amountField.getStyleClass().add("trade-amount-field");
         Button maxBuyBtn = new Button("MAX BUY");
         maxBuyBtn.getStyleClass().add("trade-max-buy-button");
@@ -508,7 +508,6 @@ public final class GameView {
 
         updateBuyAmount.run();
         updateSellAmount.run();
-        normalizeQtyAndAmount.run();
         qtyField.textProperty().addListener((obs, old, val) -> {
             if (syncingFields[0]) {
                 return;
@@ -650,7 +649,7 @@ public final class GameView {
         sellColumn.getStyleClass().add("trade-action-column");
         sellColumn.getStyleClass().add("trade-sell-column");
 
-        HBox tradeRow = new HBox(10, selectorColumn, buyColumn, sellColumn);
+        HBox tradeRow = new HBox(8, selectorColumn, buyColumn, sellColumn);
         tradeRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox tradePanel = new VBox(0, tradeRow);
