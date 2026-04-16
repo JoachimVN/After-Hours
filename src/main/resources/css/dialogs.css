@@ -1,0 +1,147 @@
+/* ── Trade Dialogs (Order Summary + Receipt) ─────────────────────────────── */
+
+.dialog-backdrop {
+    -fx-background-color: rgba(2, 4, 18, 0.72);
+}
+
+.trade-dialog-root {
+    -fx-background-color: #06081a;
+}
+
+.dialog-header {
+    -fx-background-color: rgba(5, 10, 28, 0.98);
+    -fx-padding: 18 22 14 22;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 0 0 1 0;
+}
+
+.dialog-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #c8d8ee;
+}
+
+.dialog-action-icon-buy {
+    -fx-font-size: 22px;
+    -fx-text-fill: #4ecb71;
+}
+
+.dialog-action-icon-sell {
+    -fx-font-size: 22px;
+    -fx-text-fill: #e05a5a;
+}
+
+.receipt-check {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.dialog-rows {
+    -fx-background-color: #07091f;
+}
+
+.dialog-row {
+    -fx-padding: 8 22 8 22;
+    -fx-border-color: transparent transparent rgba(30, 64, 128, 0.12) transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.dialog-row-key {
+    -fx-font-size: 11px;
+    -fx-text-fill: #4a6899;
+}
+
+.dialog-row-val {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #c8d8ee;
+}
+
+.dialog-val-buy  { -fx-text-fill: #4ecb71; }
+.dialog-val-sell { -fx-text-fill: #e05a5a; }
+.dialog-val-fee  { -fx-text-fill: #7a9fc8; }
+.dialog-val-cash { -fx-text-fill: #f5a201; }
+
+.dialog-total-section {
+    -fx-background-color: rgba(10, 16, 42, 0.96);
+    -fx-padding: 14 22 14 22;
+    -fx-border-color: rgba(245, 162, 1, 0.18) transparent;
+    -fx-border-width: 1 0 1 0;
+}
+
+.dialog-total-key {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+}
+
+.dialog-total-val-buy {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.dialog-total-val-sell {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e05a5a;
+}
+
+.dialog-btn-row {
+    -fx-background-color: rgba(5, 7, 20, 0.98);
+    -fx-padding: 12 18 12 18;
+    -fx-border-color: rgba(30, 64, 128, 0.20) transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.dialog-cancel-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4a6899;
+    -fx-font-size: 12px;
+    -fx-border-color: rgba(30, 64, 128, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 14 6 14;
+    -fx-cursor: hand;
+}
+
+.dialog-cancel-btn:hover {
+    -fx-text-fill: #b8cce8;
+    -fx-border-color: rgba(30, 64, 128, 0.65);
+}
+
+.dialog-confirm-buy-btn {
+    -fx-background-color: linear-gradient(to bottom, #1e9e4a, #157838);
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(46, 184, 92, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 18 6 18;
+    -fx-cursor: hand;
+}
+
+.dialog-confirm-buy-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, #25b855, #1e9e4a);
+}
+
+.dialog-confirm-sell-btn {
+    -fx-background-color: linear-gradient(to bottom, #7a1c1c, #5e1414);
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(180, 40, 40, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 18 6 18;
+    -fx-cursor: hand;
+}
+
+.dialog-confirm-sell-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, #9e2222, #7a1c1c);
+}

@@ -1,0 +1,29 @@
+/* ── Import CSV Page ─────────────────────────────────────────────────────── */
+
+.drop-zone {
+    -fx-border-color: #1e408080;
+    -fx-border-width: 2;
+    -fx-border-style: dashed;
+    -fx-border-radius: 14;
+    -fx-background-color: #07152c;
+    -fx-background-radius: 14;
+    -fx-padding: 28;
+}
+
+.drop-zone.drag-over {
+    -fx-border-color: #f5a201;
+    -fx-background-color: #0e2040;
+}
+
+.drop-zone-label {
+    -fx-font-size: 16;
+    -fx-text-fill: #5a7aaa;
+}
+
+.csv-req-panel {
+    -fx-background-color: #07152c;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e408050;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}

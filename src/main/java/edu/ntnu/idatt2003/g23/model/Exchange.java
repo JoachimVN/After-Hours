@@ -141,9 +141,7 @@ public class Exchange {
         }
 
         Stock stock = share.getStock();
-        BigDecimal currentPrice = stock.getSalesPrice();
-        Share sellShare = new Share(stock, share.getQuantity(), currentPrice);
-        return TransactionFactory.createSale(sellShare, this.week);
+        return TransactionFactory.createSale(share, this.week);
     }
 
     /**
