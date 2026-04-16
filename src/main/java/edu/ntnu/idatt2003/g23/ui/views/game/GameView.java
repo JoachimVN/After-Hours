@@ -67,6 +67,7 @@ public final class GameView {
         // ── Stock list (left panel) ──────────────────────────────────────────
         VBox stockListBox = new VBox(4);
         stockListBox.getStyleClass().add("game-stock-list");
+        Node[] selectedCardRef = {null};
 
         // ── Refresh closure ──────────────────────────────────────────────────
         Runnable[] refreshRef = {null};
@@ -76,16 +77,17 @@ public final class GameView {
             portVal.setText(fmt(player.getPortfolio().getNetWorth()));
             nwVal.setText(fmt(player.getNetWorth()));
             portfolioItems.setAll(player.getPortfolio().getShares());
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, refreshRef);
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, refreshRef);
             rebuildDetail(detailArea, selectedStock.get(), player, exchange, portfolioItems, refreshRef, overlayRef);
         };
 
         // Initial stock list population
-        rebuildStockList(stockListBox, filteredStocks, selectedStock, refreshRef);
+        rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, refreshRef);
 
         // Rebuild detail when selection changes
-        selectedStock.addListener((obs, old, stock) ->
-                rebuildDetail(detailArea, stock, player, exchange, portfolioItems, refreshRef, overlayRef));
+        selectedStock.addListener((obs, old, stock) -> {
+            rebuildDetail(detailArea, stock, player, exchange, portfolioItems, refreshRef, overlayRef);
+        });
 
         // Show detail immediately for first stock
         if (selectedStock.get() != null) {
@@ -102,7 +104,7 @@ public final class GameView {
                     lower.isEmpty()
                     || s.getSymbol().toLowerCase().contains(lower)
                     || s.getCompany().toLowerCase().contains(lower));
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, refreshRef);
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, refreshRef);
         });
 
         Label marketTitle = new Label("Market Stocks");
@@ -202,14 +204,17 @@ public final class GameView {
 
     private static void rebuildStockList(VBox box, FilteredList<Stock> stocks,
                                          ObjectProperty<Stock> selectedStock,
+                                         Node[] selectedCardRef,
                                          Runnable[] refreshRef) {
         box.getChildren().clear();
+        selectedCardRef[0] = null;
         for (Stock stock : stocks) {
-            box.getChildren().add(buildStockCard(stock, selectedStock, refreshRef));
+            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, refreshRef));
         }
     }
 
     private static Node buildStockCard(Stock stock, ObjectProperty<Stock> selectedStock,
+                                        Node[] selectedCardRef,
                                         Runnable[] refreshRef) {
         Label symLbl    = new Label(stock.getSymbol());
         symLbl.getStyleClass().add("stock-card-symbol");
@@ -238,9 +243,19 @@ public final class GameView {
 
         if (stock.equals(selectedStock.get())) {
             card.getStyleClass().add("stock-card-selected");
+            selectedCardRef[0] = card;
         }
 
-        card.setOnMouseClicked(e -> selectedStock.set(stock));
+        card.setOnMouseClicked(e -> {
+            if (selectedCardRef[0] != null) {
+                selectedCardRef[0].getStyleClass().remove("stock-card-selected");
+            }
+            if (!card.getStyleClass().contains("stock-card-selected")) {
+                card.getStyleClass().add("stock-card-selected");
+            }
+            selectedCardRef[0] = card;
+            selectedStock.set(stock);
+        });
         return card;
     }
 
