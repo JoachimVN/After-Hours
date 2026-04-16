@@ -13,7 +13,7 @@
 }
 
 .background-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.2);
+    -fx-background-color: rgba(0, 0, 0, 0.3);
 }
 
 /* Title */
@@ -83,6 +83,17 @@
 
 .secondary-button:hover {
     -fx-background-color: derive(#0f2d5e, 25%);
+    -fx-text-fill: white;
+}
+
+.quit-button {
+    -fx-background-color: #4b1520;
+    -fx-border-color: #8d304870;
+    -fx-text-fill: #f1c6cf;
+}
+
+.quit-button:hover {
+    -fx-background-color: derive(#4b1520, 18%);
     -fx-text-fill: white;
 }
 

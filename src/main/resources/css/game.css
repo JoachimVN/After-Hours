@@ -194,6 +194,18 @@
     -fx-text-fill: #4a6899;
 }
 
+.stock-owned-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8ff0b0;
+    -fx-background-color: rgba(30, 158, 74, 0.18);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(46, 184, 92, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 1 6 1 6;
+}
+
 .stock-card-price {
     -fx-font-size: 13px;
     -fx-font-weight: bold;
@@ -256,7 +268,9 @@
     -fx-border-color: rgba(20, 140, 60, 0.40);
     -fx-border-width: 1;
     -fx-border-radius: 6;
-    -fx-padding: 3 10 3 10;
+    -fx-padding: 3 12 3 12;
+    -fx-min-width: 82px;
+    -fx-alignment: center;
 }
 
 .detail-badge-down {
@@ -268,7 +282,9 @@
     -fx-border-color: rgba(160, 30, 30, 0.40);
     -fx-border-width: 1;
     -fx-border-radius: 6;
-    -fx-padding: 3 10 3 10;
+    -fx-padding: 3 12 3 12;
+    -fx-min-width: 82px;
+    -fx-alignment: center;
 }
 
 .stat-hl-value-up {
@@ -300,14 +316,16 @@
     -fx-border-color: rgba(30, 64, 128, 0.55);
     -fx-border-width: 1;
     -fx-border-radius: 8;
+    -fx-pref-width: 140px;
+    -fx-max-width: 140px;
 }
 
 .trade-qty-btn {
-    -fx-background-color: rgba(15, 40, 90, 0.80);
+    -fx-background-color: transparent;
+    -fx-alignment: center;
     -fx-text-fill: #b8cce8;
     -fx-font-size: 16px;
     -fx-font-weight: bold;
-    -fx-background-radius: 0;
     -fx-border-color: transparent;
     -fx-border-width: 0;
     -fx-min-width: 32px;
@@ -316,12 +334,26 @@
 }
 
 .trade-qty-btn:hover {
-    -fx-background-color: rgba(245, 162, 1, 0.18);
     -fx-text-fill: #f5a201;
 }
 
-.trade-max-buttons {
+.trade-selector-column,
+.trade-action-column {
     -fx-alignment: center-left;
+}
+
+.trade-selector-column {
+    -fx-min-width: 190px;
+}
+
+.trade-buy-column,
+.trade-sell-column {
+    -fx-alignment: center;
+}
+
+.trade-action-column .trade-buy-button,
+.trade-action-column .trade-sell-button {
+    -fx-pref-width: 140px;
 }
 
 .trade-max-buy-button,
@@ -329,6 +361,7 @@
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-min-height: 30px;
+    -fx-pref-width: 110px;
     -fx-padding: 4 10 4 10;
     -fx-border-width: 1;
     -fx-border-radius: 7;
@@ -337,23 +370,23 @@
 }
 
 .trade-max-buy-button {
-    -fx-background-color: linear-gradient(to bottom, rgba(30, 158, 74, 0.26), rgba(21, 120, 56, 0.35));
-    -fx-text-fill: #8ff0b0;
-    -fx-border-color: rgba(46, 184, 92, 0.55);
+    -fx-background-color: linear-gradient(to bottom, rgba(30, 158, 74, 0.12), rgba(21, 120, 56, 0.18));
+    -fx-text-fill: rgba(143, 240, 176, 0.88);
+    -fx-border-color: rgba(46, 184, 92, 0.28);
 }
 
 .trade-max-buy-button:hover {
-    -fx-background-color: linear-gradient(to bottom, rgba(37, 184, 85, 0.35), rgba(30, 158, 74, 0.45));
+    -fx-background-color: linear-gradient(to bottom, rgba(37, 184, 85, 0.20), rgba(30, 158, 74, 0.28));
 }
 
 .trade-max-sell-button {
-    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.25), rgba(122, 28, 28, 0.35));
-    -fx-text-fill: #ffb0b0;
-    -fx-border-color: rgba(180, 40, 40, 0.55);
+    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.12), rgba(122, 28, 28, 0.18));
+    -fx-text-fill: rgba(255, 176, 176, 0.88);
+    -fx-border-color: rgba(180, 40, 40, 0.28);
 }
 
 .trade-max-sell-button:hover {
-    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.35), rgba(122, 28, 28, 0.48));
+    -fx-background-color: linear-gradient(to bottom, rgba(158, 34, 34, 0.20), rgba(122, 28, 28, 0.28));
 }
 
 .trade-qty-field {
@@ -364,8 +397,9 @@
     -fx-alignment: center;
     -fx-border-color: transparent rgba(30, 64, 128, 0.45) transparent rgba(30, 64, 128, 0.45);
     -fx-border-width: 0 1 0 1;
+    -fx-border-insets: 6 0 6 0;
     -fx-background-radius: 0;
-    -fx-pref-width: 48px;
+    -fx-pref-width: 76px;
     -fx-min-height: 40px;
     -fx-padding: 0 6 0 6;
 }
@@ -377,11 +411,12 @@
     -fx-font-weight: bold;
     -fx-border-color: rgba(245, 162, 1, 0.30);
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-pref-width: 126px;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-pref-width: 140px;
+    -fx-max-width: 140px;
     -fx-min-height: 40px;
-    -fx-padding: 0 10 0 10;
+    -fx-padding: 0 12 0 12;
     -fx-prompt-text-fill: #6d87b0;
 }
 

@@ -22,6 +22,7 @@ import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -62,7 +63,8 @@ public class App extends Application {
 
         homePage = LandingPageView.build(
                 this::goToSetup,
-                () -> { Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); }
+            () -> { Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); },
+            Platform::exit
         );
 
         backgroundCanvas = new BackgroundCanvas();

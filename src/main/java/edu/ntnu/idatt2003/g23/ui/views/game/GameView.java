@@ -82,12 +82,12 @@ public final class GameView {
             portVal.setText(fmt(player.getPortfolio().getNetWorth()));
             nwVal.setText(fmt(player.getNetWorth()));
             portfolioItems.setAll(gameController.getOwnedShares());
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef);
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
             rebuildDetail(detailArea, selectedStock.get(), player, exchange, refreshRef, overlayRef);
         };
 
         // Initial stock list population
-        rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef);
+        rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
 
         // Rebuild detail when selection changes
         selectedStock.addListener((obs, old, stock) -> {
@@ -109,7 +109,7 @@ public final class GameView {
                     lower.isEmpty()
                     || s.getSymbol().toLowerCase().contains(lower)
                     || s.getCompany().toLowerCase().contains(lower));
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef);
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
         });
 
         Label marketTitle = new Label("Market Stocks");
@@ -264,16 +264,18 @@ public final class GameView {
 
     private static void rebuildStockList(VBox box, FilteredList<Stock> stocks,
                                          ObjectProperty<Stock> selectedStock,
-                                         Node[] selectedCardRef) {
+                                         Node[] selectedCardRef,
+                                         Player player) {
         box.getChildren().clear();
         selectedCardRef[0] = null;
         for (Stock stock : stocks) {
-            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef));
+            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, player));
         }
     }
 
     private static Node buildStockCard(Stock stock, ObjectProperty<Stock> selectedStock,
-                                        Node[] selectedCardRef) {
+                                        Node[] selectedCardRef,
+                                        Player player) {
         Label symLbl    = new Label(stock.getSymbol());
         symLbl.getStyleClass().add("stock-card-symbol");
 
@@ -288,7 +290,20 @@ public final class GameView {
         Label pctLbl    = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
         pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
 
-        VBox left  = new VBox(2, symLbl, compLbl, pctLbl);
+        BigDecimal ownedQty = player.getPortfolio().getShareBySymbol(stock.getSymbol())
+                .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+        Label ownedLbl = null;
+        if (ownedQty.compareTo(BigDecimal.ZERO) > 0) {
+            ownedLbl = new Label("Owned: " + ownedQty.stripTrailingZeros().toPlainString());
+            ownedLbl.getStyleClass().add("stock-owned-label");
+        }
+
+        VBox left;
+        if (ownedLbl != null) {
+            left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl);
+        } else {
+            left = new VBox(2, symLbl, compLbl, pctLbl);
+        }
         VBox right = new VBox();
         right.setAlignment(Pos.TOP_RIGHT);
         right.getChildren().add(priceLbl);
@@ -377,7 +392,7 @@ public final class GameView {
         incBtn.getStyleClass().add("trade-qty-btn");
 
         TextField amountField = new TextField();
-        amountField.setPromptText("$ Amount");
+        amountField.setPromptText("Type amount ($)");
         amountField.getStyleClass().add("trade-amount-field");
         Button maxBuyBtn = new Button("MAX BUY");
         maxBuyBtn.getStyleClass().add("trade-max-buy-button");
@@ -429,10 +444,6 @@ public final class GameView {
         HBox stepper = new HBox(0, decBtn, qtyField, incBtn);
         stepper.getStyleClass().add("trade-qty-stepper");
         stepper.setAlignment(Pos.CENTER);
-
-        HBox maxButtons = new HBox(6, maxBuyBtn, maxSellBtn);
-        maxButtons.getStyleClass().add("trade-max-buttons");
-        maxButtons.setAlignment(Pos.CENTER_LEFT);
 
         // ── Live cost / proceeds labels ────────────────────────────────────────
         Label buyAmountLbl  = new Label("\u2014");
@@ -628,7 +639,18 @@ public final class GameView {
             });
         });
 
-        HBox tradeRow = new HBox(8, stepper, maxButtons, amountField, buyBtn, sellBtn);
+        VBox selectorColumn = new VBox(6, stepper, amountField);
+        selectorColumn.getStyleClass().add("trade-selector-column");
+
+        VBox buyColumn = new VBox(6, buyBtn, maxBuyBtn);
+        buyColumn.getStyleClass().add("trade-action-column");
+        buyColumn.getStyleClass().add("trade-buy-column");
+
+        VBox sellColumn = new VBox(6, sellBtn, maxSellBtn);
+        sellColumn.getStyleClass().add("trade-action-column");
+        sellColumn.getStyleClass().add("trade-sell-column");
+
+        HBox tradeRow = new HBox(10, selectorColumn, buyColumn, sellColumn);
         tradeRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox tradePanel = new VBox(0, tradeRow);
