@@ -888,6 +888,37 @@ public final class GameView {
                       .multiply(BigDecimal.valueOf(100));
     }
 
+    /** Compound return from {@code weeks} price points ago to now (−1 = all-time). */
+    private static BigDecimal compoundReturn(Stock stock, int weeks) {
+        java.util.List<BigDecimal> prices = stock.getHistoricalPrices();
+        if (prices.size() < 2) return BigDecimal.ZERO;
+        int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
+        BigDecimal from = prices.get(fromIdx);
+        BigDecimal to   = prices.get(prices.size() - 1);
+        if (from.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+        return to.subtract(from).divide(from, 6, RoundingMode.HALF_UP)
+                 .multiply(BigDecimal.valueOf(100));
+    }
+
+    /** Mean of each consecutive week's % change over the last {@code weeks} periods (−1 = all-time). */
+    private static BigDecimal avgWeeklyReturn(Stock stock, int weeks) {
+        java.util.List<BigDecimal> prices = stock.getHistoricalPrices();
+        if (prices.size() < 2) return BigDecimal.ZERO;
+        int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
+        BigDecimal sum = BigDecimal.ZERO;
+        int count = 0;
+        for (int i = fromIdx + 1; i < prices.size(); i++) {
+            BigDecimal prev = prices.get(i - 1);
+            BigDecimal cur  = prices.get(i);
+            if (prev.compareTo(BigDecimal.ZERO) == 0) continue;
+            sum = sum.add(cur.subtract(prev).divide(prev, 6, RoundingMode.HALF_UP)
+                             .multiply(BigDecimal.valueOf(100)));
+            count++;
+        }
+        if (count == 0) return BigDecimal.ZERO;
+        return sum.divide(BigDecimal.valueOf(count), 4, RoundingMode.HALF_UP);
+    }
+
     private static String fmt(BigDecimal value) {
         return String.format("$%,.2f", value.doubleValue());
     }
@@ -1430,14 +1461,6 @@ public final class GameView {
     }
 
     private static void showMarketMovers(StackPane overlay, Exchange exchange, Node background, Consumer<Stock> onSelectStock) {
-        List<Stock> all = exchange.getStocks();
-        List<Stock> gainers = all.stream()
-                .sorted((a, b) -> pctChange(b).compareTo(pctChange(a)))
-                .limit(10).toList();
-        List<Stock> losers = all.stream()
-                .sorted((a, b) -> pctChange(a).compareTo(pctChange(b)))
-                .limit(10).toList();
-
         GaussianBlur blur = new GaussianBlur(0);
         background.setEffect(blur);
 
@@ -1455,15 +1478,65 @@ public final class GameView {
         titleRow.getStyleClass().add("market-movers-header");
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
+        // ── Tab bar ───────────────────────────────────────────────────────────
+        String[] tabRef = {"1W"};
+        Button tab1w  = new Button("1W");
+        Button tab4w  = new Button("4W");
+        Button tabAll = new Button("All");
+        for (Button t : new Button[]{tab1w, tab4w, tabAll}) t.getStyleClass().add("movers-tab");
+        tab1w.getStyleClass().add("movers-tab-active");
+        HBox tabBar = new HBox(4, tab1w, tab4w, tabAll);
+        tabBar.getStyleClass().add("movers-tab-bar");
+
         Runnable[] dismissRef = {null};
-        VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true, dismissRef, onSelectStock);
-        VBox losersCol  = buildMoversColumn("\u25BC  TOP LOSERS",  losers,  false, dismissRef, onSelectStock);
-        HBox.setHgrow(gainersCol, Priority.ALWAYS);
-        HBox.setHgrow(losersCol,  Priority.ALWAYS);
-        HBox columns = new HBox(0, gainersCol, losersCol);
+        HBox columns = new HBox(0);
         columns.getStyleClass().add("market-movers-columns");
 
-        VBox card = new VBox(0, titleRow, columns);
+        Runnable[] rebuildRef = {null};
+        rebuildRef[0] = () -> {
+            int weeks = switch (tabRef[0]) {
+                case "4W"  -> 4;
+                case "All" -> -1;
+                default    -> 1;
+            };
+            List<Stock> all = exchange.getStocks();
+            List<Stock> gainers = all.stream()
+                    .sorted((a, b) -> compoundReturn(b, weeks).compareTo(compoundReturn(a, weeks)))
+                    .limit(10).toList();
+            List<Stock> losers = all.stream()
+                    .sorted((a, b) -> compoundReturn(a, weeks).compareTo(compoundReturn(b, weeks)))
+                    .limit(10).toList();
+            VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true, weeks, dismissRef, onSelectStock);
+            VBox losersCol  = buildMoversColumn("\u25BC  TOP LOSERS",  losers,  false, weeks, dismissRef, onSelectStock);
+            HBox.setHgrow(gainersCol, Priority.ALWAYS);
+            HBox.setHgrow(losersCol,  Priority.ALWAYS);
+            columns.getChildren().setAll(gainersCol, losersCol);
+        };
+        rebuildRef[0].run();
+
+        tab1w.setOnAction(ev -> {
+            tabRef[0] = "1W";
+            tab1w.getStyleClass().add("movers-tab-active");
+            tab4w.getStyleClass().remove("movers-tab-active");
+            tabAll.getStyleClass().remove("movers-tab-active");
+            rebuildRef[0].run();
+        });
+        tab4w.setOnAction(ev -> {
+            tabRef[0] = "4W";
+            tab4w.getStyleClass().add("movers-tab-active");
+            tab1w.getStyleClass().remove("movers-tab-active");
+            tabAll.getStyleClass().remove("movers-tab-active");
+            rebuildRef[0].run();
+        });
+        tabAll.setOnAction(ev -> {
+            tabRef[0] = "All";
+            tabAll.getStyleClass().add("movers-tab-active");
+            tab1w.getStyleClass().remove("movers-tab-active");
+            tab4w.getStyleClass().remove("movers-tab-active");
+            rebuildRef[0].run();
+        });
+
+        VBox card = new VBox(0, titleRow, tabBar, columns);
         card.getStyleClass().add("market-movers-card");
         card.setMaxWidth(720);
         card.setMaxHeight(Region.USE_PREF_SIZE);
@@ -1506,7 +1579,7 @@ public final class GameView {
     }
 
     private static VBox buildMoversColumn(String title, List<Stock> stocks, boolean isGainers,
-                                           Runnable[] dismissRef, Consumer<Stock> onSelectStock) {
+                                           int weeks, Runnable[] dismissRef, Consumer<Stock> onSelectStock) {
         Label colTitle = new Label(title);
         colTitle.getStyleClass().add("market-movers-col-title");
         colTitle.getStyleClass().add(isGainers ? "market-movers-col-title-gainers" : "market-movers-col-title-losers");
@@ -1514,7 +1587,7 @@ public final class GameView {
         VBox rows = new VBox(0);
         for (int i = 0; i < stocks.size(); i++) {
             Stock s = stocks.get(i);
-            BigDecimal pct = pctChange(s);
+            BigDecimal pct = compoundReturn(s, weeks);
             String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
 
             Label rankLbl = new Label("#" + (i + 1));
@@ -1523,7 +1596,7 @@ public final class GameView {
             else if (i == 1) rankLbl.getStyleClass().add("movers-rank-silver");
             else if (i == 2) rankLbl.getStyleClass().add("movers-rank-bronze");
 
-            Label symLbl  = new Label(s.getSymbol());
+            Label symLbl = new Label(s.getSymbol());
             symLbl.getStyleClass().add("movers-symbol");
             Label compLbl = new Label(s.getCompany());
             compLbl.getStyleClass().add("movers-company");
@@ -1531,9 +1604,9 @@ public final class GameView {
 
             Label priceLbl = new Label(fmt(s.getSalesPrice()));
             priceLbl.getStyleClass().add("movers-price");
-            Label pctLbl   = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+            Label pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
             pctLbl.getStyleClass().add(isGainers ? "movers-pct-up" : "movers-pct-down");
-            VBox rightBox  = new VBox(2, priceLbl, pctLbl);
+            VBox rightBox = new VBox(2, priceLbl, pctLbl);
             rightBox.setAlignment(Pos.CENTER_RIGHT);
 
             Region spacer = new Region();

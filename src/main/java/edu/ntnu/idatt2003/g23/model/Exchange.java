@@ -226,6 +226,28 @@ public class Exchange {
                 s.setVolatility(pickNextVolatility(s.getVolatility()));
             }
         }
+
+        // Spike events — each tier independently fires and applies to one random stock
+        List<Stock> allStocks = new ArrayList<>(stockMap.values());
+        applySpike(allStocks, 0.10, 10,  75);
+        applySpike(allStocks, 0.05, 20, 100);
+        applySpike(allStocks, 0.02, 40, 150);
+        applySpike(allStocks, 0.01, 50, 200);
+    }
+
+    private void applySpike(List<Stock> stocks, double chance, double minPct, double maxPct) {
+        if (random.nextDouble() >= chance) return;
+        Stock target = stocks.get(random.nextInt(stocks.size()));
+        double pct = minPct + random.nextDouble() * (maxPct - minPct);
+        BigDecimal factor = BigDecimal.valueOf(1.0 + pct / 100.0).setScale(6, RoundingMode.HALF_UP);
+        BigDecimal newPrice;
+        if (random.nextBoolean()) {
+            newPrice = target.getSalesPrice().multiply(factor);
+        } else {
+            newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
+        }
+        target.addNewSalesPrice(newPrice);
+    
     }
 
     private Volatility pickNextVolatility(Volatility current) {
