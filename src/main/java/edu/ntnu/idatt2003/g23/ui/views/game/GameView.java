@@ -29,6 +29,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -178,13 +179,14 @@ public final class GameView {
         stockScroll.setFitToWidth(true);
         stockScroll.getStyleClass().add("game-scroll");
         stockScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        stockScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         VBox.setVgrow(stockScroll, Priority.ALWAYS);
 
         VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, stockScroll);
         leftPanel.getStyleClass().add("game-left-panel");
         leftPanel.setPrefWidth(300);
-        leftPanel.setMinWidth(220);
-        leftPanel.setMaxWidth(340);
+        leftPanel.setMinWidth(Region.USE_PREF_SIZE);
+        leftPanel.setMaxWidth(Region.USE_PREF_SIZE);
 
         // ── Portfolio table (bottom of right panel) ──────────────────────────
         Label portTitle = new Label("Portfolio");
@@ -825,6 +827,7 @@ public final class GameView {
 
         TableColumn<Share, String> plCol = new TableColumn<>("P&L");
         plCol.setMinWidth(90);
+        plCol.setMaxWidth(120);
         plCol.setCellValueFactory(c -> {
             Share sh = c.getValue();
             BigDecimal pl = sh.getStock().getSalesPrice().subtract(sh.getPurchasePrice())
@@ -1293,17 +1296,21 @@ public final class GameView {
         }
 
         // ── Table ─────────────────────────────────────────────────────────────
-        TableView<TxRow> table = new TableView<>(filteredTx);
+        SortedList<TxRow> sortedTx = new SortedList<>(filteredTx);
+        TableView<TxRow> table = new TableView<>(sortedTx);
+        sortedTx.comparatorProperty().bind(table.comparatorProperty());
         table.getStyleClass().add("history-table");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<TxRow, String> weekCol = new TableColumn<>("Wk");
         weekCol.setCellValueFactory(cd -> new SimpleStringProperty(String.valueOf(cd.getValue().week())));
+        weekCol.setComparator(java.util.Comparator.comparingInt(Integer::parseInt));
         weekCol.setMinWidth(34); weekCol.setPrefWidth(34);
 
         TableColumn<TxRow, String> typeCol = new TableColumn<>("Type");
         typeCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().isBuy() ? "BUY" : "SELL"));
         typeCol.setMinWidth(46); typeCol.setPrefWidth(46);
+        typeCol.setComparator(String::compareTo);
         typeCol.setCellFactory(col -> new TableCell<>() {
             @Override protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);

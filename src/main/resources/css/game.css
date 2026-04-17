@@ -161,6 +161,12 @@
     -fx-pref-width: 6px;
 }
 
+.game-scroll .scroll-bar:vertical .track,
+.game-scroll .scroll-bar:vertical .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
 .game-scroll .scroll-bar:vertical .thumb {
     -fx-background-color: rgba(30, 64, 128, 0.5);
     -fx-background-radius: 3px;
@@ -541,10 +547,23 @@
     -fx-background-color: rgba(5, 8, 24, 0.95);
 }
 
-.game-table .column-header,
+.game-table .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-border-insets: 6 0 0 0;
+    -fx-border-width: 0 1 1 0;
+    -fx-size: 30px;
+    -fx-cursor: hand;
+}
+
+.game-table .column-header:hover {
+    -fx-background-color: rgba(30, 64, 128, 0.08);
+}
+
 .game-table .filler {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(30, 64, 128, 0.35);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-border-insets: 0;
     -fx-border-width: 0 0 1 0;
     -fx-size: 30px;
 }
@@ -582,7 +601,9 @@
     -fx-text-fill: #c8d8ee;
     -fx-font-size: 11px;
     -fx-padding: 4 6 4 6;
-    -fx-border-color: transparent;
+    -fx-border-color: transparent rgba(30, 64, 128, 0.10) transparent transparent;
+    -fx-border-insets: 4 0 4 0;
+    -fx-border-width: 0 1 0 0;
 }
 
 .game-table .placeholder .label {
@@ -925,6 +946,14 @@
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 6 4 6 4;
+}
+
+.history-table .column-header {
+    -fx-cursor: hand;
+}
+
+.history-table .column-header .arrow {
+    -fx-background-color: #7a9fc8;
 }
 
 .history-table .table-row-cell {
