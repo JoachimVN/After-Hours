@@ -118,7 +118,6 @@ public class App extends Application {
     }
 
     private void startGame(String name, double cash) {
-        homePageMusicController.playGameStartThenAmbience(sfxVolume); // instant — FX thread free
         new Thread(() -> {
             List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
             Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
@@ -126,7 +125,6 @@ public class App extends Application {
     }
 
     private void startGameWithCsv(String name, double cash, File csvFile) {
-        homePageMusicController.playGameStartThenAmbience(sfxVolume); // instant — FX thread free
         new Thread(() -> {
             List<Stock> stocks;
             try {
@@ -158,6 +156,7 @@ public class App extends Application {
                 currentSfxVolumeSupplier()
         );
         navigateToGame(currentGamePage);
+        Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxVolume));
     }
 
     private DoubleSupplier currentSfxVolumeSupplier() {

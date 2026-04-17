@@ -91,7 +91,7 @@ public class HomePageMusicController {
             String randomTrack = candidates.get((int) (Math.random() * candidates.size()));
             lastGameStartTrack = randomTrack;
             String path = resourceOwner.getResource(randomTrack).toExternalForm();
-            MediaPlayer sfxPlayer = new MediaPlayer(new Media(path));
+            final MediaPlayer sfxPlayer = new MediaPlayer(new Media(path));
             mediaPlayer = sfxPlayer;
             sfxPlayer.setVolume(sfxVolume);
             sfxPlayer.setOnEndOfMedia(() -> {
