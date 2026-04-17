@@ -28,8 +28,6 @@ import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -228,7 +226,7 @@ public final class GameView {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             if (totalOwnedQty.compareTo(BigDecimal.ZERO) <= 0) {
-                showError("You don't own any shares to sell.");
+                showError(overlayRef[0], "You don't own any shares to sell.");
                 return;
             }
 
@@ -252,7 +250,7 @@ public final class GameView {
                                     player.getMoney());
                             refreshRef[0].run();
                         } catch (Exception ex) {
-                            showError(ex.getMessage());
+                            showError(overlayRef[0], ex.getMessage());
                         }
                     });
         });
@@ -637,10 +635,10 @@ public final class GameView {
         buyBtn.setOnAction(e -> {
             int parsedQty;
             try { parsedQty = Integer.parseInt(qtyField.getText().trim()); }
-            catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
+            catch (NumberFormatException ex) { showError(overlayRef[0], "Enter a valid quantity."); return; }
 
             if (parsedQty < 1) {
-                showError("Quantity must be at least 1 whole share.");
+                showError(overlayRef[0], "Quantity must be at least 1 whole share.");
                 return;
             }
 
@@ -654,7 +652,7 @@ public final class GameView {
                     tx.commit(player);
                     showReceipt(overlayRef[0], "BUY", stock, qty, total, fee, BigDecimal.ZERO, player.getMoney());
                     refreshRef[0].run();
-                } catch (Exception ex) { showError(ex.getMessage()); }
+                } catch (Exception ex) { showError(overlayRef[0], ex.getMessage()); }
             });
         });
 
@@ -670,10 +668,10 @@ public final class GameView {
         sellBtn.setOnAction(e -> {
             int parsedQty;
             try { parsedQty = Integer.parseInt(qtyField.getText().trim()); }
-            catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
+            catch (NumberFormatException ex) { showError(overlayRef[0], "Enter a valid quantity."); return; }
 
             if (parsedQty < 1) {
-                showError("Quantity must be at least 1 whole share.");
+                showError(overlayRef[0], "Quantity must be at least 1 whole share.");
                 return;
             }
 
@@ -681,10 +679,10 @@ public final class GameView {
             BigDecimal totalOwned = player.getPortfolio().getShareBySymbol(stock.getSymbol())
                     .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (totalOwned.compareTo(BigDecimal.ZERO) == 0) {
-                showError("You don't own any shares of " + stock.getSymbol()); return;
+                showError(overlayRef[0], "You don't own any shares of " + stock.getSymbol()); return;
             }
             if (sellQty.compareTo(totalOwned) > 0) {
-                showError("You only own " + totalOwned.stripTrailingZeros().toPlainString()
+                showError(overlayRef[0], "You only own " + totalOwned.stripTrailingZeros().toPlainString()
                         + " shares of " + stock.getSymbol()); return;
             }
             BigDecimal[] preview = previewSell(player, stock, sellQty);
@@ -695,7 +693,7 @@ public final class GameView {
                     showReceipt(overlayRef[0], "SELL", stock, sellQty,
                             result[3], result[1], result[2], player.getMoney());
                     refreshRef[0].run();
-                } catch (Exception ex) { showError(ex.getMessage()); }
+                } catch (Exception ex) { showError(overlayRef[0], ex.getMessage()); }
             });
         });
 
@@ -1457,12 +1455,51 @@ public final class GameView {
         return pane;
     }
 
-    private static void showError(String message) {
+    private static void showError(StackPane overlay, String message) {
         Alert alert = new Alert(AlertType.ERROR);
         alert.setTitle("Error");
         alert.setHeaderText(null);
         alert.setContentText(message != null ? message : "An unexpected error occurred.");
         alert.showAndWait();
+=======
+    private static void showError(StackPane overlay, String message) {
+        Label iconLbl = new Label("\u26A0");
+        iconLbl.getStyleClass().add("error-dialog-icon");
+        Label titleLbl = new Label("ERROR");
+        titleLbl.getStyleClass().add("error-dialog-title");
+        HBox header = new HBox(10, iconLbl, titleLbl);
+        header.getStyleClass().add("error-dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Label msgLbl = new Label(message != null ? message : "An unexpected error occurred.");
+        msgLbl.getStyleClass().add("error-dialog-message");
+        msgLbl.setWrapText(true);
+        msgLbl.setMaxWidth(300);
+        VBox msgBox = new VBox(msgLbl);
+        msgBox.getStyleClass().add("error-dialog-body");
+
+        Button okBtn = new Button("OK");
+        okBtn.getStyleClass().add("dialog-confirm-sell-btn");
+        HBox btnRow = new HBox(okBtn);
+        btnRow.setAlignment(Pos.CENTER_RIGHT);
+        btnRow.getStyleClass().add("dialog-btn-row");
+
+        VBox card = new VBox(0, header, msgBox, btnRow);
+        card.getStyleClass().add("error-dialog-root");
+        card.setMaxWidth(360);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+
+        Region backdrop = new Region();
+        backdrop.getStyleClass().add("error-dialog-backdrop");
+
+        StackPane popup = new StackPane(backdrop, card);
+        StackPane.setAlignment(card, Pos.CENTER);
+
+        Runnable dismiss = () -> overlay.getChildren().remove(popup);
+        okBtn.setOnAction(ev -> dismiss.run());
+        backdrop.setOnMouseClicked(ev -> dismiss.run());
+
+        overlay.getChildren().add(popup);
     }
 }
 
