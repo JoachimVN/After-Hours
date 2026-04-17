@@ -142,6 +142,7 @@ public final class GameView {
                 case "PRICE_DESC" -> java.util.Comparator.comparing(Stock::getSalesPrice).reversed();
                 case "CHG_ASC"    -> java.util.Comparator.comparing(s -> pctChange((Stock) s));
                 case "CHG_DESC"   -> java.util.Comparator.comparing((Stock s) -> pctChange(s)).reversed();
+                case "NAME_DESC"  -> java.util.Comparator.comparing(Stock::getSymbol).reversed();
                 default           -> java.util.Comparator.comparing(Stock::getSymbol);
             };
             rebuildStockList(stockListBox, filteredStocks, sortCmp, selectedStock, selectedCardRef, player, favorites, applyFilterRef[0]);
@@ -196,10 +197,15 @@ public final class GameView {
         sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
 
         sortName.setOnAction(ev -> {
-            stockSortRef[0] = "NAME";
-            sortName.getStyleClass().add("stock-sort-chip-active");
-            sortPrice.getStyleClass().remove("stock-sort-chip-active");
-            sortChg.getStyleClass().remove("stock-sort-chip-active");
+            if (sortName.getStyleClass().contains("stock-sort-chip-active")) {
+                stockSortRef[0] = stockSortRef[0].equals("NAME_DESC") ? "NAME" : "NAME_DESC";
+            } else {
+                stockSortRef[0] = "NAME";
+                sortName.getStyleClass().add("stock-sort-chip-active");
+                sortPrice.getStyleClass().remove("stock-sort-chip-active");
+                sortChg.getStyleClass().remove("stock-sort-chip-active");
+            }
+            sortName.setText(stockSortRef[0].equals("NAME_DESC") ? "Z\u2013A" : "A\u2013Z");
             applyFilterRef[0].run();
         });
         sortPrice.setOnAction(ev -> {
@@ -706,9 +712,9 @@ public final class GameView {
         TextField amountField = new TextField();
         amountField.setPromptText("Enter amount ($)");
         amountField.getStyleClass().add("trade-amount-field");
-        Button maxBuyBtn = new Button("MAX BUY");
+        Button maxBuyBtn = new Button("\u25b2  Buy Max");
         maxBuyBtn.getStyleClass().add("trade-max-buy-button");
-        Button maxSellBtn = new Button("MAX SELL");
+        Button maxSellBtn = new Button("\u25bc  Sell Max");
         maxSellBtn.getStyleClass().add("trade-max-sell-button");
 
         final boolean[] syncingFields = {false};
@@ -1815,17 +1821,22 @@ public final class GameView {
                 .map(s -> new TradeDot(s.getWeek(), s.getShare().getQuantity(), s.getShare().getPurchasePrice(), true))
                 .forEach(tradeDots::add);
 
-        // dots: {cx, cy, week, qty, price, type}  type=0 buy, type=1 sell — rebuilt each draw
+        // State for hover crosshair — rebuilt on each draw
         List<double[]> drawnDots = new ArrayList<>();
+        double[][] xsRef   = {new double[0]};
+        double[][] ysRef   = {new double[0]};
+        int[]     hoverIdx = {-1};
+        boolean[] onDot    = {false};
 
-        // Tooltip node
+        // Trade-dot tooltip
         VBox tooltip = new VBox(3);
         tooltip.getStyleClass().add("chart-tooltip");
         tooltip.setVisible(false);
         tooltip.setMouseTransparent(true);
         pane.getChildren().add(tooltip);
 
-        Runnable draw = () -> {
+        Runnable[] drawRef = {null};
+        drawRef[0] = () -> {
             double w = canvas.getWidth();
             double h = canvas.getHeight();
             if (w <= 0 || h <= 0) return;
@@ -1838,6 +1849,8 @@ public final class GameView {
                 gc.setFill(Color.web("#4a6899", 0.55));
                 gc.setFont(javafx.scene.text.Font.font(12));
                 gc.fillText("No price history yet", w / 2 - 60, h / 2);
+                xsRef[0] = new double[0];
+                ysRef[0] = new double[0];
                 return;
             }
 
@@ -1846,7 +1859,7 @@ public final class GameView {
             BigDecimal range  = maxVal.subtract(minVal);
             if (range.compareTo(BigDecimal.ZERO) == 0) range = BigDecimal.ONE;
 
-            double padL = 10, padR = 10, padT = 14, padB = 10;
+            final double padL = 10, padR = 10, padT = 14, padB = 10;
             double cW = w - padL - padR;
             double cH = h - padT - padB;
 
@@ -1871,6 +1884,8 @@ public final class GameView {
                 double norm = prices.get(i).subtract(minVal).divide(range, 6, RoundingMode.HALF_UP).doubleValue();
                 ys[i] = padT + innerH + innerOff - (norm * innerH);
             }
+            xsRef[0] = xs;
+            ysRef[0] = ys;
 
             // Gradient fill under the line
             LinearGradient fillGrad = new LinearGradient(0, padT, 0, padT + cH, false, CycleMethod.NO_CYCLE,
@@ -1885,13 +1900,44 @@ public final class GameView {
             gc.closePath();
             gc.fill();
 
-            // Line
+            // Price line
             gc.setStroke(Color.web(lineHex, 0.90));
             gc.setLineWidth(2);
             gc.beginPath();
             gc.moveTo(xs[0], ys[0]);
             for (int i = 1; i < n; i++) gc.lineTo(xs[i], ys[i]);
             gc.stroke();
+
+            // Crosshair (drawn before trade dots so dots appear on top)
+            int hi = hoverIdx[0];
+            if (hi >= 0 && hi < n && !onDot[0]) {
+                double cx = xs[hi], cy = ys[hi];
+                // Vertical dashed rule
+                gc.setStroke(Color.web("#ffffff", 0.16));
+                gc.setLineWidth(1);
+                gc.setLineDashes(4, 4);
+                gc.strokeLine(cx, padT, cx, padT + cH);
+                gc.setLineDashes((double[]) null);
+                // Crosshair dot
+                gc.setFill(Color.web(lineHex, 0.95));
+                gc.fillOval(cx - 3.5, cy - 3.5, 7, 7);
+                gc.setStroke(Color.web("#ffffff", 0.55));
+                gc.setLineWidth(1.5);
+                gc.strokeOval(cx - 3.5, cy - 3.5, 7, 7);
+                // Price chip near top of chart
+                String chipTxt = "Wk " + (hi + 1) + "  " + fmt(prices.get(hi));
+                gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
+                double tw    = chipTxt.length() * 6.0;
+                double chipX = Math.min(cx + 8, w - tw - 12);
+                double chipY = padT + 2;
+                gc.setFill(Color.web("#060d20", 0.88));
+                gc.fillRoundRect(chipX - 5, chipY - 3, tw + 10, 16, 6, 6);
+                gc.setStroke(Color.web("#ffffff", 0.09));
+                gc.setLineWidth(0.5);
+                gc.strokeRoundRect(chipX - 5, chipY - 3, tw + 10, 16, 6, 6);
+                gc.setFill(Color.web("#e8d8b0", 0.90));
+                gc.fillText(chipTxt, chipX, chipY + 11);
+            }
 
             // Trade dots — buys first (behind), then sells (on top)
             for (int pass = 0; pass < 2; pass++) {
@@ -1900,38 +1946,36 @@ public final class GameView {
                     if (dot.isSell() != drawingSells) continue;
                     int idx = dot.week() - 1;
                     if (idx < 0 || idx >= n) continue;
-                    double cx = xs[idx], cy = ys[idx];
+                    double dotX = xs[idx], dotY = ys[idx];
                     if (dot.isSell()) {
-                        // Red halo + dot for sells
                         gc.setFill(Color.web("#e05a5a", 0.28));
-                        gc.fillOval(cx - 7, cy - 7, 14, 14);
+                        gc.fillOval(dotX - 7, dotY - 7, 14, 14);
                         gc.setFill(Color.web("#e05a5a"));
-                        gc.fillOval(cx - 4, cy - 4, 8, 8);
+                        gc.fillOval(dotX - 4, dotY - 4, 8, 8);
                     } else {
-                        // Amber halo + dot for buys
                         gc.setFill(Color.web("#f5a201", 0.30));
-                        gc.fillOval(cx - 7, cy - 7, 14, 14);
+                        gc.fillOval(dotX - 7, dotY - 7, 14, 14);
                         gc.setFill(Color.web("#f5a201"));
-                        gc.fillOval(cx - 4, cy - 4, 8, 8);
+                        gc.fillOval(dotX - 4, dotY - 4, 8, 8);
                     }
-                    drawnDots.add(new double[]{cx, cy, dot.week(), dot.qty().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
+                    drawnDots.add(new double[]{dotX, dotY, dot.week(), dot.qty().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
                 }
             }
 
-            // Last price dot
+            // Last price dot + label (suppressed when crosshair is active)
             double lx = xs[n - 1], ly = ys[n - 1];
             gc.setFill(Color.web(lineHex));
             gc.fillOval(lx - 3.5, ly - 3.5, 7, 7);
-
-            // Last price label
-            String lastTxt = fmt(prices.get(n - 1));
-            double lblX = Math.min(lx + 8, w - lastTxt.length() * 6.5);
-            gc.setFill(Color.web("#e8d8b0", 0.85));
-            gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
-            gc.fillText(lastTxt, lblX, ly + 4);
+            if (hi < 0 || onDot[0]) {
+                String lastTxt = fmt(prices.get(n - 1));
+                double lblX = Math.min(lx + 8, w - lastTxt.length() * 6.5);
+                gc.setFill(Color.web("#e8d8b0", 0.85));
+                gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
+                gc.fillText(lastTxt, lblX, ly + 4);
+            }
         };
 
-        // Hover: show tooltip near any trade dot
+        // Hover: crosshair on price line, or trade-dot tooltip
         pane.setOnMouseMoved(e -> {
             double mx = e.getX(), my = e.getY();
             double[] hit = null;
@@ -1940,6 +1984,8 @@ public final class GameView {
                 if (dx * dx + dy * dy <= 64) { hit = dot; break; }
             }
             if (hit != null) {
+                onDot[0]    = true;
+                hoverIdx[0] = -1;
                 final double[] h = hit;
                 boolean isSell = h[5] == 1;
                 tooltip.getChildren().clear();
@@ -1958,22 +2004,39 @@ public final class GameView {
                     gainLbl.getStyleClass().add(gain.compareTo(BigDecimal.ZERO) >= 0 ? "chart-tooltip-gain" : "chart-tooltip-loss");
                     tooltip.getChildren().add(gainLbl);
                 }
-                double tx = h[0] + 12;
-                double ty = h[1] - 70;
-                if (ty < 4) ty = h[1] + 14;
+                double tx = h[0] + 12, ty = h[1] - 70;
+                if (ty < 4)                    ty = h[1] + 14;
                 if (tx + 150 > pane.getWidth()) tx = h[0] - 155;
                 tooltip.setLayoutX(tx);
                 tooltip.setLayoutY(ty);
                 tooltip.setVisible(true);
+                drawRef[0].run();
             } else {
+                onDot[0] = false;
                 tooltip.setVisible(false);
+                double[] xs = xsRef[0];
+                if (xs.length >= 2) {
+                    final double padL = 10, padR = 10;
+                    double cW = canvas.getWidth() - padL - padR;
+                    int n = xs.length;
+                    int idx = (int) Math.round((mx - padL) / cW * (n - 1));
+                    hoverIdx[0] = Math.max(0, Math.min(n - 1, idx));
+                } else {
+                    hoverIdx[0] = -1;
+                }
+                drawRef[0].run();
             }
         });
-        pane.setOnMouseExited(e -> tooltip.setVisible(false));
+        pane.setOnMouseExited(e -> {
+            tooltip.setVisible(false);
+            onDot[0]    = false;
+            hoverIdx[0] = -1;
+            drawRef[0].run();
+        });
 
-        canvas.widthProperty().addListener((obs, o, nv) -> draw.run());
-        canvas.heightProperty().addListener((obs, o, nv) -> draw.run());
-        Platform.runLater(draw);
+        canvas.widthProperty().addListener((obs, o, nv) -> drawRef[0].run());
+        canvas.heightProperty().addListener((obs, o, nv) -> drawRef[0].run());
+        Platform.runLater(drawRef[0]);
         return pane;
     }
     private static void showError(StackPane overlay, String message) {
