@@ -4,6 +4,8 @@ import java.util.function.BiConsumer;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -83,8 +85,7 @@ public final class SetupView {
             if (!fromPreset[0]) presetGroup.selectToggle(null);
         });
 
-        // Pre-select $10K
-        ((ToggleButton) presetRow.getChildren().get(DEFAULT_PRESET_IDX)).setSelected(true);
+        // Do not pre-select any preset — cash field starts empty
 
         HBox cashInput = new HBox(10, presetRow, cashField);
         cashInput.setAlignment(Pos.CENTER_LEFT);
@@ -122,6 +123,7 @@ public final class SetupView {
         Button startButton = new Button("\u25B6   Start Game");
         startButton.getStyleClass().add("start-button");
         startButton.setMaxWidth(Double.MAX_VALUE);
+        startButton.setDisable(true); // enabled once cash is chosen
         startButton.setOnAction(e -> {
             String name = nameField.getText().isBlank() ? "Player" : nameField.getText().trim();
             double cash = parseCash(cashField.getText());
@@ -131,6 +133,16 @@ public final class SetupView {
                 onStartDefault.accept(name, cash);
             }
         });
+
+        // Keep start button disabled until a cash amount is provided
+        Runnable updateStartEnabled = () -> {
+            boolean cashReady = presetGroup.getSelectedToggle() != null
+                    || (!cashField.getText().isBlank() && parseCash(cashField.getText()) > 0);
+            startButton.setDisable(!cashReady);
+        };
+        presetGroup.selectedToggleProperty().addListener((obs, old, sel) -> updateStartEnabled.run());
+        cashField.textProperty().addListener((obs, old, text) -> updateStartEnabled.run());
+        updateStartEnabled.run();
 
         // ── Form card ─────────────────────────────────────────────────────────
         VBox form = new VBox(28, nameSection, cashSection, dataSection, startButton);
@@ -145,6 +157,28 @@ public final class SetupView {
         page.setAlignment(Pos.CENTER);
         page.setPadding(new Insets(0, 0, 40, 0));
         root.setCenter(page);
+
+        // ── Keybindings ───────────────────────────────────────────────────────────
+        // Enter in name field → advance to cash field
+        nameField.setOnAction(e -> cashField.requestFocus());
+        // Enter in cash field → start game
+        cashField.setOnAction(e -> startButton.fire());
+        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            switch (e.getCode()) {
+                case ESCAPE -> { onBack.run(); e.consume(); }
+                // Space anywhere (except name field) → start only if cash is set
+                case SPACE -> {
+                    if (e.getTarget() != nameField && !startButton.isDisable()) { startButton.fire(); e.consume(); }
+                }
+                // Enter when focus is not on a handled text field → start only if cash is set
+                case ENTER -> {
+                    if (e.getTarget() != nameField && e.getTarget() != cashField && !startButton.isDisable()) {
+                        startButton.fire(); e.consume();
+                    }
+                }
+                default -> {}
+            }
+        });
 
         return root;
     }

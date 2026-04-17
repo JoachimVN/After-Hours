@@ -19,6 +19,7 @@ import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import javafx.application.Platform;
 import javafx.animation.FadeTransition;
+import javafx.scene.input.KeyEvent;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -458,6 +459,45 @@ public final class GameView {
 
         StackPane overlay = new StackPane(root, devPanel);
         overlayRef[0] = overlay;
+
+        // ── Global keybindings ──────────────────────────────────────────────────
+        // N / Space → Next Week  |  / → Focus search  |  M → Market Movers  |  H → History
+        // Escape → clear search, then go back to landing page
+        overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            boolean inTextField = e.getTarget() instanceof TextField;
+            // If a dialog popup is layered on top, ignore game shortcuts (Escape is handled per-popup)
+            boolean dialogOpen = overlay.getChildren().size() > 2;
+            if (dialogOpen) return;
+            switch (e.getCode()) {
+                case N, SPACE -> {
+                    if (!inTextField) { nextWeekBtn.fire(); e.consume(); }
+                }
+                case SLASH -> {
+                    if (!inTextField) { searchField.requestFocus(); e.consume(); }
+                }
+                case F -> {
+                    if (e.isControlDown()) { searchField.requestFocus(); e.consume(); }
+                }
+                case M -> {
+                    if (!inTextField) { marketMoversBtn.fire(); e.consume(); }
+                }
+                case H -> {
+                    if (!inTextField) { historyBtn.fire(); e.consume(); }
+                }
+                case ESCAPE -> {
+                    if (!searchField.getText().isEmpty()) {
+                        searchField.clear();
+                        searchField.getParent().requestFocus();
+                        e.consume();
+                    } else if (!inTextField) {
+                        onBack.run();
+                        e.consume();
+                    }
+                }
+                default -> {}
+            }
+        });
+
         return overlay;
     }
 
@@ -1226,8 +1266,10 @@ public final class GameView {
         cancelBtn.setOnAction(ev  -> dismiss.run());
         confirmBtn.setOnAction(ev -> { dismiss.run(); onConfirm.run(); });
         backdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) { dismiss.run(); ev.consume(); } });
 
         overlay.getChildren().add(popup);
+        popup.requestFocus();
     }
 
     private static void showReceipt(StackPane overlay, String action, Stock stock, BigDecimal qty,
@@ -1274,8 +1316,10 @@ public final class GameView {
         Runnable dismiss = () -> overlay.getChildren().remove(popup);
         doneBtn.setOnAction(ev -> dismiss.run());
         backdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) { dismiss.run(); ev.consume(); } });
 
         overlay.getChildren().add(popup);
+        popup.requestFocus();
     }
 
     private static HBox dialogRow(String key, String val, String valStyle) {
@@ -1394,8 +1438,10 @@ public final class GameView {
         cancelBtn.setOnAction(ev  -> dismiss.run());
         confirmBtn.setOnAction(ev -> { dismiss.run(); onConfirm.run(); });
         backdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) { dismiss.run(); ev.consume(); } });
 
         overlay.getChildren().add(popup);
+        popup.requestFocus();
     }
 
     private static void showBulkReceipt(StackPane overlay, String action, BigDecimal qty,
@@ -1439,8 +1485,10 @@ public final class GameView {
         Runnable dismiss = () -> overlay.getChildren().remove(popup);
         doneBtn.setOnAction(ev -> dismiss.run());
         backdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) { dismiss.run(); ev.consume(); } });
 
         overlay.getChildren().add(popup);
+        popup.requestFocus();
     }
 
     private static void showTransactionHistory(StackPane overlay, Player player, Node background) {
@@ -1657,6 +1705,15 @@ public final class GameView {
         };
         closeBtn.setOnAction(ev -> dismiss.run());
         dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+            switch (ev.getCode()) {
+                case ESCAPE -> { dismiss.run(); ev.consume(); }
+                case SLASH  -> { if (!(ev.getTarget() instanceof TextField)) { txSearch.requestFocus(); ev.consume(); } }
+                case F      -> { if (ev.isControlDown()) { txSearch.requestFocus(); ev.consume(); } }
+                default     -> {}
+            }
+        });
+        popup.requestFocus();
     }
 
     private static void showMarketMovers(StackPane overlay, Exchange exchange, Node background, Consumer<Stock> onSelectStock) {
@@ -1775,6 +1832,8 @@ public final class GameView {
 
         closeBtn.setOnAction(ev -> dismiss.run());
         dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) { dismiss.run(); ev.consume(); } });
+        popup.requestFocus();
     }
 
     private static VBox buildMoversColumn(String title, List<Stock> stocks, boolean isGainers,
@@ -2107,8 +2166,10 @@ public final class GameView {
         Runnable dismiss = () -> overlay.getChildren().remove(popup);
         okBtn.setOnAction(ev -> dismiss.run());
         backdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) { dismiss.run(); ev.consume(); } });
 
         overlay.getChildren().add(popup);
+        popup.requestFocus();
     }
 }
 

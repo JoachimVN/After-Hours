@@ -7,6 +7,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -105,6 +107,18 @@ public final class ImportCsvView {
 
         continueBtn.setOnAction(e -> {
             if (chosenFile[0] != null) onContinue.accept(chosenFile[0]);
+        });
+
+        // ── Keybindings ───────────────────────────────────────────────────────
+        // Escape → back to setup; Enter/Space (once file loaded) → continue
+        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            switch (e.getCode()) {
+                case ESCAPE -> { onBack.run(); e.consume(); }
+                case ENTER, SPACE -> {
+                    if (!continueBtn.isDisable()) { continueBtn.fire(); e.consume(); }
+                }
+                default -> {}
+            }
         });
 
         // ── CSV Format Requirements ───────────────────────────────────────────
