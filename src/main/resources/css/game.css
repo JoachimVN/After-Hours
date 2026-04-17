@@ -884,9 +884,20 @@
     -fx-border-color: rgba(30, 64, 128, 0.70);
 }
 
-/* ── Stock filter chips ──────────────────────────────────────────────────── */
+/* ── Stock filter / sort chips ──────────────────────────────────────────── */
+
+.stock-row-section-label {
+    -fx-font-size: 8px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2a3a58;
+    -fx-padding: 4 0 0 0;
+}
 
 .stock-filter-row {
+    -fx-padding: 0 4 0 4;
+}
+
+.stock-sort-row {
     -fx-padding: 0 4 4 4;
 }
 
@@ -912,6 +923,30 @@
     -fx-background-color: rgba(30, 64, 128, 0.45);
     -fx-text-fill: #e8d8b0;
     -fx-border-color: rgba(245, 162, 1, 0.40);
+}
+
+.stock-sort-chip {
+    -fx-background-color: rgba(10, 20, 50, 0.40);
+    -fx-text-fill: #344e72;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 7 2 7;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(30, 64, 128, 0.22);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+}
+
+.stock-sort-chip:hover {
+    -fx-background-color: rgba(20, 38, 78, 0.65);
+    -fx-text-fill: #5a78a8;
+}
+
+.stock-sort-chip-active {
+    -fx-background-color: rgba(25, 50, 100, 0.55);
+    -fx-text-fill: #7a9fc8;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
 }
 
 /* ── Favorite star button ────────────────────────────────────────────────── */

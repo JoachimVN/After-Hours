@@ -29,17 +29,17 @@ public class Exchange {
      * Transition weight matrix for volatility phases.
      * Rows/columns ordered by Volatility.ordinal():
      * 0=STABLE, 1=FAST, 2=CHAOTIC, 3=SLOW_RISE, 4=SLOW_FALL, 5=NORMAL_RISE, 6=NORMAL_FALL
-     * Higher weight = more likely transition. Diagonal is 0 (no self-transition).
+     * Higher weight = more likely transition. Self-transitions are allowed for trending phases.
      */
     private static final double[][] VOLATILITY_TRANSITIONS = {
         //       ST    FA    CH    SR    SF    NR    NF
-        /* ST */ {  0,   5,   2,  30,  30,  15,  15 },
+        /* ST */ {  0,   5,   2,  28,  28,  18,  18 },
         /* FA */ {  8,   0,  10,   5,   5,  25,  25 },
         /* CH */ {  5,  35,   0,   5,   5,   8,   8 },
-        /* SR */ { 20,   5,   3,   0,  12,  35,   5 },
-        /* SF */ { 20,   5,   3,  12,   0,   5,  35 },
-        /* NR */ { 10,  18,   3,  28,   5,   0,   8 },
-        /* NF */ { 10,  18,   3,   5,  28,   8,   0 },
+        /* SR */ { 15,   5,   2,  10,  20,  25,  12 },  // SR can stay SR; less NR funnel
+        /* SF */ { 15,   5,   2,  20,  10,  12,  25 },  // symmetric with SR
+        /* NR */ {  8,  12,   2,  18,   8,  20,  14 },  // NR self-transition; less SR loop; more NF path
+        /* NF */ {  8,  12,   2,   8,  18,  14,  20 },  // NF self-transition; less SF cushion; symmetric
     };
 
     /**
@@ -195,13 +195,13 @@ public class Exchange {
 
             double min, max;
             switch (stock.getVolatility()) {
-                case SLOW_RISE   -> { min =  0.0; max =  4.0; } // 18%:
-                case SLOW_FALL   -> { min = -4.0; max =  0.0; } // 12%: 
-                case NORMAL_RISE -> { min =  2.0; max = 5.0; } // 25%: 
-                case NORMAL_FALL -> { min = -5.0; max = -2.0; } // 18%: 
-                case FAST        -> { min =  3.0; max = 10.0; } // 10%: 
-                case CHAOTIC     -> { min = 7.0; max = 15.0; } //  1%: 
-                default          -> { min =  0.0; max =  3.0; } // 15%: 
+                case SLOW_RISE   -> { min =  0.0; max =  2.0; }  // was 0–4; gentler upward drift
+                case SLOW_FALL   -> { min = -4.0; max =  0.0; }  // unchanged
+                case NORMAL_RISE -> { min =  0.5; max =  2.5; }  // was 2–5; main fix for runaway gains
+                case NORMAL_FALL -> { min = -5.0; max = -2.0; }  // unchanged; keeps losses steep
+                case FAST        -> { min =  2.0; max =  7.0; }  // was 3–10
+                case CHAOTIC     -> { min =  4.0; max = 12.0; }  // was 7–15
+                default          -> { min =  0.0; max =  2.0; }  // was 0–3
             }
 
             double percentageChange = (random.nextDouble() * (max - min)) + min;
@@ -229,10 +229,10 @@ public class Exchange {
 
         // Spike events — each tier independently fires and applies to one random stock
         List<Stock> allStocks = new ArrayList<>(stockMap.values());
-        applySpike(allStocks, 0.10, 10,  75);
-        applySpike(allStocks, 0.05, 20, 100);
-        applySpike(allStocks, 0.02, 40, 150);
-        applySpike(allStocks, 0.01, 50, 200);
+        applySpike(allStocks, 0.10,  5,  30);
+        applySpike(allStocks, 0.05, 10,  50);
+        applySpike(allStocks, 0.02, 20,  70);
+        applySpike(allStocks, 0.01, 30,  90);
     }
 
     private void applySpike(List<Stock> stocks, double chance, double minPct, double maxPct) {

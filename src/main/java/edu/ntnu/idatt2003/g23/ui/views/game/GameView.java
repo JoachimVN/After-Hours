@@ -44,6 +44,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -94,9 +95,10 @@ public final class GameView {
         stockListBox.getStyleClass().add("game-stock-list");
         Node[] selectedCardRef = {null};
 
-        // ── Favorites + filter state ─────────────────────────────────────────
+        // ── Favorites + filter + sort state ─────────────────────────────────
         Set<String> favorites = new HashSet<>();
         String[] stockFilterRef = {"ALL"};
+        String[] stockSortRef   = {"NAME"};
         Runnable[] applyFilterRef = {null};
 
         // ── Search field (declared early for closure access) ─────────────────
@@ -134,7 +136,14 @@ public final class GameView {
                 };
                 return textMatch && typeMatch;
             });
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player, favorites, applyFilterRef[0]);
+            java.util.Comparator<Stock> sortCmp = switch (stockSortRef[0]) {
+                case "PRICE_ASC"  -> java.util.Comparator.comparing(Stock::getSalesPrice);
+                case "PRICE_DESC" -> java.util.Comparator.comparing(Stock::getSalesPrice).reversed();
+                case "CHG_ASC"    -> java.util.Comparator.comparing(s -> pctChange((Stock) s));
+                case "CHG_DESC"   -> java.util.Comparator.comparing((Stock s) -> pctChange(s)).reversed();
+                default           -> java.util.Comparator.comparing(Stock::getSymbol);
+            };
+            rebuildStockList(stockListBox, filteredStocks, sortCmp, selectedStock, selectedCardRef, player, favorites, applyFilterRef[0]);
         };
 
         // Initial stock list population
@@ -156,8 +165,7 @@ public final class GameView {
         // ── Stock filter chips ────────────────────────────────────────────────
         String[] chipKeys   = {"ALL", "FAVORITES", "OWNED", "UP", "DOWN"};
         String[] chipLabels = {"All",  "\u2605 Favorites", "Owned", "\u25B2 Up", "\u25BC Down"};
-        HBox filterRow = new HBox(4);
-        filterRow.getStyleClass().add("stock-filter-row");
+        FlowPane filterChips = new FlowPane(4, 4);
         for (int i = 0; i < chipLabels.length; i++) {
             final int idx = i;
             Button chip = new Button(chipLabels[i]);
@@ -165,12 +173,64 @@ public final class GameView {
             if (i == 0) chip.getStyleClass().add("stock-filter-chip-active");
             chip.setOnAction(ev -> {
                 stockFilterRef[0] = chipKeys[idx];
-                for (Node n : filterRow.getChildren()) n.getStyleClass().remove("stock-filter-chip-active");
+                for (Node n : filterChips.getChildren()) n.getStyleClass().remove("stock-filter-chip-active");
                 chip.getStyleClass().add("stock-filter-chip-active");
                 applyFilterRef[0].run();
             });
-            filterRow.getChildren().add(chip);
+            filterChips.getChildren().add(chip);
         }
+        Label filterLabel = new Label("FILTER");
+        filterLabel.getStyleClass().add("stock-row-section-label");
+        VBox filterRow = new VBox(3, filterLabel, filterChips);
+        filterRow.getStyleClass().add("stock-filter-row");
+
+        // ── Sort row ──────────────────────────────────────────────────────────
+        Button sortName  = new Button("A\u2013Z");
+        Button sortPrice = new Button("Price \u25bc");
+        Button sortChg   = new Button("Chg \u25bc");
+        sortName.getStyleClass().addAll("stock-sort-chip", "stock-sort-chip-active");
+        sortPrice.getStyleClass().add("stock-sort-chip");
+        sortChg.getStyleClass().add("stock-sort-chip");
+        FlowPane sortChips = new FlowPane(4, 4);
+        sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
+
+        sortName.setOnAction(ev -> {
+            stockSortRef[0] = "NAME";
+            sortName.getStyleClass().add("stock-sort-chip-active");
+            sortPrice.getStyleClass().remove("stock-sort-chip-active");
+            sortChg.getStyleClass().remove("stock-sort-chip-active");
+            applyFilterRef[0].run();
+        });
+        sortPrice.setOnAction(ev -> {
+            if (sortPrice.getStyleClass().contains("stock-sort-chip-active")) {
+                // toggle direction
+                stockSortRef[0] = stockSortRef[0].equals("PRICE_DESC") ? "PRICE_ASC" : "PRICE_DESC";
+            } else {
+                stockSortRef[0] = "PRICE_DESC";
+                sortName.getStyleClass().remove("stock-sort-chip-active");
+                sortChg.getStyleClass().remove("stock-sort-chip-active");
+                sortPrice.getStyleClass().add("stock-sort-chip-active");
+            }
+            sortPrice.setText("Price " + (stockSortRef[0].equals("PRICE_DESC") ? "\u25bc" : "\u25b2"));
+            applyFilterRef[0].run();
+        });
+        sortChg.setOnAction(ev -> {
+            if (sortChg.getStyleClass().contains("stock-sort-chip-active")) {
+                stockSortRef[0] = stockSortRef[0].equals("CHG_DESC") ? "CHG_ASC" : "CHG_DESC";
+            } else {
+                stockSortRef[0] = "CHG_DESC";
+                sortName.getStyleClass().remove("stock-sort-chip-active");
+                sortPrice.getStyleClass().remove("stock-sort-chip-active");
+                sortChg.getStyleClass().add("stock-sort-chip-active");
+            }
+            sortChg.setText("Chg " + (stockSortRef[0].equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
+            applyFilterRef[0].run();
+        });
+
+        Label sortLabel = new Label("SORT");
+        sortLabel.getStyleClass().add("stock-row-section-label");
+        VBox sortRow = new VBox(3, sortLabel, sortChips);
+        sortRow.getStyleClass().add("stock-sort-row");
 
         Label marketTitle = new Label("Market Stocks");
         marketTitle.getStyleClass().add("game-panel-title");
@@ -182,7 +242,7 @@ public final class GameView {
         stockScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         VBox.setVgrow(stockScroll, Priority.ALWAYS);
 
-        VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, stockScroll);
+        VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockScroll);
         leftPanel.getStyleClass().add("game-left-panel");
         leftPanel.setPrefWidth(300);
         leftPanel.setMinWidth(Region.USE_PREF_SIZE);
@@ -375,6 +435,7 @@ public final class GameView {
     // ── Stock list builder ────────────────────────────────────────────────────
 
     private static void rebuildStockList(VBox box, FilteredList<Stock> stocks,
+                                         java.util.Comparator<Stock> sortCmp,
                                          ObjectProperty<Stock> selectedStock,
                                          Node[] selectedCardRef,
                                          Player player,
@@ -382,9 +443,8 @@ public final class GameView {
                                          Runnable onFavChanged) {
         box.getChildren().clear();
         selectedCardRef[0] = null;
-        for (Stock stock : stocks) {
-            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, player, favorites, onFavChanged));
-        }
+        stocks.stream().sorted(sortCmp).forEach(stock ->
+                box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, player, favorites, onFavChanged)));
     }
 
     private static Node buildStockCard(Stock stock, ObjectProperty<Stock> selectedStock,
@@ -898,25 +958,6 @@ public final class GameView {
         if (from.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
         return to.subtract(from).divide(from, 6, RoundingMode.HALF_UP)
                  .multiply(BigDecimal.valueOf(100));
-    }
-
-    /** Mean of each consecutive week's % change over the last {@code weeks} periods (−1 = all-time). */
-    private static BigDecimal avgWeeklyReturn(Stock stock, int weeks) {
-        java.util.List<BigDecimal> prices = stock.getHistoricalPrices();
-        if (prices.size() < 2) return BigDecimal.ZERO;
-        int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
-        BigDecimal sum = BigDecimal.ZERO;
-        int count = 0;
-        for (int i = fromIdx + 1; i < prices.size(); i++) {
-            BigDecimal prev = prices.get(i - 1);
-            BigDecimal cur  = prices.get(i);
-            if (prev.compareTo(BigDecimal.ZERO) == 0) continue;
-            sum = sum.add(cur.subtract(prev).divide(prev, 6, RoundingMode.HALF_UP)
-                             .multiply(BigDecimal.valueOf(100)));
-            count++;
-        }
-        if (count == 0) return BigDecimal.ZERO;
-        return sum.divide(BigDecimal.valueOf(count), 4, RoundingMode.HALF_UP);
     }
 
     private static String fmt(BigDecimal value) {
