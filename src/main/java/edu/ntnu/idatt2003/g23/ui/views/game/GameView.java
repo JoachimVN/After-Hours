@@ -3,14 +3,18 @@ package edu.ntnu.idatt2003.g23.ui.views.game;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import javafx.application.Platform;
 import javafx.animation.FadeTransition;
@@ -89,6 +93,16 @@ public final class GameView {
         stockListBox.getStyleClass().add("game-stock-list");
         Node[] selectedCardRef = {null};
 
+        // ── Favorites + filter state ─────────────────────────────────────────
+        Set<String> favorites = new HashSet<>();
+        String[] stockFilterRef = {"ALL"};
+        Runnable[] applyFilterRef = {null};
+
+        // ── Search field (declared early for closure access) ─────────────────
+        TextField searchField = new TextField();
+        searchField.setPromptText("\uD83D\uDD0D  Search stocks\u2026");
+        searchField.getStyleClass().add("game-search-field");
+
         // ── Refresh closure ──────────────────────────────────────────────────
         Runnable[] refreshRef = {null};
         refreshRef[0] = () -> {
@@ -97,12 +111,33 @@ public final class GameView {
             portVal.setText(fmt(player.getPortfolio().getNetWorth()));
             nwVal.setText(fmt(player.getNetWorth()));
             portfolioItems.setAll(gameController.getOwnedShares());
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
+            if (applyFilterRef[0] != null) applyFilterRef[0].run();
             rebuildDetail(detailArea, selectedStock.get(), player, exchange, refreshRef, overlayRef);
         };
 
+        // ── Apply-filter closure + initial population ────────────────────────
+        applyFilterRef[0] = () -> {
+            String lower = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
+            filteredStocks.setPredicate(s -> {
+                boolean textMatch = lower.isEmpty()
+                        || s.getSymbol().toLowerCase().contains(lower)
+                        || s.getCompany().toLowerCase().contains(lower);
+                boolean typeMatch = switch (stockFilterRef[0]) {
+                    case "OWNED"  -> player.getPortfolio().getShareBySymbol(s.getSymbol())
+                            .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .compareTo(BigDecimal.ZERO) > 0;
+                    case "UP"     -> pctChange(s).compareTo(BigDecimal.ZERO) > 0;
+                    case "DOWN"   -> pctChange(s).compareTo(BigDecimal.ZERO) < 0;
+                    case "FAVORITES" -> favorites.contains(s.getSymbol());
+                    default       -> true;
+                };
+                return textMatch && typeMatch;
+            });
+            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player, favorites, applyFilterRef[0]);
+        };
+
         // Initial stock list population
-        rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
+        applyFilterRef[0].run();
 
         // Rebuild detail when selection changes
         selectedStock.addListener((obs, old, stock) -> {
@@ -114,18 +149,27 @@ public final class GameView {
             rebuildDetail(detailArea, selectedStock.get(), player, exchange, refreshRef, overlayRef);
         }
 
-        // ── Search field ─────────────────────────────────────────────────────
-        TextField searchField = new TextField();
-        searchField.setPromptText("\uD83D\uDD0D  Search stocks\u2026");
-        searchField.getStyleClass().add("game-search-field");
-        searchField.textProperty().addListener((obs, old, val) -> {
-            String lower = val == null ? "" : val.toLowerCase();
-            filteredStocks.setPredicate(s ->
-                    lower.isEmpty()
-                    || s.getSymbol().toLowerCase().contains(lower)
-                    || s.getCompany().toLowerCase().contains(lower));
-            rebuildStockList(stockListBox, filteredStocks, selectedStock, selectedCardRef, player);
-        });
+        // ── Search field listener ──────────────────────────────────────────────
+        searchField.textProperty().addListener((obs, old, val) -> applyFilterRef[0].run());
+
+        // ── Stock filter chips ────────────────────────────────────────────────
+        String[] chipKeys   = {"ALL", "FAVORITES", "OWNED", "UP", "DOWN"};
+        String[] chipLabels = {"All",  "\u2605 Favorites", "Owned", "\u25B2 Up", "\u25BC Down"};
+        HBox filterRow = new HBox(4);
+        filterRow.getStyleClass().add("stock-filter-row");
+        for (int i = 0; i < chipLabels.length; i++) {
+            final int idx = i;
+            Button chip = new Button(chipLabels[i]);
+            chip.getStyleClass().add("stock-filter-chip");
+            if (i == 0) chip.getStyleClass().add("stock-filter-chip-active");
+            chip.setOnAction(ev -> {
+                stockFilterRef[0] = chipKeys[idx];
+                for (Node n : filterRow.getChildren()) n.getStyleClass().remove("stock-filter-chip-active");
+                chip.getStyleClass().add("stock-filter-chip-active");
+                applyFilterRef[0].run();
+            });
+            filterRow.getChildren().add(chip);
+        }
 
         Label marketTitle = new Label("Market Stocks");
         marketTitle.getStyleClass().add("game-panel-title");
@@ -136,7 +180,7 @@ public final class GameView {
         stockScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         VBox.setVgrow(stockScroll, Priority.ALWAYS);
 
-        VBox leftPanel = new VBox(12, marketTitle, searchField, stockScroll);
+        VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, stockScroll);
         leftPanel.getStyleClass().add("game-left-panel");
         leftPanel.setPrefWidth(300);
         leftPanel.setMinWidth(220);
@@ -274,7 +318,12 @@ public final class GameView {
         VBox nextWeekStack = new VBox(2, calmDownLbl, nextWeekBtn);
         nextWeekStack.setAlignment(Pos.BOTTOM_CENTER);
         Region subSpacer = new Region(); HBox.setHgrow(subSpacer, Priority.ALWAYS);
-        HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllHoldingsBtn, subSpacer, marketMoversBtn);
+
+        Button historyBtn = new Button("\uD83D\uDCCB  History");
+        historyBtn.getStyleClass().add("market-movers-button");
+        historyBtn.setOnAction(e -> showTransactionHistory(overlayRef[0], player, rootRef[0]));
+
+        HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllHoldingsBtn, subSpacer, historyBtn, marketMoversBtn);
         subBar.getStyleClass().add("game-sub-bar");
         subBar.setAlignment(Pos.BOTTOM_LEFT);
 
@@ -326,17 +375,21 @@ public final class GameView {
     private static void rebuildStockList(VBox box, FilteredList<Stock> stocks,
                                          ObjectProperty<Stock> selectedStock,
                                          Node[] selectedCardRef,
-                                         Player player) {
+                                         Player player,
+                                         Set<String> favorites,
+                                         Runnable onFavChanged) {
         box.getChildren().clear();
         selectedCardRef[0] = null;
         for (Stock stock : stocks) {
-            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, player));
+            box.getChildren().add(buildStockCard(stock, selectedStock, selectedCardRef, player, favorites, onFavChanged));
         }
     }
 
     private static Node buildStockCard(Stock stock, ObjectProperty<Stock> selectedStock,
                                         Node[] selectedCardRef,
-                                        Player player) {
+                                        Player player,
+                                        Set<String> favorites,
+                                        Runnable onFavChanged) {
         Label symLbl    = new Label(stock.getSymbol());
         symLbl.getStyleClass().add("stock-card-symbol");
 
@@ -359,19 +412,35 @@ public final class GameView {
             ownedLbl.getStyleClass().add("stock-owned-label");
         }
 
+        // ── Favorite star button ─────────────────────────────────────────────
+        boolean isFav = favorites.contains(stock.getSymbol());
+        Button favBtn = new Button(isFav ? "\u2605" : "\u2606");
+        favBtn.getStyleClass().add("stock-fav-btn");
+        if (isFav) favBtn.getStyleClass().add("stock-fav-btn-active");
+        favBtn.setOnAction(ev -> {
+            if (favorites.contains(stock.getSymbol())) {
+                favorites.remove(stock.getSymbol());
+            } else {
+                favorites.add(stock.getSymbol());
+            }
+            onFavChanged.run();
+        });
+        favBtn.setOnMouseClicked(e -> e.consume());
+
         VBox left;
         if (ownedLbl != null) {
             left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl);
         } else {
             left = new VBox(2, symLbl, compLbl, pctLbl);
         }
-        VBox right = new VBox();
+        VBox right = new VBox(4);
         right.setAlignment(Pos.TOP_RIGHT);
-        right.getChildren().add(priceLbl);
+        right.getChildren().addAll(favBtn, priceLbl);
 
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox card = new HBox(8, left, spacer, right);
         card.getStyleClass().add("stock-card");
+        if (isFav) card.getStyleClass().add("stock-card-favorited");
         card.setAlignment(Pos.TOP_LEFT);
         card.setPadding(new Insets(12, 14, 12, 14));
         card.setUserData(stock.getSymbol());
@@ -1141,6 +1210,218 @@ public final class GameView {
         overlay.getChildren().add(popup);
     }
 
+    private static void showTransactionHistory(StackPane overlay, Player player, Node background) {
+        record TxRow(int week, boolean isBuy, String symbol, String company,
+                     BigDecimal qty, BigDecimal pricePerShare,
+                     BigDecimal fee, BigDecimal tax, BigDecimal total) {}
+
+        List<TxRow> allTx = new ArrayList<>();
+        for (Purchase p : player.getTransactionArchive().getAllPurchases()) {
+            allTx.add(new TxRow(
+                    p.getWeek(), true,
+                    p.getShare().getStock().getSymbol(),
+                    p.getShare().getStock().getCompany(),
+                    p.getShare().getQuantity(),
+                    p.getShare().getPurchasePrice(),
+                    p.getCalculator().calculateCommission(),
+                    BigDecimal.ZERO,
+                    p.getCalculator().calculateTotal()
+            ));
+        }
+        for (Sale s : player.getTransactionArchive().getAllSales()) {
+            BigDecimal qty   = s.getShare().getQuantity();
+            BigDecimal gross = s.getCalculator().calculateGross();
+            BigDecimal pricePerShare = qty.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
+                    : gross.divide(qty, 4, RoundingMode.HALF_UP);
+            allTx.add(new TxRow(
+                    s.getWeek(), false,
+                    s.getShare().getStock().getSymbol(),
+                    s.getShare().getStock().getCompany(),
+                    qty,
+                    pricePerShare,
+                    s.getCalculator().calculateCommission(),
+                    s.getCalculator().calculateTax(),
+                    s.getCalculator().calculateTotal()
+            ));
+        }
+        allTx.sort((a, b) -> b.week() - a.week());
+
+        ObservableList<TxRow> txItems = FXCollections.observableArrayList(allTx);
+        FilteredList<TxRow>   filteredTx = new FilteredList<>(txItems, t -> true);
+
+        String[]    txFilterRef  = {"ALL"};
+        Runnable[]  applyTxFilter = {null};
+
+        TextField txSearch = new TextField();
+        txSearch.setPromptText("\uD83D\uDD0D  Search by symbol\u2026");
+        txSearch.getStyleClass().add("game-search-field");
+
+        // ── Type filter chips ─────────────────────────────────────────────────
+        String[] txChipKeys   = {"ALL", "BUY", "SELL"};
+        String[] txChipLabels = {"All",  "Buy",  "Sell"};
+        HBox txFilterRow = new HBox(6);
+        txFilterRow.getStyleClass().add("stock-filter-row");
+
+        applyTxFilter[0] = () -> {
+            String lower = txSearch.getText() == null ? "" : txSearch.getText().trim().toLowerCase();
+            filteredTx.setPredicate(t -> {
+                boolean textMatch = lower.isEmpty()
+                        || t.symbol().toLowerCase().contains(lower)
+                        || t.company().toLowerCase().contains(lower);
+                boolean typeMatch = switch (txFilterRef[0]) {
+                    case "BUY"  -> t.isBuy();
+                    case "SELL" -> !t.isBuy();
+                    default     -> true;
+                };
+                return textMatch && typeMatch;
+            });
+        };
+        txSearch.textProperty().addListener((obs, old, val) -> applyTxFilter[0].run());
+
+        for (int i = 0; i < txChipLabels.length; i++) {
+            final int idx = i;
+            Button chip = new Button(txChipLabels[i]);
+            chip.getStyleClass().add("stock-filter-chip");
+            if (i == 0) chip.getStyleClass().add("stock-filter-chip-active");
+            chip.setOnAction(ev -> {
+                txFilterRef[0] = txChipKeys[idx];
+                for (Node n : txFilterRow.getChildren()) n.getStyleClass().remove("stock-filter-chip-active");
+                chip.getStyleClass().add("stock-filter-chip-active");
+                applyTxFilter[0].run();
+            });
+            txFilterRow.getChildren().add(chip);
+        }
+
+        // ── Table ─────────────────────────────────────────────────────────────
+        TableView<TxRow> table = new TableView<>(filteredTx);
+        table.getStyleClass().add("history-table");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+
+        TableColumn<TxRow, String> weekCol = new TableColumn<>("Wk");
+        weekCol.setCellValueFactory(cd -> new SimpleStringProperty(String.valueOf(cd.getValue().week())));
+        weekCol.setMinWidth(34); weekCol.setPrefWidth(34);
+
+        TableColumn<TxRow, String> typeCol = new TableColumn<>("Type");
+        typeCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().isBuy() ? "BUY" : "SELL"));
+        typeCol.setMinWidth(46); typeCol.setPrefWidth(46);
+        typeCol.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); return; }
+                setText(item);
+                getStyleClass().removeAll("tx-type-buy", "tx-type-sell");
+                getStyleClass().add("BUY".equals(item) ? "tx-type-buy" : "tx-type-sell");
+            }
+        });
+
+        TableColumn<TxRow, String> symCol = new TableColumn<>("Symbol");
+        symCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().symbol()));
+        symCol.setMinWidth(64); symCol.setPrefWidth(72);
+
+        TableColumn<TxRow, String> compCol = new TableColumn<>("Company");
+        compCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().company()));
+        compCol.setMinWidth(120); compCol.setPrefWidth(160);
+
+        TableColumn<TxRow, String> qtyCol = new TableColumn<>("Qty");
+        qtyCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().qty().stripTrailingZeros().toPlainString()));
+        qtyCol.setMinWidth(50); qtyCol.setPrefWidth(60);
+
+        TableColumn<TxRow, String> priceCol = new TableColumn<>("Price/sh");
+        priceCol.setCellValueFactory(cd -> new SimpleStringProperty(fmt(cd.getValue().pricePerShare())));
+        priceCol.setMinWidth(70); priceCol.setPrefWidth(80);
+
+        TableColumn<TxRow, String> feeCol = new TableColumn<>("Fee");
+        feeCol.setCellValueFactory(cd -> new SimpleStringProperty(fmt(cd.getValue().fee())));
+        feeCol.setMinWidth(60); feeCol.setPrefWidth(70);
+
+        TableColumn<TxRow, String> taxCol = new TableColumn<>("Tax");
+        taxCol.setCellValueFactory(cd -> new SimpleStringProperty(
+                cd.getValue().tax().compareTo(BigDecimal.ZERO) == 0 ? "\u2014" : fmt(cd.getValue().tax())));
+        taxCol.setMinWidth(60); taxCol.setPrefWidth(70);
+
+        TableColumn<TxRow, String> totalCol = new TableColumn<>("Total");
+        totalCol.setCellValueFactory(cd -> new SimpleStringProperty(fmt(cd.getValue().total())));
+        totalCol.setMinWidth(80); totalCol.setPrefWidth(90);
+
+        table.getColumns().addAll(weekCol, typeCol, symCol, compCol, qtyCol, priceCol, feeCol, taxCol, totalCol);
+        // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
+        double rowH = 28;
+        double headerH = 30;
+        double tableH = headerH + Math.min(filteredTx.size(), 12) * rowH;
+        table.setPrefHeight(tableH);
+        table.setMinHeight(headerH + rowH);  // at least one row visible
+        // Grow the table when filter makes more rows visible
+        filteredTx.addListener((javafx.collections.ListChangeListener<TxRow>) c -> {
+            double h = headerH + Math.min(filteredTx.size(), 12) * rowH;
+            table.setPrefHeight(h);
+        });
+        Label emptyLbl = new Label("No transactions yet.");
+        emptyLbl.getStyleClass().add("market-movers-col-title");
+        table.setPlaceholder(emptyLbl);
+
+        // ── Layout ────────────────────────────────────────────────────────────
+        Label titleLbl = new Label("\uD83D\uDCCB  Transaction History");
+        titleLbl.getStyleClass().add("market-movers-title");
+        Button closeBtn = new Button("\u2715");
+        closeBtn.getStyleClass().add("market-movers-close-btn");
+        Region titleSpacer = new Region();
+        HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+        HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+        titleRow.getStyleClass().add("market-movers-header");
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+
+        HBox controlsRow = new HBox(10, txSearch, txFilterRow);
+        controlsRow.getStyleClass().add("history-controls-row");
+        controlsRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(txSearch, Priority.ALWAYS);
+
+        VBox card = new VBox(0, titleRow, controlsRow, table);
+        card.getStyleClass().add("history-card");
+        card.setMaxWidth(920);
+        card.setMaxHeight(580);
+        card.setOpacity(0);
+
+        GaussianBlur blur = new GaussianBlur(0);
+        background.setEffect(blur);
+
+        Region dimBackdrop = new Region();
+        dimBackdrop.getStyleClass().add("market-movers-backdrop");
+        dimBackdrop.setOpacity(0);
+
+        StackPane popup = new StackPane(dimBackdrop, card);
+        StackPane.setAlignment(card, Pos.CENTER);
+        overlay.getChildren().add(popup);
+
+        Timeline blurIn = new Timeline(
+            new KeyFrame(Duration.ZERO,        new KeyValue(blur.radiusProperty(), 0)),
+            new KeyFrame(Duration.millis(300),  new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT))
+        );
+        FadeTransition dimIn  = new FadeTransition(Duration.millis(300), dimBackdrop);
+        dimIn.setFromValue(0); dimIn.setToValue(1);
+        FadeTransition cardIn = new FadeTransition(Duration.millis(220), card);
+        cardIn.setFromValue(0); cardIn.setToValue(1);
+        cardIn.setDelay(Duration.millis(80));
+        blurIn.play(); dimIn.play(); cardIn.play();
+
+        Runnable dismiss = () -> {
+            Timeline blurOut = new Timeline(
+                new KeyFrame(Duration.ZERO,        new KeyValue(blur.radiusProperty(), 8)),
+                new KeyFrame(Duration.millis(250),  new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
+            );
+            FadeTransition dimOut  = new FadeTransition(Duration.millis(250), dimBackdrop);
+            dimOut.setFromValue(1); dimOut.setToValue(0);
+            FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+            cardOut.setFromValue(1); cardOut.setToValue(0);
+            blurOut.play(); dimOut.play(); cardOut.play();
+            blurOut.setOnFinished(ev -> {
+                overlay.getChildren().remove(popup);
+                background.setEffect(null);
+            });
+        };
+        closeBtn.setOnAction(ev -> dismiss.run());
+        dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    }
+
     private static void showMarketMovers(StackPane overlay, Exchange exchange, Node background, Consumer<Stock> onSelectStock) {
         List<Stock> all = exchange.getStocks();
         List<Stock> gainers = all.stream()
@@ -1454,14 +1735,6 @@ public final class GameView {
         Platform.runLater(draw);
         return pane;
     }
-
-    private static void showError(StackPane overlay, String message) {
-        Alert alert = new Alert(AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message != null ? message : "An unexpected error occurred.");
-        alert.showAndWait();
-=======
     private static void showError(StackPane overlay, String message) {
         Label iconLbl = new Label("\u26A0");
         iconLbl.getStyleClass().add("error-dialog-icon");
