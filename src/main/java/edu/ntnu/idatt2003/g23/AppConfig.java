@@ -1,5 +1,7 @@
 package edu.ntnu.idatt2003.g23;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.util.Duration;
 
 public final class AppConfig {
@@ -13,6 +15,9 @@ public final class AppConfig {
     public static final Duration SPLASH_DELAY = Duration.seconds(110.0 / 60.0 - (SPLASH_FADE_DURATION.toSeconds() * 0.25));
                                                 // 110 BPM (Song BPM) / 60 (seconds per beat) - quarter of the fade duration (aligns well)
     public static final Duration SPLASH_FALLBACK_DELAY = Duration.seconds(0.3);
+
+    /** Global dev-mode flag — toggled from Settings. */
+    public static final BooleanProperty DEV_MODE = new SimpleBooleanProperty(false);
 
     private AppConfig() {
     }

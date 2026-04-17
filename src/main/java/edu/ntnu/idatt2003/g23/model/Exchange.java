@@ -2,14 +2,17 @@ package edu.ntnu.idatt2003.g23.model;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
 import edu.ntnu.idatt2003.g23.io.StockCsvExporter;
+import edu.ntnu.idatt2003.g23.model.Stock.Volatility;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionFactory;
 
@@ -21,6 +24,24 @@ public class Exchange {
     private int week;
     private Map<String, Stock> stockMap;
     private Random random;
+    private boolean frozen = false;
+
+    /**
+     * Transition weight matrix for volatility phases.
+     * Rows/columns ordered by Volatility.ordinal():
+     * 0=STABLE, 1=FAST, 2=CHAOTIC, 3=SLOW_RISE, 4=SLOW_FALL, 5=NORMAL_RISE, 6=NORMAL_FALL
+     * Higher weight = more likely transition. Self-transitions are allowed for trending phases.
+     */
+    private static final double[][] VOLATILITY_TRANSITIONS = {
+        //       ST    FA    CH    SR    SF    NR    NF
+        /* ST */ {  0,   5,   2,  28,  28,  18,  18 },
+        /* FA */ {  8,   0,  10,   5,   5,  25,  25 },
+        /* CH */ {  5,  35,   0,   5,   5,   8,   8 },
+        /* SR */ { 15,   5,   2,  10,  20,  25,  12 },  // SR can stay SR; less NR funnel
+        /* SF */ { 15,   5,   2,  20,  10,  12,  25 },  // symmetric with SR
+        /* NR */ {  8,  12,   2,  18,   8,  20,  14 },  // NR self-transition; less SR loop; more NF path
+        /* NF */ {  8,  12,   2,   8,  18,  14,  20 },  // NF self-transition; less SF cushion; symmetric
+    };
 
     /**
      * Constructor for Exchange
@@ -39,6 +60,27 @@ public class Exchange {
         this.week = 1;
         this.stockMap = stocks.stream().collect(Collectors.toMap(Stock::getSymbol, stock -> stock));
         this.random = new Random();
+        assignVolatilities(new ArrayList<>(stocks));
+    }
+
+    private void assignVolatilities(List<Stock> stocks) {
+        int total = stocks.size();
+        Collections.shuffle(stocks, random);
+        int nChaotic   = Math.max(1, (int) Math.round(total * 0.01)); // 2% of total stocks, ensure at least 1 chaotic stock
+        int nFast      = (int) Math.round(total * 0.10); // 10% of total stocks
+        int nSlowRise  = (int) Math.round(total * 0.19); // 18% of total stocks
+        int nSlowFall  = (int) Math.round(total * 0.12); // 12% of total stocks
+        int nNormRise  = (int) Math.round(total * 0.25); // 25% of total stocks
+        int nNormFall  = (int) Math.round(total * 0.18); // 18% of total stocks
+        // total percentage assigned: 85%, remaining 15% will be stable
+        int i = 0;
+        for (int c = 0; c < nChaotic  && i < total; c++, i++) stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
+        for (int f = 0; f < nFast     && i < total; f++, i++) stocks.get(i).setVolatility(Stock.Volatility.FAST);
+        for (int r = 0; r < nSlowRise && i < total; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_RISE);
+        for (int d = 0; d < nSlowFall && i < total; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_FALL);
+        for (int r = 0; r < nNormRise && i < total; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_RISE);
+        for (int d = 0; d < nNormFall && i < total; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_FALL);
+        while (i < total) stocks.get(i++).setVolatility(Stock.Volatility.STABLE); // Remaining stocks are stable
     }
 
     /**
@@ -145,16 +187,106 @@ public class Exchange {
     }
 
     /**
+     * Freezes or unfreezes price simulation (dev mode).
+     */
+    public void setFrozen(boolean frozen) {
+        this.frozen = frozen;
+    }
+
+    /**
      * Advances the exchange to the next week, updating stock prices based on a random percentage change.
      */
     public void advance() {
         this.week++;
+        if (frozen) return;
         for (Stock stock : stockMap.values()) {
             BigDecimal currentPrice = stock.getSalesPrice();
-            double percentageChange = (random.nextDouble() * 20) - 10;  // AI - -10% to +10%
-            BigDecimal newPrice = currentPrice.multiply(BigDecimal.valueOf(1 + (percentageChange / 100)));
+
+            double min, max;
+            switch (stock.getVolatility()) {
+                case SLOW_RISE   -> { min =  0.0; max =  4.0; }
+                case SLOW_FALL   -> { min = -4.0; max =  0.0; }
+                case NORMAL_RISE -> { min =  2.0; max =  5.0; }  
+                case NORMAL_FALL -> { min = -5.0; max = -2.0; }
+                case FAST        -> { min =  3.0; max = 10.0; }  
+                case CHAOTIC     -> { min =  7.0; max = 15.0; } 
+                default          -> { min =  0.0; max =  3.0; }  // STABLE
+            }
+
+            double percentageChange = (random.nextDouble() * (max - min)) + min;
+            BigDecimal multiplicativeChange = BigDecimal.valueOf(1 + (percentageChange / 100));  // 1 to 1.10
+
+            boolean randomBool = Math.random() < 0.5; // 50% chance to be negative
+            boolean directional = stock.getVolatility() == Volatility.SLOW_FALL
+                    || stock.getVolatility() == Volatility.NORMAL_FALL
+                    || stock.getVolatility() == Volatility.SLOW_RISE
+                    || stock.getVolatility() == Volatility.NORMAL_RISE;
+            if (!directional && randomBool) {
+                multiplicativeChange = BigDecimal.ONE.divide(multiplicativeChange, 4, RoundingMode.HALF_UP); // Randomly invert to add unpredictability
+            }
+
+            BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
+
+            // Mean reversion — log-space pull toward the stock's initial price.
+            // Force is proportional to log(current/initial): negligible near the start,
+            // grows large enough to dominate any trend state when price diverges wildly.
+            // At 2× initial → ~1.4% pull/week; at 10× → ~4.6%; at 8000× → ~18%.
+            BigDecimal initialPrice = stock.getHistoricalPrices().get(0);
+            double logRatio = Math.log(newPrice.doubleValue() / initialPrice.doubleValue());
+            double reversionFactor = 1.0 - logRatio * 0.02;
+            reversionFactor = Math.max(0.50, Math.min(1.50, reversionFactor));
+            newPrice = newPrice.multiply(BigDecimal.valueOf(reversionFactor)).setScale(6, RoundingMode.HALF_UP);
+
+            // Price floor — prevents approaching zero from compounding losses
+            if (newPrice.compareTo(BigDecimal.valueOf(0.01)) < 0) {
+                newPrice = BigDecimal.valueOf(0.01);
+            }
+
             stock.addNewSalesPrice(newPrice);
         }
+
+        // Per-stock volatility phase transitions — 50% chance per week to shift phase (avg ~2 weeks per state)
+        for (Stock s : stockMap.values()) {
+            if (random.nextDouble() < 0.50) {
+                s.setVolatility(pickNextVolatility(s.getVolatility()));
+            }
+        }
+
+        // Spike events — each tier independently fires and applies to one random stock
+        List<Stock> allStocks = new ArrayList<>(stockMap.values());
+        applySpike(allStocks, 0.10,  5,  30);
+        applySpike(allStocks, 0.05, 10,  50);
+        applySpike(allStocks, 0.02, 20,  70);
+        applySpike(allStocks, 0.01, 30,  90);
+    }
+
+    private void applySpike(List<Stock> stocks, double chance, double minPct, double maxPct) {
+        if (random.nextDouble() >= chance) return;
+        Stock target = stocks.get(random.nextInt(stocks.size()));
+        double pct = minPct + random.nextDouble() * (maxPct - minPct);
+        BigDecimal factor = BigDecimal.valueOf(1.0 + pct / 100.0).setScale(6, RoundingMode.HALF_UP);
+        BigDecimal newPrice;
+        if (random.nextBoolean()) {
+            newPrice = target.getSalesPrice().multiply(factor);
+        } else {
+            newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
+        }
+        target.addNewSalesPrice(newPrice);
+    
+    }
+
+    private Volatility pickNextVolatility(Volatility current) {
+        double[] weights = VOLATILITY_TRANSITIONS[current.ordinal()];
+        double total = 0;
+        for (double w : weights) total += w;
+        double pick = random.nextDouble() * total;
+        double cumulative = 0;
+        Volatility[] vals = Volatility.values();
+        for (int i = 0; i < weights.length; i++) {
+            cumulative += weights[i];
+            if (pick < cumulative) return vals[i];
+        }
+        return vals[0];
     }
 
     /**
