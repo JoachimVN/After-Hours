@@ -24,6 +24,7 @@ public class Exchange {
     private int week;
     private Map<String, Stock> stockMap;
     private Random random;
+    private boolean frozen = false;
 
     /**
      * Transition weight matrix for volatility phases.
@@ -186,22 +187,30 @@ public class Exchange {
     }
 
     /**
+     * Freezes or unfreezes price simulation (dev mode).
+     */
+    public void setFrozen(boolean frozen) {
+        this.frozen = frozen;
+    }
+
+    /**
      * Advances the exchange to the next week, updating stock prices based on a random percentage change.
      */
     public void advance() {
         this.week++;
+        if (frozen) return;
         for (Stock stock : stockMap.values()) {
             BigDecimal currentPrice = stock.getSalesPrice();
 
             double min, max;
             switch (stock.getVolatility()) {
-                case SLOW_RISE   -> { min =  0.0; max =  2.0; }  // was 0–4; gentler upward drift
-                case SLOW_FALL   -> { min = -4.0; max =  0.0; }  // unchanged
-                case NORMAL_RISE -> { min =  0.5; max =  2.5; }  // was 2–5; main fix for runaway gains
-                case NORMAL_FALL -> { min = -5.0; max = -2.0; }  // unchanged; keeps losses steep
-                case FAST        -> { min =  2.0; max =  7.0; }  // was 3–10
-                case CHAOTIC     -> { min =  4.0; max = 12.0; }  // was 7–15
-                default          -> { min =  0.0; max =  2.0; }  // was 0–3
+                case SLOW_RISE   -> { min =  0.0; max =  4.0; }
+                case SLOW_FALL   -> { min = -4.0; max =  0.0; }
+                case NORMAL_RISE -> { min =  2.0; max =  5.0; }  
+                case NORMAL_FALL -> { min = -5.0; max = -2.0; }
+                case FAST        -> { min =  3.0; max = 10.0; }  
+                case CHAOTIC     -> { min =  7.0; max = 15.0; } 
+                default          -> { min =  0.0; max =  3.0; }  // STABLE
             }
 
             double percentageChange = (random.nextDouble() * (max - min)) + min;
@@ -217,12 +226,28 @@ public class Exchange {
             }
 
             BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
+
+            // Mean reversion — log-space pull toward the stock's initial price.
+            // Force is proportional to log(current/initial): negligible near the start,
+            // grows large enough to dominate any trend state when price diverges wildly.
+            // At 2× initial → ~1.4% pull/week; at 10× → ~4.6%; at 8000× → ~18%.
+            BigDecimal initialPrice = stock.getHistoricalPrices().get(0);
+            double logRatio = Math.log(newPrice.doubleValue() / initialPrice.doubleValue());
+            double reversionFactor = 1.0 - logRatio * 0.02;
+            reversionFactor = Math.max(0.50, Math.min(1.50, reversionFactor));
+            newPrice = newPrice.multiply(BigDecimal.valueOf(reversionFactor)).setScale(6, RoundingMode.HALF_UP);
+
+            // Price floor — prevents approaching zero from compounding losses
+            if (newPrice.compareTo(BigDecimal.valueOf(0.01)) < 0) {
+                newPrice = BigDecimal.valueOf(0.01);
+            }
+
             stock.addNewSalesPrice(newPrice);
         }
 
-        // Per-stock volatility phase transitions — each stock independently has ~25% chance to shift phase each week
+        // Per-stock volatility phase transitions — 50% chance per week to shift phase (avg ~2 weeks per state)
         for (Stock s : stockMap.values()) {
-            if (random.nextDouble() < 0.25) {
+            if (random.nextDouble() < 0.50) {
                 s.setVolatility(pickNextVolatility(s.getVolatility()));
             }
         }

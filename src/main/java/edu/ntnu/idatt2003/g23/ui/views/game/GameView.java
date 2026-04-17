@@ -59,6 +59,7 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import java.util.function.Consumer;
+import edu.ntnu.idatt2003.g23.AppConfig;
 
 public final class GameView {
 
@@ -187,7 +188,7 @@ public final class GameView {
         // ── Sort row ──────────────────────────────────────────────────────────
         Button sortName  = new Button("A\u2013Z");
         Button sortPrice = new Button("Price \u25bc");
-        Button sortChg   = new Button("Chg \u25bc");
+        Button sortChg   = new Button("Change \u25bc");
         sortName.getStyleClass().addAll("stock-sort-chip", "stock-sort-chip-active");
         sortPrice.getStyleClass().add("stock-sort-chip");
         sortChg.getStyleClass().add("stock-sort-chip");
@@ -223,7 +224,7 @@ public final class GameView {
                 sortPrice.getStyleClass().remove("stock-sort-chip-active");
                 sortChg.getStyleClass().add("stock-sort-chip-active");
             }
-            sortChg.setText("Chg " + (stockSortRef[0].equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
+            sortChg.setText("Change " + (stockSortRef[0].equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
             applyFilterRef[0].run();
         });
 
@@ -427,9 +428,128 @@ public final class GameView {
         root.setTop(topSection);
         root.setCenter(body);
 
-        StackPane overlay = new StackPane(root);
+        // ── Dev panel ─────────────────────────────────────────────────────────
+        VBox devPanel = buildDevPanel(player, exchange, refreshRef);
+        devPanel.visibleProperty().bind(AppConfig.DEV_MODE);
+        devPanel.managedProperty().bind(AppConfig.DEV_MODE);
+        StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
+
+        StackPane overlay = new StackPane(root, devPanel);
         overlayRef[0] = overlay;
         return overlay;
+    }
+
+    private static VBox buildDevPanel(Player player, Exchange exchange, Runnable[] refreshRef) {
+        Label title = new Label("🛠  DEV MODE");
+        title.getStyleClass().add("dev-panel-title");
+
+        // Week counter
+        Label weekDisplay = new Label("Week: " + exchange.getWeek());
+        weekDisplay.getStyleClass().add("dev-panel-stat");
+
+        // Advance week buttons (bypass rate limiter)
+        TextField advInput = new TextField();
+        advInput.setPromptText("Weeks");
+        advInput.getStyleClass().add("dev-panel-input");
+        advInput.setPrefWidth(70);
+        Button advCustom = devBtn("Advance");
+        HBox advRow = new HBox(4, advInput, advCustom);
+        advRow.setAlignment(Pos.CENTER_LEFT);
+
+        Runnable doAdvance = () -> {
+            weekDisplay.setText("Week: " + exchange.getWeek());
+            refreshRef[0].run();
+        };
+        advCustom.setOnAction(e -> {
+            try {
+                int n = Integer.parseInt(advInput.getText().trim());
+                if (n > 0) { for (int i=0;i<n;i++) exchange.advance(); doAdvance.run(); advInput.clear(); }
+            } catch (NumberFormatException ignored) { advInput.selectAll(); }
+        });
+
+        // Cash buttons
+        Button cash1k   = devBtn("+$1K");
+        Button cash10k  = devBtn("+$10K");
+        Button cash100k = devBtn("+$100K");
+        cash1k  .setOnAction(e -> { player.addMoney(BigDecimal.valueOf(1_000));    refreshRef[0].run(); });
+        cash10k .setOnAction(e -> { player.addMoney(BigDecimal.valueOf(10_000));   refreshRef[0].run(); });
+        cash100k.setOnAction(e -> { player.addMoney(BigDecimal.valueOf(100_000));  refreshRef[0].run(); });
+        HBox cashRow = new HBox(4, cash1k, cash10k, cash100k);
+        cashRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Custom cash input
+        TextField cashInput = new TextField();
+        cashInput.setPromptText("Amount");
+        cashInput.getStyleClass().add("dev-panel-input");
+        cashInput.setPrefWidth(90);
+        Button setCashBtn = devBtn("Set Cash");
+        setCashBtn.setOnAction(e -> {
+            try {
+                BigDecimal amount = new BigDecimal(cashInput.getText().trim().replace(",", ""));
+                if (amount.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal current = player.getMoney();
+                    if (amount.compareTo(current) > 0) {
+                        player.addMoney(amount.subtract(current));
+                    } else {
+                        player.withdrawMoney(current.subtract(amount));
+                    }
+                    cashInput.clear();
+                    refreshRef[0].run();
+                }
+            } catch (NumberFormatException ignored) {
+                cashInput.selectAll();
+            }
+        });
+        HBox setCashRow = new HBox(4, cashInput, setCashBtn);
+        setCashRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Freeze prices toggle
+        boolean[] frozen = {false};
+        Button freezeBtn = devBtn("Freeze Prices");
+        freezeBtn.setOnAction(e -> {
+            frozen[0] = !frozen[0];
+            exchange.setFrozen(frozen[0]);
+            freezeBtn.setText(frozen[0] ? "Unfreeze Prices" : "Freeze Prices");
+            if (frozen[0]) freezeBtn.getStyleClass().add("dev-btn-active");
+            else           freezeBtn.getStyleClass().remove("dev-btn-active");
+        });
+
+        // Net worth snapshot
+        Label nwLabel = new Label();
+        nwLabel.getStyleClass().add("dev-panel-stat");
+        Runnable updateNw = () -> {
+            BigDecimal portVal = player.getPortfolio().getShares().stream()
+                    .map(sh -> sh.getStock().getSalesPrice().multiply(sh.getQuantity()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            nwLabel.setText("NW: $" + player.getMoney().add(portVal)
+                    .setScale(0, RoundingMode.HALF_UP).toPlainString());
+        };
+        updateNw.run();
+        // update after every advance
+        Runnable origRefresh = refreshRef[0];
+        refreshRef[0] = () -> { origRefresh.run(); updateNw.run(); weekDisplay.setText("Week: " + exchange.getWeek()); };
+
+        VBox panel = new VBox(6,
+                title,
+                weekDisplay,
+                nwLabel,
+                new Label("Advance:") {{ getStyleClass().add("dev-panel-section"); }},
+                advRow,
+                new Label("Cash:") {{ getStyleClass().add("dev-panel-section"); }},
+                cashRow,
+                setCashRow,
+                freezeBtn
+        );
+        panel.getStyleClass().add("dev-panel");
+        panel.setMaxWidth(220);
+        panel.setMaxHeight(Region.USE_PREF_SIZE);
+        return panel;
+    }
+
+    private static Button devBtn(String text) {
+        Button b = new Button(text);
+        b.getStyleClass().add("dev-btn");
+        return b;
     }
 
     // ── Stock list builder ────────────────────────────────────────────────────

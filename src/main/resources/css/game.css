@@ -949,6 +949,88 @@
     -fx-border-color: rgba(30, 64, 128, 0.55);
 }
 
+.stock-sort-chip-active {
+    -fx-background-color: rgba(25, 50, 100, 0.55);
+    -fx-text-fill: #7a9fc8;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
+}
+
+/* ── Dev panel ───────────────────────────────────────────────────────────── */
+
+.dev-panel {
+    -fx-background-color: rgba(4, 10, 28, 0.92);
+    -fx-border-color: rgba(255, 160, 0, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 14 12 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 12, 0.3, 0, 2);
+}
+
+.dev-panel-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a200;
+}
+
+.dev-panel-stat {
+    -fx-font-size: 10px;
+    -fx-text-fill: #8aaccc;
+}
+
+.dev-panel-section {
+    -fx-font-size: 8px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6080;
+    -fx-padding: 4 0 0 0;
+}
+
+.dev-btn {
+    -fx-background-color: rgba(20, 40, 80, 0.80);
+    -fx-text-fill: #8aaccc;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 8 3 8;
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(30, 64, 128, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+}
+
+.dev-btn:hover {
+    -fx-background-color: rgba(40, 80, 160, 0.80);
+    -fx-text-fill: #c8d8ee;
+}
+
+.dev-btn-active {
+    -fx-background-color: rgba(180, 80, 0, 0.55);
+    -fx-text-fill: #f5a200;
+    -fx-border-color: rgba(255, 140, 0, 0.60);
+}
+
+.dev-panel-input {
+    -fx-background-color: rgba(10, 20, 50, 0.80);
+    -fx-text-fill: #c8d8ee;
+    -fx-prompt-text-fill: #3a5070;
+    -fx-border-color: rgba(30, 64, 128, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-font-size: 10px;
+    -fx-padding: 3 6 3 6;
+}
+
+.settings-dev-button {
+    -fx-border-color: rgba(255, 140, 0, 0.50);
+}
+
+.settings-dev-button:selected {
+    -fx-background-color: rgba(180, 80, 0, 0.55);
+    -fx-text-fill: #f5a200;
+    -fx-border-color: rgba(255, 140, 0, 0.70);
+}
+
 /* ── Favorite star button ────────────────────────────────────────────────── */
 
 .stock-fav-btn {
