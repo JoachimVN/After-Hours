@@ -118,23 +118,31 @@ public class App extends Application {
     }
 
     private void startGame(String name, double cash) {
-        List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
-        buildAndStartGame(name, cash, stocks);
+        homePageMusicController.playGameStartThenAmbience(sfxVolume); // instant — FX thread free
+        new Thread(() -> {
+            List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
+            Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
+        }, "stock-loader").start();
     }
 
     private void startGameWithCsv(String name, double cash, File csvFile) {
-        List<Stock> stocks;
-        try {
-            stocks = StockCsvLoader.parse(new FileReader(csvFile, StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("CSV Error");
-            alert.setHeaderText("Could not load stock data");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
-            return;
-        }
-        buildAndStartGame(name, cash, stocks);
+        homePageMusicController.playGameStartThenAmbience(sfxVolume); // instant — FX thread free
+        new Thread(() -> {
+            List<Stock> stocks;
+            try {
+                stocks = StockCsvLoader.parse(new FileReader(csvFile, StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("CSV Error");
+                    alert.setHeaderText("Could not load stock data");
+                    alert.setContentText(e.getMessage());
+                    alert.showAndWait();
+                });
+                return;
+            }
+            Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
+        }, "stock-loader").start();
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks) {
@@ -171,9 +179,8 @@ public class App extends Application {
 
     // ── Music-aware navigation primitives ────────────────────────────────────
 
-    /** Swap page and start ambience — entering the game. */
+    /** Swap page — music was already started at the top of the start-game call. */
     private void navigateToGame(Parent page) {
-        homePageMusicController.fadeOutThenPlayAmbience();
         root.getChildren().setAll(backgroundCanvas, page);
     }
 

@@ -65,7 +65,7 @@ import edu.ntnu.idatt2003.g23.AppConfig;
 
 public final class GameView {
 
-    private static final String WEEK_ADVANCE_SOUND = "/audio/effects/Week_Advance.mp3";
+    private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
 
     public static StackPane build(Runnable onBack, Runnable onSettings,
                                    Player player, Exchange exchange,
@@ -320,12 +320,12 @@ public final class GameView {
 
         nextWeekBtn.setOnMousePressed(e -> {
             playedOnMousePress[0] = true;
-            playAudioClip(weekAdvanceClip, sfxVolumeSupplier);
+            playAudioClip(weekAdvanceClip, () -> Math.min(sfxVolumeSupplier.getAsDouble() * 1.10, 1.0)); // 10% volume boost
         });
 
         nextWeekBtn.setOnAction(e -> {
             if (!playedOnMousePress[0]) {
-                playAudioClip(weekAdvanceClip, sfxVolumeSupplier);
+                playAudioClip(weekAdvanceClip, () -> Math.min(sfxVolumeSupplier.getAsDouble() * 1.10, 1.0));
             }
             playedOnMousePress[0] = false;
             long now = System.currentTimeMillis();
