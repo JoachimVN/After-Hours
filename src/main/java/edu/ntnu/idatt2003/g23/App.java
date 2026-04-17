@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
@@ -145,9 +146,14 @@ public class App extends Application {
                 this::goHome,
                 () -> navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))),
                 player,
-                exchange
+                exchange,
+                currentSfxVolumeSupplier()
         );
         navigateToGame(currentGamePage);
+    }
+
+    private DoubleSupplier currentSfxVolumeSupplier() {
+        return () -> sfxVolume;
     }
 
     private Parent buildSettingsView(Runnable onBack) {

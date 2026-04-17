@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
@@ -43,6 +44,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.media.AudioClip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -63,12 +65,16 @@ import edu.ntnu.idatt2003.g23.AppConfig;
 
 public final class GameView {
 
+    private static final String WEEK_ADVANCE_SOUND = "/audio/effects/Week_Advance.mp3";
+
     public static StackPane build(Runnable onBack, Runnable onSettings,
-                                   Player player, Exchange exchange) {
+                                   Player player, Exchange exchange,
+                                   DoubleSupplier sfxVolumeSupplier) {
     GameController gameController = new GameController(player);
 
         StackPane[] overlayRef = {null};
         Node[] rootRef = {null};
+        AudioClip weekAdvanceClip = loadAudioClip(WEEK_ADVANCE_SOUND);
 
         // ── Observable data ──────────────────────────────────────────────────
         ObservableList<Stock> allStocks        = FXCollections.observableArrayList(exchange.getStocks());
@@ -306,12 +312,22 @@ public final class GameView {
         calmDownLbl.setMouseTransparent(true);
 
         FadeTransition[] calmFade = {null};
+        boolean[] playedOnMousePress = {false};
 
         // Rate-limit: max 6 advances per second (sliding window)
         long[] advanceTimes = new long[6];
         int[] advanceHead = {0};
 
+        nextWeekBtn.setOnMousePressed(e -> {
+            playedOnMousePress[0] = true;
+            playAudioClip(weekAdvanceClip, sfxVolumeSupplier);
+        });
+
         nextWeekBtn.setOnAction(e -> {
+            if (!playedOnMousePress[0]) {
+                playAudioClip(weekAdvanceClip, sfxVolumeSupplier);
+            }
+            playedOnMousePress[0] = false;
             long now = System.currentTimeMillis();
             long oldest = advanceTimes[advanceHead[0]];
             if (now - oldest < 1000) {
@@ -443,6 +459,22 @@ public final class GameView {
         StackPane overlay = new StackPane(root, devPanel);
         overlayRef[0] = overlay;
         return overlay;
+    }
+
+    private static AudioClip loadAudioClip(String resourcePath) {
+        var resource = GameView.class.getResource(resourcePath);
+        if (resource == null) {
+            return null;
+        }
+        return new AudioClip(resource.toExternalForm());
+    }
+
+    private static void playAudioClip(AudioClip clip, DoubleSupplier sfxVolumeSupplier) {
+        if (clip == null) {
+            return;
+        }
+        double volume = sfxVolumeSupplier == null ? 1.0 : sfxVolumeSupplier.getAsDouble();
+        clip.play(Math.clamp(volume, 0.0, 1.0));
     }
 
     private static VBox buildDevPanel(Player player, Exchange exchange, Runnable[] refreshRef) {
