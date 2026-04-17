@@ -3,6 +3,7 @@ package edu.ntnu.idatt2003.g23.ui.views.settings;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -57,7 +58,22 @@ public final class SettingsView {
         HBox animRow = new HBox(12, animLabel, animToggle);
         animRow.setAlignment(Pos.CENTER_LEFT);
 
-        VBox settingsBlock = new VBox(28, musicBlock, sfxBlock, animRow);
+        // ── Dev Mode ──────────────────────────────────────────────────────────
+        Label devLabel = new Label("Developer Mode");
+        devLabel.getStyleClass().add("settings-label");
+
+        ToggleButton devToggle = new ToggleButton(AppConfig.DEV_MODE.get() ? "ON" : "OFF");
+        devToggle.setSelected(AppConfig.DEV_MODE.get());
+        devToggle.getStyleClass().addAll("settings-mute-button", "settings-dev-button");
+        devToggle.selectedProperty().addListener((obs, wasOn, isOn) -> {
+            devToggle.setText(isOn ? "ON" : "OFF");
+            AppConfig.DEV_MODE.set(isOn);
+        });
+
+        HBox devRow = new HBox(12, devLabel, devToggle);
+        devRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox settingsBlock = new VBox(28, musicBlock, sfxBlock, animRow, devRow);
         settingsBlock.setAlignment(Pos.CENTER_LEFT);
         settingsBlock.setMaxWidth(500);
 

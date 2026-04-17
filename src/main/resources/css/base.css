@@ -1,5 +1,15 @@
 /* ── Base / Global ───────────────────────────────────────────────────────── */
 
+@font-face {
+    font-family: "Harlow Solid Italic";
+    src: url("/fonts/HARLOWSI.TTF");
+}
+
+@font-face {
+    font-family: "Sans Serif";
+    src: url("/fonts/SANSSERIFCOLLECTION.TTF");
+}
+
 .app-root {
     -fx-background-color: #07091f;
 }
@@ -13,7 +23,7 @@
 }
 
 .background-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.2);
+    -fx-background-color: rgba(0, 0, 0, 0.3);
 }
 
 /* Title */
@@ -30,11 +40,13 @@
     -fx-font-size: 15;
     -fx-text-fill: #e8d8b0;
     -fx-font-weight: bold;
+    -fx-padding: 2 12 4 12;
 }
 
 .sub-tagline {
     -fx-font-size: 12;
     -fx-text-fill: #4a6899;
+    -fx-padding: 2 12 4 12;
 }
 
 /* Page headings (non-home pages) */
@@ -83,6 +95,17 @@
 
 .secondary-button:hover {
     -fx-background-color: derive(#0f2d5e, 25%);
+    -fx-text-fill: white;
+}
+
+.quit-button {
+    -fx-background-color: #4b1520;
+    -fx-border-color: #8d304870;
+    -fx-text-fill: #f1c6cf;
+}
+
+.quit-button:hover {
+    -fx-background-color: derive(#4b1520, 18%);
     -fx-text-fill: white;
 }
 

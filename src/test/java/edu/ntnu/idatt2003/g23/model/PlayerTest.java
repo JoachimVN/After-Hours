@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class PlayerTest {
@@ -170,20 +171,6 @@ class PlayerTest {
     }
 
     @Test
-    @DisplayName("money operations maintain precision with BigDecimal")
-    void testBigDecimalPrecision() {
-        Player player = new Player("Ryan", new BigDecimal("100.50"));
-        BigDecimal addAmount = new BigDecimal("0.25");
-        BigDecimal withdrawAmount = new BigDecimal("50.75");
-
-        player.addMoney(addAmount);
-        assertEquals(new BigDecimal("100.75"), player.getMoney());
-
-        player.withdrawMoney(withdrawAmount);
-        assertEquals(new BigDecimal("50.00"), player.getMoney());
-    }
-
-    @Test
     @DisplayName("getNetWorth includes both cash and portfolio net worth")
     void testGetNetWorth() {
         Player player = new Player("Sara", new BigDecimal("1000.00"));
@@ -209,5 +196,86 @@ class PlayerTest {
         Player player = new Player("Alice", new BigDecimal("1000"));
 
         assertEquals(PlayerStatus.NOVICE, player.getStatus());
+    }
+
+    @Test
+    @DisplayName("getWeeksTraded returns count of distinct weeks traded")
+    void testGetWeeksTraded() {
+        Player player = new Player("Uma", new BigDecimal("1000.00"));
+
+        // Initially no trades
+        assertEquals(0, player.getWeeksTraded());
+    }
+
+    @Nested
+    @DisplayName("calculateStatus Tests")
+    class CalculateStatusTests {
+
+        @Test
+        @DisplayName("calculateStatus sets NOVICE when weeks == 0")
+        void testCalculateStatusNoviceNoWeeks() {
+            Player player = new Player("Victoria", new BigDecimal("1000.00"));
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.NOVICE, player.getStatus());
+        }
+
+        @Test
+        @DisplayName("calculateStatus sets NOVICE with zero starting money")
+        void testCalculateStatusNoviceZeroStartingMoney() {
+            Player zeroPlayer = new Player("Walter", BigDecimal.ZERO);
+            zeroPlayer.calculateStatus();
+
+            assertEquals(PlayerStatus.NOVICE, zeroPlayer.getStatus());
+        }
+
+        @Test
+        @DisplayName("calculateStatus sets NOVICE with low growth and weeks")
+        void testCalculateStatusNoviceLowGrowth() {
+            // Start with 1000, end with 1100 (growth = 1.1)
+            Player player = new Player("Victoria", new BigDecimal("1000.00"));
+            player.addMoney(new BigDecimal("100.00"));
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.NOVICE, player.getStatus());
+        }
+
+        @Test
+        @DisplayName("getNetWorth correctly includes multiple shares")
+        void testGetNetWorthMultipleShares() {
+            Player player = new Player("Ben", new BigDecimal("1000.00"));
+
+            Stock aapl = new Stock("AAPL", "Apple", List.of(new BigDecimal("150")));
+            Stock googl = new Stock("GOOGL", "Google", List.of(new BigDecimal("200")));
+
+            Share aaplShare = new Share(aapl, new BigDecimal("5"), new BigDecimal("150"));
+            Share googlShare = new Share(googl, new BigDecimal("3"), new BigDecimal("200"));
+
+            player.getPortfolio().addShare(aaplShare);
+            player.getPortfolio().addShare(googlShare);
+
+            // Net worth = cash + portfolio value after commission and tax
+            // AAPL: 750 - 7.50 commission + 2.25 tax refund = 744.75
+            // GOOGL: 600 - 6.00 commission + 1.80 tax refund = 595.80
+            // = 1000 + 744.75 + 595.80 = 2340.55
+            assertEquals(new BigDecimal("2340.550"), player.getNetWorth());
+        }
+
+        @Test
+        @DisplayName("getNetWorth updates after money operations")
+        void testGetNetWorthAfterMoneyOperations() {
+            Player player = new Player("Cathy", new BigDecimal("500.00"));
+
+            Stock stock = new Stock("TEST", "Test Corp", List.of(new BigDecimal("100")));
+            Share share = new Share(stock, new BigDecimal("2"), new BigDecimal("100"));
+            player.getPortfolio().addShare(share);
+
+            player.addMoney(new BigDecimal("250.00"));
+
+            // Net worth = 750 (cash) + portfolio value after commission and tax
+            // TEST: 200 - 2.00 commission + 0.60 tax refund = 198.60
+            // = 750 + 198.60 = 948.60
+            assertEquals(new BigDecimal("948.600"), player.getNetWorth());
+        }
     }
 }

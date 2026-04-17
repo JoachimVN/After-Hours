@@ -36,7 +36,7 @@ public class SplashOverlayController {
         StackPane splashPane = new StackPane(bg);
 
         ColorAdjust colorAdjust = new ColorAdjust();
-        colorAdjust.setBrightness(0.125); // Range -1.0 to 1.0
+        colorAdjust.setBrightness(0.125); // Range 0 to 1.0 (0 is black/original, 1.0 is white)
 
         var logoUrl = SplashOverlayController.class.getResource("/images/logos/After_Hours_Logo_Centered_Black.png");
         if (logoUrl != null) {

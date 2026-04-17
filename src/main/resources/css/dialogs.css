@@ -8,6 +8,50 @@
     -fx-background-color: #06081a;
 }
 
+/* ── Error Dialog ──────────────────────────────────────────────────────────── */
+
+.error-dialog-backdrop {
+    -fx-background-color: rgba(2, 4, 18, 0.72);
+}
+
+.error-dialog-root {
+    -fx-background-color: #130810;
+    -fx-border-color: #c0293a;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(192, 41, 59, 0.5), 14, 0.2, 0, 0);
+}
+
+.error-dialog-header {
+    -fx-background-color: rgba(90, 12, 20, 0.85);
+    -fx-padding: 18 22 14 22;
+    -fx-border-color: rgba(192, 41, 59, 0.50);
+    -fx-border-width: 0 0 1 0;
+}
+
+.error-dialog-icon {
+    -fx-font-size: 22px;
+    -fx-text-fill: #ff4d5e;
+}
+
+.error-dialog-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ff8a94;
+}
+
+.error-dialog-body {
+    -fx-background-color: #0f060a;
+    -fx-padding: 16 22 16 22;
+}
+
+.error-dialog-message {
+    -fx-font-size: 13px;
+    -fx-text-fill: #e8c8cc;
+    -fx-wrap-text: true;
+}
+
 .dialog-header {
     -fx-background-color: rgba(5, 10, 28, 0.98);
     -fx-padding: 18 22 14 22;

@@ -85,6 +85,28 @@ public class TransactionArchive {
     }
 
     /**
+     * Gets all purchases ever made, regardless of week.
+     * @return a list of all purchase transactions
+     */
+    public List<Purchase> getAllPurchases() {
+        return transactions.stream()
+                .filter(t -> t instanceof Purchase)
+                .map(t -> (Purchase) t)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets all sales ever made, regardless of week.
+     * @return a list of all sale transactions
+     */
+    public List<Sale> getAllSales() {
+        return transactions.stream()
+                .filter(t -> t instanceof Sale)
+                .map(t -> (Sale) t)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Counts the number of weeks there have been transactions
      * @return the amount of weeks there have been transactions
      */

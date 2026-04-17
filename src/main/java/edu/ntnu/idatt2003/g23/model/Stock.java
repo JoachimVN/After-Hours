@@ -5,9 +5,28 @@ import java.util.List;
 
 // Represents a stock with its symbol, company name, and a list of historical prices. Provides methods to retrieve stock information and add new sales prices.
 public class Stock {
+
+    public enum Volatility {
+        /** 0–5 % upward swing per week */
+        STABLE,
+        /** 2–10 % swing per week (neutral) */
+        FAST,
+        /** 12–30 % swing per week */
+        CHAOTIC,
+        /** 0–5 % upward drift per week */
+        SLOW_RISE,
+        /** 0–5 % downward drift per week */
+        SLOW_FALL,
+        /** 2–10 % upward trend per week */
+        NORMAL_RISE,
+        /** 2–10 % downward trend per week */
+        NORMAL_FALL
+    }
+
     private final String symbol;
     private final String company;
     private final List<BigDecimal> prices;
+    private Volatility volatility = Volatility.STABLE;
 
     // Constructor for creating a new Stock instance with the specified symbol, company name, and list of prices.
     public Stock(String symbol, String company, List<BigDecimal> prices) {
@@ -63,6 +82,17 @@ public class Stock {
             throw new IllegalArgumentException("New price must be a positive value");
         }
         prices.add(price);
+    }
+
+    public Volatility getVolatility() {
+        return volatility;
+    }
+
+    public void setVolatility(Volatility volatility) {
+        if (volatility == null) {
+            throw new IllegalArgumentException("Volatility cannot be null");
+        }
+        this.volatility = volatility;
     }
 
     /**
