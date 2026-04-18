@@ -12,6 +12,7 @@
 
 .app-root {
     -fx-background-color: #07091f;
+    -fx-font-family: "Sans Serif";
 }
 
 .home-page {
