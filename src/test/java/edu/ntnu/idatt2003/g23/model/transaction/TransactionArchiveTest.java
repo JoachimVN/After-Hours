@@ -5,6 +5,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -165,5 +166,105 @@ class TransactionArchiveTest {
         TransactionArchive archive = new TransactionArchive();
 
         assertEquals(0, archive.countDistinctWeeks());
+    }
+
+    @Test
+    @DisplayName("getTransactions throws on zero week")
+    void testGetTransactionsThrowsOnZeroWeek() {
+        TransactionArchive archive = new TransactionArchive();
+
+        assertThrows(IllegalArgumentException.class, () -> archive.getTransactions(0));
+    }
+
+    @Test
+    @DisplayName("getTransactions throws on negative week")
+    void testGetTransactionsThrowsOnNegativeWeek() {
+        TransactionArchive archive = new TransactionArchive();
+
+        assertThrows(IllegalArgumentException.class, () -> archive.getTransactions(-1));
+    }
+
+    @Test
+    @DisplayName("getPurchases throws on non-positive week")
+    void testGetPurchasesThrowsOnInvalidWeek() {
+        TransactionArchive archive = new TransactionArchive();
+
+        assertThrows(IllegalArgumentException.class, () -> archive.getPurchases(0));
+    }
+
+    @Test
+    @DisplayName("getSales throws on non-positive week")
+    void testGetSalesThrowsOnInvalidWeek() {
+        TransactionArchive archive = new TransactionArchive();
+
+        assertThrows(IllegalArgumentException.class, () -> archive.getSales(0));
+    }
+
+    @Test
+    @DisplayName("getAllPurchases returns all purchases regardless of week")
+    void testGetAllPurchases() {
+        TransactionArchive archive = new TransactionArchive();
+        Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+        Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("140"));
+
+        Purchase purchase1 = new Purchase(share, 1);
+        Purchase purchase2 = new Purchase(share, 5);
+        Sale sale = new Sale(share, 2);
+
+        archive.add(purchase1);
+        archive.add(purchase2);
+        archive.add(sale);
+
+        List<Purchase> purchases = archive.getAllPurchases();
+
+        assertEquals(2, purchases.size());
+        assertTrue(purchases.contains(purchase1));
+        assertTrue(purchases.contains(purchase2));
+    }
+
+    @Test
+    @DisplayName("getPurchases returns empty list when purchases exist in other weeks")
+    void testGetPurchasesFiltersWeek() {
+        TransactionArchive archive = new TransactionArchive();
+        Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+        Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("140"));
+
+        archive.add(new Purchase(share, 2)); // week 2, not week 1
+
+        assertEquals(0, archive.getPurchases(1).size());
+    }
+
+    @Test
+    @DisplayName("getSales returns empty list when sales exist in other weeks")
+    void testGetSalesFiltersWeek() {
+        TransactionArchive archive = new TransactionArchive();
+        Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+        Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("140"));
+
+        archive.add(new Sale(share, 2)); // week 2, not week 1
+
+        assertEquals(0, archive.getSales(1).size());
+    }
+
+    @Test
+    @DisplayName("getAllSales returns all sales regardless of week")
+    void testGetAllSales() {
+        TransactionArchive archive = new TransactionArchive();
+        Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+        Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("140"));
+
+        Purchase purchase = new Purchase(share, 1);
+        Sale sale1 = new Sale(share, 2);
+        Sale sale2 = new Sale(share, 7);
+
+        archive.add(purchase);
+        archive.add(sale1);
+        archive.add(sale2);
+
+        List<Sale> sales = archive.getAllSales();
+
+        assertEquals(2, sales.size());
+        assertTrue(sales.contains(sale1));
+        assertTrue(sales.contains(sale2));
     }
 }

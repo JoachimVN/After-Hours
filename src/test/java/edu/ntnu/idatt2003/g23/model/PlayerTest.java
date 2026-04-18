@@ -11,6 +11,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+
 class PlayerTest {
 
     @Test
@@ -276,6 +278,103 @@ class PlayerTest {
             // TEST: 200 - 2.00 commission + 0.60 tax refund = 198.60
             // = 750 + 198.60 = 948.60
             assertEquals(new BigDecimal("948.600"), player.getNetWorth());
+        }
+
+        @Test
+        @DisplayName("calculateStatus sets INVESTOR with 10+ weeks and 1.2x growth")
+        void testCalculateStatusInvestor() {
+            Player player = new Player("Alice", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+            for (int i = 1; i <= 10; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            player.addMoney(new BigDecimal("200.00")); // net worth = 1200, growth = 1.2
+
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.INVESTOR, player.getStatus());
+        }
+
+        @Test
+        @DisplayName("calculateStatus sets SPECULATOR with 20+ weeks and 2x growth")
+        void testCalculateStatusSpeculator() {
+            Player player = new Player("Alice", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+            for (int i = 1; i <= 20; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            player.addMoney(new BigDecimal("1000.00")); // net worth = 2000, growth = 2.0
+
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.SPECULATOR, player.getStatus());
+        }
+
+        @Test
+        @DisplayName("calculateStatus stays NOVICE when 20+ weeks but growth < 2x")
+        void testCalculateStatusNotSpeculatorLowGrowth() {
+            Player player = new Player("Alice", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+            for (int i = 1; i <= 20; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            // growth = 1.0, does not qualify for SPECULATOR or INVESTOR
+
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.NOVICE, player.getStatus());
+        }
+
+        @Test
+        @DisplayName("calculateStatus stays NOVICE when 10+ weeks but growth < 1.2x")
+        void testCalculateStatusNotInvestorLowGrowth() {
+            Player player = new Player("Alice", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+            for (int i = 1; i <= 10; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            // growth = 1.0, does not qualify for INVESTOR
+
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.NOVICE, player.getStatus());
+        }
+    }
+
+    @Nested
+    @DisplayName("Constructor validation tests")
+    class ConstructorValidationTests {
+
+        @Test
+        @DisplayName("Constructor throws on null name")
+        void testConstructorThrowsOnNullName() {
+            assertThrows(IllegalArgumentException.class,
+                () -> new Player(null, new BigDecimal("1000")));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on blank name")
+        void testConstructorThrowsOnBlankName() {
+            assertThrows(IllegalArgumentException.class,
+                () -> new Player("   ", new BigDecimal("1000")));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on null starting money")
+        void testConstructorThrowsOnNullStartingMoney() {
+            assertThrows(IllegalArgumentException.class,
+                () -> new Player("Alice", null));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on negative starting money")
+        void testConstructorThrowsOnNegativeStartingMoney() {
+            assertThrows(IllegalArgumentException.class,
+                () -> new Player("Alice", new BigDecimal("-1")));
         }
     }
 }

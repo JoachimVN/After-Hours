@@ -73,9 +73,6 @@ public class Portfolio {
      * @throws IllegalStateException if any share in the portfolio has invalid data (e.g., null stock, quantity, or purchase price)
      */
     public BigDecimal getNetWorth() {
-        if (shares == null) {
-            throw new IllegalStateException("Shares list cannot be null");
-        }
         return shares.stream()
                      .map(share -> new SaleCalculator(share).calculateTotal())
                      .reduce(BigDecimal.ZERO, BigDecimal::add);

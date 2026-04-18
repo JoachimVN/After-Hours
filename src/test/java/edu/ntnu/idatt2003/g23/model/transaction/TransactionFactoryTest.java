@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.model.transaction;
 
 import java.math.BigDecimal;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,5 +64,13 @@ class TransactionFactoryTest {
 
         Transaction sale = TransactionFactory.createTransaction(TransactionFactory.TransactionType.SALE, share, 1);
         assertTrue(sale instanceof Sale);
+    }
+
+    @Test
+    @DisplayName("Private constructor throws IllegalStateException")
+    void testPrivateConstructorThrows() throws Exception {
+        var constructor = TransactionFactory.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        assertThrows(InvocationTargetException.class, constructor::newInstance);
     }
 }

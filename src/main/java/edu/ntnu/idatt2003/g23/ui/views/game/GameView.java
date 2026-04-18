@@ -1076,7 +1076,7 @@ public final class GameView {
 
         TableColumn<Share, String> symCol = col("Symbol", c ->
                 c.getStock().getSymbol(), 70, 85);
-        TableColumn<Share, String> qtyCol = col("Qty", c ->
+        TableColumn<Share, String> qtyCol = col("Quantity", c ->
                 c.getQuantity().stripTrailingZeros().toPlainString(), 45, 65);
         TableColumn<Share, String> boughtCol = col("Bought", c ->
             fmt(c.getPurchasePrice().multiply(c.getQuantity())), 85, 110);
@@ -1226,7 +1226,7 @@ public final class GameView {
             dialogRow("Action",   action,                                   isBuy ? "dialog-val-buy" : "dialog-val-sell"),
             dialogRow("Symbol",   stock.getSymbol(),                        null),
             dialogRow("Company",  stock.getCompany(),                       null),
-            dialogRow("Qty",      qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity",      qty.stripTrailingZeros().toPlainString(), null),
             dialogRow("Price",    fmt(stock.getSalesPrice()),               null),
             dialogRow("Subtotal", fmt(gross),                              null),
             dialogRow(isBuy ? "Fee (0.5%)" : "Fee (1%)", fmt(fee),        "dialog-val-fee"),
@@ -1287,7 +1287,7 @@ public final class GameView {
         VBox rows = new VBox(0,
             dialogRow("Action",      action,                                   isBuy ? "dialog-val-buy" : "dialog-val-sell"),
             dialogRow("Symbol",      stock.getSymbol(),                        null),
-            dialogRow("Qty",         qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity",         qty.stripTrailingZeros().toPlainString(), null),
             dialogRow("Price",       fmt(stock.getSalesPrice()),               null),
             dialogRow(isBuy ? "Fee (0.5%)" : "Fee (1%)", fmt(fee),           "dialog-val-fee"),
             dialogRow("Tax",         fmt(tax),                                "dialog-val-fee"),
@@ -1399,7 +1399,7 @@ public final class GameView {
         VBox rows = new VBox(0,
             dialogRow("Action", action, "dialog-val-sell"),
             dialogRow("Symbols", "ALL", null),
-            dialogRow("Qty", qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity", qty.stripTrailingZeros().toPlainString(), null),
             dialogRow("Subtotal", fmt(gross), null),
             dialogRow("Fee (1%)", fmt(fee), "dialog-val-fee"),
             dialogRow("Tax", fmt(tax), "dialog-val-fee")
@@ -1457,7 +1457,7 @@ public final class GameView {
         VBox rows = new VBox(0,
             dialogRow("Action", action, "dialog-val-sell"),
             dialogRow("Symbols", "ALL", null),
-            dialogRow("Qty", qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity", qty.stripTrailingZeros().toPlainString(), null),
             dialogRow("Fee (1%)", fmt(fee), "dialog-val-fee"),
             dialogRow("Tax", fmt(tax), "dialog-val-fee"),
             dialogRow("Received", fmt(total), null),
@@ -1580,7 +1580,7 @@ public final class GameView {
         table.getStyleClass().add("history-table");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
-        TableColumn<TxRow, String> weekCol = new TableColumn<>("Wk");
+        TableColumn<TxRow, String> weekCol = new TableColumn<>("Week");
         weekCol.setCellValueFactory(cd -> new SimpleStringProperty(String.valueOf(cd.getValue().week())));
         weekCol.setComparator(java.util.Comparator.comparingInt(Integer::parseInt));
         weekCol.setMinWidth(34); weekCol.setPrefWidth(34);
@@ -1607,11 +1607,11 @@ public final class GameView {
         compCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().company()));
         compCol.setMinWidth(120); compCol.setPrefWidth(160);
 
-        TableColumn<TxRow, String> qtyCol = new TableColumn<>("Qty");
+        TableColumn<TxRow, String> qtyCol = new TableColumn<>("Quantity");
         qtyCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().qty().stripTrailingZeros().toPlainString()));
         qtyCol.setMinWidth(50); qtyCol.setPrefWidth(60);
 
-        TableColumn<TxRow, String> priceCol = new TableColumn<>("Price/sh");
+        TableColumn<TxRow, String> priceCol = new TableColumn<>("Price per share");
         priceCol.setCellValueFactory(cd -> new SimpleStringProperty(fmt(cd.getValue().pricePerShare())));
         priceCol.setMinWidth(70); priceCol.setPrefWidth(80);
 
@@ -1627,8 +1627,17 @@ public final class GameView {
         TableColumn<TxRow, String> totalCol = new TableColumn<>("Total");
         totalCol.setCellValueFactory(cd -> new SimpleStringProperty(fmt(cd.getValue().total())));
         totalCol.setMinWidth(80); totalCol.setPrefWidth(90);
+        // table.getColumns().addAll(weekCol, typeCol, symCol, compCol, qtyCol, priceCol, feeCol, taxCol, totalCol); // Gets error message for some reason
+        table.getColumns().add(weekCol);
+        table.getColumns().add(typeCol);
+        table.getColumns().add(symCol);
+        table.getColumns().add(compCol);
+        table.getColumns().add(qtyCol);
+        table.getColumns().add(priceCol);
+        table.getColumns().add(feeCol);
+        table.getColumns().add(taxCol);
+        table.getColumns().add(totalCol);
 
-        table.getColumns().addAll(weekCol, typeCol, symCol, compCol, qtyCol, priceCol, feeCol, taxCol, totalCol);
         // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
         double rowH = 28;
         double headerH = 30;
@@ -2016,7 +2025,7 @@ public final class GameView {
                 gc.setLineWidth(1.5);
                 gc.strokeOval(cx - 3.5, cy - 3.5, 7, 7);
                 // Price chip near top of chart
-                String chipTxt = "Wk " + (hi + 1) + "  " + fmt(prices.get(hi));
+                String chipTxt = "Week " + (hi + 1) + "  " + fmt(prices.get(hi));
                 gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
                 double tw    = chipTxt.length() * 6.0;
                 double chipX = Math.min(cx + 8, w - tw - 12);
