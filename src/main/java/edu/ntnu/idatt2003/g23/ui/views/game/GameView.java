@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 
+import edu.ntnu.idatt2003.g23.util.NumberParser;
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
@@ -81,7 +82,7 @@ public final class GameView {
         ObservableList<Stock> allStocks        = FXCollections.observableArrayList(exchange.getStocks());
         FilteredList<Stock>   filteredStocks   = new FilteredList<>(allStocks, s -> true);
         ObservableList<Share> portfolioItems   = FXCollections.observableArrayList(gameController.getOwnedShares());
-        ObjectProperty<Stock> selectedStock    = new SimpleObjectProperty<>(allStocks.isEmpty() ? null : allStocks.get(0));
+        ObjectProperty<Stock> selectedStock    = new SimpleObjectProperty<>(null);
 
         // ── Stat pill labels ─────────────────────────────────────────────────
         Label cashVal    = new Label(fmt(player.getMoney()));
@@ -163,10 +164,8 @@ public final class GameView {
             rebuildDetail(detailArea, stock, player, exchange, refreshRef, overlayRef);
         });
 
-        // Show detail immediately for first stock
-        if (selectedStock.get() != null) {
-            rebuildDetail(detailArea, selectedStock.get(), player, exchange, refreshRef, overlayRef);
-        }
+        // Show placeholder on initial load (no stock selected yet)
+        rebuildDetail(detailArea, null, player, exchange, refreshRef, overlayRef);
 
         // ── Search field listener ──────────────────────────────────────────────
         searchField.textProperty().addListener((obs, old, val) -> applyFilterRef[0].run());
@@ -540,7 +539,7 @@ public final class GameView {
         };
         advCustom.setOnAction(e -> {
             try {
-                int n = Integer.parseInt(advInput.getText().trim());
+                int n = parseNumber(advInput.getText()).intValue();
                 if (n > 0) { for (int i=0;i<n;i++) exchange.advance(); doAdvance.run(); advInput.clear(); }
             } catch (NumberFormatException ignored) { advInput.selectAll(); }
         });
@@ -563,7 +562,7 @@ public final class GameView {
         Button setCashBtn = devBtn("Set Cash");
         setCashBtn.setOnAction(e -> {
             try {
-                BigDecimal amount = new BigDecimal(cashInput.getText().trim().replace(",", ""));
+                BigDecimal amount = parseNumber(cashInput.getText());
                 if (amount.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal current = player.getMoney();
                     if (amount.compareTo(current) > 0) {
@@ -750,7 +749,15 @@ public final class GameView {
                                        Runnable[] refreshRef,
                                        StackPane[] overlayRef) {
         area.getChildren().clear();
-        if (stock == null) return;
+        if (stock == null) {
+            Label hint = new Label("\u2190  Select a stock to view details");
+            hint.getStyleClass().add("detail-no-selection-hint");
+            StackPane placeholder = new StackPane(hint);
+            placeholder.getStyleClass().add("detail-no-selection");
+            VBox.setVgrow(placeholder, Priority.ALWAYS);
+            area.getChildren().add(placeholder);
+            return;
+        }
 
         Label sym   = new Label(stock.getSymbol());  sym.getStyleClass().add("detail-symbol");
         Label comp  = new Label(stock.getCompany()); comp.getStyleClass().add("detail-company");
@@ -797,7 +804,7 @@ public final class GameView {
 
             int qty;
             try {
-                qty = Integer.parseInt(qtyField.getText().trim());
+                qty = parseNumber(qtyField.getText()).intValue();
             } catch (NumberFormatException ex) {
                 qty = 1;
             }
@@ -814,7 +821,7 @@ public final class GameView {
         decBtn.setOnAction(e -> {
             amountTracksSell[0] = false;
             try {
-                int v = Math.max(0, Integer.parseInt(qtyField.getText().trim()) - 1);
+                int v = Math.max(0, parseNumber(qtyField.getText()).intValue() - 1);
                 qtyField.setText(String.valueOf(v));
             } catch (NumberFormatException ignored) {
                 qtyField.setText("1");
@@ -824,7 +831,7 @@ public final class GameView {
         incBtn.setOnAction(e -> {
             amountTracksSell[0] = false;
             try {
-                qtyField.setText(String.valueOf(Integer.parseInt(qtyField.getText().trim()) + 1));
+                qtyField.setText(String.valueOf(parseNumber(qtyField.getText()).intValue() + 1));
             } catch (NumberFormatException ignored) {
                 qtyField.setText("1");
             }
@@ -844,7 +851,7 @@ public final class GameView {
         // Both labels track the qty field
         final Runnable updateBuyAmount = () -> {
             int qty;
-            try { qty = Integer.parseInt(qtyField.getText().trim()); }
+            try { qty = parseNumber(qtyField.getText()).intValue(); }
             catch (NumberFormatException ex) { buyAmountLbl.setText("\u2014"); return; }
             if (qty < 1) {
                 buyAmountLbl.setText("\u2014");
@@ -855,7 +862,7 @@ public final class GameView {
         };
         final Runnable updateSellAmount = () -> {
             int qty;
-            try { qty = Integer.parseInt(qtyField.getText().trim()); }
+            try { qty = parseNumber(qtyField.getText()).intValue(); }
             catch (NumberFormatException ex) { sellAmountLbl.setText("\u2014"); return; }
             if (qty < 1) {
                 sellAmountLbl.setText("\u2014");
@@ -904,7 +911,7 @@ public final class GameView {
             }
             int qty;
             try {
-                qty = Integer.parseInt(val.trim());
+                qty = parseNumber(val).intValue();
             } catch (NumberFormatException ex) {
                 qty = 1;
             }
@@ -930,7 +937,7 @@ public final class GameView {
             amountTracksSell[0] = false;
             BigDecimal amount;
             try {
-                amount = new BigDecimal(val.trim());
+                amount = parseNumber(val);
             } catch (NumberFormatException ex) {
                 return;
             }
@@ -963,7 +970,7 @@ public final class GameView {
         buyBtn.getStyleClass().add("trade-buy-button");
         buyBtn.setOnAction(e -> {
             int parsedQty;
-            try { parsedQty = Integer.parseInt(qtyField.getText().trim()); }
+            try { parsedQty = parseNumber(qtyField.getText()).intValue(); }
             catch (NumberFormatException ex) { showError(overlayRef[0], "Enter a valid quantity."); return; }
 
             if (parsedQty < 1) {
@@ -996,7 +1003,7 @@ public final class GameView {
         sellBtn.getStyleClass().add("trade-sell-button");
         sellBtn.setOnAction(e -> {
             int parsedQty;
-            try { parsedQty = Integer.parseInt(qtyField.getText().trim()); }
+            try { parsedQty = parseNumber(qtyField.getText()).intValue(); }
             catch (NumberFormatException ex) { showError(overlayRef[0], "Enter a valid quantity."); return; }
 
             if (parsedQty < 1) {
@@ -1160,6 +1167,17 @@ public final class GameView {
 
     private static String fmt(BigDecimal value) {
         return String.format("$%,.2f", value.doubleValue());
+    }
+
+    /**
+     * Parses a number string that may end with a magnitude suffix:
+     * K / k → ×1 000, M / m → ×1 000 000, B / b → ×1 000 000 000.
+     * Strips leading/trailing whitespace and commas before parsing.
+     *
+     * @throws NumberFormatException if the string (after suffix removal) is not a valid number
+     */
+    private static BigDecimal parseNumber(String text) {
+        return NumberParser.parse(text);
     }
 
     /** Walk lots without mutating state; returns null if qty > owned. [gross, fee, tax, proceeds] */

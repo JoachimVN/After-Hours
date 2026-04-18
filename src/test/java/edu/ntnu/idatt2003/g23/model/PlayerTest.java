@@ -257,10 +257,10 @@ class PlayerTest {
             player.getPortfolio().addShare(googlShare);
 
             // Net worth = cash + portfolio value after commission and tax
-            // AAPL: 750 - 7.50 commission + 2.25 tax refund = 744.75
-            // GOOGL: 600 - 6.00 commission + 1.80 tax refund = 595.80
-            // = 1000 + 744.75 + 595.80 = 2340.55
-            assertEquals(new BigDecimal("2340.550"), player.getNetWorth());
+            // AAPL: 750 - 7.50 commission, no profit → tax = 0 → 742.50
+            // GOOGL: 600 - 6.00 commission, no profit → tax = 0 → 594.00
+            // = 1000 + 742.50 + 594.00 = 2336.50
+            assertEquals(new BigDecimal("2336.50"), player.getNetWorth());
         }
 
         @Test
@@ -275,9 +275,9 @@ class PlayerTest {
             player.addMoney(new BigDecimal("250.00"));
 
             // Net worth = 750 (cash) + portfolio value after commission and tax
-            // TEST: 200 - 2.00 commission + 0.60 tax refund = 198.60
-            // = 750 + 198.60 = 948.60
-            assertEquals(new BigDecimal("948.600"), player.getNetWorth());
+            // TEST: 200 - 2.00 commission, no profit → tax = 0 → 198.00
+            // = 750 + 198.00 = 948.00
+            assertEquals(new BigDecimal("948.00"), player.getNetWorth());
         }
 
         @Test

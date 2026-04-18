@@ -496,4 +496,26 @@ class ExchangeTest {
         exchange.advance();
         assertTrue(stock.getSalesPrice().compareTo(new BigDecimal("0.01")) >= 0);
     }
+
+    @Test
+    @DisplayName("post-spike floor prevents price falling below $0.01 over many advances")
+    void testPostSpikePriceFloorAfterSpike() {
+        // Stock starts below the $0.01 floor. The main-advance loop always resets
+        // it to exactly $0.01, so any downward spike immediately crosses the floor
+        // and must be caught by the post-spike floor check (lines 264-265).
+        // Running 500 advances gives a ~(1-0.083)^500 ≈ 0 chance of never hitting
+        // a downward spike, making coverage of line 265 essentially certain.
+        Stock stock = createSampleStock("TINY", "Tiny Corp", new BigDecimal("0.001"));
+        stock.setVolatility(Stock.Volatility.SLOW_FALL);
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(stock));
+
+        BigDecimal priceFloor = new BigDecimal("0.01");
+        for (int i = 0; i < 500; i++) {
+            exchange.advance();
+            assertTrue(
+                stock.getSalesPrice().compareTo(priceFloor) >= 0,
+                "Price fell below $0.01 at week " + exchange.getWeek()
+            );
+        }
+    }
 }

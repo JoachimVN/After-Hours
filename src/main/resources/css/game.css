@@ -251,6 +251,16 @@
     -fx-padding: 0;
 }
 
+.detail-no-selection {
+    -fx-background-color: rgba(8, 14, 36, 0.60);
+}
+
+.detail-no-selection-hint {
+    -fx-font-size: 15px;
+    -fx-text-fill: #3a5070;
+    -fx-font-style: italic;
+}
+
 .game-detail-header {
     -fx-background-color: rgba(8, 14, 36, 0.92);
     -fx-padding: 20 24 16 24;

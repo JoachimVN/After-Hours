@@ -257,6 +257,14 @@ public class Exchange {
         applySpike(allStocks, 0.05, 10,  50);
         applySpike(allStocks, 0.02, 20,  70);
         applySpike(allStocks, 0.01, 30,  90);
+
+        // Re-apply price floor after spikes — a downward spike can bypass the per-stock floor above
+        BigDecimal priceFloor = BigDecimal.valueOf(0.01);
+        for (Stock s : allStocks) {
+            if (s.getSalesPrice().compareTo(priceFloor) < 0) {
+                s.addNewSalesPrice(priceFloor);
+            }
+        }
     }
 
     private void applySpike(List<Stock> stocks, double chance, double minPct, double maxPct) {

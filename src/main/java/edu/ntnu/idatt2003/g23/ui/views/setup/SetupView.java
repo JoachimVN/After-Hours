@@ -2,6 +2,8 @@ package edu.ntnu.idatt2003.g23.ui.views.setup;
 
 import java.util.function.BiConsumer;
 
+import edu.ntnu.idatt2003.g23.util.NumberParser;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.input.KeyEvent;
@@ -183,8 +185,7 @@ public final class SetupView {
 
     private static double parseCash(String text) {
         try {
-            String cleaned = text.replaceAll("[^0-9.]", "");
-            double val = Double.parseDouble(cleaned);
+            double val = NumberParser.parse(text).doubleValue();
             return val > 0 ? val : 10_000;
         } catch (NumberFormatException e) {
             return 10_000;
