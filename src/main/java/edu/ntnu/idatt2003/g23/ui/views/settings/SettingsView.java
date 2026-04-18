@@ -2,6 +2,8 @@ package edu.ntnu.idatt2003.g23.ui.views.settings;
 
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import javafx.geometry.Insets;
@@ -80,6 +82,12 @@ public final class SettingsView {
         VBox center = new VBox(32, title, settingsBlock);
         center.setAlignment(Pos.CENTER);
         root.setCenter(center);
+
+        // ── Keybindings ───────────────────────────────────────────────────────────
+        // Escape → back
+        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE) { onBack.run(); e.consume(); }
+        });
 
         return root;
     }

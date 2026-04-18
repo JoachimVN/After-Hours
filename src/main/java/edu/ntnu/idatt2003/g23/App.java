@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
@@ -117,23 +118,29 @@ public class App extends Application {
     }
 
     private void startGame(String name, double cash) {
-        List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
-        buildAndStartGame(name, cash, stocks);
+        new Thread(() -> {
+            List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
+            Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
+        }, "stock-loader").start();
     }
 
     private void startGameWithCsv(String name, double cash, File csvFile) {
-        List<Stock> stocks;
-        try {
-            stocks = StockCsvLoader.parse(new FileReader(csvFile, StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("CSV Error");
-            alert.setHeaderText("Could not load stock data");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
-            return;
-        }
-        buildAndStartGame(name, cash, stocks);
+        new Thread(() -> {
+            List<Stock> stocks;
+            try {
+                stocks = StockCsvLoader.parse(new FileReader(csvFile, StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("CSV Error");
+                    alert.setHeaderText("Could not load stock data");
+                    alert.setContentText(e.getMessage());
+                    alert.showAndWait();
+                });
+                return;
+            }
+            Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
+        }, "stock-loader").start();
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks) {
@@ -145,9 +152,15 @@ public class App extends Application {
                 this::goHome,
                 () -> navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))),
                 player,
-                exchange
+                exchange,
+                currentSfxVolumeSupplier()
         );
         navigateToGame(currentGamePage);
+        Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxVolume));
+    }
+
+    private DoubleSupplier currentSfxVolumeSupplier() {
+        return () -> sfxVolume;
     }
 
     private Parent buildSettingsView(Runnable onBack) {
@@ -165,9 +178,8 @@ public class App extends Application {
 
     // ── Music-aware navigation primitives ────────────────────────────────────
 
-    /** Swap page and start ambience — entering the game. */
+    /** Swap page — music was already started at the top of the start-game call. */
     private void navigateToGame(Parent page) {
-        homePageMusicController.fadeOutThenPlayAmbience();
         root.getChildren().setAll(backgroundCanvas, page);
     }
 

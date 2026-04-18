@@ -14,18 +14,32 @@ import javafx.util.Duration;
 public class HomePageMusicController {
 
     private static final String HOME_PAGE_MUSIC = "/audio/music/After_Hours_Theme_demo.mp3";
+    private static final List<String> GAME_START_TRACKS = List.of(
+            "/audio/sfx/game_start/Game_Start1.mp3",
+            "/audio/sfx/game_start/Game_Start2.mp3",
+            "/audio/sfx/game_start/Game_Start4.mp3"
+            // "/audio/sfx/game_start/Game_Start3.mp3",
+            // "/audio/sfx/game_start/Game_Start5.mp3"
+    );
     private static final List<String> AMBIENCE_TRACKS = List.of(
             "/audio/music/ambience/After_Hours_Ambience2_demo.mp3",
             "/audio/music/ambience/After_Hours_Ambience1_demo.mp3"
     );
     private static final Duration FADE_DURATION = Duration.seconds(1.0);
+    private static final Duration AMBIENCE_FADE_IN_DURATION = Duration.seconds(0.1);
+    private static final double DEFAULT_VOLUME = 0.50;
+    private static final double MAIN_THEME_VOLUME_MULTIPLIER  = 0.8;
+    private static final double AMBIENCE1_VOLUME_MULTIPLIER   = 0.50;
+    private static final double AMBIENCE2_VOLUME_MULTIPLIER   = 1.0;
 
     private final Class<?> resourceOwner;
     private MediaPlayer mediaPlayer;
-    private double volume = 0.50;
+    private double volume = DEFAULT_VOLUME;
+    private double currentTrackMultiplier = 1.0;
     private Timeline fadeTimeline;
 
     private List<String> ambienceQueue = new ArrayList<>();
+    private String lastGameStartTrack = null;
 
     public HomePageMusicController(Class<?> resourceOwner) {
         this.resourceOwner = resourceOwner;
@@ -36,7 +50,8 @@ public class HomePageMusicController {
         try {
             String musicPath = resourceOwner.getResource(HOME_PAGE_MUSIC).toExternalForm();
             mediaPlayer = new MediaPlayer(new Media(musicPath));
-            mediaPlayer.setVolume(volume);
+            currentTrackMultiplier = MAIN_THEME_VOLUME_MULTIPLIER;
+            mediaPlayer.setVolume(volume * currentTrackMultiplier);
             mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
             if (onPlaying != null) {
                 mediaPlayer.setOnPlaying(onPlaying);
@@ -60,6 +75,67 @@ public class HomePageMusicController {
 
     public void fadeOutThenPlayAmbience() {
         fadeOutThen(this::playAmbience);
+    }
+
+    /**
+     * Instantly cuts the main theme, plays the game-start sting at {@code sfxVolume},
+     * then fades the ambience in from silence over {@value} seconds once the sting ends.
+     */
+    public void playGameStartThenAmbience(double sfxVolume) {
+        stop(); // cut main theme immediately
+        try {
+            List<String> candidates = new ArrayList<>(GAME_START_TRACKS);
+            if (lastGameStartTrack != null && candidates.size() > 1) {
+                candidates.remove(lastGameStartTrack);
+            }
+            String randomTrack = candidates.get((int) (Math.random() * candidates.size()));
+            lastGameStartTrack = randomTrack;
+            String path = resourceOwner.getResource(randomTrack).toExternalForm();
+            final MediaPlayer sfxPlayer = new MediaPlayer(new Media(path));
+            mediaPlayer = sfxPlayer;
+            sfxPlayer.setVolume(sfxVolume);
+            sfxPlayer.setOnEndOfMedia(() -> {
+                sfxPlayer.stop();
+                sfxPlayer.dispose();
+                if (mediaPlayer == sfxPlayer) {
+                    mediaPlayer = null;
+                }
+                fadeInAmbience();
+            });
+            sfxPlayer.play();
+        } catch (Exception ignored) {
+            fadeInAmbience();
+        }
+    }
+
+    private void fadeInAmbience() {
+        if (ambienceQueue.isEmpty()) {
+            ambienceQueue = new ArrayList<>(AMBIENCE_TRACKS);
+            Collections.shuffle(ambienceQueue);
+        }
+        String track = ambienceQueue.remove(0);
+        try {
+            String path = resourceOwner.getResource(track).toExternalForm();
+            currentTrackMultiplier = multiplierFor(track);
+            mediaPlayer = new MediaPlayer(new Media(path));
+            mediaPlayer.setVolume(0.0);
+            mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
+            mediaPlayer.play();
+            if (fadeTimeline != null) {
+                fadeTimeline.stop();
+            }
+            MediaPlayer ambiencePlayer = mediaPlayer;
+            double targetVolume = volume * currentTrackMultiplier;
+            fadeTimeline = new Timeline(
+                    new KeyFrame(Duration.ZERO,
+                            new KeyValue(ambiencePlayer.volumeProperty(), 0.0)),
+                    new KeyFrame(AMBIENCE_FADE_IN_DURATION,
+                            new KeyValue(ambiencePlayer.volumeProperty(), targetVolume))
+            );
+            fadeTimeline.play();
+        } catch (Exception ignored) {
+            playNextAmbience();
+        }
     }
 
     private void fadeOutThen(Runnable after) {
@@ -96,13 +172,20 @@ public class HomePageMusicController {
         String track = ambienceQueue.remove(0);
         try {
             String path = resourceOwner.getResource(track).toExternalForm();
+            currentTrackMultiplier = multiplierFor(track);
             mediaPlayer = new MediaPlayer(new Media(path));
-            mediaPlayer.setVolume(volume);
+            mediaPlayer.setVolume(volume * currentTrackMultiplier);
             mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
             mediaPlayer.play();
         } catch (Exception ignored) {
             playNextAmbience();
         }
+    }
+
+    private double multiplierFor(String track) {
+        if (track.contains("Ambience1")) return AMBIENCE1_VOLUME_MULTIPLIER;
+        if (track.contains("Ambience2")) return AMBIENCE2_VOLUME_MULTIPLIER;
+        return 1.0;
     }
 
     public void stop() {
@@ -121,7 +204,7 @@ public class HomePageMusicController {
     public void setVolume(double volume) {
         this.volume = volume;
         if (mediaPlayer != null) {
-            mediaPlayer.setVolume(volume);
+            mediaPlayer.setVolume(volume * currentTrackMultiplier);
         }
     }
 
