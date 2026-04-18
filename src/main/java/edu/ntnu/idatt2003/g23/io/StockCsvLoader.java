@@ -44,11 +44,7 @@ public final class StockCsvLoader {
             throw new IllegalStateException("Resource not found: " + resourcePath);
         }
 
-        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
-            return parse(reader);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read stock resource: " + resourcePath, e);
-        }
+        return parse(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
     }
 
     /**
