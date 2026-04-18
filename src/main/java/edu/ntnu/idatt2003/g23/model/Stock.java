@@ -165,4 +165,28 @@ public class Stock {
         return current.subtract(prev).divide(prev, 6, RoundingMode.HALF_UP)
                       .multiply(BigDecimal.valueOf(100));
     }
+
+    /**
+     * Calculates the all-time high price of the stock
+     * @return the all-time high price of the stock
+     * @throws IllegalStateException if no prices are available for the stock
+     */
+    public BigDecimal allTimeHigh() {
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalStateException("No prices available for the stock");
+        }
+        return getHistoricalPrices().stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Calculates the all-time low price of the stock
+     * @return the all-time low price of the stock
+     * @throws IllegalStateException if no prices are available for the stock
+     */
+    public BigDecimal allTimeLow() {
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalStateException("No prices available for the stock");
+        }
+        return getHistoricalPrices().stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+    }
 }
