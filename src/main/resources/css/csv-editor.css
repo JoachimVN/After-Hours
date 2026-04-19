@@ -1,0 +1,122 @@
+/* ── In-game CSV Editor ───────────────────────────────────────────────────── */
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+
+.csv-editor-table {
+    -fx-background-color: #07152c;
+    -fx-border-color: #1e408060;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-table-cell-border-color: #1e408040;
+}
+
+.csv-editor-table .column-header-background {
+    -fx-background-color: #0a1e38;
+}
+
+.csv-editor-table .column-header {
+    -fx-background-color: #0a1e38;
+    -fx-border-color: #1e408060;
+    -fx-border-width: 0 0 1 0;
+}
+
+.csv-editor-table .column-header .label {
+    -fx-text-fill: #b8cce8;
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+}
+
+.csv-editor-table .table-cell {
+    -fx-text-fill: #d8e8f8;
+    -fx-font-size: 12;
+    -fx-padding: 4 8;
+    -fx-background-color: transparent;
+}
+
+.csv-editor-table .table-row-cell {
+    -fx-background-color: #07152c;
+}
+
+.csv-editor-table .table-row-cell:odd {
+    -fx-background-color: #091a35;
+}
+
+.csv-editor-table .table-row-cell:selected {
+    -fx-background-color: #1a3a6a;
+}
+
+/* ── Error row highlight ──────────────────────────────────────────────────── */
+
+.csv-row-error {
+    -fx-background-color: #3a0a0a !important;
+}
+
+.csv-row-error:odd {
+    -fx-background-color: #420c0c !important;
+}
+
+.csv-row-error:selected {
+    -fx-background-color: #6a1a1a !important;
+}
+
+.csv-row-error .table-cell {
+    -fx-text-fill: #ffaaaa;
+}
+
+/* ── OK row ──────────────────────────────────────────────────────────────── */
+
+.csv-row-ok .table-cell {
+    -fx-text-fill: #d8e8f8;
+}
+
+/* ── Text field editor inside cells ─────────────────────────────────────── */
+
+.csv-editor-table .text-field-table-cell .text-field {
+    -fx-background-color: #0e2a50;
+    -fx-text-fill: #e8f0ff;
+    -fx-border-color: #3a6acc;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-size: 12;
+}
+
+/* ── Error count / status label ─────────────────────────────────────────── */
+
+.csv-error-count {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12;
+    -fx-background-radius: 8;
+    -fx-background-color: #10213a;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.csv-error-count-bad {
+    -fx-text-fill: #ff6b6b;
+    -fx-border-color: #6a1a1a;
+}
+
+.csv-error-count-ok {
+    -fx-text-fill: #6bff9e;
+    -fx-border-color: #1a6a3a;
+}
+
+/* ── Skip broken rows button ─────────────────────────────────────────────── */
+
+.csv-skip-button {
+    -fx-background-color: #3a1010;
+    -fx-border-color: #8d304870;
+    -fx-text-fill: #f1c6cf;
+}
+
+.csv-skip-button:hover {
+    -fx-background-color: derive(#3a1010, 20%);
+    -fx-text-fill: white;
+}
+
+.csv-skip-button:disabled {
+    -fx-opacity: 0.35;
+}

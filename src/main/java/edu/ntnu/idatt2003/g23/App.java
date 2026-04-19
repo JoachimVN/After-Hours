@@ -9,12 +9,15 @@ import java.util.List;
 import java.util.function.DoubleSupplier;
 
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
+import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
+import edu.ntnu.idatt2003.g23.ui.views.csveditor.CsvEditorView;
+import edu.ntnu.idatt2003.g23.ui.views.nostocks.NoStocksView;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.importcsv.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
@@ -87,7 +90,9 @@ public class App extends Application {
                 getClass().getResource("/css/setup.css").toExternalForm(),
                 getClass().getResource("/css/import-csv.css").toExternalForm(),
                 getClass().getResource("/css/game.css").toExternalForm(),
-                getClass().getResource("/css/dialogs.css").toExternalForm()
+                getClass().getResource("/css/dialogs.css").toExternalForm(),
+                getClass().getResource("/css/csv-editor.css").toExternalForm(),
+                getClass().getResource("/css/no-stocks.css").toExternalForm()
         );
 
         configureStage(stage, scene);
@@ -119,31 +124,64 @@ public class App extends Application {
 
     private void startGame(String name, double cash) {
         new Thread(() -> {
-            List<Stock> stocks = StockCsvLoader.loadFromResource("data/stocks/sp500_stocks.csv");
-            Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
+            CsvParseResult result = StockCsvLoader.loadFromResourceWithErrors("data/stocks/sp500_stocks.csv");
+            Platform.runLater(() -> {
+                if (result.hasErrors()) {
+                    openCsvEditor(result, name, cash);
+                } else {
+                    List<Stock> stocks = result.getRows().stream()
+                            .map(StockCsvLoader::rowToStock)
+                            .toList();
+                    buildAndStartGame(name, cash, stocks, false);
+                }
+            });
         }, "stock-loader").start();
     }
 
     private void startGameWithCsv(String name, double cash, File csvFile) {
         new Thread(() -> {
-            List<Stock> stocks;
+            CsvParseResult result;
             try {
-                stocks = StockCsvLoader.parse(new FileReader(csvFile, StandardCharsets.UTF_8));
+                result = StockCsvLoader.parseWithErrors(
+                        new FileReader(csvFile, StandardCharsets.UTF_8));
             } catch (IOException e) {
                 Platform.runLater(() -> {
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("CSV Error");
-                    alert.setHeaderText("Could not load stock data");
+                    alert.setHeaderText("Could not read file");
                     alert.setContentText(e.getMessage());
                     alert.showAndWait();
                 });
                 return;
             }
-            Platform.runLater(() -> buildAndStartGame(name, cash, stocks));
+            Platform.runLater(() -> {
+                if (result.hasErrors()) {
+                    openCsvEditor(result, name, cash);
+                } else {
+                    List<Stock> stocks = result.getRows().stream()
+                            .map(StockCsvLoader::rowToStock)
+                            .toList();
+                    buildAndStartGame(name, cash, stocks, false);
+                }
+            });
         }, "stock-loader").start();
     }
 
-    private void buildAndStartGame(String name, double cash, List<Stock> stocks) {
+    private void openCsvEditor(CsvParseResult result, String name, double cash) {
+        Parent editorPage = CsvEditorView.build(
+                result,
+                this::goHomeKeepMusic,
+                stocks -> buildAndStartGame(name, cash, stocks, true)
+        );
+        navigateKeepMusic(editorPage);
+        fadeInPage(editorPage);
+    }
+
+    private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor) {
+        if (stocks.isEmpty()) {
+            showNoStocksPage(fromEditor);
+            return;
+        }
         Player player = new Player(
                 name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
@@ -157,6 +195,13 @@ public class App extends Application {
         );
         navigateToGame(currentGamePage);
         Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxVolume));
+    }
+
+    private void showNoStocksPage(boolean fromEditor) {
+        Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, this::goHome);
+        navigateToGame(page);
+        Platform.runLater(() -> homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
+                "/audio/music/ambience/After_Hours_Ambience3_demo.mp3"));
     }
 
     private DoubleSupplier currentSfxVolumeSupplier() {

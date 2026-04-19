@@ -80,6 +80,24 @@ public class HomePageMusicController {
     }
 
     /**
+     * Fades out current music then plays ambience, forcing {@code firstTrack} to be played first.
+     * The remaining tracks continue in shuffled order.
+     */
+    public void fadeOutThenPlayAmbienceStartingWith(String firstTrack) {
+        fadeOutThen(() -> playAmbienceStartingWith(firstTrack));
+    }
+
+    public void playAmbienceStartingWith(String firstTrack) {
+        stop();
+        // Rebuild queue with remaining tracks shuffled, firstTrack goes first
+        ambienceQueue = new ArrayList<>(AMBIENCE_TRACKS);
+        ambienceQueue.remove(firstTrack);
+        Collections.shuffle(ambienceQueue);
+        ambienceQueue.add(0, firstTrack);
+        playNextAmbience();
+    }
+
+    /**
      * Instantly cuts the main theme, plays the game-start sting at {@code sfxVolume},
      * then fades the ambience in from silence over {@value} seconds once the sting ends.
      */
