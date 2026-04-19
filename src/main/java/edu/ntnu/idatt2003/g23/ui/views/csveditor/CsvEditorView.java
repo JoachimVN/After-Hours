@@ -258,6 +258,19 @@ public final class CsvEditorView {
         Label hintLabel = new Label("Click a cell to edit it, or press Skip on a row to remove it.");
         hintLabel.getStyleClass().add("sub-tagline");
 
+        // Add Row button
+        Button addRowBtn = new Button("+ Add Row");
+        addRowBtn.getStyleClass().add("secondary-button");
+        addRowBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+        addRowBtn.setOnAction(e -> {
+            int nextLine = rows.size() > 0 ? rows.get(rows.size() - 1).getLineNumber() + 1 : 1;
+            CsvRow newRow = new CsvRow(nextLine, "", "", "", "");
+            rows.add(newRow);
+            table.getSelectionModel().select(newRow);
+            table.scrollTo(newRow);
+            refreshState.run();
+        });
+
         // "Skip all broken rows" — removes every row that still has an error
         Button skipAllBtn = new Button("\u2715  Skip All Broken Rows");
         skipAllBtn.getStyleClass().addAll("secondary-button", "csv-skip-button");
@@ -292,7 +305,7 @@ public final class CsvEditorView {
         Region bottomSpacer = new Region();
         HBox.setHgrow(bottomSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(12, hintLabel, bottomSpacer, skipAllBtn, continueBtn, saveBtn);
+        HBox bottomBar = new HBox(12, hintLabel, addRowBtn, bottomSpacer, skipAllBtn, continueBtn, saveBtn);
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         bottomBar.setPadding(new Insets(12, 32, 24, 32));
 

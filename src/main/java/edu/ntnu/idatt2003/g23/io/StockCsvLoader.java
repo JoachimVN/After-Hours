@@ -214,11 +214,9 @@ public final class StockCsvLoader {
 
         String[] rawPrices = prices.split(";");
         boolean hasPrices = false;
-        int priceIdx = 0;
         for (String raw : rawPrices) {
             String p = raw.trim();
             if (!p.isEmpty()) {
-                priceIdx++;
                 try {
                     BigDecimal val = new BigDecimal(p);
                     if (val.compareTo(BigDecimal.ZERO) <= 0) {
@@ -307,11 +305,9 @@ public final class StockCsvLoader {
 
         String[] rawPrices = prices.split(";");
         boolean hasPrices = false;
-        int priceIdx = 0;
         for (String raw : rawPrices) {
             String p = raw.trim();
             if (!p.isEmpty()) {
-                priceIdx++;
                 try {
                     BigDecimal val = new BigDecimal(p);
                     if (val.compareTo(BigDecimal.ZERO) <= 0) {

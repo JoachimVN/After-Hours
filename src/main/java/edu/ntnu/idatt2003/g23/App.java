@@ -85,14 +85,15 @@ public class App extends Application {
 
         Scene scene = new Scene(root, AppConfig.DEFAULT_WIDTH, AppConfig.DEFAULT_HEIGHT);
         scene.getStylesheets().addAll(
-                getClass().getResource("/css/base.css").toExternalForm(),
-                getClass().getResource("/css/settings.css").toExternalForm(),
-                getClass().getResource("/css/setup.css").toExternalForm(),
-                getClass().getResource("/css/import-csv.css").toExternalForm(),
-                getClass().getResource("/css/game.css").toExternalForm(),
-                getClass().getResource("/css/dialogs.css").toExternalForm(),
-                getClass().getResource("/css/csv-editor.css").toExternalForm(),
-                getClass().getResource("/css/no-stocks.css").toExternalForm()
+            getClass().getResource("/css/base.css").toExternalForm(),
+            getClass().getResource("/css/settings.css").toExternalForm(),
+            getClass().getResource("/css/setup.css").toExternalForm(),
+            getClass().getResource("/css/import-csv.css").toExternalForm(),
+            getClass().getResource("/css/game.css").toExternalForm(),
+            getClass().getResource("/css/dialogs.css").toExternalForm(),
+            getClass().getResource("/css/csv-editor.css").toExternalForm(),
+            getClass().getResource("/css/no-stocks.css").toExternalForm(),
+            getClass().getResource("/css/scrollbar.css").toExternalForm()
         );
 
         configureStage(stage, scene);
