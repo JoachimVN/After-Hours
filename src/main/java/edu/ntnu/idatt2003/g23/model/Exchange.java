@@ -66,20 +66,20 @@ public class Exchange {
     private void assignVolatilities(List<Stock> stocks) {
         int total = stocks.size();
         Collections.shuffle(stocks, random);
-        int nChaotic   = Math.max(1, (int) Math.round(total * 0.01)); // 2% of total stocks, ensure at least 1 chaotic stock
-        int nFast      = (int) Math.round(total * 0.10); // 10% of total stocks
-        int nSlowRise  = (int) Math.round(total * 0.19); // 18% of total stocks
-        int nSlowFall  = (int) Math.round(total * 0.12); // 12% of total stocks
-        int nNormRise  = (int) Math.round(total * 0.25); // 25% of total stocks
-        int nNormFall  = (int) Math.round(total * 0.18); // 18% of total stocks
-        // total percentage assigned: 85%, remaining 15% will be stable
+        int remaining = total;
+        int nChaotic  = Math.min(remaining, Math.max(1, (int) Math.round(total * 0.01))); remaining -= nChaotic;
+        int nFast     = Math.min(remaining, (int) Math.round(total * 0.10)); remaining -= nFast;
+        int nSlowRise = Math.min(remaining, (int) Math.round(total * 0.19)); remaining -= nSlowRise;
+        int nSlowFall = Math.min(remaining, (int) Math.round(total * 0.12)); remaining -= nSlowFall;
+        int nNormRise = Math.min(remaining, (int) Math.round(total * 0.25)); remaining -= nNormRise;
+        int nNormFall = Math.min(remaining, (int) Math.round(total * 0.18)); remaining -= nNormFall;
         int i = 0;
-        for (int c = 0; c < nChaotic  && i < total; c++, i++) stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
-        for (int f = 0; f < nFast     && i < total; f++, i++) stocks.get(i).setVolatility(Stock.Volatility.FAST);
-        for (int r = 0; r < nSlowRise && i < total; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_RISE);
-        for (int d = 0; d < nSlowFall && i < total; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_FALL);
-        for (int r = 0; r < nNormRise && i < total; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_RISE);
-        for (int d = 0; d < nNormFall && i < total; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_FALL);
+        for (int c = 0; c < nChaotic;  c++, i++) stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
+        for (int f = 0; f < nFast;     f++, i++) stocks.get(i).setVolatility(Stock.Volatility.FAST);
+        for (int r = 0; r < nSlowRise; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_RISE);
+        for (int d = 0; d < nSlowFall; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.SLOW_FALL);
+        for (int r = 0; r < nNormRise; r++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_RISE);
+        for (int d = 0; d < nNormFall; d++, i++) stocks.get(i).setVolatility(Stock.Volatility.NORMAL_FALL);
         while (i < total) stocks.get(i++).setVolatility(Stock.Volatility.STABLE); // Remaining stocks are stable
     }
 
@@ -182,7 +182,6 @@ public class Exchange {
             throw new IllegalArgumentException("Player cannot be null");
         }
 
-        Stock stock = share.getStock();
         return TransactionFactory.createSale(share, this.week);
     }
 
@@ -258,6 +257,14 @@ public class Exchange {
         applySpike(allStocks, 0.05, 10,  50);
         applySpike(allStocks, 0.02, 20,  70);
         applySpike(allStocks, 0.01, 30,  90);
+
+        // Re-apply price floor after spikes — a downward spike can bypass the per-stock floor above
+        BigDecimal priceFloor = BigDecimal.valueOf(0.01);
+        for (Stock s : allStocks) {
+            if (s.getSalesPrice().compareTo(priceFloor) < 0) {
+                s.addNewSalesPrice(priceFloor);
+            }
+        }
     }
 
     private void applySpike(List<Stock> stocks, double chance, double minPct, double maxPct) {
@@ -282,11 +289,11 @@ public class Exchange {
         double pick = random.nextDouble() * total;
         double cumulative = 0;
         Volatility[] vals = Volatility.values();
-        for (int i = 0; i < weights.length; i++) {
+        for (int i = 0; i < weights.length - 1; i++) {
             cumulative += weights[i];
             if (pick < cumulative) return vals[i];
         }
-        return vals[0];
+        return vals[weights.length - 1];
     }
 
     /**
@@ -322,9 +329,6 @@ public class Exchange {
     }
 
     public List<Stock> getStocks() {
-        if (stockMap == null) {
-            throw new IllegalStateException("Stock map is not initialized");
-        }
         return new ArrayList<>(stockMap.values());
     }
 

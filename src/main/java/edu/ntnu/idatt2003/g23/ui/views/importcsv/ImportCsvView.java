@@ -7,7 +7,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
@@ -69,10 +68,17 @@ public final class ImportCsvView {
             fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
             File f = fc.showOpenDialog(root.getScene().getWindow());
             if (f != null) {
-                chosenFile[0] = f;
-                fileNameLabel.setText("\u2714  " + f.getName());
-                fileNameLabel.setStyle("-fx-text-fill: #f5a201;");
-                continueBtn.setDisable(false);
+                if (!f.getName().toLowerCase().endsWith(".csv")) {
+                    fileNameLabel.setText("\u2716  Please select a .csv file");
+                    fileNameLabel.setStyle("-fx-text-fill: #cc4444;");
+                    continueBtn.setDisable(true);
+                    chosenFile[0] = null;
+                } else {
+                    chosenFile[0] = f;
+                    fileNameLabel.setText("\u2714  " + f.getName());
+                    fileNameLabel.setStyle("-fx-text-fill: #f5a201;");
+                    continueBtn.setDisable(false);
+                }
             }
         });
 

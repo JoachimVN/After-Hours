@@ -13,9 +13,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import edu.ntnu.idatt2003.g23.model.Stock.Volatility;
 
 import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Sale;
@@ -25,6 +28,15 @@ class ExchangeTest {
 
     @TempDir
     Path tempDir;
+
+    private Stock stock;
+    private Exchange exchange;
+
+    @BeforeEach
+    void setUp() {
+        stock = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        exchange = new Exchange("NYSE", Arrays.asList(stock));
+    }
 
     // Helper method to create a sample stock
     private Stock createSampleStock(String symbol, String company, BigDecimal price) {
@@ -56,15 +68,13 @@ class ExchangeTest {
     @Test
     @DisplayName("Constructor throws when name is null")
     void testConstructorNullName() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        assertThrows(IllegalArgumentException.class, () -> new Exchange(null, stocks));
+        assertThrows(IllegalArgumentException.class, () -> new Exchange(null, Arrays.asList(stock)));
     }
 
     @Test
     @DisplayName("Constructor throws when name is blank")
     void testConstructorBlankName() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        assertThrows(IllegalArgumentException.class, () -> new Exchange("", stocks));
+        assertThrows(IllegalArgumentException.class, () -> new Exchange("", Arrays.asList(stock)));
     }
 
     @Test
@@ -76,81 +86,60 @@ class ExchangeTest {
     @Test
     @DisplayName("getName returns correct name")
     void testGetName() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertEquals("NYSE", exchange.getName());
     }
 
     @Test
     @DisplayName("getWeek returns initial week as 1")
     void testGetWeekInitial() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertEquals(1, exchange.getWeek());
     }
 
     @Test
     @DisplayName("hasStock returns true for existing stock")
     void testHasStockExisting() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertTrue(exchange.hasStock("AAPL"));
     }
 
     @Test
     @DisplayName("hasStock returns false for non-existing stock")
     void testHasStockNonExisting() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertFalse(exchange.hasStock("GOOGL"));
     }
 
     @Test
     @DisplayName("hasStock throws when symbol is null")
     void testHasStockNullSymbol() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertThrows(IllegalArgumentException.class, () -> exchange.hasStock(null));
     }
 
     @Test
     @DisplayName("hasStock throws when symbol is blank")
     void testHasStockBlankSymbol() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertThrows(IllegalArgumentException.class, () -> exchange.hasStock(""));
     }
 
     @Test
     @DisplayName("getStock returns correct stock")
     void testGetStock() {
-        Stock stock = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
-        List<Stock> stocks = Arrays.asList(stock);
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertEquals(stock, exchange.getStock("AAPL"));
     }
 
     @Test
     @DisplayName("getStock throws when symbol is null")
     void testGetStockNullSymbol() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertThrows(IllegalArgumentException.class, () -> exchange.getStock(null));
     }
 
     @Test
     @DisplayName("getStock throws when symbol is blank")
     void testGetStockBlankSymbol() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertThrows(IllegalArgumentException.class, () -> exchange.getStock(""));
     }
 
     @Test
     @DisplayName("getStock throws when stock does not exist")
     void testGetStockNonExisting() {
-        List<Stock> stocks = Arrays.asList(createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")));
-        Exchange exchange = new Exchange("NYSE", stocks);
         assertThrows(IllegalArgumentException.class, () -> exchange.getStock("GOOGL"));
     }
 
@@ -324,7 +313,6 @@ class ExchangeTest {
         List<Stock> stocks = Arrays.asList(stock);
         Exchange exchange = new Exchange("NYSE", stocks);
 
-        BigDecimal initialPrice = stock.getSalesPrice();
         int initialWeek = exchange.getWeek();
 
         exchange.advance();
@@ -408,5 +396,126 @@ class ExchangeTest {
         // Order isn't guaranteed -> assert by containment
         assertTrue(lines.contains("AAPL,Apple Inc.,150"));
         assertTrue(lines.contains("MSFT,Microsoft,250"));
+    }
+
+    @Test
+    @DisplayName("setFrozen prevents price updates on advance")
+    void testSetFrozenPreventsAdvance() {
+        Stock stock = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(stock));
+
+        exchange.setFrozen(true);
+        exchange.advance();
+
+        assertEquals(2, exchange.getWeek());
+        assertEquals(new BigDecimal("150"), stock.getSalesPrice());
+    }
+
+    @Test
+    @DisplayName("advance with frozen false still updates prices")
+    void testAdvanceUnfrozenUpdatesPrices() {
+        Stock stock = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(stock));
+
+        exchange.setFrozen(false);
+        exchange.advance();
+
+        assertEquals(2, exchange.getWeek());
+        assertEquals(2, stock.getHistoricalPrices().size());
+    }
+
+    @Test
+    @DisplayName("getStocks returns all stocks")
+    void testGetStocks() {
+        Stock aapl = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+        Stock msft = createSampleStock("MSFT", "Microsoft", new BigDecimal("250"));
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(aapl, msft));
+
+        List<Stock> stocks = exchange.getStocks();
+
+        assertEquals(2, stocks.size());
+        assertTrue(stocks.contains(aapl));
+        assertTrue(stocks.contains(msft));
+    }
+
+    @Test
+    @DisplayName("advance exercises all volatility switch branches")
+    void testAdvanceAllVolatilityBranches() {
+        List<Volatility> volatilities = List.of(
+                Volatility.SLOW_RISE, Volatility.SLOW_FALL,
+                Volatility.NORMAL_RISE, Volatility.NORMAL_FALL,
+                Volatility.FAST, Volatility.CHAOTIC, Volatility.STABLE);
+
+        for (Volatility v : volatilities) {
+            Stock stock = createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150"));
+            stock.setVolatility(v);
+            Exchange exchange = new Exchange("NYSE", Arrays.asList(stock));
+            exchange.advance();
+            assertEquals(2, exchange.getWeek());
+        }
+    }
+
+    @Test
+    @DisplayName("advance over many weeks exercises probabilistic branches")
+    void testAdvanceManyWeeks() {
+        List<Stock> stocks = Arrays.asList(
+                createSampleStock("AAPL", "Apple Inc.", new BigDecimal("150")),
+                createSampleStock("MSFT", "Microsoft", new BigDecimal("250")),
+                createSampleStock("TSLA", "Tesla", new BigDecimal("100")));
+        Exchange exchange = new Exchange("NYSE", stocks);
+
+        for (int i = 0; i < 200; i++) {
+            exchange.advance();
+        }
+
+        assertEquals(201, exchange.getWeek());
+    }
+
+    @Test
+    @DisplayName("assignVolatilities exercises all loop bodies with many stocks")
+    void testAssignVolatilitiesWithManyStocks() {
+        String[] symbols = {
+            "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "META", "NVDA", "NFLX",
+            "AMD", "INTC", "CRM", "ORCL", "IBM", "CSCO", "QCOM", "TXN",
+            "AVGO", "ASML", "MRVL", "ADI"
+        };
+        List<Stock> stocks = new ArrayList<>();
+        for (String symbol : symbols) {
+            stocks.add(createSampleStock(symbol, symbol + " Inc.", new BigDecimal("100")));
+        }
+        Exchange exchange = new Exchange("NYSE", stocks);
+        exchange.advance();
+        assertEquals(2, exchange.getWeek());
+    }
+
+    @Test
+    @DisplayName("advance applies price floor when stock price is near zero")
+    void testAdvancePriceFloor() {
+        Stock stock = createSampleStock("TINY", "Tiny Corp", new BigDecimal("0.001"));
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(stock));
+        exchange.advance();
+        assertTrue(stock.getSalesPrice().compareTo(new BigDecimal("0.01")) >= 0);
+    }
+
+    @Test
+    @DisplayName("post-spike floor prevents price falling below $0.01 over many advances")
+    void testPostSpikePriceFloorAfterSpike() {
+        // Stock starts below the $0.01 floor. The main-advance loop always resets
+        // it to exactly $0.01, so any downward spike immediately crosses the floor
+        // and must be caught by the post-spike floor check (lines 264-265).
+        // Running 500 advances gives a ~(1-0.083)^500 ≈ 0 chance of never hitting
+        // a downward spike, making coverage of line 265 essentially certain.
+        Stock stock = createSampleStock("TINY", "Tiny Corp", new BigDecimal("0.001"));
+        stock.setVolatility(Stock.Volatility.SLOW_FALL);
+        Exchange exchange = new Exchange("NYSE", Arrays.asList(stock));
+
+        BigDecimal priceFloor = new BigDecimal("0.01");
+        for (int i = 0; i < 500; i++) {
+            exchange.advance();
+            assertTrue(
+                stock.getSalesPrice().compareTo(priceFloor) >= 0,
+                "Price fell below $0.01 at week " + exchange.getWeek()
+            );
+        }
     }
 }

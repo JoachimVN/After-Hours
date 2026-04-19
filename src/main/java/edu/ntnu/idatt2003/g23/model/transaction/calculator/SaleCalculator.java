@@ -53,7 +53,9 @@ public class SaleCalculator implements TransactionCalculator {
      */
     @Override
     public BigDecimal calculateTax() {
-        return (calculateGross().subtract(calculateCommission()).subtract(purchasePrice.multiply(quantity))).multiply(TAX_RATE);
+        BigDecimal profit = calculateGross().subtract(calculateCommission()).subtract(purchasePrice.multiply(quantity));
+        if (profit.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
+        return profit.multiply(TAX_RATE);
     }
 
     /**

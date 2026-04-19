@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.ntnu.idatt2003.g23.ModelTestFixtures;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class PortfolioTest {
@@ -25,8 +27,7 @@ class PortfolioTest {
     void testAddShare() {
         Portfolio portfolio = new Portfolio();
 
-        Stock stock = new Stock("AAPL", "Apple Inc.", null);
-        Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("150"));
+        Share share = ModelTestFixtures.share();
 
         boolean result = portfolio.addShare(share);
 
@@ -46,8 +47,7 @@ class PortfolioTest {
     @Test
     @DisplayName("removeShare removes an existing share")
     void testRemoveShare() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", null);
-        Share share = new Share(stock, new BigDecimal("5"), new BigDecimal("100"));
+        Share share = ModelTestFixtures.share();
 
         Portfolio portfolio = new Portfolio();
         portfolio.addShare(share);
@@ -69,8 +69,8 @@ class PortfolioTest {
     @Test
     @DisplayName("getShareBySymbol returns matching shares")
     void testGetShareBySymbol() {
-        Stock apple = new Stock("AAPL", "Apple Inc.", null);
-        Stock tesla = new Stock("TSLA", "Tesla Inc.", null);
+        Stock apple = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+        Stock tesla = new Stock("TSLA", "Tesla Inc.", List.of(new BigDecimal("700")));
         Share s1 = new Share(apple, new BigDecimal("10"), new BigDecimal("150"));
         Share s2 = new Share(tesla, new BigDecimal("3"), new BigDecimal("700"));
         Share s3 = new Share(apple, new BigDecimal("2"), new BigDecimal("155"));

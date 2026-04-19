@@ -2,9 +2,10 @@ package edu.ntnu.idatt2003.g23.ui.views.setup;
 
 import java.util.function.BiConsumer;
 
+import edu.ntnu.idatt2003.g23.util.NumberParser;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -20,7 +21,6 @@ public final class SetupView {
 
     private static final double[] PRESETS      = {1_000, 5_000, 10_000, 50_000, 100_000};
     private static final String[] PRESET_LABELS = {"$1K", "$5K", "$10K", "$50K", "$100K"};
-    private static final int DEFAULT_PRESET_IDX = 2; // $10K
 
     public static BorderPane build(
             Runnable onBack,
@@ -185,8 +185,7 @@ public final class SetupView {
 
     private static double parseCash(String text) {
         try {
-            String cleaned = text.replaceAll("[^0-9.]", "");
-            double val = Double.parseDouble(cleaned);
+            double val = NumberParser.parse(text).doubleValue();
             return val > 0 ? val : 10_000;
         } catch (NumberFormatException e) {
             return 10_000;

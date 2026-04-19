@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -90,5 +91,11 @@ class PurchaseCalculatorTest {
         BigDecimal expectedTotal = gross.add(commission).add(tax); // 9500 + 47.5 = 9547.5
 
         assertEquals(expectedTotal, calculator.calculateTotal());
+    }
+
+    @Test
+    @DisplayName("Constructor throws on null share")
+    void testConstructorThrowsOnNullShare() {
+        assertThrows(IllegalArgumentException.class, () -> new PurchaseCalculator(null));
     }
 }

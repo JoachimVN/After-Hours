@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -71,24 +72,20 @@ class SaleCalculatorTest {
 
         SaleCalculator calculator = new SaleCalculator(share);
 
-        // No profit: (140 - 140) * 10 - 14 = 0 - 14 = -14
-        // Tax = -14 * 0.3 = -4.2
-        BigDecimal expectedTax = new BigDecimal("-4.2");
-        assertEquals(0, expectedTax.compareTo(calculator.calculateTax()));
+        // No profit: sell price == purchase price, commission creates a loss → tax is 0
+        assertEquals(0, BigDecimal.ZERO.compareTo(calculator.calculateTax()));
     }
 
     @Test
-    @DisplayName("calculateTax returns negative when loss")
+    @DisplayName("calculateTax returns zero on a loss")
     void testCalculateTaxLoss() {
         Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("130")));
         Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("140"));
 
         SaleCalculator calculator = new SaleCalculator(share);
 
-        // Loss: (130 - 140) * 10 - 13 = -100 - 13 = -113
-        // Tax = -113 * 0.3 = -33.9
-        BigDecimal expectedTax = new BigDecimal("-33.9");
-        assertEquals(0, expectedTax.compareTo(calculator.calculateTax()));
+        // Loss: sell price < purchase price → no capital gains → tax is 0
+        assertEquals(0, BigDecimal.ZERO.compareTo(calculator.calculateTax()));
     }
 
     @Test
@@ -122,5 +119,11 @@ class SaleCalculatorTest {
         BigDecimal expectedTotal = gross.subtract(commission).subtract(tax); // 10000 - 100 - 120 = 9780
 
         assertEquals(0, expectedTotal.compareTo(calculator.calculateTotal()));
+    }
+
+    @Test
+    @DisplayName("Constructor throws on null share")
+    void testConstructorThrowsOnNullShare() {
+        assertThrows(IllegalArgumentException.class, () -> new SaleCalculator(null));
     }
 }

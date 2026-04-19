@@ -9,7 +9,6 @@ import edu.ntnu.idatt2003.g23.model.Share;
  */
 public class PurchaseCalculator implements TransactionCalculator {
     private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.005");
-    private static final BigDecimal TAX_RATE = new BigDecimal("0.3");
 
     private final BigDecimal purchasePrice;
     private final BigDecimal quantity;

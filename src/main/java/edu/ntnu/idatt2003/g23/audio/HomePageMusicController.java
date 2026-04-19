@@ -22,8 +22,9 @@ public class HomePageMusicController {
             // "/audio/sfx/game_start/Game_Start5.mp3"
     );
     private static final List<String> AMBIENCE_TRACKS = List.of(
+            "/audio/music/ambience/After_Hours_Ambience1_demo.mp3",
             "/audio/music/ambience/After_Hours_Ambience2_demo.mp3",
-            "/audio/music/ambience/After_Hours_Ambience1_demo.mp3"
+            "/audio/music/ambience/After_Hours_Ambience3_demo.mp3"
     );
     private static final Duration FADE_DURATION = Duration.seconds(1.0);
     private static final Duration AMBIENCE_FADE_IN_DURATION = Duration.seconds(0.1);
@@ -31,6 +32,7 @@ public class HomePageMusicController {
     private static final double MAIN_THEME_VOLUME_MULTIPLIER  = 0.8;
     private static final double AMBIENCE1_VOLUME_MULTIPLIER   = 0.50;
     private static final double AMBIENCE2_VOLUME_MULTIPLIER   = 1.0;
+    private static final double AMBIENCE3_VOLUME_MULTIPLIER   = 0.75;
 
     private final Class<?> resourceOwner;
     private MediaPlayer mediaPlayer;
@@ -75,6 +77,24 @@ public class HomePageMusicController {
 
     public void fadeOutThenPlayAmbience() {
         fadeOutThen(this::playAmbience);
+    }
+
+    /**
+     * Fades out current music then plays ambience, forcing {@code firstTrack} to be played first.
+     * The remaining tracks continue in shuffled order.
+     */
+    public void fadeOutThenPlayAmbienceStartingWith(String firstTrack) {
+        fadeOutThen(() -> playAmbienceStartingWith(firstTrack));
+    }
+
+    public void playAmbienceStartingWith(String firstTrack) {
+        stop();
+        // Rebuild queue with remaining tracks shuffled, firstTrack goes first
+        ambienceQueue = new ArrayList<>(AMBIENCE_TRACKS);
+        ambienceQueue.remove(firstTrack);
+        Collections.shuffle(ambienceQueue);
+        ambienceQueue.add(0, firstTrack);
+        playNextAmbience();
     }
 
     /**
@@ -185,6 +205,7 @@ public class HomePageMusicController {
     private double multiplierFor(String track) {
         if (track.contains("Ambience1")) return AMBIENCE1_VOLUME_MULTIPLIER;
         if (track.contains("Ambience2")) return AMBIENCE2_VOLUME_MULTIPLIER;
+        if (track.contains("Ambience3")) return AMBIENCE3_VOLUME_MULTIPLIER;
         return 1.0;
     }
 

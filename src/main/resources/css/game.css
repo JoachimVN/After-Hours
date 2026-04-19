@@ -19,7 +19,7 @@
     -fx-background-color: rgba(15, 45, 94, 0.70);
     -fx-text-fill: #7a9fc8;
     -fx-font-size: 15px;
-    -fx-font-family: "System";
+    -fx-font-family: "Sans Serif";
     -fx-background-radius: 50%;
     -fx-min-width: 34px;
     -fx-min-height: 34px;
@@ -249,6 +249,16 @@
 /* Detail panel */
 .game-detail-area {
     -fx-padding: 0;
+}
+
+.detail-no-selection {
+    -fx-background-color: rgba(8, 14, 36, 0.60);
+}
+
+.detail-no-selection-hint {
+    -fx-font-size: 15px;
+    -fx-text-fill: #3a5070;
+    -fx-font-style: italic;
 }
 
 .game-detail-header {
