@@ -69,13 +69,8 @@ public final class NoStocksView {
         }
     }
 
-    private static final String MSG_SKIPPED = "I know you skipped them all in the editor.";
+    private static final String MSG_SKIPPED = "I know you skipped all the stocks in the editor.";
     private static final String MSG_EMPTY   = "I know that file had nothing in it.\nDid you think I wouldn't notice?";
-
-    private static final String BTN_STYLE =
-            "-fx-background-color: #0d1f3c; -fx-text-fill: #b8cce8; " +
-            "-fx-border-color: #b8cce8; -fx-border-radius: 6; -fx-background-radius: 6; " +
-            "-fx-padding: 8 24 8 24; -fx-font-size: 16px; -fx-cursor: hand;";
 
     private static final String APPLAUSE_SOUND = "/audio/sfx/Applause.mp3";
 

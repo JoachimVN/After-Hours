@@ -186,7 +186,7 @@ public final class StockCsvLoader {
 
     /**
      * Validates a {@link CsvRow} in place: re-evaluates the current field
-     * values and updates the row's {@code errorMessage} property.
+     * values and updates the row's {@code errorMessage} and {@code errorColumn} properties.
      *
      * @param row the row to validate
      */
@@ -196,47 +196,82 @@ public final class StockCsvLoader {
         String prices  = row.getPrices().trim();
 
         if (symbol.isEmpty()) {
-            row.setErrorMessage("Symbol must not be empty");
+            setError(row, "symbol", "Symbol must not be empty");
             return;
         }
         if (!symbol.matches("[A-Z]+(\\.[A-Z]+)*")) {
-            row.setErrorMessage("Symbol must be uppercase letters only (e.g. AAPL or BRK.A): \"" + symbol + "\"");
+            setError(row, "symbol", buildSymbolError(symbol));
             return;
         }
         if (company.isEmpty()) {
-            row.setErrorMessage("Company must not be empty");
+            setError(row, "company", "Company name must not be empty");
             return;
         }
         if (prices.isEmpty()) {
-            row.setErrorMessage("Stock must have at least one price");
+            setError(row, "prices", "No price set — add at least one price (e.g. 214.10)");
             return;
         }
 
         String[] rawPrices = prices.split(";");
         boolean hasPrices = false;
+        int priceIdx = 0;
         for (String raw : rawPrices) {
             String p = raw.trim();
             if (!p.isEmpty()) {
+                priceIdx++;
                 try {
                     BigDecimal val = new BigDecimal(p);
                     if (val.compareTo(BigDecimal.ZERO) <= 0) {
-                        row.setErrorMessage("Price must be positive: \"" + p + "\"");
+                        setError(row, "prices",
+                                "Price \"" + p + "\" must be greater than zero");
                         return;
                     }
                     hasPrices = true;
                 } catch (NumberFormatException e) {
-                    row.setErrorMessage("Invalid price value: \"" + p + "\"");
+                    setError(row, "prices",
+                            "\"" + p + "\" isn't a valid price — enter a number like 214.10");
                     return;
                 }
             }
         }
 
         if (!hasPrices) {
-            row.setErrorMessage("Stock must have at least one price");
+            setError(row, "prices", "No price set — add at least one price (e.g. 214.10)");
             return;
         }
 
+        clearError(row);
+    }
+
+    /** Sets both errorMessage and errorColumn on a row. */
+    private static void setError(CsvRow row, String column, String message) {
+        row.setErrorMessage(message);
+        row.setErrorColumn(column);
+    }
+
+    /** Clears both errorMessage and errorColumn on a row. */
+    private static void clearError(CsvRow row) {
         row.setErrorMessage("");
+        row.setErrorColumn("");
+    }
+
+    /**
+     * Builds a simple, user-friendly error message for an invalid symbol.
+     */
+    private static String buildSymbolError(String symbol) {
+        for (int i = 0; i < symbol.length(); i++) {
+            char c = symbol.charAt(i);
+            if (c != '.' && !Character.isUpperCase(c)) {
+                if (Character.isDigit(c)) {
+                    return "\"" + symbol + "\" can't contain numbers — use letters only (e.g. AAPL)";
+                } else if (Character.isLowerCase(c)) {
+                    return "\"" + symbol + "\" must be uppercase — try \"" + symbol.toUpperCase() + "\"";
+                } else {
+                    return "\"" + symbol + "\" can't contain special characters — use letters only (e.g. AAPL)";
+                }
+            }
+        }
+        return "\"" + symbol + "\" is not a valid symbol — use uppercase letters only (e.g. AAPL)";
     }
 
     /** Parses one line leniently, never throwing — errors go into the returned row. */
@@ -246,46 +281,65 @@ public final class StockCsvLoader {
         String company = parts.length > 1 ? parts[1].trim() : "";
         String prices  = parts.length > 2 ? parts[2].trim() : "";
 
-        if (parts.length != 3) {
-            return new CsvRow(lineNumber, symbol, company, prices,
-                    "Expected 3 columns (symbol,company,prices) but found " + parts.length);
+        if (parts.length < 3) {
+            String missing = parts.length == 1
+                    ? "missing the company name and price"
+                    : "missing the price";
+            return rowWithError(lineNumber, symbol, company, prices, "",
+                    "Row is incomplete — " + missing + " (format should be: symbol,company,price)");
         }
         if (symbol.isEmpty()) {
-            return new CsvRow(lineNumber, symbol, company, prices, "Symbol must not be empty");
+            return rowWithError(lineNumber, symbol, company, prices, "symbol",
+                    "Symbol must not be empty");
         }
         if (!symbol.matches("[A-Z]+(\\.[A-Z]+)*")) {
-            return new CsvRow(lineNumber, symbol, company, prices,
-                    "Symbol must be uppercase letters only (e.g. AAPL or BRK.A): \"" + symbol + "\"");
+            return rowWithError(lineNumber, symbol, company, prices, "symbol",
+                    buildSymbolError(symbol));
         }
         if (company.isEmpty()) {
-            return new CsvRow(lineNumber, symbol, company, prices, "Company must not be empty");
+            return rowWithError(lineNumber, symbol, company, prices, "company",
+                    "Company name must not be empty");
+        }
+        if (prices.isEmpty()) {
+            return rowWithError(lineNumber, symbol, company, prices, "prices",
+                    "No price set — add at least one price (e.g. 214.10)");
         }
 
         String[] rawPrices = prices.split(";");
         boolean hasPrices = false;
+        int priceIdx = 0;
         for (String raw : rawPrices) {
             String p = raw.trim();
             if (!p.isEmpty()) {
+                priceIdx++;
                 try {
                     BigDecimal val = new BigDecimal(p);
                     if (val.compareTo(BigDecimal.ZERO) <= 0) {
-                        return new CsvRow(lineNumber, symbol, company, prices,
-                                "Price must be positive: \"" + p + "\"");
+                        return rowWithError(lineNumber, symbol, company, prices, "prices",
+                                "Price \"" + p + "\" must be greater than zero");
                     }
                     hasPrices = true;
                 } catch (NumberFormatException e) {
-                    return new CsvRow(lineNumber, symbol, company, prices,
-                            "Invalid price value: \"" + p + "\"");
+                    return rowWithError(lineNumber, symbol, company, prices, "prices",
+                            "\"" + p + "\" isn't a valid price — enter a number like 214.10");
                 }
             }
         }
 
         if (!hasPrices) {
-            return new CsvRow(lineNumber, symbol, company, prices,
-                    "Stock must have at least one price");
+            return rowWithError(lineNumber, symbol, company, prices, "prices",
+                    "No price set — add at least one price (e.g. 214.10)");
         }
 
         return new CsvRow(lineNumber, symbol, company, prices, "");
+    }
+
+    /** Creates a CsvRow with an error message and the column that caused it. */
+    private static CsvRow rowWithError(int lineNumber, String symbol, String company,
+                                       String prices, String errorColumn, String errorMessage) {
+        CsvRow row = new CsvRow(lineNumber, symbol, company, prices, errorMessage);
+        row.setErrorColumn(errorColumn);
+        return row;
     }
 }
 

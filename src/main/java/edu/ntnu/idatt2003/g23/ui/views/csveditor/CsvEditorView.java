@@ -20,9 +20,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
@@ -33,6 +35,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.util.converter.DefaultStringConverter;
 
 /**
  * In-game CSV editor that opens whenever a stock CSV file fails to parse.
@@ -89,6 +92,8 @@ public final class CsvEditorView {
         Label errorCountLabel = new Label();
         errorCountLabel.getStyleClass().add("csv-error-count");
 
+        // Tooltip removed as per user request
+
         // Shared refresh: call this after any mutation that may change error state.
         Runnable refreshState = () -> {
             updateErrorCount(errorCountLabel, rows);
@@ -114,7 +119,7 @@ public final class CsvEditorView {
         // Symbol
         TableColumn<CsvRow, String> symbolCol = new TableColumn<>("Symbol");
         symbolCol.setCellValueFactory(c -> c.getValue().symbolProperty());
-        symbolCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        symbolCol.setCellFactory(tc -> errorAwareCell("symbol"));
         symbolCol.setPrefWidth(100);
         symbolCol.setSortable(false);
         symbolCol.setOnEditCommit(e -> {
@@ -127,7 +132,7 @@ public final class CsvEditorView {
         // Company
         TableColumn<CsvRow, String> companyCol = new TableColumn<>("Company");
         companyCol.setCellValueFactory(c -> c.getValue().companyProperty());
-        companyCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        companyCol.setCellFactory(tc -> errorAwareCell("company"));
         companyCol.setPrefWidth(220);
         companyCol.setSortable(false);
         companyCol.setOnEditCommit(e -> {
@@ -140,7 +145,7 @@ public final class CsvEditorView {
         // Prices
         TableColumn<CsvRow, String> pricesCol = new TableColumn<>("Prices (semicolon-separated)");
         pricesCol.setCellValueFactory(c -> c.getValue().pricesProperty());
-        pricesCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        pricesCol.setCellFactory(tc -> errorAwareCell("prices"));
         pricesCol.setPrefWidth(260);
         pricesCol.setSortable(false);
         pricesCol.setOnEditCommit(e -> {
@@ -215,6 +220,40 @@ public final class CsvEditorView {
             }
         });
 
+        // ── Navigation toolbar ────────────────────────────────────────────────
+        Button prevErrBtn = new Button("\u2191 Prev Error");
+        prevErrBtn.getStyleClass().addAll("secondary-button", "csv-nav-button");
+        prevErrBtn.disableProperty().bind(hasErrors.not());
+        prevErrBtn.setOnAction(e -> navigateError(table, rows, -1));
+
+        Button nextErrBtn = new Button("Next Error \u2193");
+        nextErrBtn.getStyleClass().addAll("secondary-button", "csv-nav-button");
+        nextErrBtn.disableProperty().bind(hasErrors.not());
+        nextErrBtn.setOnAction(e -> navigateError(table, rows, +1));
+
+        Label navSep = new Label("|");
+        navSep.getStyleClass().add("csv-nav-sep");
+
+        TextField jumpField = new TextField();
+        jumpField.setPromptText("Jump to line\u2026");
+        jumpField.setPrefWidth(140);
+        jumpField.getStyleClass().add("csv-jump-field");
+        jumpField.setOnAction(e -> {
+            handleJumpToLine(table, rows, jumpField.getText().trim());
+            jumpField.clear();
+        });
+
+        Button jumpBtn = new Button("Go \u2192");
+        jumpBtn.getStyleClass().addAll("secondary-button", "csv-nav-button");
+        jumpBtn.setOnAction(e -> {
+            handleJumpToLine(table, rows, jumpField.getText().trim());
+            jumpField.clear();
+        });
+
+        HBox navBar = new HBox(8, prevErrBtn, nextErrBtn, navSep, jumpField, jumpBtn);
+        navBar.setAlignment(Pos.CENTER_LEFT);
+        navBar.getStyleClass().add("csv-nav-bar");
+
         // ── Bottom bar ────────────────────────────────────────────────────────
         Label hintLabel = new Label("Click a cell to edit it, or press Skip on a row to remove it.");
         hintLabel.getStyleClass().add("sub-tagline");
@@ -258,7 +297,7 @@ public final class CsvEditorView {
         bottomBar.setPadding(new Insets(12, 32, 24, 32));
 
         // ── Assemble ──────────────────────────────────────────────────────────
-        VBox centerBox = new VBox(8, errorCountLabel, table);
+        VBox centerBox = new VBox(8, errorCountLabel, navBar, new Separator(), table);
         VBox.setVgrow(table, Priority.ALWAYS);
         centerBox.setPadding(new Insets(0, 32, 0, 32));
 
@@ -281,7 +320,7 @@ public final class CsvEditorView {
     private static void updateErrorCount(Label label, ObservableList<CsvRow> rows) {
         long errors = rows.stream().filter(CsvRow::hasError).count();
         if (errors == 0) {
-            label.setText("\u2714  All rows are valid — you can save and continue.");
+            label.setText("\u2714  All rows are valid \u2014 you can save and continue.");
             label.getStyleClass().removeAll("csv-error-count-bad");
             label.getStyleClass().add("csv-error-count-ok");
         } else {
@@ -343,8 +382,7 @@ public final class CsvEditorView {
         }
     }
 
-    /**
-     * Wraps a CSV field in double-quotes if it contains commas, quotes, or
+    /** Wraps a CSV field in double-quotes if it contains commas, quotes, or
      * newlines; doubles any embedded quote characters.
      */
     private static String escapeCsvField(String value) {
@@ -355,5 +393,83 @@ public final class CsvEditorView {
             return "\"" + value.replace("\"", "\"\"") + "\"";
         }
         return value;
+    }
+
+    /**
+     * Returns a {@link TextFieldTableCell} that additionally applies the
+     * {@code csv-cell-error-col} CSS class whenever the row's
+     * {@code errorColumn} matches {@code colId}.
+     */
+    private static TextFieldTableCell<CsvRow, String> errorAwareCell(String colId) {
+        return new TextFieldTableCell<>(new DefaultStringConverter()) {
+            @Override
+            public void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().remove("csv-cell-error-col");
+                setGraphic(null);
+                if (!empty && getTableRow() != null
+                        && getTableRow().getItem() instanceof CsvRow row
+                        && colId.equals(row.getErrorColumn())) {
+                    getStyleClass().add("csv-cell-error-col");
+                    // ⚠ warning badge on the left
+                    Label badge = new Label("\u26A0");
+                    badge.getStyleClass().add("csv-cell-error-badge");
+                    setGraphic(badge);
+                }
+            }
+        };
+    }
+
+    /**
+     * Navigates to the previous ({@code direction < 0}) or next
+     * ({@code direction > 0}) error row, wrapping around if needed.
+     */
+    private static void navigateError(TableView<CsvRow> table,
+                                      ObservableList<CsvRow> rows, int direction) {
+        int selected = table.getSelectionModel().getSelectedIndex();
+        int n = rows.size();
+        if (n == 0) return;
+
+        if (direction > 0) {
+            int start = selected < 0 ? 0 : selected + 1;
+            for (int i = 0; i < n; i++) {
+                int idx = (start + i) % n;
+                if (rows.get(idx).hasError()) {
+                    table.scrollTo(idx);
+                    table.getSelectionModel().select(idx);
+                    return;
+                }
+            }
+        } else {
+            int start = selected <= 0 ? n - 1 : selected - 1;
+            for (int i = 0; i < n; i++) {
+                int idx = ((start - i) % n + n) % n;
+                if (rows.get(idx).hasError()) {
+                    table.scrollTo(idx);
+                    table.getSelectionModel().select(idx);
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * Jumps to the row whose {@code lineNumber} matches the given string.
+     * Silently does nothing if the text is not a valid integer or not found.
+     */
+    private static void handleJumpToLine(TableView<CsvRow> table,
+                                         ObservableList<CsvRow> rows, String text) {
+        try {
+            int target = Integer.parseInt(text);
+            for (int i = 0; i < rows.size(); i++) {
+                if (rows.get(i).getLineNumber() == target) {
+                    table.scrollTo(i);
+                    table.getSelectionModel().select(i);
+                    return;
+                }
+            }
+        } catch (NumberFormatException ignored) {
+            // non-numeric input — ignore silently
+        }
     }
 }

@@ -16,6 +16,8 @@ public class CsvRow {
     private final SimpleStringProperty company;
     private final SimpleStringProperty prices;
     private final SimpleStringProperty errorMessage;
+    /** Which column contains the error: "symbol", "company", "prices", or "" for structural/no error. */
+    private final SimpleStringProperty errorColumn;
 
     /**
      * @param lineNumber   original 1-based line number in the source file
@@ -30,6 +32,7 @@ public class CsvRow {
         this.company       = new SimpleStringProperty(company      == null ? "" : company);
         this.prices        = new SimpleStringProperty(prices       == null ? "" : prices);
         this.errorMessage  = new SimpleStringProperty(errorMessage == null ? "" : errorMessage);
+        this.errorColumn   = new SimpleStringProperty("");
     }
 
     /** @return {@code true} if this row currently carries a validation error. */
@@ -65,4 +68,11 @@ public class CsvRow {
     public String getErrorMessage() { return errorMessage.get(); }
     public void setErrorMessage(String v) { errorMessage.set(v == null ? "" : v); }
     public SimpleStringProperty errorMessageProperty() { return errorMessage; }
+
+    // ── errorColumn ───────────────────────────────────────────────────────────
+
+    /** "symbol", "company", "prices", or "" when no column-specific error. */
+    public String getErrorColumn() { return errorColumn.get(); }
+    public void setErrorColumn(String v) { errorColumn.set(v == null ? "" : v); }
+    public SimpleStringProperty errorColumnProperty() { return errorColumn; }
 }

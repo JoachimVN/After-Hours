@@ -8,7 +8,7 @@
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-table-cell-border-color: #1e408040;
+    -fx-table-cell-border-color: #1e408030;
 }
 
 .csv-editor-table .column-header-background {
@@ -49,19 +49,37 @@
 /* ── Error row highlight ──────────────────────────────────────────────────── */
 
 .csv-row-error {
-    -fx-background-color: #3a0a0a !important;
+    -fx-background-color: #2d0808 !important;
 }
 
 .csv-row-error:odd {
-    -fx-background-color: #420c0c !important;
+    -fx-background-color: #350909 !important;
 }
 
 .csv-row-error:selected {
-    -fx-background-color: #6a1a1a !important;
+    -fx-background-color: #581414 !important;
 }
 
 .csv-row-error .table-cell {
-    -fx-text-fill: #ffaaaa;
+    -fx-text-fill: #ffbbbb;
+}
+
+/* ── Error column cell (the specific field that caused the error) ─────────── */
+
+.csv-cell-error-col {
+    -fx-background-color: rgba(220, 30, 30, 0.30) !important;
+    -fx-border-color: #ff3333;
+    -fx-border-width: 0 0 2.5 0;
+    -fx-text-fill: #ff7070 !important;
+    -fx-font-weight: bold;
+}
+
+/* Warning badge (⚠) shown inside the error cell */
+.csv-cell-error-badge {
+    -fx-text-fill: #ffcc00;
+    -fx-font-size: 13;
+    -fx-padding: 0 4 0 0;
+    -fx-effect: dropshadow(gaussian, rgba(255,100,0,0.6), 4, 0.4, 0, 0);
 }
 
 /* ── OK row ──────────────────────────────────────────────────────────────── */
@@ -87,7 +105,7 @@
 .csv-error-count {
     -fx-font-size: 13;
     -fx-font-weight: bold;
-    -fx-padding: 6 12;
+    -fx-padding: 8 14;
     -fx-background-radius: 8;
     -fx-background-color: #10213a;
     -fx-border-radius: 8;
@@ -104,16 +122,64 @@
     -fx-border-color: #1a6a3a;
 }
 
+/* ── Navigation toolbar ──────────────────────────────────────────────────── */
+
+.csv-nav-bar {
+    -fx-padding: 4 0 4 0;
+}
+
+.csv-nav-button {
+    -fx-font-size: 12 !important;
+    -fx-pref-height: 32 !important;
+    -fx-padding: 4 14 !important;
+    -fx-background-color: #0f2d5e;
+    -fx-border-color: #1e408070;
+    -fx-text-fill: #a8c0e0;
+}
+
+.csv-nav-button:hover {
+    -fx-background-color: derive(#0f2d5e, 25%);
+    -fx-text-fill: white;
+}
+
+.csv-nav-button:disabled {
+    -fx-opacity: 0.3;
+}
+
+.csv-nav-sep {
+    -fx-text-fill: #2a4060;
+    -fx-font-size: 16;
+    -fx-padding: 0 4;
+}
+
+/* ── Jump to line field ──────────────────────────────────────────────────── */
+
+.csv-jump-field {
+    -fx-background-color: #0b1e38;
+    -fx-text-fill: #d0e4ff;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-size: 12;
+    -fx-pref-height: 32;
+    -fx-prompt-text-fill: #3a5a80;
+}
+
+.csv-jump-field:focused {
+    -fx-border-color: #4a80cc;
+}
+
 /* ── Skip broken rows button ─────────────────────────────────────────────── */
 
 .csv-skip-button {
-    -fx-background-color: #3a1010;
+    -fx-background-color: #2e0c0c;
     -fx-border-color: #8d304870;
     -fx-text-fill: #f1c6cf;
 }
 
 .csv-skip-button:hover {
-    -fx-background-color: derive(#3a1010, 20%);
+    -fx-background-color: derive(#2e0c0c, 25%);
     -fx-text-fill: white;
 }
 
