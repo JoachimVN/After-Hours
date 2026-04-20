@@ -49,15 +49,15 @@
 /* ── Error row highlight ──────────────────────────────────────────────────── */
 
 .csv-row-error {
-    -fx-background-color: #2d0808 !important;
+    -fx-background-color: #2d0808de !important;
 }
 
 .csv-row-error:odd {
-    -fx-background-color: #350909 !important;
+    -fx-background-color: #350909de !important;
 }
 
 .csv-row-error:selected {
-    -fx-background-color: #581414 !important;
+    -fx-background-color: #581414de !important;
 }
 
 .csv-row-error .table-cell {

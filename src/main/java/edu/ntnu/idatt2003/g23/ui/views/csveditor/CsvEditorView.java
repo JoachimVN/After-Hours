@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import javafx.application.Platform;
+
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.CsvRow;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
@@ -77,7 +79,7 @@ public final class CsvEditorView {
         backButton.getStyleClass().add("back-button");
         backButton.setOnAction(e -> onCancel.run());
 
-        Label titleLabel = new Label("Fix CSV Errors");
+        Label titleLabel = new Label("CSV Editor");
         titleLabel.getStyleClass().add("page-title");
 
         Region spacer = new Region();
@@ -107,6 +109,11 @@ public final class CsvEditorView {
         table.setEditable(true);
         table.getStyleClass().add("csv-editor-table");
 
+        Label placeholder = new Label(
+                "No rows yet \u2014 click '+ Add Row' to create one.");
+        placeholder.getStyleClass().add("sub-tagline");
+        table.setPlaceholder(placeholder);
+
         // Line # (read-only)
         TableColumn<CsvRow, Number> lineCol = new TableColumn<>("#");
         lineCol.setCellValueFactory(c -> c.getValue().lineNumberProperty());
@@ -119,7 +126,6 @@ public final class CsvEditorView {
         // Symbol
         TableColumn<CsvRow, String> symbolCol = new TableColumn<>("Symbol");
         symbolCol.setCellValueFactory(c -> c.getValue().symbolProperty());
-        symbolCol.setCellFactory(tc -> errorAwareCell("symbol"));
         symbolCol.setPrefWidth(100);
         symbolCol.setSortable(false);
         symbolCol.setOnEditCommit(e -> {
@@ -132,7 +138,6 @@ public final class CsvEditorView {
         // Company
         TableColumn<CsvRow, String> companyCol = new TableColumn<>("Company");
         companyCol.setCellValueFactory(c -> c.getValue().companyProperty());
-        companyCol.setCellFactory(tc -> errorAwareCell("company"));
         companyCol.setPrefWidth(220);
         companyCol.setSortable(false);
         companyCol.setOnEditCommit(e -> {
@@ -145,7 +150,6 @@ public final class CsvEditorView {
         // Prices
         TableColumn<CsvRow, String> pricesCol = new TableColumn<>("Prices (semicolon-separated)");
         pricesCol.setCellValueFactory(c -> c.getValue().pricesProperty());
-        pricesCol.setCellFactory(tc -> errorAwareCell("prices"));
         pricesCol.setPrefWidth(260);
         pricesCol.setSortable(false);
         pricesCol.setOnEditCommit(e -> {
@@ -154,6 +158,12 @@ public final class CsvEditorView {
             table.refresh();
             refreshState.run();
         });
+
+        // Ordered list of editable columns — used by smartCell for Tab/Enter navigation.
+        List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol, pricesCol);
+        symbolCol.setCellFactory(tc -> smartCell("symbol", table, editableCols));
+        companyCol.setCellFactory(tc -> smartCell("company", table, editableCols));
+        pricesCol.setCellFactory(tc -> smartCell("prices", table, editableCols));
 
         // Error
         TableColumn<CsvRow, String> errorCol = new TableColumn<>("Error");
@@ -409,12 +419,73 @@ public final class CsvEditorView {
     }
 
     /**
-     * Returns a {@link TextFieldTableCell} that additionally applies the
-     * {@code csv-cell-error-col} CSS class whenever the row's
-     * {@code errorColumn} matches {@code colId}.
+     * A smart {@link TextFieldTableCell} with:
+     * <ul>
+     *   <li>Error-column highlighting and ⚠ badge</li>
+     *   <li>Commit on focus loss (click away)</li>
+     *   <li>Tab / Shift+Tab — move to next / previous editable column, wrapping rows</li>
+     *   <li>Enter — move down one row in the same column</li>
+     * </ul>
      */
-    private static TextFieldTableCell<CsvRow, String> errorAwareCell(String colId) {
+    private static TextFieldTableCell<CsvRow, String> smartCell(
+            String colId,
+            TableView<CsvRow> table,
+            List<TableColumn<CsvRow, String>> editableCols) {
+
         return new TextFieldTableCell<>(new DefaultStringConverter()) {
+
+            @Override
+            public void startEdit() {
+                super.startEdit();
+                if (!isEditing()) return;
+                TextField tf = (TextField) getGraphic();
+                if (tf == null) return;
+
+                // Commit on focus loss (clicking away from the cell)
+                tf.focusedProperty().addListener((obs, was, isFocused) -> {
+                    if (!isFocused && isEditing()) commitEdit(tf.getText());
+                });
+
+                // Excel-style keyboard shortcuts while editing
+                tf.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                    switch (event.getCode()) {
+                        case TAB -> {
+                            commitEdit(tf.getText());
+                            int ci = editableCols.indexOf(getTableColumn());
+                            int ri = getIndex();
+                            int rc = table.getItems().size();
+                            int targetRow = ri, targetColIdx = ci;
+                            boolean canNavigate = true;
+                            if (event.isShiftDown()) {
+                                if (ci > 0)       { targetColIdx = ci - 1; }
+                                else if (ri > 0)  { targetRow = ri - 1; targetColIdx = editableCols.size() - 1; }
+                                else              { canNavigate = false; }
+                            } else {
+                                if (ci < editableCols.size() - 1)  { targetColIdx = ci + 1; }
+                                else if (ri < rc - 1)              { targetRow = ri + 1; targetColIdx = 0; }
+                                else                               { canNavigate = false; }
+                            }
+                            if (canNavigate) {
+                                final int ftr = targetRow;
+                                final TableColumn<CsvRow, String> ftc = editableCols.get(targetColIdx);
+                                Platform.runLater(() -> { table.getSelectionModel().select(ftr); table.edit(ftr, ftc); });
+                            }
+                            event.consume();
+                        }
+                        case ENTER -> {
+                            commitEdit(tf.getText());
+                            int ri = getIndex();
+                            if (ri < table.getItems().size() - 1) {
+                                final TableColumn<CsvRow, String> col = getTableColumn();
+                                Platform.runLater(() -> { table.getSelectionModel().select(ri + 1); table.edit(ri + 1, col); });
+                            }
+                            event.consume();
+                        }
+                        default -> {}
+                    }
+                });
+            }
+
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -424,7 +495,6 @@ public final class CsvEditorView {
                         && getTableRow().getItem() instanceof CsvRow row
                         && colId.equals(row.getErrorColumn())) {
                     getStyleClass().add("csv-cell-error-col");
-                    // ⚠ warning badge on the left
                     Label badge = new Label("\u26A0");
                     badge.getStyleClass().add("csv-cell-error-badge");
                     setGraphic(badge);

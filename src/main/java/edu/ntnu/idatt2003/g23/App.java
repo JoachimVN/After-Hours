@@ -117,10 +117,19 @@ public class App extends Application {
     }
 
     private void goToImportCsv(String name, double cash) {
-        navigateKeepMusic(ImportCsvView.build(
+        goToImportCsv(name, cash, null);
+    }
+
+    private void goToImportCsv(String name, double cash, File selectedFile) {
+        Parent importPage = ImportCsvView.build(
                 () -> navigateKeepMusic(currentSetupPage),
-                file -> startGameWithCsv(name, cash, file)
-        ));
+                () -> openCsvEditorFromImport(new CsvParseResult(List.of()), name, cash, selectedFile),
+                file -> openCsvEditorFromImport(file, name, cash),
+                file -> startGameWithCsv(name, cash, file),
+                selectedFile
+        );
+        navigateKeepMusic(importPage);
+        fadeInPage(importPage);
     }
 
     private void startGame(String name, double cash) {
@@ -138,6 +147,7 @@ public class App extends Application {
             });
         }, "stock-loader").start();
     }
+
 
     private void startGameWithCsv(String name, double cash, File csvFile) {
         new Thread(() -> {
@@ -157,7 +167,7 @@ public class App extends Application {
             }
             Platform.runLater(() -> {
                 if (result.hasErrors()) {
-                    openCsvEditor(result, name, cash);
+                    openCsvEditorFromImport(result, name, cash, csvFile);
                 } else {
                     List<Stock> stocks = result.getRows().stream()
                             .map(StockCsvLoader::rowToStock)
@@ -172,6 +182,33 @@ public class App extends Application {
         Parent editorPage = CsvEditorView.build(
                 result,
                 this::goHomeKeepMusic,
+                stocks -> buildAndStartGame(name, cash, stocks, true)
+        );
+        navigateKeepMusic(editorPage);
+        fadeInPage(editorPage);
+    }
+
+    private void openCsvEditorFromImport(File csvFile, String name, double cash) {
+        CsvParseResult result;
+        try {
+            result = StockCsvLoader.parseWithErrors(
+                    new FileReader(csvFile, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("CSV Error");
+            alert.setHeaderText("Could not read file");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+            return;
+        }
+
+        openCsvEditorFromImport(result, name, cash, csvFile);
+    }
+
+    private void openCsvEditorFromImport(CsvParseResult result, String name, double cash, File selectedFile) {
+        Parent editorPage = CsvEditorView.build(
+                result,
+                () -> goToImportCsv(name, cash, selectedFile),
                 stocks -> buildAndStartGame(name, cash, stocks, true)
         );
         navigateKeepMusic(editorPage);
