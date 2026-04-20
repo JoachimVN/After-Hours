@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.Nested;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class StockTest {
@@ -22,28 +24,56 @@ class StockTest {
         assertEquals(new BigDecimal("100.50"), stock.getSalesPrice());
     }
 
-    @Test
-    @DisplayName("getSymbol throws when symbol is null or empty")
-    void testGetSymbolThrows() {
-        Stock nullSymbol = new Stock(null, "Company", List.of(new BigDecimal("10")));
-        Stock emptySymbol = new Stock("", "Company", List.of(new BigDecimal("10")));
-        Stock intSymbol = new Stock("123", "Company", List.of(new BigDecimal("10")));
+    @Nested
+    @DisplayName("Constructor validation tests")
+    class ConstructorValidationTests {
 
-        assertThrows(IllegalStateException.class, nullSymbol::getSymbol);
-        assertThrows(IllegalStateException.class, emptySymbol::getSymbol);
-        assertThrows(IllegalStateException.class, intSymbol::getSymbol);
-    }
+        @Test
+        @DisplayName("Constructor throws on null symbol")
+        void testConstructorThrowsOnNullSymbol() {
+            List<BigDecimal> prices = List.of(new BigDecimal("10"));
+            assertThrows(IllegalArgumentException.class, () -> new Stock(null, "Company", prices));
+        }
 
-    @Test
-    @DisplayName("getCompany throws when company is null or empty")
-    void testGetCompanyThrows() {
-        Stock nullCompany = new Stock("AAPL", null, List.of(new BigDecimal("10")));
-        Stock emptyCompany = new Stock("AAPL", "", List.of(new BigDecimal("10")));
-        Stock intCompany = new Stock("AAPL", "123", List.of(new BigDecimal("10")));
+        @Test
+        @DisplayName("Constructor throws on empty symbol")
+        void testConstructorThrowsOnEmptySymbol() {
+            List<BigDecimal> prices = List.of(new BigDecimal("10"));
+            assertThrows(IllegalArgumentException.class, () -> new Stock("", "Company", prices));
+        }
 
-        assertThrows(IllegalStateException.class, nullCompany::getCompany);
-        assertThrows(IllegalStateException.class, emptyCompany::getCompany);
-        assertDoesNotThrow(intCompany::getCompany);
+        @Test
+        @DisplayName("Constructor throws on invalid symbol format")
+        void testConstructorThrowsOnInvalidSymbolFormat() {
+            List<BigDecimal> prices = List.of(new BigDecimal("10"));
+            assertThrows(IllegalArgumentException.class, () -> new Stock("123", "Company", prices));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on null company")
+        void testConstructorThrowsOnNullCompany() {
+            List<BigDecimal> prices = List.of(new BigDecimal("10"));
+            assertThrows(IllegalArgumentException.class, () -> new Stock("AAPL", null, prices));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on empty company")
+        void testConstructorThrowsOnEmptyCompany() {
+            List<BigDecimal> prices = List.of(new BigDecimal("10"));
+            assertThrows(IllegalArgumentException.class, () -> new Stock("AAPL", "", prices));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on null prices")
+        void testConstructorThrowsOnNullPrices() {
+            assertThrows(IllegalArgumentException.class, () -> new Stock("AAPL", "Apple Inc.", null));
+        }
+
+        @Test
+        @DisplayName("Constructor throws on empty prices")
+        void testConstructorThrowsOnEmptyPrices() {
+            assertThrows(IllegalArgumentException.class, () -> new Stock("AAPL", "Apple Inc.", new ArrayList<>()));
+        }
     }
 
     @Test
@@ -60,14 +90,6 @@ class StockTest {
     }
 
     @Test
-    @DisplayName("getSalesPrice throws when no prices exist")
-    void testGetSalesPriceThrows() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
-
-        assertThrows(IllegalStateException.class, stock::getSalesPrice);
-    }
-
-    @Test
     @DisplayName("addNewSalesPrice adds a valid price")
     void testAddNewSalesPrice() {
         List<BigDecimal> prices = new ArrayList<>(List.of(new BigDecimal("100")));
@@ -80,12 +102,23 @@ class StockTest {
     }
 
     @Test
-    @DisplayName("addNewSalesPrice throws for null or non-positive values")
-    void testAddNewSalesPriceThrows() {
+    @DisplayName("addNewSalesPrice throws on null price")
+    void testAddNewSalesPriceThrowsOnNull() {
         Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
-
         assertThrows(IllegalArgumentException.class, () -> stock.addNewSalesPrice(null));
+    }
+
+    @Test
+    @DisplayName("addNewSalesPrice throws on zero price")
+    void testAddNewSalesPriceThrowsOnZero() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
         assertThrows(IllegalArgumentException.class, () -> stock.addNewSalesPrice(BigDecimal.ZERO));
+    }
+
+    @Test
+    @DisplayName("addNewSalesPrice throws on negative price")
+    void testAddNewSalesPriceThrowsOnNegative() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
         assertThrows(IllegalArgumentException.class, () -> stock.addNewSalesPrice(new BigDecimal("-5")));
     }
 
@@ -106,13 +139,6 @@ class StockTest {
     }
 
     @Test
-    @DisplayName("getHighestPrice throws when no prices exist")
-    void testGetHighestPriceThrows() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
-        assertThrows(IllegalStateException.class, stock::getHighestPrice);
-    }
-
-    @Test
     @DisplayName("getLowestPrice returns lowest value")
     void testGetLowestPrice() {
         Stock stock = new Stock(
@@ -129,10 +155,38 @@ class StockTest {
     }
 
     @Test
-    @DisplayName("getLowestPrice throws when no prices exist")
-    void testGetLowestPriceThrows() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
-        assertThrows(IllegalStateException.class, stock::getLowestPrice);
+    @DisplayName("getVolatility returns default STABLE")
+    void testGetVolatilityDefault() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
+
+        assertEquals(Stock.Volatility.STABLE, stock.getVolatility());
+    }
+
+    @Test
+    @DisplayName("setVolatility updates the volatility")
+    void testSetVolatility() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
+
+        stock.setVolatility(Stock.Volatility.CHAOTIC);
+
+        assertEquals(Stock.Volatility.CHAOTIC, stock.getVolatility());
+    }
+
+    @Test
+    @DisplayName("setVolatility throws on null")
+    void testSetVolatilityThrowsOnNull() {
+        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
+
+        assertThrows(IllegalArgumentException.class, () -> stock.setVolatility(null));
+    }
+
+    @Test
+    @DisplayName("getHistoricalPrices returns the full prices list")
+    void testGetHistoricalPrices() {
+        List<BigDecimal> prices = new ArrayList<>(List.of(new BigDecimal("100"), new BigDecimal("110")));
+        Stock stock = new Stock("AAPL", "Apple Inc.", prices);
+
+        assertEquals(prices, stock.getHistoricalPrices());
     }
 
     @Test
@@ -162,17 +216,4 @@ class StockTest {
         assertEquals(new BigDecimal("10.50"), stock.getLatestPriceChange());
     }
 
-    @Test
-    @DisplayName("getLatestPriceChange throws when prices is null")
-    void testGetLatestPriceChangeThrowsWhenPricesNull() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", null);
-        assertThrows(IllegalStateException.class, stock::getLatestPriceChange);
-    }
-
-    @Test
-    @DisplayName("getLatestPriceChange throws when prices is empty")
-    void testGetLatestPriceChangeThrowsWhenPricesEmpty() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>());
-        assertThrows(IllegalStateException.class, stock::getLatestPriceChange);
-    }
 }

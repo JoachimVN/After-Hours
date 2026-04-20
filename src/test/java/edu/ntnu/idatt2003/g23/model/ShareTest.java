@@ -1,10 +1,13 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import edu.ntnu.idatt2003.g23.ModelTestFixtures;
+
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class ShareTest {
@@ -12,7 +15,7 @@ class ShareTest {
     @Test
     @DisplayName("Constructor stores fields correctly")
     void testConstructorStoresValues() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", null);
+        Stock stock = ModelTestFixtures.stock();
         Share share = new Share(stock, new BigDecimal("10"), new BigDecimal("150.00"));
 
         assertEquals(stock, share.getStock());
@@ -20,39 +23,57 @@ class ShareTest {
         assertEquals(new BigDecimal("150.00"), share.getPurchasePrice());
     }
 
-    @Test
-    @DisplayName("getStock throws when stock is null")
-    void testGetStockThrows() {
-        Share share = new Share(null, new BigDecimal("5"), new BigDecimal("100"));
+    @Nested
+    @DisplayName("Constructor validation tests")
+    class ConstructorValidationTests {
 
-        assertThrows(IllegalStateException.class, share::getStock);
-    }
+        @Test
+        @DisplayName("Constructor throws on null stock")
+        void testConstructorThrowsOnNullStock() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Share(null, new BigDecimal("5"), new BigDecimal("100")));
+        }
 
-    @Test
-    @DisplayName("getQuantity throws when quantity is null, zero, or negative")
-    void testGetQuantityThrows() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", null);
+        @Test
+        @DisplayName("Constructor throws on null quantity")
+        void testConstructorThrowsOnNullQuantity() {
+            Stock stock = ModelTestFixtures.stock();
+            assertThrows(IllegalArgumentException.class, () -> new Share(stock, null, new BigDecimal("100")));
+        }
 
-        Share nullQuantity = new Share(stock, null, new BigDecimal("100"));
-        Share zeroQuantity = new Share(stock, BigDecimal.ZERO, new BigDecimal("100"));
-        Share negativeQuantity = new Share(stock, new BigDecimal("-5"), new BigDecimal("100"));
+        @Test
+        @DisplayName("Constructor throws on zero quantity")
+        void testConstructorThrowsOnZeroQuantity() {
+            Stock stock = ModelTestFixtures.stock();
+            assertThrows(IllegalArgumentException.class, () -> new Share(stock, BigDecimal.ZERO, new BigDecimal("100")));
+        }
 
-        assertThrows(IllegalStateException.class, nullQuantity::getQuantity);
-        assertThrows(IllegalStateException.class, zeroQuantity::getQuantity);
-        assertThrows(IllegalStateException.class, negativeQuantity::getQuantity);
-    }
+        @Test
+        @DisplayName("Constructor throws on negative quantity")
+        void testConstructorThrowsOnNegativeQuantity() {
+            Stock stock = ModelTestFixtures.stock();
+            assertThrows(IllegalArgumentException.class, () -> new Share(stock, new BigDecimal("-5"), new BigDecimal("100")));
+        }
 
-    @Test
-    @DisplayName("getPurchasePrice throws when price is null, zero, or negative")
-    void testGetPurchasePriceThrows() {
-        Stock stock = new Stock("AAPL", "Apple Inc.", null);
+        @Test
+        @DisplayName("Constructor throws on null purchase price")
+        void testConstructorThrowsOnNullPurchasePrice() {
+            Stock stock = ModelTestFixtures.stock();
+            assertThrows(IllegalArgumentException.class, () -> new Share(stock, new BigDecimal("10"), null));
+        }
 
-        Share nullPrice = new Share(stock, new BigDecimal("10"), null);
-        Share zeroPrice = new Share(stock, new BigDecimal("10"), BigDecimal.ZERO);
-        Share negativePrice = new Share(stock, new BigDecimal("10"), new BigDecimal("-1"));
+        @Test
+        @DisplayName("Constructor throws on zero purchase price")
+        void testConstructorThrowsOnZeroPurchasePrice() {
+            Stock stock = ModelTestFixtures.stock();
+            assertThrows(IllegalArgumentException.class, () -> new Share(stock, new BigDecimal("10"), BigDecimal.ZERO));
+        }
 
-        assertThrows(IllegalStateException.class, nullPrice::getPurchasePrice);
-        assertThrows(IllegalStateException.class, zeroPrice::getPurchasePrice);
-        assertThrows(IllegalStateException.class, negativePrice::getPurchasePrice);
+        @Test
+        @DisplayName("Constructor throws on negative purchase price")
+        void testConstructorThrowsOnNegativePurchasePrice() {
+            Stock stock = ModelTestFixtures.stock();
+            assertThrows(IllegalArgumentException.class, () -> new Share(stock, new BigDecimal("10"), new BigDecimal("-1")));
+        }
     }
 }

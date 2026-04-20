@@ -16,6 +16,18 @@ public class Player {
 
     // Constructor for creating a new Player instance.
     public Player(String name, BigDecimal startingMoney) {
+        if (name == null) {
+            throw new IllegalArgumentException("Name cannot be null");
+        }
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be blank");
+        }
+        if (startingMoney == null) {
+            throw new IllegalArgumentException("Starting money cannot be null");
+        }
+        if (startingMoney.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Starting money cannot be negative");
+        }
         this.name = name;
         this.startingMoney = startingMoney;
         this.money = startingMoney;
@@ -27,36 +39,24 @@ public class Player {
     /**
      * Gets the player's name.
      * @return the player's name
-     * @throws IllegalArgumentException if the name is null
      */
     public String getName() {
-        if (name == null) {
-            throw new IllegalArgumentException("Name cannot be null");
-        }
-            return name;
-        }
+        return name;
+    }
 
     /**
      * Gets the player's current money.
      * @return the player's current money
-     * @throws IllegalStateException if the  money is null or negative
      */
     public BigDecimal getMoney() {
-        if (money == null || money.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalStateException("Money cannot be null or negative");
-        }
         return money;
     }
 
     /**
      * Gets the player's starting money.
      * @return the player's starting money
-     * @throws IllegalStateException if the starting money is null or negative
      */
     public BigDecimal getStartingMoney() {
-        if (startingMoney == null || startingMoney.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalStateException("Starting money cannot be null or negative");
-        }
         return startingMoney;
     }
 
@@ -91,48 +91,32 @@ public class Player {
     /**
      * Gets the player's portfolio.
      * @return the player's portfolio
-     * @throws IllegalStateException if the portfolio is null
      */
     public Portfolio getPortfolio() {
-        if (portfolio == null) {
-            throw new IllegalStateException("Portfolio cannot be null");
-        }
         return portfolio;
     }
 
     /**
      * Gets the player's transaction archive.
      * @return the player's transaction archive
-     * @throws IllegalStateException if the transaction archive is null
      */
     public TransactionArchive getTransactionArchive() {
-        if (transactionArchive == null) {
-            throw new IllegalStateException("Transaction archive cannot be null");
-        }
         return transactionArchive;
     }
 
     /**
      * Gets the player's net worth.
      * @return the player's net worth
-     * @throws IllegalStateException if the player's money or portfolio is null
      */
     public BigDecimal getNetWorth() {
-        if (money == null || portfolio == null) {
-            throw new IllegalStateException("Money or portfolio cannot be null");
-        }
         return money.add(portfolio.getNetWorth());
     }
 
     /**
-     * Gets the number of distinct weeks the player has traded
-     * @throws IllegalStateException if the transaction archive is null
+     * Gets the number of distinct weeks the player has traded.
      * @return the number of distinct weeks the player has traded
      */
     public int getWeeksTraded() {
-        if (transactionArchive == null) {
-            throw new IllegalStateException("Transaction archive cannot be null");
-        }
         return transactionArchive.countDistinctWeeks();
     }
 
@@ -160,13 +144,9 @@ public class Player {
 
     /**
      * Gets the player's status.
-     * @throws IllegalStateException if the player status is null
      * @return the player's status
      */
     public PlayerStatus getStatus() {
-        if (status == null) {
-            throw new IllegalStateException("Player status cannot be null");
-        }
         return status;
     }
 

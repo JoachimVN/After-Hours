@@ -15,6 +15,21 @@ public class Share {
 
     // Constructor for creating a new Share instance with the specified stock, quantity, and purchase price.
     public Share(Stock stock, BigDecimal quantity, BigDecimal purchasePrice) {
+        if (stock == null) {
+            throw new IllegalArgumentException("Stock cannot be null");
+        }
+        if (quantity == null) {
+            throw new IllegalArgumentException("Quantity cannot be null");
+        }
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+        if (purchasePrice == null) {
+            throw new IllegalArgumentException("Purchase price cannot be null");
+        }
+        if (purchasePrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Purchase price must be positive");
+        }
         this.stock = stock;
         this.quantity = quantity;
         this.purchasePrice = purchasePrice;
@@ -23,36 +38,24 @@ public class Share {
     /**
      * Getter for the stock associated with this share
      * @return stock associated with this share
-     * @throws IllegalStateException if the stock is null
      */
     public Stock getStock() {
-        if (stock == null) {
-            throw new IllegalStateException("Stock is null");
-        }
         return stock;
     }
 
     /**
      * Getter for the quantity of shares owned
      * @return quantity of shares owned
-     * @throws IllegalStateException if the quantity is null or not positive
      */
     public BigDecimal getQuantity() {
-        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalStateException("Quantity is null or not positive");
-        }
         return quantity;
     }
 
     /**
      * Getter for the purchase price of the shares
      * @return purchase price of the shares
-     * @throws IllegalStateException if the purchase price is null or not positive
      */
     public BigDecimal getPurchasePrice() {
-        if (purchasePrice == null || purchasePrice.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalStateException("Purchase price is null or not positive");
-        }
         return purchasePrice;
     }
 

@@ -5,6 +5,7 @@ import java.util.Locale;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.effect.BlurType;
@@ -125,6 +126,17 @@ public final class LandingPageView {
         VBox.setMargin(buttonBlock, new Insets(32, 0, 0, 0));
 
         root.setCenter(center);
+
+        // ── Keybindings ───────────────────────────────────────────────────────────
+        // Enter → Start Trading, S → Settings
+        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            switch (e.getCode()) {
+                case ENTER -> { onPlay.run(); e.consume(); }
+                case S     -> { onSettings.run(); e.consume(); }
+                default    -> {}
+            }
+        });
+
         return root;
     }
 }

@@ -19,11 +19,14 @@
     -fx-background-color: rgba(15, 45, 94, 0.70);
     -fx-text-fill: #7a9fc8;
     -fx-font-size: 15px;
+    -fx-font-family: "Sans Serif";
     -fx-background-radius: 50%;
     -fx-min-width: 34px;
     -fx-min-height: 34px;
     -fx-max-width: 34px;
     -fx-max-height: 34px;
+    -fx-padding: 0;
+    -fx-text-overrun: clip;
     -fx-border-color: rgba(30, 64, 128, 0.5);
     -fx-border-radius: 50%;
     -fx-border-width: 1;
@@ -246,6 +249,16 @@
 /* Detail panel */
 .game-detail-area {
     -fx-padding: 0;
+}
+
+.detail-no-selection {
+    -fx-background-color: rgba(8, 14, 36, 0.60);
+}
+
+.detail-no-selection-hint {
+    -fx-font-size: 15px;
+    -fx-text-fill: #3a5070;
+    -fx-font-style: italic;
 }
 
 .game-detail-header {
@@ -1139,4 +1152,41 @@
 .tx-type-sell {
     -fx-text-fill: #e05a5a;
     -fx-font-weight: bold;
+}
+
+/* ── History table scrollbar ─────────────────────────────────────────────── */
+
+.history-table .scroll-bar:vertical {
+    -fx-background-color: rgba(5, 10, 28, 0.60);
+    -fx-pref-width: 7px;
+}
+
+.history-table .scroll-bar:vertical .track,
+.history-table .scroll-bar:vertical .track-background {
+    -fx-background-color: rgba(10, 20, 50, 0.40);
+    -fx-border-color: transparent;
+    -fx-background-radius: 4;
+}
+
+.history-table .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(30, 64, 128, 0.55);
+    -fx-background-radius: 4;
+}
+
+.history-table .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(30, 64, 128, 0.85);
+}
+
+.history-table .scroll-bar .increment-button,
+.history-table .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 2 3 2 3;
+}
+
+.history-table .scroll-bar .increment-arrow,
+.history-table .scroll-bar .decrement-arrow {
+    -fx-background-color: rgba(30, 64, 128, 0.50);
+    -fx-shape: " ";
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
 }
