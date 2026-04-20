@@ -380,6 +380,8 @@ public final class GameView {
 
         StackPane overlay = new StackPane(root, devPanel);
         overlayRef = overlay;
+
+        updateData();
     }
 
     public StackPane getRoot() {
@@ -750,7 +752,7 @@ public final class GameView {
 
         TableColumn<Share, String> symCol = col("Symbol", c ->
                 c.getStock().getSymbol(), 70, 85);
-        TableColumn<Share, String> qtyCol = col("Qty", c ->
+        TableColumn<Share, String> quantityCol = col("Quantity", c ->
                 c.getQuantity().stripTrailingZeros().toPlainString(), 45, 65);
         TableColumn<Share, String> boughtCol = col("Bought", c ->
             CurrencyFormatter.format(c.getPurchasePrice().multiply(c.getQuantity())), 85, 110);
@@ -778,7 +780,7 @@ public final class GameView {
         });
 
         table.getColumns().add(symCol);
-        table.getColumns().add(qtyCol);
+        table.getColumns().add(quantityCol);
         table.getColumns().add(boughtCol);
         table.getColumns().add(nowCol);
         table.getColumns().add(plCol);
@@ -825,7 +827,7 @@ public final class GameView {
         overlayRef.getChildren().add(popup);
     }
 
-    public void showBulkTradeConfirm(String action, BigDecimal qty, BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total) {
+    public void showBulkTradeConfirm(String action, BigDecimal quantity, BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total) {
         Label iconLbl  = new Label("\u2198");
         iconLbl.getStyleClass().add("dialog-action-icon-sell");
         Label titleLbl = new Label("ORDER SUMMARY");
@@ -837,7 +839,7 @@ public final class GameView {
         VBox rows = new VBox(0,
             dialogRow("Action", action, "dialog-val-sell"),
             dialogRow("Symbols", "ALL", null),
-            dialogRow("Qty", qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity", quantity.stripTrailingZeros().toPlainString(), null),
             dialogRow("Subtotal", CurrencyFormatter.format(gross), null),
             dialogRow("Fee (1%)", CurrencyFormatter.format(fee), "dialog-val-fee"),
             dialogRow("Tax", CurrencyFormatter.format(tax), "dialog-val-fee")
@@ -880,7 +882,7 @@ public final class GameView {
         overlayRef.getChildren().add(popup);
     }
 
-    public void showBulkReceipt(String action, BigDecimal qty, BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
+    public void showBulkReceipt(String action, BigDecimal quantity, BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
         Label checkLbl = new Label("\u2713");
         checkLbl.getStyleClass().add("receipt-check");
         Label titleLbl = new Label("ORDER COMPLETE");
@@ -892,7 +894,7 @@ public final class GameView {
         VBox rows = new VBox(0,
             dialogRow("Action", action, "dialog-val-sell"),
             dialogRow("Symbols", "ALL", null),
-            dialogRow("Qty", qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity", quantity.stripTrailingZeros().toPlainString(), null),
             dialogRow("Fee (1%)", CurrencyFormatter.format(fee), "dialog-val-fee"),
             dialogRow("Tax", CurrencyFormatter.format(tax), "dialog-val-fee"),
             dialogRow("Received", CurrencyFormatter.format(total), null),
@@ -937,7 +939,7 @@ public final class GameView {
         return row;
     }
 
-    public void showTradeConfirm(String action, Stock stock, BigDecimal qty,
+    public void showTradeConfirm(String action, Stock stock, BigDecimal quantity,
             BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total) {
         boolean isBuy = action != null && action.startsWith("BUY");
 
@@ -953,7 +955,7 @@ public final class GameView {
             dialogRow("Action",   action,                                   isBuy ? "dialog-val-buy" : "dialog-val-sell"),
             dialogRow("Symbol",   stock.getSymbol(),                        null),
             dialogRow("Company",  stock.getCompany(),                       null),
-            dialogRow("Qty",      qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity",      quantity.stripTrailingZeros().toPlainString(), null),
             dialogRow("Price",    CurrencyFormatter.format(stock.getSalesPrice()),               null),
             dialogRow("Subtotal", CurrencyFormatter.format(gross),                              null),
             dialogRow(isBuy ? "Fee (0.5%)" : "Fee (1%)", CurrencyFormatter.format(fee),        "dialog-val-fee"),
@@ -994,9 +996,9 @@ public final class GameView {
         confirmBtn.setOnAction(ev -> { 
             dismiss.run(); 
             if (isBuy) {
-                gameController.executeBuy(stock, qty, total, fee); 
+                gameController.executeBuy(stock, quantity, total, fee); 
             } else {
-                gameController.executeSell(stock, qty);
+                gameController.executeSell(stock, quantity);
             }
         });
         backdrop.setOnMouseClicked(ev -> dismiss.run());
@@ -1285,9 +1287,9 @@ public final class GameView {
         compCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().company()));
         compCol.setMinWidth(120); compCol.setPrefWidth(160);
 
-        TableColumn<TxRow, String> qtyCol = new TableColumn<>("Qty");
-        qtyCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().qty().stripTrailingZeros().toPlainString()));
-        qtyCol.setMinWidth(50); qtyCol.setPrefWidth(60);
+        TableColumn<TxRow, String> quantityCol = new TableColumn<>("Quantity");
+        quantityCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().quantity().stripTrailingZeros().toPlainString()));
+        quantityCol.setMinWidth(50); quantityCol.setPrefWidth(60);
 
         TableColumn<TxRow, String> priceCol = new TableColumn<>("Price/sh");
         priceCol.setCellValueFactory(cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().pricePerShare())));
@@ -1306,7 +1308,7 @@ public final class GameView {
         totalCol.setCellValueFactory(cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().total())));
         totalCol.setMinWidth(80); totalCol.setPrefWidth(90);
 
-        table.getColumns().addAll(weekCol, typeCol, symCol, compCol, qtyCol, priceCol, feeCol, taxCol, totalCol);
+        table.getColumns().addAll(weekCol, typeCol, symCol, compCol, quantityCol, priceCol, feeCol, taxCol, totalCol);
         // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
         double rowH = 28;
         double headerH = 30;
@@ -1530,11 +1532,11 @@ public final class GameView {
         Label pctLbl    = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
         pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
 
-        BigDecimal ownedQty = player.getPortfolio().getShareBySymbol(stock.getSymbol())
+        BigDecimal ownedQuantity = player.getPortfolio().getShareBySymbol(stock.getSymbol())
                 .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
         Label ownedLbl = null;
-        if (ownedQty.compareTo(BigDecimal.ZERO) > 0) {
-            ownedLbl = new Label("Owned: " + ownedQty.stripTrailingZeros().toPlainString());
+        if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
+            ownedLbl = new Label("Owned: " + ownedQuantity.stripTrailingZeros().toPlainString());
             ownedLbl.getStyleClass().add("stock-owned-label");
         }
 
@@ -1589,7 +1591,7 @@ public final class GameView {
         return card;
     }
 
-    public void showReceipt(String action, Stock stock, BigDecimal qty,
+    public void showReceipt(String action, Stock stock, BigDecimal quantity,
             BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
         boolean isBuy = action != null && action.startsWith("BUY");
 
@@ -1604,7 +1606,7 @@ public final class GameView {
         VBox rows = new VBox(0,
             dialogRow("Action",      action, isBuy ? "dialog-val-buy" : "dialog-val-sell"),
             dialogRow("Symbol",      stock.getSymbol(), null),
-            dialogRow("Qty",         qty.stripTrailingZeros().toPlainString(), null),
+            dialogRow("Quantity",         quantity.stripTrailingZeros().toPlainString(), null),
             dialogRow("Price",       CurrencyFormatter.format(stock.getSalesPrice()), null),
             dialogRow(isBuy ? "Fee (0.5%)" : "Fee (1%)", CurrencyFormatter.format(fee), "dialog-val-fee"),
             dialogRow("Tax",         CurrencyFormatter.format(tax), "dialog-val-fee"),
@@ -1647,7 +1649,7 @@ public final class GameView {
 
         List<BigDecimal> prices = stock.getHistoricalPrices();
 
-        record TradeDot(int week, BigDecimal qty, BigDecimal price, boolean isSell) {}
+        record TradeDot(int week, BigDecimal quantity, BigDecimal price, boolean isSell) {}
 
         String sym = stock.getSymbol();
         List<TradeDot> tradeDots = new ArrayList<>();
@@ -1797,7 +1799,7 @@ public final class GameView {
                         gc.setFill(Color.web("#f5a201"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
                     }
-                    drawnDots.add(new double[]{dotX, dotY, dot.week(), dot.qty().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
+                    drawnDots.add(new double[]{dotX, dotY, dot.week(), dot.quantity().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
                 }
             }
 
@@ -1830,11 +1832,11 @@ public final class GameView {
                 tooltip.getChildren().clear();
                 Label weekLbl = new Label((isSell ? "Sold" : "Bought") + " · Week " + (int) h[2]);
                 weekLbl.getStyleClass().add(isSell ? "chart-tooltip-sell-week" : "chart-tooltip-week");
-                Label qtyLbl = new Label("Qty: " + BigDecimal.valueOf(h[3]).stripTrailingZeros().toPlainString());
-                qtyLbl.getStyleClass().add("chart-tooltip-row");
+                Label quantityLbl = new Label("Quantity: " + BigDecimal.valueOf(h[3]).stripTrailingZeros().toPlainString());
+                quantityLbl.getStyleClass().add("chart-tooltip-row");
                 Label priceLbl = new Label("Price: " + CurrencyFormatter.format(BigDecimal.valueOf(h[4])));
                 priceLbl.getStyleClass().add("chart-tooltip-row");
-                tooltip.getChildren().addAll(weekLbl, qtyLbl, priceLbl);
+                tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl);
                 if (!isSell) {
                     BigDecimal gain = stock.getSalesPrice().subtract(BigDecimal.valueOf(h[4]))
                             .multiply(BigDecimal.valueOf(h[3]));

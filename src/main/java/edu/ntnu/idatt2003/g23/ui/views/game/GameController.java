@@ -33,8 +33,8 @@ public final class GameController {
         this.view = view;
     }
 
-    public List<BigDecimal> previewSell(Stock stock, BigDecimal qtyToSell) {
-        BigDecimal rem = qtyToSell;
+    public List<BigDecimal> previewSell(Stock stock, BigDecimal quantityToSell) {
+        BigDecimal rem = quantityToSell;
         BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
 
         for (Share lot : player.getPortfolio().getShareBySymbol(stock.getSymbol())) {
@@ -58,7 +58,7 @@ public final class GameController {
         BigDecimal tGross = BigDecimal.ZERO;
         BigDecimal tFee = BigDecimal.ZERO;
         BigDecimal tTax = BigDecimal.ZERO;
-        BigDecimal totalQty = BigDecimal.ZERO;
+        BigDecimal totalquantity = BigDecimal.ZERO;
 
         for (Share lot : player.getPortfolio().getShares()) {
             SaleCalculator calc = new SaleCalculator(lot);
@@ -66,10 +66,10 @@ public final class GameController {
             tGross = tGross.add(calc.calculateGross());
             tFee   = tFee.add(calc.calculateCommission());
             tTax   = tTax.add(calc.calculateTax());
-            totalQty = totalQty.add(lot.getQuantity());
+            totalquantity = totalquantity.add(lot.getQuantity());
         }
 
-        return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax), totalQty);
+        return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax), totalquantity);
     }
 
     public BigDecimal unitCostWithFee(Stock stock) {
@@ -87,32 +87,32 @@ public final class GameController {
     }
 
     public void executeSellAll() {
-        Map<String, BigDecimal> qtyBySymbol = new LinkedHashMap<>();
+        Map<String, BigDecimal> quantityBySymbol = new LinkedHashMap<>();
         Map<String, Stock> stockBySymbol = new LinkedHashMap<>();
 
         for (Share share : new ArrayList<>(player.getPortfolio().getShares())) {
             String symbol = share.getStock().getSymbol();
-            qtyBySymbol.merge(symbol, share.getQuantity(), BigDecimal::add);
+            quantityBySymbol.merge(symbol, share.getQuantity(), BigDecimal::add);
             stockBySymbol.putIfAbsent(symbol, share.getStock());
         }
 
         BigDecimal tGross = BigDecimal.ZERO;
         BigDecimal tFee = BigDecimal.ZERO;
         BigDecimal tTax = BigDecimal.ZERO;
-        BigDecimal totalQty = BigDecimal.ZERO;
+        BigDecimal totalquantity = BigDecimal.ZERO;
 
-        for (Map.Entry<String, BigDecimal> entry : qtyBySymbol.entrySet()) {
+        for (Map.Entry<String, BigDecimal> entry : quantityBySymbol.entrySet()) {
             String symbol = entry.getKey();
-            BigDecimal qty = entry.getValue();
+            BigDecimal quantity = entry.getValue();
             Stock stock = stockBySymbol.get(symbol);
-            List<BigDecimal> result = executeSell(stock, qty);
+            List<BigDecimal> result = executeSell(stock, quantity);
             tGross = tGross.add(result.get(0));
             tFee = tFee.add(result.get(1));
             tTax = tTax.add(result.get(2));
-            totalQty = totalQty.add(qty);
+            totalquantity = totalquantity.add(quantity);
         }
         try {
-            view.showBulkReceipt("SELL ALL HOLDINGS", totalQty, tGross.subtract(tFee).subtract(tTax), tFee, tTax, player.getMoney());
+            view.showBulkReceipt("SELL ALL HOLDINGS", totalquantity, tGross.subtract(tFee).subtract(tTax), tFee, tTax, player.getMoney());
             view.updateData();
         } catch (Exception e) {
             view.showError(e.getMessage());
@@ -121,8 +121,8 @@ public final class GameController {
 
     
 
-    public List<BigDecimal> executeSell(Stock stock, BigDecimal qtyToSell) {
-        BigDecimal remaining = qtyToSell;
+    public List<BigDecimal> executeSell(Stock stock, BigDecimal quantityToSell) {
+        BigDecimal remaining = quantityToSell;
         BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
         BigDecimal sellQuantity = BigDecimal.ZERO;
         for (Share lot : new ArrayList<>(player.getPortfolio().getShareBySymbol(stock.getSymbol()))) {
@@ -171,11 +171,11 @@ public final class GameController {
     };
 
     public void handleSellAll(StackPane overlay) {
-        BigDecimal totalOwnedQty = player.getPortfolio().getShares().stream()
+        BigDecimal totalOwnedquantity = player.getPortfolio().getShares().stream()
                     .map(Share::getQuantity)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (totalOwnedQty.compareTo(BigDecimal.ZERO) <= 0) {
+        if (totalOwnedquantity.compareTo(BigDecimal.ZERO) <= 0) {
             view.showError("You don't own any shares to sell.");
             return;
         }
@@ -205,15 +205,15 @@ public final class GameController {
             ));
         }
         for (Sale s : player.getTransactionArchive().getAllSales()) {
-            BigDecimal qty   = s.getShare().getQuantity();
+            BigDecimal quantity   = s.getShare().getQuantity();
             BigDecimal gross = s.getCalculator().calculateGross();
-            BigDecimal pricePerShare = qty.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
-                    : gross.divide(qty, 4, RoundingMode.HALF_UP);
+            BigDecimal pricePerShare = quantity.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
+                    : gross.divide(quantity, 4, RoundingMode.HALF_UP);
             allTx.add(new TxRow(
                     s.getWeek(), false,
                     s.getShare().getStock().getSymbol(),
                     s.getShare().getStock().getCompany(),
-                    qty,
+                    quantity,
                     pricePerShare,
                     s.getCalculator().calculateCommission(),
                     s.getCalculator().calculateTax(),
