@@ -6,9 +6,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.DoubleSupplier;
-
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
+import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Exchange;
@@ -60,15 +59,16 @@ public class App extends Application {
     /** Retained so Settings can return to the game without recreating it. */
     private Parent currentGamePage;
     private boolean animationsEnabled = true;
-    private double sfxVolume = 0.5;
+    private SfxController sfxController;
 
     @Override
     public void start(Stage stage) {
         homePageMusicController = new HomePageMusicController(getClass());
+        sfxController = new SfxController(getClass());
 
         homePage = LandingPageView.build(
                 this::goToSetup,
-            () -> { Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); },
+            () -> { sfxController.play(SfxController.SETTINGS); Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); },
             Platform::exit
         );
 
@@ -106,9 +106,13 @@ public class App extends Application {
 
     // ── Navigation targets ────────────────────────────────────────────────────
 
+    private Runnable withBack(Runnable r) {
+        return () -> { sfxController.play(SfxController.BACK); r.run(); };
+    }
+
     private void goToSetup() {
         currentSetupPage = SetupView.build(
-                this::goHomeKeepMusic,
+                withBack(this::goHomeKeepMusic),
                 (name, cash) -> startGame(name, cash),
                 (name, cash) -> goToImportCsv(name, cash)
         );
@@ -122,7 +126,7 @@ public class App extends Application {
 
     private void goToImportCsv(String name, double cash, File selectedFile) {
         Parent importPage = ImportCsvView.build(
-                () -> navigateKeepMusic(currentSetupPage),
+                withBack(() -> navigateKeepMusic(currentSetupPage)),
                 () -> openCsvEditorFromImport(new CsvParseResult(List.of()), name, cash, selectedFile),
                 file -> openCsvEditorFromImport(file, name, cash),
                 file -> startGameWithCsv(name, cash, file),
@@ -181,7 +185,7 @@ public class App extends Application {
     private void openCsvEditor(CsvParseResult result, String name, double cash) {
         Parent editorPage = CsvEditorView.build(
                 result,
-                this::goHomeKeepMusic,
+                withBack(this::goHomeKeepMusic),
                 stocks -> buildAndStartGame(name, cash, stocks, true)
         );
         navigateKeepMusic(editorPage);
@@ -208,7 +212,7 @@ public class App extends Application {
     private void openCsvEditorFromImport(CsvParseResult result, String name, double cash, File selectedFile) {
         Parent editorPage = CsvEditorView.build(
                 result,
-                () -> goToImportCsv(name, cash, selectedFile),
+                withBack(() -> goToImportCsv(name, cash, selectedFile)),
                 stocks -> buildAndStartGame(name, cash, stocks, true)
         );
         navigateKeepMusic(editorPage);
@@ -225,32 +229,29 @@ public class App extends Application {
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange("S&P 500", stocks);
         currentGamePage = GameView.build(
-                this::goHome,
-                () -> navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))),
+                withBack(this::goHome),
+                () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); },
                 player,
                 exchange,
-                currentSfxVolumeSupplier()
+                sfxController::getVolume
         );
         navigateToGame(currentGamePage);
-        Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxVolume));
+        Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxController.getVolume()));
     }
 
     private void showNoStocksPage(boolean fromEditor) {
-        Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, this::goHome);
+        Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, withBack(this::goHome));
         navigateToGame(page);
         Platform.runLater(() -> homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
                 "/audio/music/ambience/After_Hours_Ambience3_demo.mp3"));
     }
 
-    private DoubleSupplier currentSfxVolumeSupplier() {
-        return () -> sfxVolume;
-    }
-
     private Parent buildSettingsView(Runnable onBack) {
+        Runnable onBackWithSfx = () -> { sfxController.play(SfxController.BACK); onBack.run(); };
         return SettingsView.build(
-                onBack,
+                onBackWithSfx,
                 homePageMusicController::setVolume, homePageMusicController.getVolume(),
-                v -> sfxVolume = v, sfxVolume,
+                sfxController::setVolume, sfxController.getVolume(),
                 enabled -> {
                     animationsEnabled = enabled;
                     backgroundCanvas.setAnimationsEnabled(enabled);
