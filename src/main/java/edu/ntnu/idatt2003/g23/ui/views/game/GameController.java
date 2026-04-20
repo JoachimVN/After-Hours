@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.ui.views.game;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
@@ -21,7 +22,6 @@ public final class GameController {
         this.view = view;
     }
 
-    // GameController.java
     public List<BigDecimal> previewSell(Stock stock, BigDecimal qtyToSell) {
         BigDecimal rem = qtyToSell;
         BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
@@ -31,7 +31,7 @@ public final class GameController {
             BigDecimal sq = rem.min(lot.getQuantity());
 
             // Use SaleCalculator with a proportional slice of the lot
-            Share partial = new Share(stock, sq, lot.getPurchasePrice()); // fine here — controller is model-adjacent
+            Share partial = new Share(stock, sq, lot.getPurchasePrice());
             SaleCalculator calc = new SaleCalculator(partial);
 
             tGross = tGross.add(calc.calculateGross());
@@ -42,5 +42,15 @@ public final class GameController {
         if (rem.compareTo(BigDecimal.ZERO) > 0) return null;
         return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax));
     }
+
+    public BigDecimal unitCostWithFee(Stock stock) {
+        return stock.getSalesPrice().multiply(new BigDecimal("1.005"));
+    }
+
+    public int maxSellQuantity(Stock stock) {
+        return player.getPortfolio().getShareBySymbol(stock.getSymbol())
+            .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
+            .setScale(0, RoundingMode.DOWN).intValue();
+}
 
 }
