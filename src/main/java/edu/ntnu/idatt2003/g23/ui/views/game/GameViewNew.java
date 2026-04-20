@@ -57,7 +57,7 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.util.Duration;
 
-public final class GameView {
+public final class GameViewNew {
     private final GameController gameController;
     private final Label cashVal;
     private final Label portVal;
@@ -84,7 +84,7 @@ public final class GameView {
     private StackPane overlayRef = null;
     private Node rootRef = null;
 
-    public GameView(Player player, Exchange exchange, Runnable onBack, Runnable onSettings) {
+    public GameViewNew(Player player, Exchange exchange, Runnable onBack, Runnable onSettings) {
         this.gameController = new GameController(player, exchange);
         this.gameController.setView(this);
 
@@ -340,7 +340,7 @@ public final class GameView {
         backBtn.setOnAction(e -> onBack.run());
 
         ImageView appTitle;
-        var logoUrl = GameView.class.getResource("/images/logos/After_Hours_Logo.png");
+        var logoUrl = GameViewNew.class.getResource("/images/logos/After_Hours_Logo.png");
         if (logoUrl != null) {
             Image logoImg = new Image(logoUrl.toExternalForm());
             appTitle = new ImageView(logoImg);
