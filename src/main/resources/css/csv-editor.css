@@ -43,7 +43,24 @@
 }
 
 .csv-editor-table .table-row-cell:selected {
-    -fx-background-color: #1a3a6a;
+    -fx-background-color: #07152c; /* Keep row background unchanged — individual cell is highlighted instead */
+}
+
+/* Selected cell: subtle tint + thin border */
+.csv-editor-table .table-cell:selected {
+    -fx-background-color: #132d5e;
+    -fx-border-color: #3a6acc;
+    -fx-border-width: 1.5;
+    -fx-text-fill: #d8e8f8;
+    -fx-font-weight: normal;
+}
+
+/* Selected cell inside an error row */
+.csv-row-error .table-cell:selected {
+    -fx-background-color: #3d1212;
+    -fx-border-color: #a04040;
+    -fx-border-width: 1.5;
+    -fx-text-fill: #ffbbbb;
 }
 
 /* ── Error row highlight ──────────────────────────────────────────────────── */
@@ -57,7 +74,7 @@
 }
 
 .csv-row-error:selected {
-    -fx-background-color: #581414de !important;
+    -fx-background-color: #2d0808de !important; /* Keep row dim; cell highlight handles the focus indicator */
 }
 
 .csv-row-error .table-cell {

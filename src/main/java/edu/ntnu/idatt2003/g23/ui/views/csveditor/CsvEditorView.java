@@ -52,6 +52,9 @@ public final class CsvEditorView {
 
     private CsvEditorView() {}
 
+    /** Key stored in {@link TableView#getProperties()} to allow a programmatic edit to start. */
+    private static final String EDIT_ALLOWED_KEY = "csv-edit-allowed";
+
     /**
      * Builds the CSV editor view.
      *
@@ -108,6 +111,7 @@ public final class CsvEditorView {
         TableView<CsvRow> table = new TableView<>(rows);
         table.setEditable(true);
         table.getStyleClass().add("csv-editor-table");
+        table.getSelectionModel().setCellSelectionEnabled(true);
 
         Label placeholder = new Label(
                 "No rows yet \u2014 click '+ Add Row' to create one.");
@@ -164,6 +168,37 @@ public final class CsvEditorView {
         symbolCol.setCellFactory(tc -> smartCell("symbol", table, editableCols));
         companyCol.setCellFactory(tc -> smartCell("company", table, editableCols));
         pricesCol.setCellFactory(tc -> smartCell("prices", table, editableCols));
+
+        // Table-level keyboard navigation — only active when no cell is being edited
+        table.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (table.getEditingCell() != null) return; // Let the editing cell handle it
+            var selectedCells = table.getSelectionModel().getSelectedCells();
+            if (selectedCells.isEmpty()) return;
+            var pos = selectedCells.get(0);
+            int ri = pos.getRow();
+            int ci = editableCols.indexOf(pos.getTableColumn());
+            int rc = table.getItems().size();
+            if (event.getCode() == KeyCode.TAB) {
+                if (event.isShiftDown()) {
+                    if (ci > 0)      selectCell(table, ri, editableCols.get(ci - 1));
+                    else if (ri > 0) selectCell(table, ri - 1, editableCols.get(editableCols.size() - 1));
+                } else {
+                    if (ci >= 0 && ci < editableCols.size() - 1) selectCell(table, ri, editableCols.get(ci + 1));
+                    else if (ri < rc - 1)                         selectCell(table, ri + 1, editableCols.get(0));
+                    else if (ci < 0)                              selectCell(table, ri, editableCols.get(0));
+                }
+                event.consume();
+            } else if (event.getCode() == KeyCode.ENTER) {
+                TableColumn<CsvRow, ?> col = pos.getTableColumn() != null
+                        ? pos.getTableColumn() : editableCols.get(0);
+                if (event.isShiftDown()) {
+                    if (ri > 0) selectCell(table, ri - 1, col);
+                } else {
+                    if (ri < rc - 1) selectCell(table, ri + 1, col);
+                }
+                event.consume();
+            }
+        });
 
         // Error
         TableColumn<CsvRow, String> errorCol = new TableColumn<>("Error");
@@ -265,7 +300,7 @@ public final class CsvEditorView {
         navBar.getStyleClass().add("csv-nav-bar");
 
         // ── Bottom bar ────────────────────────────────────────────────────────
-        Label hintLabel = new Label("Click a cell to edit it, or press Skip on a row to remove it.");
+        Label hintLabel = new Label("Double-click a cell to edit \u2014 Tab/Enter navigates; Escape cancels an edit.");
         hintLabel.getStyleClass().add("sub-tagline");
 
         // Add Row button
@@ -329,7 +364,8 @@ public final class CsvEditorView {
 
         // Escape → back
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ESCAPE) {
+            // Only navigate back when no cell is being edited (Escape is handled inside editing cells)
+            if (e.getCode() == KeyCode.ESCAPE && table.getEditingCell() == null) {
                 onCancel.run();
                 e.consume();
             }
@@ -419,12 +455,16 @@ public final class CsvEditorView {
     }
 
     /**
-     * A smart {@link TextFieldTableCell} with:
+     * A smart {@link TextFieldTableCell} with Google Sheets-style interaction:
      * <ul>
+     *   <li>Single-click → select only (no edit mode)</li>
+     *   <li>Double-click → enter edit mode</li>
+     *   <li>Tab / Shift+Tab (editing) → commit + move to next/prev editable column, wrapping rows</li>
+     *   <li>Enter / Shift+Enter (editing) → commit + move down/up same column</li>
+     *   <li>Arrow keys (editing) → normal text-cursor movement (not consumed)</li>
+     *   <li>Escape (editing) → discard changes and exit edit mode</li>
+     *   <li>Click any cell (editing) → commits current edit</li>
      *   <li>Error-column highlighting and ⚠ badge</li>
-     *   <li>Commit on focus loss (click away)</li>
-     *   <li>Tab / Shift+Tab — move to next / previous editable column, wrapping rows</li>
-     *   <li>Enter — move down one row in the same column</li>
      * </ul>
      */
     private static TextFieldTableCell<CsvRow, String> smartCell(
@@ -434,61 +474,91 @@ public final class CsvEditorView {
 
         return new TextFieldTableCell<>(new DefaultStringConverter()) {
 
+            private TextField editField = null;
+            private boolean cancelViaEscape = false;
+
+            /** Commit current edit then start editing the specified cell. */
+            private void navigateToEdit(int row, TableColumn<CsvRow, String> col) {
+                Platform.runLater(() -> {
+                    table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+                    table.getSelectionModel().clearAndSelect(row, col);
+                    table.scrollTo(row);
+                    table.edit(row, col);
+                });
+            }
+
             @Override
             public void startEdit() {
+                // Block the default single-click auto-start; only proceed when explicitly allowed
+                Object allowed = table.getProperties().remove(EDIT_ALLOWED_KEY);
+                if (allowed != Boolean.TRUE) return;
                 super.startEdit();
                 if (!isEditing()) return;
-                TextField tf = (TextField) getGraphic();
-                if (tf == null) return;
+                editField = (TextField) getGraphic();
+                if (editField == null) return;
 
-                // Commit on focus loss (clicking away from the cell)
-                tf.focusedProperty().addListener((obs, was, isFocused) -> {
-                    if (!isFocused && isEditing()) commitEdit(tf.getText());
+                // Commit when focus moves to any other node (click anywhere else)
+                editField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+                    if (!isFocused && isEditing()) commitEdit(editField.getText());
                 });
 
-                // Excel-style keyboard shortcuts while editing
-                tf.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-                    switch (event.getCode()) {
-                        case TAB -> {
-                            commitEdit(tf.getText());
-                            int ci = editableCols.indexOf(getTableColumn());
-                            int ri = getIndex();
-                            int rc = table.getItems().size();
-                            int targetRow = ri, targetColIdx = ci;
-                            boolean canNavigate = true;
-                            if (event.isShiftDown()) {
-                                if (ci > 0)       { targetColIdx = ci - 1; }
-                                else if (ri > 0)  { targetRow = ri - 1; targetColIdx = editableCols.size() - 1; }
-                                else              { canNavigate = false; }
-                            } else {
-                                if (ci < editableCols.size() - 1)  { targetColIdx = ci + 1; }
-                                else if (ri < rc - 1)              { targetRow = ri + 1; targetColIdx = 0; }
-                                else                               { canNavigate = false; }
-                            }
-                            if (canNavigate) {
-                                final int ftr = targetRow;
-                                final TableColumn<CsvRow, String> ftc = editableCols.get(targetColIdx);
-                                Platform.runLater(() -> { table.getSelectionModel().select(ftr); table.edit(ftr, ftc); });
-                            }
-                            event.consume();
+                // Keyboard shortcuts while in edit mode
+                editField.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                    KeyCode code = event.getCode();
+                    if (code == KeyCode.ESCAPE) {
+                        cancelViaEscape = true;
+                        cancelEdit();      // Discards changes (super path)
+                        event.consume();   // Prevent bubbling to the root Escape → back handler
+                    } else if (code == KeyCode.TAB) {
+                        int ci       = editableCols.indexOf(getTableColumn());
+                        int ri       = getIndex();
+                        int rc       = table.getItems().size();
+                        String text  = editField.getText();
+                        commitEdit(text);
+                        if (event.isShiftDown()) {
+                            if (ci > 0)      navigateToEdit(ri, editableCols.get(ci - 1));
+                            else if (ri > 0) navigateToEdit(ri - 1, editableCols.get(editableCols.size() - 1));
+                        } else {
+                            if (ci < editableCols.size() - 1) navigateToEdit(ri, editableCols.get(ci + 1));
+                            else if (ri < rc - 1)             navigateToEdit(ri + 1, editableCols.get(0));
                         }
-                        case ENTER -> {
-                            commitEdit(tf.getText());
-                            int ri = getIndex();
-                            if (ri < table.getItems().size() - 1) {
-                                final TableColumn<CsvRow, String> col = getTableColumn();
-                                Platform.runLater(() -> { table.getSelectionModel().select(ri + 1); table.edit(ri + 1, col); });
-                            }
-                            event.consume();
+                        event.consume();
+                    } else if (code == KeyCode.ENTER) {
+                        int ri                          = getIndex();
+                        TableColumn<CsvRow, String> col = getTableColumn();
+                        String text                     = editField.getText();
+                        commitEdit(text);
+                        if (event.isShiftDown()) {
+                            if (ri > 0) navigateToEdit(ri - 1, col);
+                        } else {
+                            if (ri < table.getItems().size() - 1) navigateToEdit(ri + 1, col);
                         }
-                        default -> {}
+                        event.consume();
                     }
+                    // Arrow keys: NOT consumed — TextField handles text-cursor movement normally
                 });
+            }
+
+            @Override
+            public void cancelEdit() {
+                boolean escape = cancelViaEscape;
+                cancelViaEscape = false;
+                if (!escape && editField != null && isEditing()) {
+                    // Clicking away: commit instead of discarding
+                    String text = editField.getText();
+                    editField = null;   // Clear before commitEdit to prevent re-entry
+                    commitEdit(text);
+                } else {
+                    editField = null;
+                    super.cancelEdit();
+                }
             }
 
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
+                if (isEditing()) return;  // Don't disturb the active text field
+                editField = null;
                 getStyleClass().remove("csv-cell-error-col");
                 setGraphic(null);
                 if (!empty && getTableRow() != null
@@ -499,8 +569,22 @@ public final class CsvEditorView {
                     badge.getStyleClass().add("csv-cell-error-badge");
                     setGraphic(badge);
                 }
+                // Double-click to enter edit mode; single-click just selects
+                setOnMouseClicked(empty ? null : event -> {
+                    if (event.getClickCount() == 2) {
+                        table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+                        table.edit(getIndex(), getTableColumn());
+                        event.consume();
+                    }
+                });
             }
         };
+    }
+
+    /** Selects the given cell without entering edit mode. */
+    private static void selectCell(TableView<CsvRow> table, int row, TableColumn<CsvRow, ?> col) {
+        table.getSelectionModel().clearAndSelect(row, col);
+        table.scrollTo(row);
     }
 
     /**
