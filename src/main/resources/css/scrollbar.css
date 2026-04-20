@@ -1,0 +1,38 @@
+/* ── Custom Scrollbar Styling ───────────────────────────────────────────── */
+
+.scroll-bar, .scroll-pane .scroll-bar, .table-view .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical {
+    -fx-pref-width: 8px;
+}
+
+.scroll-bar:horizontal {
+    -fx-pref-height: 8px;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: linear-gradient(to bottom, #1e4080cc, #4a6899cc);
+    -fx-background-radius: 5px;
+    -fx-effect: dropshadow(gaussian, #00000055, 4, 0.2, 0, 0);
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: linear-gradient(to bottom, #f5a201cc, #d48a00cc);
+}
+
+.scroll-bar .track,
+.scroll-bar .track-background {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+    -fx-background-color: #b8cce8;
+    -fx-shape: "M0,0 L0,4 L4,2 Z";
+}

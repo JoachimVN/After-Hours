@@ -6,9 +6,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.DoubleSupplier;
-
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
+import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Exchange;
@@ -60,15 +59,16 @@ public class App extends Application {
     /** Retained so Settings can return to the game without recreating it. */
     private Parent currentGamePage;
     private boolean animationsEnabled = true;
-    private double sfxVolume = 0.5;
+    private SfxController sfxController;
 
     @Override
     public void start(Stage stage) {
         homePageMusicController = new HomePageMusicController(getClass());
+        sfxController = new SfxController(getClass());
 
         homePage = LandingPageView.build(
                 this::goToSetup,
-            () -> { Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); },
+            () -> { sfxController.play(SfxController.SETTINGS); Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); },
             Platform::exit
         );
 
@@ -85,14 +85,15 @@ public class App extends Application {
 
         Scene scene = new Scene(root, AppConfig.DEFAULT_WIDTH, AppConfig.DEFAULT_HEIGHT);
         scene.getStylesheets().addAll(
-                getClass().getResource("/css/base.css").toExternalForm(),
-                getClass().getResource("/css/settings.css").toExternalForm(),
-                getClass().getResource("/css/setup.css").toExternalForm(),
-                getClass().getResource("/css/import-csv.css").toExternalForm(),
-                getClass().getResource("/css/game.css").toExternalForm(),
-                getClass().getResource("/css/dialogs.css").toExternalForm(),
-                getClass().getResource("/css/csv-editor.css").toExternalForm(),
-                getClass().getResource("/css/no-stocks.css").toExternalForm()
+            getClass().getResource("/css/base.css").toExternalForm(),
+            getClass().getResource("/css/settings.css").toExternalForm(),
+            getClass().getResource("/css/setup.css").toExternalForm(),
+            getClass().getResource("/css/import-csv.css").toExternalForm(),
+            getClass().getResource("/css/game.css").toExternalForm(),
+            getClass().getResource("/css/dialogs.css").toExternalForm(),
+            getClass().getResource("/css/csv-editor.css").toExternalForm(),
+            getClass().getResource("/css/no-stocks.css").toExternalForm(),
+            getClass().getResource("/css/scrollbar.css").toExternalForm()
         );
 
         configureStage(stage, scene);
@@ -105,9 +106,13 @@ public class App extends Application {
 
     // ── Navigation targets ────────────────────────────────────────────────────
 
+    private Runnable withBack(Runnable r) {
+        return () -> { sfxController.play(SfxController.BACK); r.run(); };
+    }
+
     private void goToSetup() {
         currentSetupPage = SetupView.build(
-                this::goHomeKeepMusic,
+                withBack(this::goHomeKeepMusic),
                 (name, cash) -> startGame(name, cash),
                 (name, cash) -> goToImportCsv(name, cash)
         );
@@ -116,10 +121,19 @@ public class App extends Application {
     }
 
     private void goToImportCsv(String name, double cash) {
-        navigateKeepMusic(ImportCsvView.build(
-                () -> navigateKeepMusic(currentSetupPage),
-                file -> startGameWithCsv(name, cash, file)
-        ));
+        goToImportCsv(name, cash, null);
+    }
+
+    private void goToImportCsv(String name, double cash, File selectedFile) {
+        Parent importPage = ImportCsvView.build(
+                withBack(() -> navigateKeepMusic(currentSetupPage)),
+                () -> openCsvEditorFromImport(new CsvParseResult(List.of()), name, cash, selectedFile),
+                file -> openCsvEditorFromImport(file, name, cash),
+                file -> startGameWithCsv(name, cash, file),
+                selectedFile
+        );
+        navigateKeepMusic(importPage);
+        fadeInPage(importPage);
     }
 
     private void startGame(String name, double cash) {
@@ -137,6 +151,7 @@ public class App extends Application {
             });
         }, "stock-loader").start();
     }
+
 
     private void startGameWithCsv(String name, double cash, File csvFile) {
         new Thread(() -> {
@@ -156,7 +171,7 @@ public class App extends Application {
             }
             Platform.runLater(() -> {
                 if (result.hasErrors()) {
-                    openCsvEditor(result, name, cash);
+                    openCsvEditorFromImport(result, name, cash, csvFile);
                 } else {
                     List<Stock> stocks = result.getRows().stream()
                             .map(StockCsvLoader::rowToStock)
@@ -170,7 +185,34 @@ public class App extends Application {
     private void openCsvEditor(CsvParseResult result, String name, double cash) {
         Parent editorPage = CsvEditorView.build(
                 result,
-                this::goHomeKeepMusic,
+                withBack(this::goHomeKeepMusic),
+                stocks -> buildAndStartGame(name, cash, stocks, true)
+        );
+        navigateKeepMusic(editorPage);
+        fadeInPage(editorPage);
+    }
+
+    private void openCsvEditorFromImport(File csvFile, String name, double cash) {
+        CsvParseResult result;
+        try {
+            result = StockCsvLoader.parseWithErrors(
+                    new FileReader(csvFile, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("CSV Error");
+            alert.setHeaderText("Could not read file");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+            return;
+        }
+
+        openCsvEditorFromImport(result, name, cash, csvFile);
+    }
+
+    private void openCsvEditorFromImport(CsvParseResult result, String name, double cash, File selectedFile) {
+        Parent editorPage = CsvEditorView.build(
+                result,
+                withBack(() -> goToImportCsv(name, cash, selectedFile)),
                 stocks -> buildAndStartGame(name, cash, stocks, true)
         );
         navigateKeepMusic(editorPage);
@@ -187,32 +229,29 @@ public class App extends Application {
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange("S&P 500", stocks);
         currentGamePage = GameView.build(
-                this::goHome,
-                () -> navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))),
+                withBack(this::goHome),
+                () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); },
                 player,
                 exchange,
-                currentSfxVolumeSupplier()
+                sfxController::getVolume
         );
         navigateToGame(currentGamePage);
-        Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxVolume));
+        Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxController.getVolume()));
     }
 
     private void showNoStocksPage(boolean fromEditor) {
-        Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, this::goHome);
+        Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, withBack(this::goHome));
         navigateToGame(page);
         Platform.runLater(() -> homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
                 "/audio/music/ambience/After_Hours_Ambience3_demo.mp3"));
     }
 
-    private DoubleSupplier currentSfxVolumeSupplier() {
-        return () -> sfxVolume;
-    }
-
     private Parent buildSettingsView(Runnable onBack) {
+        Runnable onBackWithSfx = () -> { sfxController.play(SfxController.BACK); onBack.run(); };
         return SettingsView.build(
-                onBack,
+                onBackWithSfx,
                 homePageMusicController::setVolume, homePageMusicController.getVolume(),
-                v -> sfxVolume = v, sfxVolume,
+                sfxController::setVolume, sfxController.getVolume(),
                 enabled -> {
                     animationsEnabled = enabled;
                     backgroundCanvas.setAnimationsEnabled(enabled);
