@@ -85,8 +85,8 @@ public final class SetupView {
         Label cashLabel = new Label("STARTING CASH");
         cashLabel.getStyleClass().add("setup-field-label");
 
-        double[] presetValues = controller.getPresetValues();
-        String[] presetLabels = controller.getPresetLabels();
+        double[] presetValues = AppConfig.PRESET_CASH_VALUES;
+        String[] presetLabels = AppConfig.PRESET_CASH_LABELS;
 
         ToggleGroup presetGroup = new ToggleGroup();
         HBox presetRow = new HBox(8);
@@ -153,7 +153,7 @@ public final class SetupView {
         // ── Market ComboBox (shown when Default Stocks is active) ─────────────
         ComboBox<MarketOption> marketBox = new ComboBox<>();
         marketBox.getItems().addAll(markets);
-        marketBox.setValue(markets.get(controller.getDefaultMarketIndex()));
+        marketBox.setValue(markets.get(0));
         marketBox.getStyleClass().add("market-combo-box");
         marketBox.setMaxWidth(Double.MAX_VALUE);
         marketBox.setButtonCell(marketCell());
@@ -167,20 +167,29 @@ public final class SetupView {
         marketLabel.getStyleClass().add("setup-field-label");
 
         VBox marketSection = new VBox(6, marketLabel, marketBox);
-        marketSection.setMaxHeight(0);
         marketSection.setMinHeight(0);
 
-        // Clip so content doesn't bleed out during animation
+        // Measure real preferred height regardless of DPI/font/CSS by forcing
+        // a CSS + layout pass before the scene is attached.
+        marketSection.setMaxWidth(580); // approximate card inner width for measurement
+        marketSection.applyCss();
+        marketSection.layout();
+        final double SECTION_PREF = marketSection.prefHeight(-1);
+        marketSection.setMaxWidth(Double.MAX_VALUE);
+
+        // Start expanded (defaultBtn is selected on open)
+        marketSection.setMaxHeight(SECTION_PREF);
+
+        // Clip prevents content bleeding outside the VBox during close animation
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
         clip.widthProperty().bind(marketSection.widthProperty());
-        clip.setHeight(0);
+        clip.setHeight(SECTION_PREF);
         marketSection.setClip(clip);
 
         // Smooth slide open/close when toggling data source
-        final double SECTION_HEIGHT = 74; // label (20) + gap (6) + combobox (44) + gap (4)
         dataGroup.selectedToggleProperty().addListener((obs, old, sel) -> {
             boolean toDefault = (sel == defaultBtn);
-            double target = toDefault ? SECTION_HEIGHT : 0;
+            double target = toDefault ? SECTION_PREF : 0;
             Timeline tl = new Timeline(
                 new KeyFrame(Duration.millis(220),
                     new KeyValue(marketSection.maxHeightProperty(), target,
@@ -190,7 +199,7 @@ public final class SetupView {
             );
             tl.play();
         });
-        // managed drives layout space; follows maxHeight so no gap when collapsed
+        // managed drives layout space; collapses gap when section is hidden
         marketSection.managedProperty().bind(marketSection.maxHeightProperty().greaterThan(0));
 
         VBox dataSection = new VBox(8, dataLabel, dataRow, marketSection);

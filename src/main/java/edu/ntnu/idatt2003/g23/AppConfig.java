@@ -29,6 +29,10 @@ public final class AppConfig {
         new MarketOption("OBX",        "data/stocks/obx.csv",       "25 most liquid stocks on Oslo B\u00f8rs.")
     );
 
+    /** Preset starting-cash options shown on the setup screen. */
+    public static final double[] PRESET_CASH_VALUES = {1_000, 5_000, 10_000, 50_000, 100_000};
+    public static final String[] PRESET_CASH_LABELS = {"$1K", "$5K", "$10K", "$50K", "$100K"};
+
     private AppConfig() {
     }
 }

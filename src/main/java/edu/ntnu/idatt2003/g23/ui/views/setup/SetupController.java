@@ -16,9 +16,6 @@ import edu.ntnu.idatt2003.g23.util.NumberParser;
  */
 public final class SetupController {
 
-    private static final double[] PRESET_VALUES = {1_000, 5_000, 10_000, 50_000, 100_000};
-    private static final String[] PRESET_LABELS = {"$1K", "$5K", "$10K", "$50K", "$100K"};
-
     private final Runnable onBack;
     /** Called when the user starts with a built-in market: (name, cash, csvResourcePath). */
     private final MarketStartHandler onStartDefault;
@@ -67,10 +64,6 @@ public final class SetupController {
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
-
-    public double[] getPresetValues() { return PRESET_VALUES; }
-    public String[] getPresetLabels() { return PRESET_LABELS; }
-    public int getDefaultMarketIndex() { return 0; }
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
