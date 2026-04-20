@@ -14,6 +14,7 @@ import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import static edu.ntnu.idatt2003.g23.ui.util.LabelUtil.labelSmall;
+import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -90,6 +91,8 @@ public final class GameView {
     private FlowPane filterChipsPane;
     private String stockSort;
     private ScrollPane stockScroll;
+    private TxRow highlightedTx = null;
+    private AnimationTimer highlightFadeTimer = null;
 
     private final VBox detailArea;
 
@@ -145,8 +148,12 @@ public final class GameView {
         // Initial stock list population
         applyFilter();
 
-        // Rebuild detail when selection changes
+        // Rebuild detail when selection changes; clear tx highlight when switching to a different stock
         selectedStock.addListener((obs, old, stock) -> {
+            if (highlightedTx != null && (stock == null || !highlightedTx.symbol().equals(stock.getSymbol()))) {
+                highlightedTx = null;
+                if (highlightFadeTimer != null) { highlightFadeTimer.stop(); highlightFadeTimer = null; }
+            }
             rebuildDetail();
         });
 
@@ -1558,6 +1565,45 @@ public final class GameView {
         emptyLbl.getStyleClass().add("market-movers-col-title");
         table.setPlaceholder(emptyLbl);
 
+        // ── Row click: select stock and highlight its dot on the graph ────────
+        Runnable[] dismissRef = {null};
+        table.setRowFactory(tv -> {
+            TableRow<TxRow> row = new TableRow<>() {
+                @Override protected void updateItem(TxRow item, boolean empty) {
+                    super.updateItem(item, empty);
+                    getStyleClass().removeAll("tx-row-buy", "tx-row-sell");
+                    if (!empty && item != null) {
+                        getStyleClass().add(item.isBuy() ? "tx-row-buy" : "tx-row-sell");
+                    }
+                }
+            };
+            row.setOnMouseClicked(ev -> {
+                if (!row.isEmpty() && ev.getClickCount() == 1) {
+                    TxRow tx = row.getItem();
+                    if (dismissRef[0] != null) dismissRef[0].run();
+                    if (highlightFadeTimer != null) { highlightFadeTimer.stop(); highlightFadeTimer = null; }
+                    highlightedTx = tx;
+                    String sym = tx.symbol();
+                    if (filteredStocks.stream().noneMatch(s -> s.getSymbol().equals(sym))) {
+                        searchField.setText("");
+                    }
+                    allStocks.stream()
+                            .filter(s -> s.getSymbol().equals(sym))
+                            .findFirst()
+                            .ifPresent(target -> {
+                                if (target == selectedStock.get()) {
+                                    // Same stock already selected — listener won't fire, force chart rebuild
+                                    rebuildDetail();
+                                } else {
+                                    selectedStock.set(target);
+                                }
+                                focusStockCardInList(sym, stockScroll);
+                            });
+                }
+            });
+            return row;
+        });
+
         // ── Layout ────────────────────────────────────────────────────────────
         Label titleLbl = new Label("\uD83D\uDCCB  Transaction History");
         titleLbl.getStyleClass().add("market-movers-title");
@@ -1617,6 +1663,7 @@ public final class GameView {
                 rootRef.setEffect(null);
             });
         };
+        dismissRef[0] = dismiss;
         closeBtn.setOnAction(ev -> dismiss.run());
         dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
         popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
@@ -1905,6 +1952,9 @@ public final class GameView {
                 .map(s -> new TradeDot(s.getWeek(), s.getShare().getQuantity(), s.getShare().getPurchasePrice(), true))
                 .forEach(tradeDots::add);
 
+        // Fade state for tx highlight (1.0 = fully visible, 0.0 = gone)
+        double[] highlightFade = {highlightedTx != null && highlightedTx.symbol().equals(sym) ? 1.0 : 0.0};
+
         // State for hover crosshair — rebuilt on each draw
         List<double[]> drawnDots = new ArrayList<>();
         double[][] xsRef   = {new double[0]};
@@ -2023,26 +2073,100 @@ public final class GameView {
                 gc.fillText(chipTxt, chipX, chipY + 11);
             }
 
-            // Trade dots — buys first (behind), then sells (on top)
-            for (int pass = 0; pass < 2; pass++) {
-                boolean drawingSells = (pass == 1);
+            // Pre-compute which weeks have buys, sells, or both
+            java.util.Set<Integer> weeksWithBuys  = new java.util.HashSet<>();
+            java.util.Set<Integer> weeksWithSells = new java.util.HashSet<>();
+            for (TradeDot d : tradeDots) {
+                if (d.isSell()) weeksWithSells.add(d.week()); else weeksWithBuys.add(d.week());
+            }
+            java.util.Set<Integer> weeksWithBoth = new java.util.HashSet<>(weeksWithBuys);
+            weeksWithBoth.retainAll(weeksWithSells);
+
+            // Trade dots — one dot per week (merged if both buy+sell that week)
+            java.util.Set<Integer> drawnWeeks = new java.util.HashSet<>();
+            // pass 0 = buy-only, pass 1 = sell-only, pass 2 = mixed (drawn last / on top)
+            for (int pass = 0; pass < 3; pass++) {
                 for (TradeDot dot : tradeDots) {
-                    if (dot.isSell() != drawingSells) continue;
-                    int idx = dot.week() - 1;
+                    int week = dot.week();
+                    int idx = week - 1;
                     if (idx < 0 || idx >= n) continue;
+                    boolean isMixed = weeksWithBoth.contains(week);
+                    if (pass == 0 && (isMixed || dot.isSell())) continue;  // buy-only pass
+                    if (pass == 1 && (isMixed || !dot.isSell())) continue; // sell-only pass
+                    if (pass == 2 && !isMixed) continue;                   // mixed pass
+                    if (!drawnWeeks.add(week)) continue; // already drew this week
                     double dotX = xs[idx], dotY = ys[idx];
-                    if (dot.isSell()) {
+                    if (isMixed) {
+                        // Blended: orange-amber outer halo, split inner (left=buy, right=sell)
+                        gc.setFill(Color.web("#c97a2e", 0.28));
+                        gc.fillOval(dotX - 7, dotY - 7, 14, 14);
+                        // Left half — buy orange
+                        gc.save();
+                        gc.beginPath();
+                        gc.rect(dotX - 10, dotY - 10, 10, 20);
+                        gc.clip();
+                        gc.setFill(Color.web("#f5a201"));
+                        gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        gc.restore();
+                        // Right half — sell red
+                        gc.save();
+                        gc.beginPath();
+                        gc.rect(dotX, dotY - 10, 10, 20);
+                        gc.clip();
+                        gc.setFill(Color.web("#e05a5a"));
+                        gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        gc.restore();
+                        // Thin dividing line
+                        gc.setStroke(Color.web("#060d20", 0.55));
+                        gc.setLineWidth(1);
+                        gc.strokeLine(dotX, dotY - 4, dotX, dotY + 4);
+                        // 2 = mixed sentinel for hit detection
+                        drawnDots.add(new double[]{dotX, dotY, week, 0, 0, 2});
+                    } else if (dot.isSell()) {
                         gc.setFill(Color.web("#e05a5a", 0.28));
                         gc.fillOval(dotX - 7, dotY - 7, 14, 14);
                         gc.setFill(Color.web("#e05a5a"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        drawnDots.add(new double[]{dotX, dotY, week, dot.quantity().doubleValue(), dot.price().doubleValue(), 1});
                     } else {
                         gc.setFill(Color.web("#f5a201", 0.30));
                         gc.fillOval(dotX - 7, dotY - 7, 14, 14);
                         gc.setFill(Color.web("#f5a201"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        drawnDots.add(new double[]{dotX, dotY, week, dot.quantity().doubleValue(), dot.price().doubleValue(), 0});
                     }
-                    drawnDots.add(new double[]{dotX, dotY, dot.week(), dot.quantity().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
+                    // Highlight when selected from transaction history
+                    boolean isHighlighted = highlightedTx != null
+                            && highlightedTx.symbol().equals(sym)
+                            && highlightedTx.week() == week
+                            && (isMixed || highlightedTx.isBuy() != dot.isSell());
+                    if (isHighlighted && highlightFade[0] > 0) {
+                        double fa = highlightFade[0];
+                        String dotColor = isMixed ? "#c97a2e" : (dot.isSell() ? "#e05a5a" : "#f5a201");
+                        gc.setStroke(Color.web(dotColor, 0.22 * fa));
+                        gc.setLineWidth(1);
+                        gc.setLineDashes(3, 4);
+                        gc.strokeLine(dotX, padT + 18, dotX, dotY - 9);
+                        gc.setLineDashes((double[]) null);
+                        gc.setStroke(Color.web(dotColor, 0.12 * fa));
+                        gc.setLineWidth(7);
+                        gc.strokeOval(dotX - 13, dotY - 13, 26, 26);
+                        gc.setStroke(Color.web(dotColor, 0.30 * fa));
+                        gc.setLineWidth(2);
+                        gc.strokeOval(dotX - 9, dotY - 9, 18, 18);
+                        gc.setStroke(Color.web("#ffffff", 0.40 * fa));
+                        gc.setLineWidth(1);
+                        gc.strokeOval(dotX - 6, dotY - 6, 12, 12);
+                        String txLabel = (isMixed ? "BUY/SELL" : (dot.isSell() ? "SELL" : "BUY")) + "  Week " + week;
+                        gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 9));
+                        double tw = txLabel.length() * 5.3;
+                        double chipX = Math.min(dotX + 5, w - tw - 12);
+                        double chipY = padT + 2;
+                        gc.setFill(Color.web("#060d20", 0.75 * fa));
+                        gc.fillRoundRect(chipX - 4, chipY - 2, tw + 8, 13, 5, 5);
+                        gc.setFill(Color.web(dotColor, 0.85 * fa));
+                        gc.fillText(txLabel, chipX, chipY + 9);
+                    }
                 }
             }
 
@@ -2070,27 +2194,56 @@ public final class GameView {
             if (hit != null) {
                 onDot[0]    = true;
                 hoverIdx[0] = -1;
-                final double[] h = hit;
-                boolean isSell = h[5] == 1;
+                int hitWeek = (int) hit[2];
+                List<TradeDot> weekBuys  = tradeDots.stream().filter(d -> d.week() == hitWeek && !d.isSell()).toList();
+                List<TradeDot> weekSells = tradeDots.stream().filter(d -> d.week() == hitWeek && d.isSell()).toList();
                 tooltip.getChildren().clear();
-                Label weekLbl = new Label((isSell ? "Sold" : "Bought") + " · Week " + (int) h[2]);
-                weekLbl.getStyleClass().add(isSell ? "chart-tooltip-sell-week" : "chart-tooltip-week");
-                Label quantityLbl = new Label("Quantity: " + BigDecimal.valueOf(h[3]).stripTrailingZeros().toPlainString());
-                quantityLbl.getStyleClass().add("chart-tooltip-row");
-                Label priceLbl = new Label("Price: " + CurrencyFormatter.format(BigDecimal.valueOf(h[4])));
-                priceLbl.getStyleClass().add("chart-tooltip-row");
-                tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl);
-                if (!isSell) {
-                    BigDecimal gain = stock.getSalesPrice().subtract(BigDecimal.valueOf(h[4]))
-                            .multiply(BigDecimal.valueOf(h[3]));
+                // ── Buys section ──────────────────────────────────────────
+                if (!weekBuys.isEmpty()) {
+                    BigDecimal totalQty = weekBuys.stream().map(TradeDot::quantity)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal avgPrice = weekBuys.stream().map(d -> d.price().multiply(d.quantity()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(totalQty, 4, RoundingMode.HALF_UP);
+                    Label weekLbl = new Label("Bought · Week " + hitWeek + (weekBuys.size() > 1 ? "  ×" + weekBuys.size() : ""));
+                    weekLbl.getStyleClass().add("chart-tooltip-week");
+                    Label quantityLbl = new Label("Quantity: " + totalQty.stripTrailingZeros().toPlainString());
+                    quantityLbl.getStyleClass().add("chart-tooltip-row");
+                    Label priceLbl = new Label((weekBuys.size() > 1 ? "Avg price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
+                    priceLbl.getStyleClass().add("chart-tooltip-row");
+                    BigDecimal gain = stock.getSalesPrice().subtract(avgPrice).multiply(totalQty);
                     String sign = gain.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
                     Label gainLbl = new Label("P&L: " + sign + CurrencyFormatter.format(gain));
                     gainLbl.getStyleClass().add(gain.compareTo(BigDecimal.ZERO) >= 0 ? "chart-tooltip-gain" : "chart-tooltip-loss");
-                    tooltip.getChildren().add(gainLbl);
+                    tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl, gainLbl);
                 }
-                double tx = h[0] + 12, ty = h[1] - 70;
-                if (ty < 4)                    ty = h[1] + 14;
-                if (tx + 150 > pane.getWidth()) tx = h[0] - 155;
+                // ── Divider when both types present ───────────────────────
+                if (!weekBuys.isEmpty() && !weekSells.isEmpty()) {
+                    Region divider = new Region();
+                    divider.setMaxWidth(Double.MAX_VALUE);
+                    divider.setMinHeight(3);
+                    divider.setMaxHeight(3);
+                    divider.setStyle("-fx-background-color:rgba(92, 116, 255, 0.25);");
+                    tooltip.getChildren().add(divider);
+                }
+                // ── Sells section ─────────────────────────────────────────
+                if (!weekSells.isEmpty()) {
+                    BigDecimal totalQty = weekSells.stream().map(TradeDot::quantity)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal avgPrice = weekSells.stream().map(d -> d.price().multiply(d.quantity()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(totalQty, 4, RoundingMode.HALF_UP);
+                    Label weekLbl = new Label("Sold · Week " + hitWeek + (weekSells.size() > 1 ? "  ×" + weekSells.size() : ""));
+                    weekLbl.getStyleClass().add("chart-tooltip-sell-week");
+                    Label quantityLbl = new Label("Quantity: " + totalQty.stripTrailingZeros().toPlainString());
+                    quantityLbl.getStyleClass().add("chart-tooltip-row");
+                    Label priceLbl = new Label((weekSells.size() > 1 ? "Avg price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
+                    priceLbl.getStyleClass().add("chart-tooltip-row");
+                    tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl);
+                }
+                double tx = hit[0] + 12, ty = hit[1] - 70;
+                if (ty < 4)                    ty = hit[1] + 14;
+                if (tx + 150 > pane.getWidth()) tx = hit[0] - 155;
                 tooltip.setLayoutX(tx);
                 tooltip.setLayoutY(ty);
                 tooltip.setVisible(true);
@@ -2120,6 +2273,36 @@ public final class GameView {
 
         canvas.widthProperty().addListener((obs, o, nv) -> drawRef[0].run());
         canvas.heightProperty().addListener((obs, o, nv) -> drawRef[0].run());
+
+        // Start fade timer if this chart has a highlight
+        if (highlightedTx != null && highlightedTx.symbol().equals(sym)) {
+            if (highlightFadeTimer != null) highlightFadeTimer.stop();
+            long[] startNano = {-1};
+            AnimationTimer timer = new AnimationTimer() {
+                @Override public void handle(long now) {
+                    if (startNano[0] < 0) startNano[0] = now;
+                    long elapsed  = now - startNano[0];
+                    long WAIT_NS  = 10_000_000_000L; // 10 s
+                    long FADE_NS  =    800_000_000L; //  0.8 s
+                    if (elapsed >= WAIT_NS + FADE_NS) {
+                        highlightFade[0] = 0.0;
+                        highlightedTx    = null;
+                        highlightFadeTimer = null;
+                        stop();
+                        drawRef[0].run();
+                    } else if (elapsed >= WAIT_NS) {
+                        double t = (elapsed - WAIT_NS) / (double) FADE_NS;
+                        // ease-in curve so fade feels natural
+                        highlightFade[0] = 1.0 - (t * t);
+                        drawRef[0].run();
+                    }
+                    // still in wait window — no redraw needed
+                }
+            };
+            highlightFadeTimer = timer;
+            timer.start();
+        }
+
         Platform.runLater(drawRef[0]);
         return pane;
     }
