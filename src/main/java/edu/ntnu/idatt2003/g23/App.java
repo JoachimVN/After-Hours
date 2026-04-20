@@ -17,6 +17,7 @@ import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
 import edu.ntnu.idatt2003.g23.ui.views.csveditor.CsvEditorView;
 import edu.ntnu.idatt2003.g23.ui.views.nostocks.NoStocksView;
+import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.importcsv.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
@@ -240,7 +241,8 @@ public class App extends Application {
                 name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange(exchangeName, stocks);
-        GameView gameview = new GameView(player, exchange, withBack(this::goHome), () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); }, sfxController::getVolume);
+        GameController gameController = new GameController(player, exchange);
+        GameView gameview = new GameView(gameController, withBack(this::goHome), () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); }, sfxController::getVolume);
         currentGamePage = gameview.getRoot();
         navigateToGame(currentGamePage);
         Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxController.getVolume()));

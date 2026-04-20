@@ -162,4 +162,20 @@ public class Stock {
         }
         return getHistoricalPrices().stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
     }
+
+    /**
+     * Calculates the percentage return over the last {@code weeks} weeks.
+     * Pass a negative value to get the all-time return.
+     * @param weeks number of weeks to look back (negative = all-time)
+     * @return percentage return, or 0 if insufficient price history
+     */
+    public BigDecimal percentageChangeOverWeeks(int weeks) {
+        if (prices.size() < 2) return BigDecimal.ZERO;
+        int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
+        BigDecimal from = prices.get(fromIdx);
+        BigDecimal to   = prices.get(prices.size() - 1);
+        if (from.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+        return to.subtract(from).divide(from, 6, RoundingMode.HALF_UP)
+                 .multiply(BigDecimal.valueOf(100));
+    }
 }

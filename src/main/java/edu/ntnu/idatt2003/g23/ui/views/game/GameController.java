@@ -195,6 +195,51 @@ public final class GameController {
                 preview.get(3));
     }
 
+    // ── Model data accessors (keep view free of direct model references) ─────
+
+    public List<Stock> getStocks() { return exchange.getStocks(); }
+    public String getExchangeName() { return exchange.getName(); }
+    public int getCurrentWeek() { return exchange.getWeek(); }
+    public BigDecimal getPlayerCash() { return player.getMoney(); }
+    public BigDecimal getPortfolioNetWorth() { return player.getPortfolio().getNetWorth(); }
+    public BigDecimal getPlayerNetWorth() { return player.getNetWorth(); }
+    public List<Share> getPortfolioShares() { return player.getPortfolio().getShares(); }
+    public boolean isOwned(String symbol) {
+        return getOwnedQuantity(symbol).compareTo(BigDecimal.ZERO) > 0;
+    }
+    public int maxBuyQuantity(Stock stock) {
+        BigDecimal cost = unitCostWithFee(stock);
+        return player.getMoney().divide(cost, 0, RoundingMode.DOWN).max(BigDecimal.ZERO).intValue();
+    }
+
+    // ── Dev-panel helpers ─────────────────────────────────────────────────────
+
+    public void addCash(BigDecimal amount) { player.addMoney(amount); }
+    public void setCash(BigDecimal amount) {
+        BigDecimal current = player.getMoney();
+        if (amount.compareTo(current) > 0) player.addMoney(amount.subtract(current));
+        else player.withdrawMoney(current.subtract(amount));
+    }
+    public void advanceWeeks(int n) { for (int i = 0; i < n; i++) exchange.advance(); }
+    public void setFrozen(boolean frozen) { exchange.setFrozen(frozen); }
+
+    // ── Chart trade-point data ────────────────────────────────────────────────
+
+    public record StockTradePoint(int week, BigDecimal quantity, BigDecimal price, boolean isSell) {}
+
+    public List<StockTradePoint> getTradePointsForStock(String symbol) {
+        List<StockTradePoint> result = new ArrayList<>();
+        for (var p : player.getTransactionArchive().getAllPurchases()) {
+            if (p.getShare().getStock().getSymbol().equals(symbol))
+                result.add(new StockTradePoint(p.getWeek(), p.getShare().getQuantity(), p.getShare().getPurchasePrice(), false));
+        }
+        for (var s : player.getTransactionArchive().getAllSales()) {
+            if (s.getShare().getStock().getSymbol().equals(symbol))
+                result.add(new StockTradePoint(s.getWeek(), s.getShare().getQuantity(), s.getShare().getPurchasePrice(), true));
+        }
+        return result;
+    }
+
     public List<TxRow> getTransactionHistory() {
         List<TxRow> allTx = new ArrayList<>();
         for (Purchase p : player.getTransactionArchive().getAllPurchases()) {
