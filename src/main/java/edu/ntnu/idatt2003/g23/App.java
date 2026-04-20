@@ -228,13 +228,8 @@ public class App extends Application {
                 name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange("S&P 500", stocks);
-        currentGamePage = GameView.build(
-                withBack(this::goHome),
-                () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); },
-                player,
-                exchange,
-                sfxController::getVolume
-        );
+        GameView gameview = new GameView(player, exchange, withBack(this::goHome), () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); }, sfxController::getVolume);
+        currentGamePage = gameview.getRoot();
         navigateToGame(currentGamePage);
         Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxController.getVolume()));
     }

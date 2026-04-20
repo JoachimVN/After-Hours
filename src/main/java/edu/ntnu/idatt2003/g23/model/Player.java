@@ -149,4 +149,15 @@ public class Player {
     public PlayerStatus getStatus() {
         return status;
     }
+
+    /**
+     * Checks if the player owns any shares of a stock with the given symbol
+     * @param symbol the stock symbol to check
+     * @return true if the player owns any shares of the stock, false otherwise
+     */
+    public boolean ownsStock(String symbol) {
+        return portfolio.getShareBySymbol(symbol)
+            .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
+            .compareTo(BigDecimal.ZERO) > 0;
+    }
 }

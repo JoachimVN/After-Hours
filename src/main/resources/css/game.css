@@ -386,8 +386,8 @@
     -fx-text-fill: #e05a5a;
 }
 
-/* Qty stepper */
-.trade-qty-stepper {
+/* quantity stepper */
+.trade-quantity-stepper {
     -fx-background-color: rgba(5, 12, 32, 0.90);
     -fx-background-radius: 8;
     -fx-border-color: rgba(30, 64, 128, 0.55);
@@ -397,7 +397,7 @@
     -fx-max-width: 420px;
 }
 
-.trade-qty-btn {
+.trade-quantity-btn {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-alignment: center;
@@ -416,7 +416,7 @@
     -fx-cursor: hand;
 }
 
-.trade-qty-btn:hover {
+.trade-quantity-btn:hover {
     -fx-text-fill: #f5a201;
 }
 
@@ -482,7 +482,7 @@
     -fx-text-fill: #f79494;
 }
 
-.trade-qty-field {
+.trade-quantity-field {
     -fx-background-color: transparent;
     -fx-text-fill: #e8d8b0;
     -fx-font-size: 14px;
