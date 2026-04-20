@@ -22,11 +22,14 @@ public final class GameController {
 
     private final Player player;
     private final Exchange exchange;
-    private final GameViewNew view;
+    private GameView view;
 
-    public GameController(Player player, Exchange exchange, GameViewNew view) {
+    public GameController(Player player, Exchange exchange) {
         this.player = player;
         this.exchange = exchange;
+    }
+
+    public void setView(GameView view) {
         this.view = view;
     }
 

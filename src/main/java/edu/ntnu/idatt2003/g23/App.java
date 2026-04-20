@@ -28,9 +28,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 /**
@@ -141,12 +141,9 @@ public class App extends Application {
                 name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange("S&P 500", stocks);
-        currentGamePage = GameView.build(
-                this::goHome,
-                () -> navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))),
-                player,
-                exchange
-        );
+        GameView gameView = new GameView(player, exchange, this::goHome, () -> navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))));
+        currentGamePage = gameView.getRoot();
+
         navigateToGame(currentGamePage);
     }
 
