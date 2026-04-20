@@ -216,7 +216,7 @@ public final class GameView {
         VBox sortRow = new VBox(3, sortLabel, sortChips);
         sortRow.getStyleClass().add("stock-sort-row");
 
-        Label marketTitle = new Label("Market Stocks");
+        Label marketTitle = new Label(exchange.getName());
         marketTitle.getStyleClass().add("game-panel-title");
 
         this.stockScroll = new ScrollPane(stockListBox);
@@ -502,6 +502,7 @@ public final class GameView {
                     filterChipOrder.remove(fromIdx);
                     filterChipOrder.add(toIdx, dragged);
                     rebuildFilterChips();
+                    applyFilter();
                 }
                 ev.setDropCompleted(true);
                 ev.consume();
@@ -540,21 +541,19 @@ public final class GameView {
         };
 
         if (orderedFilters.size() > 1) {
-            // Primary sort: stocks matching more filters (in chip order) come first.
-            // A stock matching filters[0] AND filters[1] scores higher than one
-            // matching only filters[1], which scores higher than only filters[0].
-            // We encode this as a bitmask in reverse-priority order so that
-            // higher bitmask = appears earlier.
+            // Primary sort by group:
+            //   rank 0 = matches ALL active filters (the intersection)
+            //   rank 1 = matches only orderedFilters[0]
+            //   rank 2 = matches only orderedFilters[1]  … etc.
+            // This respects the chip order the user has dragged them into.
             java.util.Comparator<Stock> filterPriority = java.util.Comparator.comparingInt((Stock s) -> {
-                int score = 0;
+                boolean matchesAll = orderedFilters.stream().allMatch(f -> matchesFilter(s, f));
+                if (matchesAll) return 0;
                 for (int i = 0; i < orderedFilters.size(); i++) {
-                    if (matchesFilter(s, orderedFilters.get(i))) {
-                        // bit i set; all-match gives highest score
-                        score |= (1 << i);
-                    }
+                    if (matchesFilter(s, orderedFilters.get(i))) return i + 1;
                 }
-                return score;
-            }).reversed();
+                return orderedFilters.size() + 1; // shouldn't occur (predicate already excluded)
+            });
             sortCmp = filterPriority.thenComparing(sortCmp);
         }
 
@@ -648,18 +647,16 @@ public final class GameView {
         VBox hiBox = new VBox(2, labelSmall("ALL TIME HIGH"), new Label(CurrencyFormatter.format(hi)) {{ getStyleClass().add("stat-hl-value-up"); }});
         VBox loBox = new VBox(2, labelSmall("ALL TIME LOW"),  new Label(CurrencyFormatter.format(lo)) {{ getStyleClass().add("stat-hl-value-down"); }});
 
-        HBox hlRow;
-        if (ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0) {
-            Label ownedBadge = new Label(ownedQtyDetail.stripTrailingZeros().toPlainString() + " owned");
-            ownedBadge.getStyleClass().add("detail-owned-badge");
-            VBox ownedBox = new VBox(2, labelSmall("HOLDING"), ownedBadge);
-            ownedBox.setAlignment(Pos.BOTTOM_RIGHT);
-            Region hlSpacer = new Region();
-            HBox.setHgrow(hlSpacer, Priority.ALWAYS);
-            hlRow = new HBox(24, hiBox, loBox, hlSpacer, ownedBox);
-        } else {
-            hlRow = new HBox(24, hiBox, loBox);
-        }
+        // Always include ownedBox so hlRow height stays constant regardless of ownership
+        Label ownedBadge = new Label(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0
+                ? ownedQtyDetail.stripTrailingZeros().toPlainString() + " owned" : "");
+        ownedBadge.getStyleClass().add("detail-owned-badge");
+        VBox ownedBox = new VBox(2, labelSmall("HOLDING"), ownedBadge);
+        ownedBox.setAlignment(Pos.BOTTOM_RIGHT);
+        ownedBox.setVisible(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0);
+        Region hlSpacer = new Region();
+        HBox.setHgrow(hlSpacer, Priority.ALWAYS);
+        HBox hlRow = new HBox(24, hiBox, loBox, hlSpacer, ownedBox);
 
         // ── quantity stepper: [−] [field] [+] ─────────────────────────────────────
         Button decBtn = new Button("\u2212");

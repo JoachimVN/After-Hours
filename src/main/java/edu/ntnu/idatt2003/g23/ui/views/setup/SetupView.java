@@ -169,35 +169,47 @@ public final class SetupView {
         VBox marketSection = new VBox(6, marketLabel, marketBox);
         marketSection.setMinHeight(0);
 
-        // Measure real preferred height regardless of DPI/font/CSS by forcing
-        // a CSS + layout pass before the scene is attached.
-        marketSection.setMaxWidth(580); // approximate card inner width for measurement
-        marketSection.applyCss();
-        marketSection.layout();
-        final double SECTION_PREF = marketSection.prefHeight(-1);
-        marketSection.setMaxWidth(Double.MAX_VALUE);
+        // SECTION_OPEN only needs to be >= the real preferred height.
+        // maxHeight is a cap, not a forced size — the VBox still lays out at its
+        // natural preferred height, so 500 never adds blank space when open.
+        final double SECTION_OPEN = 500;
+        marketSection.setMaxHeight(SECTION_OPEN);
 
-        // Start expanded (defaultBtn is selected on open)
-        marketSection.setMaxHeight(SECTION_PREF);
-
-        // Clip prevents content bleeding outside the VBox during close animation
+        // Clip controls what's visible during animation.
+        // At SECTION_OPEN the clip is larger than the content so nothing is cut.
+        // Animating to 0 slides the content out of view smoothly.
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
         clip.widthProperty().bind(marketSection.widthProperty());
-        clip.setHeight(SECTION_PREF);
+        clip.setHeight(SECTION_OPEN);
         marketSection.setClip(clip);
 
         // Smooth slide open/close when toggling data source
         dataGroup.selectedToggleProperty().addListener((obs, old, sel) -> {
             boolean toDefault = (sel == defaultBtn);
-            double target = toDefault ? SECTION_PREF : 0;
-            Timeline tl = new Timeline(
-                new KeyFrame(Duration.millis(220),
-                    new KeyValue(marketSection.maxHeightProperty(), target,
+            if (toDefault) {
+                // Opening: read actual content pref height so animation covers exactly the right distance
+                marketSection.setMaxHeight(SECTION_OPEN);
+                marketSection.layout();
+                double to = marketSection.prefHeight(-1);
+                marketSection.setMaxHeight(0);
+                clip.setHeight(0);
+                new Timeline(new KeyFrame(Duration.millis(220),
+                    new KeyValue(marketSection.maxHeightProperty(), to,
                         javafx.animation.Interpolator.EASE_BOTH),
-                    new KeyValue(clip.heightProperty(), target,
-                        javafx.animation.Interpolator.EASE_BOTH))
-            );
-            tl.play();
+                    new KeyValue(clip.heightProperty(), to,
+                        javafx.animation.Interpolator.EASE_BOTH))).play();
+            } else {
+                // Closing: snap maxHeight to actual rendered height first so the
+                // easing covers exactly the right distance every time (not 500→0).
+                double from = marketSection.getHeight();
+                marketSection.setMaxHeight(from);
+                clip.setHeight(from);
+                new Timeline(new KeyFrame(Duration.millis(220),
+                    new KeyValue(marketSection.maxHeightProperty(), 0,
+                        javafx.animation.Interpolator.EASE_BOTH),
+                    new KeyValue(clip.heightProperty(), 0,
+                        javafx.animation.Interpolator.EASE_BOTH))).play();
+            }
         });
         // managed drives layout space; collapses gap when section is hidden
         marketSection.managedProperty().bind(marketSection.maxHeightProperty().greaterThan(0));

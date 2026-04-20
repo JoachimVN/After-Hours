@@ -21,7 +21,6 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.importcsv.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
 import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
-import edu.ntnu.idatt2003.g23.ui.views.setup.MarketStartHandler;
 import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -229,7 +228,7 @@ public class App extends Application {
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor) {
-        buildAndStartGame(name, cash, stocks, fromEditor, "Market");
+        buildAndStartGame(name, cash, stocks, fromEditor, "Imported Market");
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor, String exchangeName) {
