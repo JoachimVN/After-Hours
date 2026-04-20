@@ -7,4 +7,6 @@ public class LabelUtil {
         l.getStyleClass().add("game-stat-key");
         return l;
     }
+
+    
 }
