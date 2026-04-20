@@ -1070,6 +1070,58 @@
     -fx-text-fill: #f5a201;
 }
 
+/* ── Detail panel – fav button (inline with symbol) ─────────────────────── */
+
+.detail-fav-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #666;
+    -fx-font-size: 22px;
+    -fx-cursor: hand;
+    -fx-padding: 0 2 0 2;
+}
+
+.detail-fav-btn:hover {
+    -fx-text-fill: #f5a201;
+}
+
+.detail-fav-btn-active {
+    -fx-text-fill: #f5a201;
+}
+
+/* ── Detail panel – owned badge (next to price) ──────────────────────────── */
+
+.detail-owned-badge {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8ff0b0;
+    -fx-background-color: rgba(30, 158, 74, 0.18);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(46, 184, 92, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 2 8 2 8;
+}
+
+/* ── Market Movers extras ────────────────────────────────────────────────── */
+
+.movers-fav-star {
+    -fx-font-size: 11px;
+    -fx-text-fill: #f5a201;
+}
+
+.movers-owned-label {
+    -fx-font-size: 9px;
+    -fx-text-fill: #7ab8f5;
+    -fx-font-style: italic;
+}
+
+/* ── Filter chip drag indicator ─────────────────────────────────────────── */
+
+.stock-filter-chip-dragging {
+    -fx-opacity: 0.5;
+}
+
 .stock-card-favorited {
     -fx-border-color: rgba(245, 162, 1, 0.35);
 }

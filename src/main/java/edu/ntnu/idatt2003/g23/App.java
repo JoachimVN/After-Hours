@@ -21,6 +21,7 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.importcsv.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
 import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
+import edu.ntnu.idatt2003.g23.ui.views.setup.MarketStartHandler;
 import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -107,15 +108,15 @@ public class App extends Application {
     // ── Navigation targets ────────────────────────────────────────────────────
 
     private Runnable withBack(Runnable r) {
-        return () -> { sfxController.play(SfxController.BACK); r.run(); };
+        return () -> { sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0)); r.run(); };
     }
 
     private void goToSetup() {
-        currentSetupPage = SetupView.build(
+        currentSetupPage = new SetupView(
                 withBack(this::goHomeKeepMusic),
-                (name, cash) -> startGame(name, cash),
+                (name, cash, csvResource) -> startGame(name, cash, csvResource),
                 (name, cash) -> goToImportCsv(name, cash)
-        );
+        ).getRoot();
         navigateKeepMusic(currentSetupPage);
         fadeInPage(currentSetupPage);
     }
@@ -136,9 +137,9 @@ public class App extends Application {
         fadeInPage(importPage);
     }
 
-    private void startGame(String name, double cash) {
+    private void startGame(String name, double cash, String csvResource) {
         new Thread(() -> {
-            CsvParseResult result = StockCsvLoader.loadFromResourceWithErrors("data/stocks/sp500_stocks.csv");
+            CsvParseResult result = StockCsvLoader.loadFromResourceWithErrors(csvResource);
             Platform.runLater(() -> {
                 if (result.hasErrors()) {
                     openCsvEditor(result, name, cash);
@@ -146,10 +147,18 @@ public class App extends Application {
                     List<Stock> stocks = result.getRows().stream()
                             .map(StockCsvLoader::rowToStock)
                             .toList();
-                    buildAndStartGame(name, cash, stocks, false);
+                    String exchangeName = marketName(csvResource);
+                    buildAndStartGame(name, cash, stocks, false, exchangeName);
                 }
             });
         }, "stock-loader").start();
+    }
+
+    private static String marketName(String csvResource) {
+        return AppConfig.BUILT_IN_MARKETS.stream()
+                .filter(m -> m.csvResource().equals(csvResource))
+                .map(m -> m.name())
+                .findFirst().orElse("Market");
     }
 
 
@@ -220,6 +229,10 @@ public class App extends Application {
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor) {
+        buildAndStartGame(name, cash, stocks, fromEditor, "Market");
+    }
+
+    private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor, String exchangeName) {
         if (stocks.isEmpty()) {
             showNoStocksPage(fromEditor);
             return;
@@ -227,7 +240,7 @@ public class App extends Application {
         Player player = new Player(
                 name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
-        Exchange exchange = new Exchange("S&P 500", stocks);
+        Exchange exchange = new Exchange(exchangeName, stocks);
         GameView gameview = new GameView(player, exchange, withBack(this::goHome), () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); }, sfxController::getVolume);
         currentGamePage = gameview.getRoot();
         navigateToGame(currentGamePage);
@@ -242,7 +255,7 @@ public class App extends Application {
     }
 
     private Parent buildSettingsView(Runnable onBack) {
-        Runnable onBackWithSfx = () -> { sfxController.play(SfxController.BACK); onBack.run(); };
+        Runnable onBackWithSfx = () -> { sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0)); onBack.run(); };
         return SettingsView.build(
                 onBackWithSfx,
                 homePageMusicController::setVolume, homePageMusicController.getVolume(),

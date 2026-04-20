@@ -1,0 +1,103 @@
+# Nasdaq 100 Companies by Market Cap
+# Ticker,Name,Price
+
+AAPL,Apple Inc.,276.43
+MSFT,Microsoft,404.68
+NVDA,Nvidia,191.27
+AMZN,Amazon,204.62
+META,Meta Platforms,669.41
+GOOGL,Alphabet Inc. (Class A),311.20
+GOOG,Alphabet Inc. (Class C),311.62
+TSLA,Tesla Inc.,426.52
+AVGO,Broadcom,343.35
+COST,Costco,979.71
+NFLX,Netflix,79.94
+ADBE,Adobe Inc.,258.39
+CMCSA,Comcast,32.53
+PEP,PepsiCo,168.71
+CSCO,Cisco,85.82
+TMUS,T-Mobile US,207.62
+INTC,Intel,47.85
+INTU,Intuit,401.05
+AMGN,Amgen,364.77
+QCOM,Qualcomm,141.90
+TXN,Texas Instruments,226.34
+HON,Honeywell,243.56
+AMAT,Applied Materials,342.19
+PANW,Palo Alto Networks,165.49
+SNPS,Synopsys,433.56
+CDNS,Cadence Design Systems,298.74
+ADI,Analog Devices,336.71
+KLAC,KLA Corporation,1492.27
+LRCX,Lam Research,236.60
+MU,Micron Technology,411.25
+ORCL,Oracle Corporation,157.08
+PDD,PDD Holdings,145.00
+MELI,MercadoLibre,1820.00
+ADP,Automatic Data Processing,217.59
+SBUX,Starbucks,99.03
+BKNG,Booking Holdings,4322.85
+GILD,Gilead Sciences,155.71
+REGN,Regeneron Pharmaceuticals,780.09
+ISRG,Intuitive Surgical,496.14
+MDLZ,Mondelez International,61.45
+CSX,CSX Corporation,41.30
+KDP,Keurig Dr Pepper,29.84
+MAR,Marriott International,360.71
+ABNB,Airbnb,119.56
+CRWD,CrowdStrike,414.94
+TEAM,Atlassian,210.00
+ZS,Zscaler,190.00
+ROST,Ross Stores,192.31
+WDAY,Workday Inc.,145.19
+FTNT,Fortinet,87.72
+ORLY,O'Reilly Auto Parts,93.87
+DXCM,Dexcom,68.19
+MCHP,Microchip Technology,80.90
+PAYX,Paychex,94.49
+CDW,CDW,135.32
+AEP,American Electric Power,122.18
+EXC,Exelon,44.57
+CHTR,Charter Communications,241.08
+LULU,Lululemon Athletica,176.88
+BIIB,Biogen,191.29
+ALGN,Align Technology,197.24
+DOCU,DocuSign,55.00
+OKTA,Okta,90.00
+ZM,Zoom Video Communications,68.00
+NXPI,NXP Semiconductors,249.26
+ON,ON Semiconductor,70.68
+MRVL,Marvell Technology,83.00
+AMD,Advanced Micro Devices,213.00
+FIS,Fidelity National Information Services,48.73
+IDXX,Idexx Laboratories,647.63
+WBD,Warner Bros. Discovery,28.01
+FAST,Fastenal,47.14
+EA,Electronic Arts,201.72
+ADSK,Autodesk,232.93
+VRSK,Verisk Analytics,171.87
+CSGP,CoStar Group,48.09
+GPN,Global Payments,72.67
+SBAC,SBA Communications,190.43
+VRTX,Vertex Pharmaceuticals,459.93
+MNST,Monster Beverage,80.88
+CTAS,Cintas,201.10
+ODFL,Old Dominion,195.74
+SWKS,Skyworks Solutions,63.62
+PCAR,Paccar,129.93
+XEL,Xcel Energy,77.79
+VRSN,Verisign,215.66
+DLTR,Dollar Tree,125.35
+CPRT,Copart,39.73
+GDDY,GoDaddy,91.44
+PTC,PTC Inc.,155.52
+EBAY,eBay,82.95
+NDAQ,Nasdaq Inc.,81.05
+DDOG,Datadog,126.70
+SNOW,Snowflake,165.00
+DASH,DoorDash,175.41
+ROKU,Roku,75.00
+EXPE,Expedia Group,235.08
+ARM,Arm Holdings,120.00
+ENPH,Enphase Energy,110.00
+ETSY,Etsy,85.00

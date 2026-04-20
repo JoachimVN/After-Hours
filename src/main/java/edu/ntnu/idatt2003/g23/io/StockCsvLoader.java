@@ -114,7 +114,7 @@ public final class StockCsvLoader {
      * throwing.  Every non-blank, non-comment data line is returned as a
      * {@link CsvRow}; invalid rows carry a non-empty error message.
      *
-     * @param resourcePath path in resources, e.g. {@code "data/stocks/sp500_stocks.csv"}
+     * @param resourcePath path in resources, e.g. {@code "data/stocks/sp500.csv"}
      * @return parse result containing all rows
      */
     public static CsvParseResult loadFromResourceWithErrors(String resourcePath) {

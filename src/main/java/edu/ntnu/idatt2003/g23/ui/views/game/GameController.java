@@ -82,6 +82,11 @@ public final class GameController {
             .setScale(0, RoundingMode.DOWN).intValue();
     }
 
+    public BigDecimal getOwnedQuantity(String symbol) {
+        return player.getPortfolio().getShareBySymbol(symbol)
+                .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     public void handleNextWeek() {
         exchange.advance();
     }
