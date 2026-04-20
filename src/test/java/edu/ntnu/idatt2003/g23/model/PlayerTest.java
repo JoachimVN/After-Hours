@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -375,6 +376,31 @@ class PlayerTest {
         void testConstructorThrowsOnNegativeStartingMoney() {
             assertThrows(IllegalArgumentException.class,
                 () -> new Player("Alice", new BigDecimal("-1")));
+        }
+    }
+
+    // ── ownsStock ────────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("ownsStock tests")
+    class OwnsStockTests {
+
+        @Test
+        @DisplayName("Returns false when player owns no shares of the stock")
+        void testOwnsStockFalseWhenNoneOwned() {
+            Player player = new Player("Alice", new BigDecimal("10000"));
+            assertFalse(player.ownsStock("AAPL"));
+        }
+
+        @Test
+        @DisplayName("Returns true when player owns shares of the stock")
+        void testOwnsStockTrueWhenOwned() {
+            Player player = new Player("Alice", new BigDecimal("10000"));
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new java.util.ArrayList<>(List.of(new BigDecimal("150"))));
+            Share share = new Share(stock, new BigDecimal("5"), new BigDecimal("150"));
+            player.getPortfolio().addShare(share);
+            assertTrue(player.ownsStock("AAPL"));
         }
     }
 }

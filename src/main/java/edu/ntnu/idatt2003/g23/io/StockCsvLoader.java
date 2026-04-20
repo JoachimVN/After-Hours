@@ -275,7 +275,7 @@ public final class StockCsvLoader {
     /** Parses one line leniently, never throwing — errors go into the returned row. */
     private static CsvRow parseRowLenient(String line, int lineNumber) {
         String[] parts = line.split(",", 3);
-        String symbol  = parts.length > 0 ? parts[0].trim() : "";
+        String symbol  = parts[0].trim();
         String company = parts.length > 1 ? parts[1].trim() : "";
         String prices  = parts.length > 2 ? parts[2].trim() : "";
 

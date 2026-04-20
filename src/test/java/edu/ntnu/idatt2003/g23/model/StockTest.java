@@ -216,4 +216,135 @@ class StockTest {
         assertEquals(new BigDecimal("10.50"), stock.getLatestPriceChange());
     }
 
+    // ── percentageChange ─────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("percentageChange tests")
+    class PercentageChangeTests {
+
+        @Test
+        @DisplayName("Returns zero when only one price exists")
+        void testSinglePrice() {
+            Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
+            assertEquals(0, stock.percentageChange().compareTo(BigDecimal.ZERO));
+        }
+
+        @Test
+        @DisplayName("Returns zero when previous price is zero")
+        void testZeroPreviousPrice() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("0"), new BigDecimal("100"))));
+            assertEquals(0, stock.percentageChange().compareTo(BigDecimal.ZERO));
+        }
+
+        @Test
+        @DisplayName("Calculates correct percentage increase")
+        void testPercentageIncrease() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("100"), new BigDecimal("150"))));
+            assertEquals(0, stock.percentageChange().compareTo(new BigDecimal("50.000000")));
+        }
+
+        @Test
+        @DisplayName("Calculates correct percentage decrease")
+        void testPercentageDecrease() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("200"), new BigDecimal("100"))));
+            assertEquals(0, stock.percentageChange().compareTo(new BigDecimal("-50.000000")));
+        }
+    }
+
+    // ── allTimeHigh ──────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("allTimeHigh tests")
+    class AllTimeHighTests {
+
+        @Test
+        @DisplayName("Returns highest price from list")
+        void testAllTimeHigh() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("80"), new BigDecimal("200"), new BigDecimal("150"))));
+            assertEquals(0, stock.allTimeHigh().compareTo(new BigDecimal("200")));
+        }
+
+        @Test
+        @DisplayName("Returns the only price when single entry")
+        void testAllTimeHighSinglePrice() {
+            Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("99"))));
+            assertEquals(0, stock.allTimeHigh().compareTo(new BigDecimal("99")));
+        }
+    }
+
+    // ── allTimeLow ───────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("allTimeLow tests")
+    class AllTimeLowTests {
+
+        @Test
+        @DisplayName("Returns lowest price from list")
+        void testAllTimeLow() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("80"), new BigDecimal("200"), new BigDecimal("150"))));
+            assertEquals(0, stock.allTimeLow().compareTo(new BigDecimal("80")));
+        }
+
+        @Test
+        @DisplayName("Returns the only price when single entry")
+        void testAllTimeLowSinglePrice() {
+            Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("42"))));
+            assertEquals(0, stock.allTimeLow().compareTo(new BigDecimal("42")));
+        }
+    }
+
+    // ── percentageChangeOverWeeks ─────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("percentageChangeOverWeeks tests")
+    class PercentageChangeOverWeeksTests {
+
+        @Test
+        @DisplayName("Returns zero when fewer than 2 prices exist")
+        void testSinglePrice() {
+            Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
+            assertEquals(0, stock.percentageChangeOverWeeks(4).compareTo(BigDecimal.ZERO));
+        }
+
+        @Test
+        @DisplayName("Negative weeks uses all-time start")
+        void testNegativeWeeksUsesAllTime() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("100"), new BigDecimal("120"), new BigDecimal("150"))));
+            // all-time: from 100 to 150 = +50%
+            assertEquals(0, stock.percentageChangeOverWeeks(-1).compareTo(new BigDecimal("50.000000")));
+        }
+
+        @Test
+        @DisplayName("Specific weeks window calculated correctly")
+        void testSpecificWeeks() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("100"), new BigDecimal("120"), new BigDecimal("150"))));
+            // 1 week back: from 120 to 150 = +25%
+            assertEquals(0, stock.percentageChangeOverWeeks(1).compareTo(new BigDecimal("25.000000")));
+        }
+
+        @Test
+        @DisplayName("Returns zero when from-price is zero")
+        void testZeroFromPrice() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("0"), new BigDecimal("100"))));
+            assertEquals(0, stock.percentageChangeOverWeeks(-1).compareTo(BigDecimal.ZERO));
+        }
+
+        @Test
+        @DisplayName("Clamps to index 0 when weeks exceed history length")
+        void testWeeksExceedHistory() {
+            Stock stock = new Stock("AAPL", "Apple Inc.",
+                    new ArrayList<>(List.of(new BigDecimal("100"), new BigDecimal("150"))));
+            // 100 weeks back, but only 2 prices — clamps to index 0
+            assertEquals(0, stock.percentageChangeOverWeeks(100).compareTo(new BigDecimal("50.000000")));
+        }
+    }
+
 }
