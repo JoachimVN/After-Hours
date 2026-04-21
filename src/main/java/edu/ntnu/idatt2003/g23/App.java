@@ -87,6 +87,7 @@ public class App extends Application {
     private boolean devModeEnabled    = false;
     private boolean autosaveEnabled   = false;
     private boolean autosaveToast     = true;
+    private String  currentAutosaveId = null;   // unique per game instance
     private boolean fullscreenEnabled = false;
     private double  musicVolume       = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
     private double  sfxVolume         = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
@@ -365,6 +366,17 @@ public class App extends Application {
         currentPlayer   = player;
         currentExchange = exchange;
         currentSavePath = savePath;
+        // Each game instance gets a distinct autosave slot:
+        //  • loaded saves  → use the existing save folder name
+        //  • new games     → use playerName + start timestamp
+        if (savePath != null) {
+            currentAutosaveId = savePath.getFileName().toString();
+        } else {
+            String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
+            currentAutosaveId = safeName + "_"
+                    + java.time.LocalDateTime.now().format(
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        }
         GameController gameController = new GameController(player, exchange);
         GameView gameview = new GameView(gameController, withBack(this::goHome),
                 () -> {
@@ -401,7 +413,7 @@ public class App extends Application {
         if (currentPlayer == null || currentExchange == null) return;
         GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
         try {
-            GameSaveExporter.autosave(currentPlayer, currentExchange, uiState);
+            GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId);
             if (autosaveToast) showTimedNotification("Autosaved", "Progress autosaved.", true);
         } catch (IOException e) {
             showAppNotification("Autosave Failed", "Could not autosave:\n" + e.getMessage(), false);

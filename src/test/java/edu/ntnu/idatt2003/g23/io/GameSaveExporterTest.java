@@ -111,6 +111,54 @@ class GameSaveExporterTest {
         assertEquals(0, new BigDecimal("1500").compareTo(savedMoney));
     }
 
+    // ─── autosave ─────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("autosave creates save.json in AUTOSAVE_DIR/<slot>")
+    void autosaveCreatesSaveJson() throws IOException {
+        Path autosaveDir = GameSaveExporter.autosave(player, exchange, null, "test_slot_abc");
+        assertTrue(Files.exists(autosaveDir.resolve("save.json")));
+        // cleanup
+        Files.walk(autosaveDir).sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+            try { Files.delete(p); } catch (IOException ignored) {}
+        });
+    }
+
+    @Test
+    @DisplayName("Two different slot IDs produce two separate autosave directories")
+    void autosaveDifferentSlotsAreSeparate() throws IOException {
+        Path dir1 = GameSaveExporter.autosave(player, exchange, null, "slot_one");
+        Path dir2 = GameSaveExporter.autosave(player, exchange, null, "slot_two");
+
+        assertNotEquals(dir1, dir2);
+        assertTrue(Files.exists(dir1));
+        assertTrue(Files.exists(dir2));
+
+        // cleanup
+        for (Path d : new Path[]{dir1, dir2}) {
+            Files.walk(d).sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try { Files.delete(p); } catch (IOException ignored) {}
+            });
+        }
+    }
+
+    @Test
+    @DisplayName("Autosaving with the same slot ID overwrites (does not create new folder)")
+    void autosaveSameSlotOverwrites() throws IOException {
+        GameSaveExporter.autosave(player, exchange, null, "my_slot");
+        player.addMoney(new BigDecimal("200"));
+        Path dir = GameSaveExporter.autosave(player, exchange, null, "my_slot");
+
+        String content = Files.readString(dir.resolve("save.json"), java.nio.charset.StandardCharsets.UTF_8);
+        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(content).getAsJsonObject();
+        assertEquals(0, new BigDecimal("1200").compareTo(new BigDecimal(json.get("money").getAsString())));
+
+        // cleanup
+        Files.walk(dir).sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+            try { Files.delete(p); } catch (IOException ignored) {}
+        });
+    }
+
     // ─── Private constructor ──────────────────────────────────────────────────
 
     @Test

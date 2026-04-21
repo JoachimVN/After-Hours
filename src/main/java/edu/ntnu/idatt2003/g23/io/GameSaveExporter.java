@@ -98,13 +98,17 @@ public final class GameSaveExporter {
     }
 
     /**
-     * Saves to the autosave slot for this player. Always overwrites any
-     * previous autosave (never touches manual save folders under SAVES_DIR).
+     * Saves to the autosave slot identified by {@code slotId}. Each game instance
+     * should supply a distinct slot ID so that different sessions never overwrite
+     * each other's autosave (e.g. two "Alice" games started independently each
+     * keep their own slot).
+     *
+     * @param slotId unique identifier for this game instance (caller-supplied)
      */
-    public static Path autosave(Player player, Exchange exchange, GameUiState uiState)
-            throws IOException {
-        String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
-        String folderName = "autosave_" + safeName;
+    public static Path autosave(Player player, Exchange exchange, GameUiState uiState,
+                                String slotId) throws IOException {
+        String safeSlot = slotId.replaceAll("[^A-Za-z0-9_\\-]", "_");
+        String folderName = "autosave_" + safeSlot;
         Path saveDir = AUTOSAVE_DIR.resolve(folderName);
         Files.createDirectories(saveDir);
         writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, true);
