@@ -374,6 +374,7 @@ public final class SettingsView {
         // ── Card ────────────────────────────────────────────────────────────────────
         Label title = new Label("\u2328  Keyboard Shortcuts");
         title.getStyleClass().add("keybind-popup-title");
+        title.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(title, Priority.ALWAYS);
 
         Button closeBtn = new Button("\u2715");

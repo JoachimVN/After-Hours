@@ -43,6 +43,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -108,8 +109,11 @@ public class App extends Application {
         animationsEnabled = gs.animations();
         musicMuted        = gs.musicMuted();
         sfxMuted          = gs.sfxMuted();
+        devModeEnabled    = gs.devMode();
         autosaveEnabled   = gs.autosave();
         autosaveToast     = gs.autosaveToast();
+        fullscreenEnabled = gs.fullscreen();
+        AppConfig.DEV_MODE.set(gs.devMode());
 
         primaryStage = stage;
 
@@ -146,6 +150,7 @@ public class App extends Application {
 
         configureStage(stage, scene);
         if (fullscreenEnabled) stage.setFullScreen(true);
+        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
         stage.show();
 
         homePageMusicController.play(
@@ -406,37 +411,29 @@ public class App extends Application {
             navigateKeepMusic(buildSettingsView(onBack, onSave));
         };
         return SettingsView.build(
-        onBackWithSfx,
-        primaryStage,
-
-        vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
-        musicVolume,
-        musicMuted,
-        muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
-
-        vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
-        sfxVolume,
-        sfxMuted,
-        muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
-
-        enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
-        animationsEnabled,
-
-        fullscreenEnabled,
-        enabled -> { fullscreenEnabled = enabled; primaryStage.setFullScreen(enabled); },
-
-        enabled -> { devModeEnabled = enabled; saveSettings(); },
-        devModeEnabled,
-
-        enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
-        autosaveEnabled,
-
-        enabled -> { autosaveToast = enabled; saveSettings(); },
-        autosaveToast,
-
-        currentSavePath,
-        onResetAll,
-        onSave
+                onBackWithSfx,
+                primaryStage,
+                vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
+                musicVolume,
+                musicMuted,
+                muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
+                vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
+                sfxVolume,
+                sfxMuted,
+                muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
+                enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
+                animationsEnabled,
+                fullscreenEnabled,
+                enabled -> { fullscreenEnabled = enabled; saveSettings(); },
+                enabled -> { devModeEnabled = enabled; saveSettings(); },
+                devModeEnabled,
+                enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
+                autosaveEnabled,
+                enabled -> { autosaveToast = enabled; saveSettings(); },
+                autosaveToast,
+                currentSavePath,
+                onResetAll,
+                onSave
         );
     }
 
@@ -447,8 +444,10 @@ public class App extends Application {
                 animationsEnabled,
                 musicMuted,
                 sfxMuted,
+                devModeEnabled,
                 autosaveEnabled,
-                autosaveToast));
+                autosaveToast,
+                fullscreenEnabled));
     }
 
     // ── Music-aware navigation primitives ────────────────────────────────────

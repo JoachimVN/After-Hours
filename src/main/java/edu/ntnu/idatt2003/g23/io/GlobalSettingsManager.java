@@ -13,16 +13,16 @@ import java.nio.file.Path;
  * Loads and saves global (cross-game) settings to
  * {@code ~/.afterhours/settings.json}.
  *
- * Only the following fields are persisted:
- *   - musicVolume (0.0–1.0)
- *   - sfxVolume   (0.0–1.0)
+ * Persisted fields:
+ *   - musicVolume
+ *   - sfxVolume
  *   - animations
  *   - musicMuted
  *   - sfxMuted
  *   - autosave
  *   - autosaveToast
- *
- * fullscreen + devMode have defaults but are NOT saved or loaded.
+ *   - fullscreen
+ *   - devMode
  */
 public final class GlobalSettingsManager {
 
@@ -37,13 +37,13 @@ public final class GlobalSettingsManager {
     public static final boolean DEFAULT_ANIMATIONS      = true;
     public static final boolean DEFAULT_MUSIC_MUTED     = false;
     public static final boolean DEFAULT_SFX_MUTED       = false;
-    public static final boolean DEFAULT_DEV_MODE        = false;   // runtime only
+    public static final boolean DEFAULT_DEV_MODE        = false;
     public static final boolean DEFAULT_AUTOSAVE        = false;
     public static final boolean DEFAULT_AUTOSAVE_TOAST  = true;
-    public static final boolean DEFAULT_FULLSCREEN      = false;   // runtime only
+    public static final boolean DEFAULT_FULLSCREEN      = false;
 
     /**
-     * Only the fields that are actually persisted.
+     * All persisted fields.
      */
     public record Settings(
             double  musicVolume,
@@ -52,7 +52,9 @@ public final class GlobalSettingsManager {
             boolean musicMuted,
             boolean sfxMuted,
             boolean autosave,
-            boolean autosaveToast
+            boolean autosaveToast,
+            boolean fullscreen,
+            boolean devMode
     ) {}
 
     private GlobalSettingsManager() {}
@@ -74,6 +76,8 @@ public final class GlobalSettingsManager {
             boolean sfxMuted      = obj.has("sfxMuted")       && obj.get("sfxMuted").getAsBoolean();
             boolean autosave      = obj.has("autosave")       && obj.get("autosave").getAsBoolean();
             boolean autosaveToast = !obj.has("autosaveToast") || obj.get("autosaveToast").getAsBoolean();
+            boolean fullscreen    = obj.has("fullscreen")     && obj.get("fullscreen").getAsBoolean();
+            boolean devMode       = obj.has("devMode")        && obj.get("devMode").getAsBoolean();
 
             return new Settings(
                     clamp(music),
@@ -82,7 +86,9 @@ public final class GlobalSettingsManager {
                     musicMuted,
                     sfxMuted,
                     autosave,
-                    autosaveToast
+                    autosaveToast,
+                    fullscreen,
+                    devMode
             );
 
         } catch (Exception e) {
@@ -91,8 +97,7 @@ public final class GlobalSettingsManager {
     }
 
     /**
-     * Persists settings to disk. Silently ignores IO errors.
-     * fullscreen + devMode are intentionally NOT saved.
+     * Persists settings to disk.
      */
     public static void save(Settings s) {
         try {
@@ -106,13 +111,15 @@ public final class GlobalSettingsManager {
             obj.addProperty("sfxMuted",       s.sfxMuted());
             obj.addProperty("autosave",       s.autosave());
             obj.addProperty("autosaveToast",  s.autosaveToast());
+            obj.addProperty("fullscreen",     s.fullscreen());
+            obj.addProperty("devMode",        s.devMode());
 
             Files.writeString(SETTINGS_FILE, GSON.toJson(obj), StandardCharsets.UTF_8);
         } catch (IOException ignored) {}
     }
 
     /**
-     * Defaults for persistent fields only.
+     * Defaults for all fields.
      */
     private static Settings defaults() {
         return new Settings(
@@ -122,7 +129,9 @@ public final class GlobalSettingsManager {
                 DEFAULT_MUSIC_MUTED,
                 DEFAULT_SFX_MUTED,
                 DEFAULT_AUTOSAVE,
-                DEFAULT_AUTOSAVE_TOAST
+                DEFAULT_AUTOSAVE_TOAST,
+                DEFAULT_FULLSCREEN,
+                DEFAULT_DEV_MODE
         );
     }
 

@@ -26,9 +26,9 @@
     -fx-padding: 0 0 1 0;
 }
 
-.settings-section-sep {
-    -fx-background-color: rgba(30, 58, 110, 0.28);
-    -fx-pref-height: 1;
+.settings-section-sep .line {
+    -fx-border-color: rgba(30, 58, 110, 0.75);
+    -fx-border-width: 0 0 1 0; /* horizontal line */
 }
 
 /* ── Labels ──────────────────────────────────────────────────────────────── */
@@ -125,6 +125,7 @@
     -fx-border-radius: 20;
     -fx-background-radius: 20;
     -fx-cursor: hand;
+}
 
 .settings-combo .arrow-button {
     -fx-background-color: transparent;
