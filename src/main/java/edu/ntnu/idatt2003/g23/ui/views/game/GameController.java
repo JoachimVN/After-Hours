@@ -162,7 +162,7 @@ public final class GameController {
         BigDecimal fee   = gross.multiply(new BigDecimal("0.005"));
         BigDecimal total = gross.add(fee);
         view.showTradeConfirm("BUY", stock, quantity, gross, fee, BigDecimal.ZERO, total);
-    };
+    }
 
     public void executeBuy(Stock stock, BigDecimal quantity, BigDecimal total, BigDecimal fee) {
             try {
@@ -173,7 +173,7 @@ public final class GameController {
             } catch (Exception ex) { 
                 view.showError(ex.getMessage()); 
             }
-    };
+    }
 
     public void handleSellAll(StackPane overlay) {
         BigDecimal totalOwnedquantity = player.getPortfolio().getShares().stream()

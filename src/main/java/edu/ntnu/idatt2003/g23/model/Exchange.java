@@ -100,6 +100,15 @@ public class Exchange {
     }
 
     /**
+     * Directly sets the current week. Used when restoring a saved game.
+     * @param week the week number to restore
+     */
+    public void setWeek(int week) {
+        if (week < 1) throw new IllegalArgumentException("Week must be positive");
+        this.week = week;
+    }
+
+    /**
      * Checks if stock with the given symbol exists on the exchange.
      * @param symbol of the stock to check
      * @return true if stock exists, false otherwise

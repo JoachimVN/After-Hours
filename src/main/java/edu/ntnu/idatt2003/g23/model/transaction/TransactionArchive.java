@@ -116,4 +116,12 @@ public class TransactionArchive {
                 .distinct()
                 .count();
     }
+
+    /**
+     * Returns all transactions in the archive.
+     * @return unmodifiable view of all transactions
+     */
+    public List<Transaction> getAll() {
+        return List.copyOf(transactions);
+    }
 }

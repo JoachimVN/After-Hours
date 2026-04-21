@@ -39,3 +39,218 @@
     -fx-background-color: #f5a201;
     -fx-text-fill: #07091f;
 }
+
+/* ── Save Game button (Settings page, in-game only) ────────────────────── */
+
+.save-game-button {
+    -fx-background-color: #1a6e2e;
+    -fx-text-fill: white;
+    -fx-font-size: 14;
+    -fx-background-radius: 6;
+    -fx-padding: 10 16 10 16;
+}
+
+.save-game-button:hover {
+    -fx-background-color: #25963f;
+}
+
+/* ── Save-select screen cards ───────────────────────────────────────────── */
+
+.save-card {
+    -fx-background-color: rgba(7, 9, 31, 0.75);
+    -fx-border-color: #1e3a6e;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0, 0, 3);
+    -fx-max-width: 700;
+}
+
+.resume-card {
+    -fx-border-color: #f5a201;
+    -fx-background-color: rgba(30, 20, 5, 0.85);
+}
+
+.save-card-title {
+    -fx-font-family: "Sans Serif Collection";
+    -fx-font-size: 22;
+    -fx-text-fill: #f5a201;
+}
+
+.save-card-detail {
+    -fx-font-size: 14;
+    -fx-text-fill: #c8d8f0;
+}
+
+.save-card-networth {
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.save-card-date {
+    -fx-font-size: 12;
+    -fx-text-fill: #6080b0;
+}
+
+.save-load-button {
+    -fx-background-color: #1a6e2e;
+    -fx-text-fill: white;
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-padding: 9 18 9 18;
+    -fx-cursor: hand;
+}
+
+.save-load-button:hover {
+    -fx-background-color: #25963f;
+}
+
+.save-delete-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e05a5a;
+    -fx-font-size: 13;
+    -fx-background-radius: 6;
+    -fx-border-color: #6e1a1a;
+    -fx-border-radius: 6;
+    -fx-border-width: 1.5;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+}
+
+.save-delete-button:hover {
+    -fx-background-color: rgba(110, 26, 26, 0.35);
+    -fx-border-color: #963f3f;
+    -fx-text-fill: #f07070;
+}
+
+.save-rename-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8ab4d8;
+    -fx-font-size: 13;
+    -fx-background-radius: 6;
+    -fx-border-color: #2a4a7e;
+    -fx-border-radius: 6;
+    -fx-border-width: 1.5;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+}
+
+.save-rename-button:hover {
+    -fx-background-color: rgba(42, 74, 126, 0.35);
+    -fx-border-color: #4a7aae;
+    -fx-text-fill: #b0d0f0;
+}
+
+.new-game-button {
+    -fx-font-size: 16;
+    -fx-padding: 14 32 14 32;
+}
+
+/* Mute toggle: when selected (muted) show red tint */
+.settings-mute-toggle:selected {
+    -fx-background-color: #6e1a1a;
+    -fx-text-fill: #f07070;
+    -fx-border-color: #963f3f;
+}
+
+.settings-mute-toggle:selected:hover {
+    -fx-background-color: #963f3f;
+}
+
+/* Text field inside rename popup */
+.save-rename-field {
+    -fx-background-color: #0a1030;
+    -fx-text-fill: #c8d8ee;
+    -fx-prompt-text-fill: #4a6899;
+    -fx-border-color: #1e3a6e;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 7 10 7 10;
+    -fx-font-size: 13;
+}
+
+.save-rename-field:focused {
+    -fx-border-color: #f5a201;
+}
+
+/* ── Native JavaFX dialogs (Rename / Delete / Error popups) ─────────────── */
+
+.dialog-pane {
+    -fx-background-color: #07091f;
+    -fx-border-color: #1e3a6e;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.dialog-pane > .header-panel {
+    -fx-background-color: rgba(5, 10, 28, 0.98);
+    -fx-border-color: rgba(30, 64, 128, 0.35);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 16 22 14 22;
+}
+
+.dialog-pane > .header-panel > .label {
+    -fx-text-fill: #c8d8ee;
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane > .content {
+    -fx-background-color: #07091f;
+    -fx-padding: 16 22 8 22;
+}
+
+.dialog-pane > .content.label {
+    -fx-text-fill: #c8d8ee;
+    -fx-font-size: 13;
+}
+
+.dialog-pane .text-field {
+    -fx-background-color: #0a1030;
+    -fx-text-fill: #c8d8ee;
+    -fx-prompt-text-fill: #4a6899;
+    -fx-border-color: #1e3a6e;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 6 10 6 10;
+}
+
+.dialog-pane .text-field:focused {
+    -fx-border-color: #f5a201;
+}
+
+.dialog-pane .button-bar {
+    -fx-background-color: rgba(5, 7, 20, 0.98);
+    -fx-padding: 10 18 10 18;
+    -fx-border-color: rgba(30, 64, 128, 0.20) transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.dialog-pane .button-bar .button {
+    -fx-background-color: #0f2d5e;
+    -fx-text-fill: #f5a201;
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 6 18 6 18;
+    -fx-cursor: hand;
+}
+
+.dialog-pane .button-bar .button:hover {
+    -fx-background-color: #1e4080;
+}
+
+.dialog-pane .button-bar .button:default {
+    -fx-background-color: #1a6e2e;
+    -fx-text-fill: white;
+    -fx-border-color: rgba(46, 184, 92, 0.50);
+}
+
+.dialog-pane .button-bar .button:default:hover {
+    -fx-background-color: #25963f;
+}

@@ -189,3 +189,38 @@
 .dialog-confirm-sell-btn:hover {
     -fx-background-color: linear-gradient(to bottom, #9e2222, #7a1c1c);
 }
+
+/* ── App-level notification overlays (Game Saved / CSV errors) ───────────── */
+
+.app-success-root {
+    -fx-background-color: #060f0a;
+    -fx-border-color: #1e9e4a;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(30, 158, 74, 0.45), 14, 0.2, 0, 0);
+}
+
+.app-success-header {
+    -fx-background-color: rgba(8, 28, 16, 0.98);
+    -fx-padding: 18 22 14 22;
+    -fx-border-color: rgba(46, 184, 92, 0.30);
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-success-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7adda0;
+}
+
+.app-success-body {
+    -fx-background-color: #060c08;
+    -fx-padding: 16 22 16 22;
+}
+
+.app-success-message {
+    -fx-font-size: 13px;
+    -fx-text-fill: #b8e8c8;
+    -fx-wrap-text: true;
+}

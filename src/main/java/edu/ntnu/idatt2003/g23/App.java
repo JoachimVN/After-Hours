@@ -8,6 +8,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.audio.SfxController;
+import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
+import edu.ntnu.idatt2003.g23.io.GameUiState;
+import edu.ntnu.idatt2003.g23.io.GlobalSettingsManager;
+import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectController;
+import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectView;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Exchange;
@@ -25,13 +30,24 @@ import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
 import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.scene.text.Font;
@@ -59,17 +75,45 @@ public class App extends Application {
     private Parent currentSetupPage;
     /** Retained so Settings can return to the game without recreating it. */
     private Parent currentGamePage;
+    /** Save folder of the currently loaded save; null for a new game. */
+    private java.nio.file.Path currentSavePath;
+    /** The active player and exchange (needed for in-game save). */
+    private Player  currentPlayer;
+    private Exchange currentExchange;
     private boolean animationsEnabled = true;
+    private boolean musicMuted        = false;
+    private boolean sfxMuted          = false;
+    private boolean devModeEnabled    = false;
+    private boolean autosaveEnabled   = false;
+    private boolean autosaveToast     = true;
+    private double  musicVolume       = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
+    private double  sfxVolume         = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
+    private Timeline autosaveTimer;
     private SfxController sfxController;
+    private GameView currentGameView;
+    private GameUiState currentUiState;
 
     @Override
     public void start(Stage stage) {
         homePageMusicController = new HomePageMusicController(getClass());
         sfxController = new SfxController(getClass());
 
+        GlobalSettingsManager.Settings gs = GlobalSettingsManager.load();
+        musicVolume       = gs.musicVolume();
+        sfxVolume         = gs.sfxVolume();
+        homePageMusicController.setVolume(gs.musicMuted() ? 0.0 : musicVolume);
+        sfxController.setVolume(gs.sfxMuted() ? 0.0 : sfxVolume);
+        animationsEnabled = gs.animations();
+        musicMuted        = gs.musicMuted();
+        sfxMuted          = gs.sfxMuted();
+        devModeEnabled    = gs.devMode();
+        autosaveEnabled   = gs.autosave();
+        autosaveToast     = gs.autosaveToast();
+        AppConfig.DEV_MODE.set(gs.devMode());
+
         homePage = LandingPageView.build(
-                this::goToSetup,
-            () -> { sfxController.play(SfxController.SETTINGS); Parent s = buildSettingsView(this::goHomeKeepMusic); navigateKeepMusic(s); fadeInPage(s); },
+                this::goToSaveSelect,
+            () -> { sfxController.play(SfxController.SETTINGS); Parent s = buildSettingsView(this::goHomeKeepMusic, null); navigateKeepMusic(s); fadeInPage(s); },
             Platform::exit
         );
 
@@ -111,7 +155,35 @@ public class App extends Application {
         return () -> { sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0)); r.run(); };
     }
 
+    private void goToSaveSelect() {
+        SaveSelectController ctrl = new SaveSelectController(
+                this::goToSetup,
+                withBack(this::goHomeKeepMusic),
+                this::loadFromSave,
+                currentPlayer,
+                currentExchange,
+                currentSavePath,
+                currentUiState
+        );
+        Parent saveSelectPage = new SaveSelectView(ctrl).getRoot();
+        navigateKeepMusic(saveSelectPage);
+        fadeInPage(saveSelectPage);
+    }
+
+    private void loadFromSave(Object[] data) {
+        Player player    = (Player)   data[0];
+        Exchange exchange = (Exchange) data[1];
+        java.nio.file.Path savePath = (java.nio.file.Path) data[2];
+        GameUiState uiState = data.length > 3 ? (GameUiState) data[3] : null;
+        buildAndStartGameFromSave(player, exchange, savePath, uiState);
+    }
+
     private void goToSetup() {
+        // Starting a new game — clear the in-memory session
+        currentPlayer   = null;
+        currentExchange = null;
+        currentSavePath = null;
+        currentUiState  = null;
         currentSetupPage = new SetupView(
                 withBack(this::goHomeKeepMusic),
                 (name, cash, csvResource) -> startGame(name, cash, csvResource),
@@ -169,13 +241,8 @@ public class App extends Application {
                 result = StockCsvLoader.parseWithErrors(
                         new FileReader(csvFile, StandardCharsets.UTF_8));
             } catch (IOException e) {
-                Platform.runLater(() -> {
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("CSV Error");
-                    alert.setHeaderText("Could not read file");
-                    alert.setContentText(e.getMessage());
-                    alert.showAndWait();
-                });
+                Platform.runLater(() -> showAppNotification(
+                        "CSV Error", "Could not read file:\n" + e.getMessage(), false));
                 return;
             }
             Platform.runLater(() -> {
@@ -185,7 +252,7 @@ public class App extends Application {
                     List<Stock> stocks = result.getRows().stream()
                             .map(StockCsvLoader::rowToStock)
                             .toList();
-                    buildAndStartGame(name, cash, stocks, false);
+                    buildAndStartGame(name, cash, stocks, false, "Custom Market");
                 }
             });
         }, "stock-loader").start();
@@ -195,7 +262,7 @@ public class App extends Application {
         Parent editorPage = CsvEditorView.build(
                 result,
                 withBack(this::goHomeKeepMusic),
-                stocks -> buildAndStartGame(name, cash, stocks, true)
+                stocks -> buildAndStartGame(name, cash, stocks, true, "Custom Market")
         );
         navigateKeepMusic(editorPage);
         fadeInPage(editorPage);
@@ -207,11 +274,7 @@ public class App extends Application {
             result = StockCsvLoader.parseWithErrors(
                     new FileReader(csvFile, StandardCharsets.UTF_8));
         } catch (IOException e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("CSV Error");
-            alert.setHeaderText("Could not read file");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
+            showAppNotification("CSV Error", "Could not read file:\n" + e.getMessage(), false);
             return;
         }
 
@@ -222,14 +285,14 @@ public class App extends Application {
         Parent editorPage = CsvEditorView.build(
                 result,
                 withBack(() -> goToImportCsv(name, cash, selectedFile)),
-                stocks -> buildAndStartGame(name, cash, stocks, true)
+                stocks -> buildAndStartGame(name, cash, stocks, true, "Custom Market")
         );
         navigateKeepMusic(editorPage);
         fadeInPage(editorPage);
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor) {
-        buildAndStartGame(name, cash, stocks, fromEditor, "Imported Market");
+        buildAndStartGame(name, cash, stocks, fromEditor, "Custom Market");
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor, String exchangeName) {
@@ -238,14 +301,75 @@ public class App extends Application {
             return;
         }
         Player player = new Player(
-                name == null || name.isBlank() ? "Player" : name,
+                name == null || name.isBlank()
+                    ? System.getProperty("user.name", "Player")
+                    : name,
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange(exchangeName, stocks);
+        buildAndStartGameFromSave(player, exchange, null, null);
+    }
+
+    private void buildAndStartGameFromSave(Player player, Exchange exchange,
+                                            java.nio.file.Path savePath, GameUiState uiState) {
+        if (exchange.getStocks().isEmpty()) {
+            showNoStocksPage(false);
+            return;
+        }
+        currentPlayer   = player;
+        currentExchange = exchange;
+        currentSavePath = savePath;
         GameController gameController = new GameController(player, exchange);
-        GameView gameview = new GameView(gameController, withBack(this::goHome), () -> { sfxController.play(SfxController.SETTINGS); navigateKeepMusic(buildSettingsView(() -> navigateKeepMusic(currentGamePage))); }, sfxController::getVolume);
+        GameView gameview = new GameView(gameController, withBack(this::goHome),
+                () -> {
+                    sfxController.play(SfxController.SETTINGS);
+                    navigateKeepMusic(buildSettingsView(
+                            () -> navigateKeepMusic(currentGamePage),
+                            this::performSave));
+                },
+                sfxController::getVolume,
+                uiState);
+        currentGameView = gameview;
         currentGamePage = gameview.getRoot();
         navigateToGame(currentGamePage);
         Platform.runLater(() -> homePageMusicController.playGameStartThenAmbience(sfxController.getVolume()));
+        if (autosaveEnabled) startAutosaveTimer();
+    }
+
+    private void performSave() {
+        if (currentPlayer == null || currentExchange == null) return;
+        GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
+        try {
+            if (currentSavePath != null) {
+                GameSaveExporter.overwrite(currentSavePath, currentPlayer, currentExchange, uiState);
+            } else {
+                currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState);
+            }
+            showAppNotification("Game Saved", "Your progress has been saved.", true);
+        } catch (IOException e) {
+            showAppNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
+        }
+    }
+
+    private void performAutosave() {
+        if (currentPlayer == null || currentExchange == null) return;
+        GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
+        try {
+            GameSaveExporter.autosave(currentPlayer, currentExchange, uiState);
+            if (autosaveToast) showTimedNotification("Autosaved", "Progress autosaved.", true);
+        } catch (IOException e) {
+            showAppNotification("Autosave Failed", "Could not autosave:\n" + e.getMessage(), false);
+        }
+    }
+
+    private void startAutosaveTimer() {
+        stopAutosaveTimer();
+        autosaveTimer = new Timeline(new KeyFrame(Duration.minutes(1), e -> performAutosave()));
+        autosaveTimer.setCycleCount(Timeline.INDEFINITE);
+        autosaveTimer.play();
+    }
+
+    private void stopAutosaveTimer() {
+        if (autosaveTimer != null) { autosaveTimer.stop(); autosaveTimer = null; }
     }
 
     private void showNoStocksPage(boolean fromEditor) {
@@ -255,23 +379,129 @@ public class App extends Application {
                 "/audio/music/ambience/After_Hours_Ambience3_demo.mp3"));
     }
 
-    private Parent buildSettingsView(Runnable onBack) {
-        Runnable onBackWithSfx = () -> { sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0)); onBack.run(); };
+    private Parent buildSettingsView(Runnable onBack, Runnable onSave) {
+        Runnable onBackWithSfx = () -> {
+            sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0));
+            onBack.run();
+        };
         return SettingsView.build(
                 onBackWithSfx,
-                homePageMusicController::setVolume, homePageMusicController.getVolume(),
-                sfxController::setVolume, sfxController.getVolume(),
-                enabled -> {
-                    animationsEnabled = enabled;
-                    backgroundCanvas.setAnimationsEnabled(enabled);
-                },
-                animationsEnabled
+                vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
+                musicVolume,
+                musicMuted,
+                muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
+                vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
+                sfxVolume,
+                sfxMuted,
+                muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
+                enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
+                animationsEnabled,
+                enabled -> { devModeEnabled = enabled; saveSettings(); },
+                devModeEnabled,
+                enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
+                autosaveEnabled,
+                enabled -> { autosaveToast = enabled; saveSettings(); },
+                autosaveToast,
+                onSave
         );
+    }
+
+    private void saveSettings() {
+        GlobalSettingsManager.save(new GlobalSettingsManager.Settings(
+                musicVolume,
+                sfxVolume,
+                animationsEnabled,
+                musicMuted,
+                sfxMuted,
+                devModeEnabled,
+                autosaveEnabled,
+                autosaveToast));
     }
 
     // ── Music-aware navigation primitives ────────────────────────────────────
 
-    /** Swap page — music was already started at the top of the start-game call. */
+    /** Styled in-app notification overlay — replaces all OS Alert dialogs. */
+    private void showAppNotification(String title, String message, boolean success) {
+        Label iconLbl = new Label(success ? "\u2713" : "\u2715");
+        iconLbl.getStyleClass().add(success ? "receipt-check" : "error-dialog-icon");
+        Label titleLbl = new Label(title);
+        titleLbl.getStyleClass().add(success ? "app-success-title" : "error-dialog-title");
+
+        HBox header = new HBox(12, iconLbl, titleLbl);
+        header.getStyleClass().add(success ? "app-success-header" : "error-dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Label msgLbl = new Label(message);
+        msgLbl.getStyleClass().add(success ? "app-success-message" : "error-dialog-message");
+        msgLbl.setWrapText(true);
+        msgLbl.setMaxWidth(320);
+
+        VBox body = new VBox(msgLbl);
+        body.getStyleClass().add(success ? "app-success-body" : "error-dialog-body");
+
+        Button okBtn = new Button("OK");
+        okBtn.getStyleClass().add(success ? "dialog-confirm-buy-btn" : "dialog-cancel-btn");
+        HBox btnRow = new HBox(okBtn);
+        btnRow.setAlignment(Pos.CENTER_RIGHT);
+        btnRow.getStyleClass().add("dialog-btn-row");
+
+        VBox card = new VBox(0, header, body, btnRow);
+        card.getStyleClass().add(success ? "app-success-root" : "error-dialog-root");
+        card.setMaxWidth(420);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+
+        Region backdrop = new Region();
+        backdrop.getStyleClass().add("dialog-backdrop");
+
+        StackPane popup = new StackPane(backdrop, card);
+        StackPane.setAlignment(card, Pos.CENTER);
+
+        Runnable dismiss = () -> root.getChildren().remove(popup);
+        okBtn.setOnAction(ev -> dismiss.run());
+        backdrop.setOnMouseClicked(ev -> dismiss.run());
+        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+            if (ev.getCode() == KeyCode.ESCAPE || ev.getCode() == KeyCode.ENTER) {
+                dismiss.run();
+                ev.consume();
+            }
+        });
+        root.getChildren().add(popup);
+        popup.requestFocus();
+    }
+
+    /** Auto-dismissing toast — disappears after 2 seconds without user interaction. */
+    private void showTimedNotification(String title, String message, boolean success) {
+        Label iconLbl = new Label(success ? "\u2713" : "\u2715");
+        iconLbl.getStyleClass().add(success ? "receipt-check" : "error-dialog-icon");
+        Label titleLbl = new Label(title);
+        titleLbl.getStyleClass().add(success ? "app-success-title" : "error-dialog-title");
+
+        HBox header = new HBox(12, iconLbl, titleLbl);
+        header.getStyleClass().add(success ? "app-success-header" : "error-dialog-header");
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Label msgLbl = new Label(message);
+        msgLbl.getStyleClass().add(success ? "app-success-message" : "error-dialog-message");
+        msgLbl.setWrapText(true);
+        msgLbl.setMaxWidth(320);
+
+        VBox body = new VBox(msgLbl);
+        body.getStyleClass().add(success ? "app-success-body" : "error-dialog-body");
+
+        VBox card = new VBox(0, header, body);
+        card.getStyleClass().add(success ? "app-success-root" : "error-dialog-root");
+        card.setMaxWidth(380);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+
+        StackPane.setAlignment(card, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(card, new Insets(0, 32, 40, 0));
+
+        root.getChildren().add(card);
+        PauseTransition pause = new PauseTransition(Duration.seconds(2));
+        pause.setOnFinished(e -> root.getChildren().remove(card));
+        pause.play();
+    }
+
     private void navigateToGame(Parent page) {
         root.getChildren().setAll(backgroundCanvas, page);
     }
@@ -308,6 +538,11 @@ public class App extends Application {
 
     /** Return home from game: fade ambience out, restart home music. */
     private void goHome() {
+        if (currentGameView != null) {
+            currentUiState = currentGameView.getUiState();
+        }
+        stopAutosaveTimer();
+        if (autosaveEnabled) performAutosave();
         homePageMusicController.fadeOutThenPlay(null, null);
         fadeOutThenNavigate(() -> root.getChildren().setAll(backgroundCanvas, homePage));
     }
@@ -334,6 +569,8 @@ public class App extends Application {
 
     @Override
     public void stop() {
+        stopAutosaveTimer();
+        if (autosaveEnabled) performAutosave();
         if (homePageMusicController != null) homePageMusicController.stop();
         if (backgroundCanvas != null) backgroundCanvas.stop();
     }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
+import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
@@ -96,11 +97,13 @@ public final class GameView {
     private Node rootRef = null;
 
     public GameView(GameController gameController, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier) {
+        this(gameController, onBack, onSettings, sfxVolumeSupplier, null);
+    }
+
+    public GameView(GameController gameController, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
         this.gameController = gameController;
         this.gameController.setView(this);
 
-        this.overlayRef = null;
-        this.rootRef = null;
         this.cashVal = new Label();
         this.portVal = new Label();
         this.nwVal = new Label();
@@ -138,6 +141,17 @@ public final class GameView {
         searchField.setPromptText("\uD83D\uDD0D  Search stocks\u2026");
         searchField.getStyleClass().add("game-search-field");
 
+        // Apply initial UI state if provided
+        if (initialState != null) {
+            this.favorites.addAll(initialState.favorites());
+            this.activeFilters.addAll(initialState.activeFilters());
+            if (!initialState.filterChipOrder().isEmpty()) {
+                this.filterChipOrder.clear();
+                this.filterChipOrder.addAll(initialState.filterChipOrder());
+            }
+            if (initialState.stockSort() != null) this.stockSort = initialState.stockSort();
+        }
+
         // Initial stock list population
         applyFilter();
 
@@ -167,9 +181,19 @@ public final class GameView {
         Button sortName  = new Button("A\u2013Z");
         Button sortPrice = new Button("Price \u25bc");
         Button sortChg   = new Button("Change \u25bc");
-        sortName.getStyleClass().addAll("stock-sort-chip", "stock-sort-chip-active");
+        sortName.getStyleClass().add("stock-sort-chip");
         sortPrice.getStyleClass().add("stock-sort-chip");
         sortChg.getStyleClass().add("stock-sort-chip");
+        if (stockSort.startsWith("PRICE")) {
+            sortPrice.getStyleClass().add("stock-sort-chip-active");
+            sortPrice.setText("Price " + (stockSort.equals("PRICE_DESC") ? "\u25bc" : "\u25b2"));
+        } else if (stockSort.startsWith("CHG")) {
+            sortChg.getStyleClass().add("stock-sort-chip-active");
+            sortChg.setText("Change " + (stockSort.equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
+        } else {
+            sortName.getStyleClass().add("stock-sort-chip-active");
+            if (stockSort.equals("NAME_DESC")) sortName.setText("Z\u2013A");
+        }
         FlowPane sortChips = new FlowPane(4, 4);
         sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
 
@@ -389,7 +413,15 @@ public final class GameView {
         StackPane overlay = new StackPane(root, devPanel);
         overlayRef = overlay;
 
-        
+        // Restore selected stock from saved UI state
+        if (initialState != null && initialState.selectedSymbol() != null) {
+            String sym = initialState.selectedSymbol();
+            allStocks.stream()
+                     .filter(s -> s.getSymbol().equals(sym))
+                     .findFirst()
+                     .ifPresent(selectedStock::set);
+        }
+
         // ── Global keybindings ──────────────────────────────────────────────────
         // N / Space → Next Week  |  / → Focus search  |  M → Market Movers  |  H → History
         // Escape → clear search, then go back to landing page
@@ -433,6 +465,16 @@ public final class GameView {
 
     public StackPane getRoot() {
         return overlayRef;
+    }
+
+    public GameUiState getUiState() {
+        String selSym = selectedStock.get() != null ? selectedStock.get().getSymbol() : null;
+        return new GameUiState(
+                List.copyOf(favorites),
+                List.copyOf(activeFilters),
+                List.copyOf(filterChipOrder),
+                stockSort,
+                selSym);
     }
 
     public void updateData() {
@@ -2070,15 +2112,15 @@ public final class GameView {
                     if (!drawnWeeks.add(week)) continue; // already drew this week
                     double dotX = xs[idx], dotY = ys[idx];
                     if (isMixed) {
-                        // Blended: orange-amber outer halo, split inner (left=buy, right=sell)
-                        gc.setFill(Color.web("#c97a2e", 0.28));
+                        // Blended: green outer halo, split inner (left=buy green, right=sell)
+                        gc.setFill(Color.web("#1e7a40", 0.28));
                         gc.fillOval(dotX - 7, dotY - 7, 14, 14);
-                        // Left half — buy orange
+                        // Left half — buy green
                         gc.save();
                         gc.beginPath();
                         gc.rect(dotX - 10, dotY - 10, 10, 20);
                         gc.clip();
-                        gc.setFill(Color.web("#f5a201"));
+                        gc.setFill(Color.web("#4ecb71"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
                         gc.restore();
                         // Right half — sell red
@@ -2102,9 +2144,9 @@ public final class GameView {
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
                         drawnDots.add(new double[]{dotX, dotY, week, dot.quantity().doubleValue(), dot.price().doubleValue(), 1});
                     } else {
-                        gc.setFill(Color.web("#f5a201", 0.30));
+                        gc.setFill(Color.web("#4ecb71", 0.30));
                         gc.fillOval(dotX - 7, dotY - 7, 14, 14);
-                        gc.setFill(Color.web("#f5a201"));
+                        gc.setFill(Color.web("#4ecb71"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
                         drawnDots.add(new double[]{dotX, dotY, week, dot.quantity().doubleValue(), dot.price().doubleValue(), 0});
                     }
@@ -2115,7 +2157,7 @@ public final class GameView {
                             && (isMixed || highlightedTx.isBuy() != dot.isSell());
                     if (isHighlighted && highlightFade[0] > 0) {
                         double fa = highlightFade[0];
-                        String dotColor = isMixed ? "#c97a2e" : (dot.isSell() ? "#e05a5a" : "#f5a201");
+                        String dotColor = isMixed ? "#1e7a40" : (dot.isSell() ? "#e05a5a" : "#4ecb71");
                         gc.setStroke(Color.web(dotColor, 0.22 * fa));
                         gc.setLineWidth(1);
                         gc.setLineDashes(3, 4);

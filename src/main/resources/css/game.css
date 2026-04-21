@@ -360,7 +360,7 @@
 .chart-tooltip-week {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: #f5a201;
+    -fx-text-fill: #4ecb71;
 }
 
 .chart-tooltip-sell-week {
