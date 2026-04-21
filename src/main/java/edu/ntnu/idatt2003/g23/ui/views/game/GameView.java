@@ -2297,7 +2297,7 @@ public final class GameView {
                 @Override public void handle(long now) {
                     if (startNano[0] < 0) startNano[0] = now;
                     long elapsed  = now - startNano[0];
-                    long WAIT_NS  = 10_000_000_000L; // 10 s
+                    long WAIT_NS  =  5_000_000_000L; //  5 s
                     long FADE_NS  =    800_000_000L; //  0.8 s
                     if (elapsed >= WAIT_NS + FADE_NS) {
                         highlightFade[0] = 0.0;

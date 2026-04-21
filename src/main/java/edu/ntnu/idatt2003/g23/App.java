@@ -118,6 +118,7 @@ public class App extends Application {
         );
 
         backgroundCanvas = new BackgroundCanvas();
+        backgroundCanvas.setAnimationsEnabled(animationsEnabled);
         root = new StackPane(backgroundCanvas, homePage);
         backgroundCanvas.widthProperty().bind(root.widthProperty());
         backgroundCanvas.heightProperty().bind(root.heightProperty());
@@ -301,9 +302,7 @@ public class App extends Application {
             return;
         }
         Player player = new Player(
-                name == null || name.isBlank()
-                    ? System.getProperty("user.name", "Player")
-                    : name,
+                name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
         Exchange exchange = new Exchange(exchangeName, stocks);
         buildAndStartGameFromSave(player, exchange, null, null);
@@ -471,30 +470,17 @@ public class App extends Application {
 
     /** Auto-dismissing toast — disappears after 2 seconds without user interaction. */
     private void showTimedNotification(String title, String message, boolean success) {
-        Label iconLbl = new Label(success ? "\u2713" : "\u2715");
-        iconLbl.getStyleClass().add(success ? "receipt-check" : "error-dialog-icon");
-        Label titleLbl = new Label(title);
-        titleLbl.getStyleClass().add(success ? "app-success-title" : "error-dialog-title");
-
-        HBox header = new HBox(12, iconLbl, titleLbl);
-        header.getStyleClass().add(success ? "app-success-header" : "error-dialog-header");
-        header.setAlignment(Pos.CENTER_LEFT);
-
         Label msgLbl = new Label(message);
-        msgLbl.getStyleClass().add(success ? "app-success-message" : "error-dialog-message");
-        msgLbl.setWrapText(true);
-        msgLbl.setMaxWidth(320);
+        msgLbl.getStyleClass().add("toast-message");
+        msgLbl.setWrapText(false);
 
-        VBox body = new VBox(msgLbl);
-        body.getStyleClass().add(success ? "app-success-body" : "error-dialog-body");
-
-        VBox card = new VBox(0, header, body);
-        card.getStyleClass().add(success ? "app-success-root" : "error-dialog-root");
-        card.setMaxWidth(380);
+        VBox card = new VBox(msgLbl);
+        card.getStyleClass().add("toast-card");
+        card.setMaxWidth(260);
         card.setMaxHeight(Region.USE_PREF_SIZE);
 
         StackPane.setAlignment(card, Pos.BOTTOM_RIGHT);
-        StackPane.setMargin(card, new Insets(0, 32, 40, 0));
+        StackPane.setMargin(card, new Insets(0, 24, 32, 0));
 
         root.getChildren().add(card);
         PauseTransition pause = new PauseTransition(Duration.seconds(2));

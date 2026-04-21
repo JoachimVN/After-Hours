@@ -1184,6 +1184,12 @@
     -fx-background-color: #7a9fc8;
 }
 
+/* Hide the empty filler column that appears to the right of the last column */
+.history-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
 .history-table .table-row-cell {
     -fx-background-color: transparent;
     -fx-border-color: transparent transparent rgba(30, 64, 128, 0.10) transparent;

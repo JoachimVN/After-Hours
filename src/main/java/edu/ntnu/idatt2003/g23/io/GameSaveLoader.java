@@ -46,6 +46,8 @@ public final class GameSaveLoader {
             String money,
             String netWorthHint,
             int    portfolioSize,
+            int    totalShares,
+            String status,
             boolean autosave) {
 
         public String id() { return saveDir.getFileName().toString(); }
@@ -231,11 +233,22 @@ public final class GameSaveLoader {
         String money        = obj.get("money").getAsString();
         String netWorth     = obj.has("netWorth") ? obj.get("netWorth").getAsString() : money;
         boolean isAutosave  = obj.has("autosave") && obj.get("autosave").getAsBoolean();
+        String status       = obj.has("status") ? obj.get("status").getAsString() : "NOVICE";
 
         JsonArray portfolio = obj.getAsJsonArray("portfolio");
         int portfolioSize = portfolio != null ? portfolio.size() : 0;
+        int totalShares = 0;
+        if (portfolio != null) {
+            for (JsonElement el : portfolio) {
+                JsonObject s = el.getAsJsonObject();
+                if (s.has("quantity")) {
+                    try { totalShares += new java.math.BigDecimal(s.get("quantity").getAsString()).intValue(); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+        }
 
         return new SaveMeta(saveDir, playerName, exchangeName, savedAt,
-                week, money, netWorth, portfolioSize, isAutosave);
+                week, money, netWorth, portfolioSize, totalShares, status, isAutosave);
     }
 }

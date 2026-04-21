@@ -117,8 +117,9 @@ public final class SaveSelectView {
         Label detailLabel = new Label(
                 meta.exchangeName() + "  \u2022  Week " + meta.week() +
                 "  \u2022  Cash: $" + formatMoney(meta.money()) +
-                "  \u2022  " + meta.portfolioSize() + " position" +
-                (meta.portfolioSize() == 1 ? "" : "s"));
+                "  \u2022  " + meta.portfolioSize() + " stock" +
+                (meta.portfolioSize() == 1 ? "" : "s") +
+                (meta.totalShares() > 0 ? "  \u2022  " + meta.totalShares() + " shares" : ""));
         detailLabel.getStyleClass().add("save-card-detail");
 
         Label netWorthLabel = new Label("Net Worth: $" + formatMoney(meta.netWorthHint()));
@@ -157,6 +158,7 @@ public final class SaveSelectView {
         HBox card = new HBox(20, info, buttons);
         card.setAlignment(Pos.CENTER);
         card.getStyleClass().add("save-card");
+        if (meta.autosave()) card.getStyleClass().add("save-card-autosave");
         card.setPadding(new Insets(20, 24, 20, 24));
         card.setMaxWidth(700);
 

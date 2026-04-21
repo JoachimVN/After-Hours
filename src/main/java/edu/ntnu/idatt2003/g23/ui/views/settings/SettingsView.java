@@ -173,14 +173,7 @@ public final class SettingsView {
         muteToggle.selectedProperty().addListener((obs, wasOn, isMuted) -> {
             muteToggle.setText(isMuted ? "MUTED" : "ON");
             onMuteChange.accept(isMuted);
-            // Push effective volume: 0 when muted, slider value when unmuted
-            onVolumeChange.accept(isMuted ? 0.0 : slider.getValue() / 100.0);
         });
-
-        // Apply initial muted state to controller immediately
-        if (initialMuted) {
-            onVolumeChange.accept(0.0);
-        }
 
         HBox sliderRow = new HBox(12, slider, muteToggle);
         sliderRow.setAlignment(Pos.CENTER_LEFT);
