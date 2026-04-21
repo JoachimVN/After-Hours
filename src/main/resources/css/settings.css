@@ -1,9 +1,106 @@
 /* ── Settings Page ───────────────────────────────────────────────────────── */
 
+/* ScrollPane transparent background */
+.settings-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.settings-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* ── Section cards ─ minimal, nearly transparent ─────────────────────────── */
+
+.settings-section-card {
+    -fx-background-color: rgba(7, 9, 31, 0.12);
+    -fx-border-color: transparent transparent transparent rgba(245, 162, 1, 0.28);
+    -fx-border-width: 0 0 0 2;
+    -fx-padding: 10 16 14 18;
+}
+
+.settings-section-title {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245, 162, 1, 0.75);
+    -fx-padding: 0 0 1 0;
+}
+
+.settings-section-sep {
+    -fx-background-color: rgba(30, 58, 110, 0.28);
+    -fx-pref-height: 1;
+}
+
+/* ── Labels ──────────────────────────────────────────────────────────────── */
+
 .settings-label {
     -fx-font-size: 14;
+    -fx-text-fill: #c8d8f0;
+}
+
+.settings-sublabel {
+    -fx-font-size: 12;
     -fx-text-fill: #4a6899;
 }
+
+/* ── Toggle button (pill shape, subtle glow on selected) ─────────────────── */
+
+.settings-toggle {
+    -fx-background-color: rgba(15, 45, 94, 0.55);
+    -fx-text-fill: #8ab4d8;
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-cursor: hand;
+    -fx-padding: 5 18 5 18;
+}
+
+.settings-toggle:hover {
+    -fx-background-color: rgba(30, 64, 128, 0.65);
+    -fx-border-color: rgba(74, 104, 153, 0.75);
+    -fx-text-fill: #c8d8f0;
+}
+
+.settings-toggle:selected {
+    -fx-background-color: rgba(245, 162, 1, 0.10);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: rgba(245, 162, 1, 0.50);
+}
+
+.settings-toggle:selected:hover {
+    -fx-background-color: rgba(245, 162, 1, 0.18);
+    -fx-border-color: #f5a201;
+}
+
+/* Muted state: subtle red glow */
+.settings-mute-toggle:selected {
+    -fx-background-color: rgba(110, 26, 26, 0.35);
+    -fx-text-fill: #f07070;
+    -fx-border-color: rgba(150, 63, 63, 0.70);
+}
+
+.settings-mute-toggle:selected:hover {
+    -fx-background-color: rgba(150, 63, 63, 0.45);
+    -fx-border-color: #e05a5a;
+}
+
+/* Danger toggle (dev mode) — amber glow */
+.settings-toggle-danger:selected {
+    -fx-background-color: rgba(122, 74, 0, 0.35);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: rgba(160, 96, 0, 0.65);
+}
+
+.settings-toggle-danger:selected:hover {
+    -fx-background-color: rgba(160, 96, 0, 0.45);
+    -fx-border-color: #c07800;
+}
+
+/* ── Volume slider ───────────────────────────────────────────────────────── */
+
 
 .settings-slider .track {
     -fx-background-color: #0f2d5e;
@@ -18,9 +115,85 @@
     -fx-pref-height: 18;
 }
 
-.settings-mute-button {
-    -fx-background-color: #0f2d5e;
+/* ── Resolution controls ─────────────────────────────────────────────────── */
+
+.settings-combo {
+    -fx-background-color: rgba(15, 45, 94, 0.38);
+    -fx-text-fill: #c8d8f0;
+    -fx-font-size: 13;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+
+.settings-combo .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.settings-combo .arrow-button .arrow {
+    -fx-background-color: #4a6899;
+}
+
+.settings-combo:hover .arrow-button .arrow {
+    -fx-background-color: #c8d8f0;
+}
+
+.settings-combo .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c8d8f0;
+    -fx-font-size: 13;
+    -fx-padding: 5 12 5 12;
+}
+
+.settings-combo .list-cell:selected {
+    -fx-background-color: rgba(30, 58, 110, 0.65);
     -fx-text-fill: #f5a201;
+}
+
+.settings-combo .list-view {
+    -fx-background-color: rgba(5, 8, 28, 0.95);
+    -fx-border-color: rgba(30, 64, 128, 0.70);
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 12, 0, 0, 4);
+}
+
+/* Remove ALL internal backgrounds */
+.settings-combo .combo-box-base,
+.settings-combo .combo-box-base .arrow-button,
+.settings-combo .combo-box-base .label,
+.settings-combo .list-cell {
+    -fx-background-color: transparent !important;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+
+
+.settings-combo .list-cell {
+    -fx-padding: 4 0 4 6; /* Padding so text doesn't touch the edges */
+}
+
+
+
+.settings-resolution-field {
+    -fx-background-color: #0a1030;
+    -fx-text-fill: #c8d8ee;
+    -fx-prompt-text-fill: #4a6899;
+    -fx-border-color: #1e3a6e;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 5 8 5 8;
+    -fx-font-size: 13;
+}
+
+.settings-resolution-field:focused {
+    -fx-border-color: #f5a201;
+}
+
+.settings-apply-btn {
+    -fx-background-color: #0f2d5e;
+    -fx-text-fill: #4ecb71;
     -fx-font-size: 12;
     -fx-font-weight: bold;
     -fx-background-radius: 6;
@@ -28,30 +201,116 @@
     -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-cursor: hand;
-    -fx-padding: 4 14 4 14;
+    -fx-padding: 5 14 5 14;
 }
 
-.settings-mute-button:hover {
+.settings-apply-btn:hover {
     -fx-background-color: #1e4080;
 }
 
-.settings-mute-button:selected {
-    -fx-background-color: #f5a201;
-    -fx-text-fill: #07091f;
-}
+/* ── Save Game button ────────────────────────────────────────────────────── */
 
-/* ── Save Game button (Settings page, in-game only) ────────────────────── */
-
-.save-game-button {
+.settings-save-game-btn {
     -fx-background-color: #1a6e2e;
     -fx-text-fill: white;
     -fx-font-size: 14;
-    -fx-background-radius: 6;
-    -fx-padding: 10 16 10 16;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 12 20 12 20;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(26,110,46,0.4), 8, 0, 0, 2);
 }
 
-.save-game-button:hover {
+.settings-save-game-btn:hover {
     -fx-background-color: #25963f;
+}
+
+/* ── Keybind cheat sheet ─────────────────────────────────────────────────── */
+
+.settings-keybind-key {
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-background-color: rgba(245, 162, 1, 0.10);
+    -fx-border-color: rgba(245, 162, 1, 0.30);
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 3 10 3 10;
+}
+
+.settings-keybind-desc {
+    -fx-font-size: 13;
+    -fx-text-fill: #c8d8f0;
+}
+
+/* ── Keybind popup overlay ───────────────────────────────────────────────── */
+
+.keybind-popup-dim {
+    -fx-background-color: rgba(0, 0, 0, 0.70);
+}
+
+.keybind-popup-card {
+    -fx-background-color: rgba(5, 8, 28, 0.97);
+    -fx-border-color: rgba(30, 64, 128, 0.80);
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 28, 0, 0, 6);
+}
+
+.keybind-popup-title {
+    -fx-font-size: 17;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+}
+
+.keybind-popup-group {
+    -fx-font-size: 10;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245, 162, 1, 0.60);
+    -fx-padding: 2 0 1 0;
+}
+
+.keybind-popup-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4a6899;
+    -fx-font-size: 15;
+    -fx-background-radius: 20;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 0 6 2 6;
+}
+
+.keybind-popup-close:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.07);
+    -fx-text-fill: #c8d8f0;
+}
+
+/* ── Default value tag ───────────────────────────────────────────────────── */
+
+.settings-default-tag {
+    -fx-font-size: 10;
+    -fx-text-fill: rgba(74, 104, 153, 0.65);
+}
+
+/* ── Reset to Defaults button ─────────────────────────────────────────────── */
+
+.settings-reset-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: rgba(74, 104, 153, 0.80);
+    -fx-font-size: 12;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(30, 64, 128, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-cursor: hand;
+    -fx-padding: 5 16 5 16;
+}
+
+.settings-reset-btn:hover {
+    -fx-background-color: rgba(110, 26, 26, 0.25);
+    -fx-border-color: rgba(150, 63, 63, 0.60);
+    -fx-text-fill: #e07070;
 }
 
 /* ── Save-select screen cards ───────────────────────────────────────────── */
@@ -194,17 +453,6 @@
     -fx-text-fill: #4ecb71;
     -fx-font-size: 12;
     -fx-font-weight: bold;
-}
-
-/* Mute toggle: when selected (muted) show red tint */
-.settings-mute-toggle:selected {
-    -fx-background-color: #6e1a1a;
-    -fx-text-fill: #f07070;
-    -fx-border-color: #963f3f;
-}
-
-.settings-mute-toggle:selected:hover {
-    -fx-background-color: #963f3f;
 }
 
 /* Text field inside rename popup */

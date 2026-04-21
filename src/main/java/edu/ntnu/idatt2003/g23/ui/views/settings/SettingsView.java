@@ -1,146 +1,522 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
-import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-
 import edu.ntnu.idatt2003.g23.AppConfig;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import java.nio.file.Path;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 
 public final class SettingsView {
 
-    /**
-     * Builds the settings view without a save button (home/setup context).
-     */
-    public static BorderPane build(
+    private SettingsView() {}
+
+    // ── No-save overload (home / setup context) ───────────────────────────────
+
+    public static StackPane build(
             Runnable onBack,
+            Stage stage,
             DoubleConsumer onMusicVolumeChange, double initialMusicVolume,
             boolean initialMusicMuted, Consumer<Boolean> onMusicMutedChange,
             DoubleConsumer onSfxVolumeChange, double initialSfxVolume,
             boolean initialSfxMuted, Consumer<Boolean> onSfxMutedChange,
             Consumer<Boolean> onAnimationsChange, boolean animationsEnabled,
+            boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
             Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
             Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
             Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled) {
-        return build(onBack,
+        return build(onBack, stage,
                 onMusicVolumeChange, initialMusicVolume, initialMusicMuted, onMusicMutedChange,
                 onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange,
                 onAnimationsChange, animationsEnabled,
+                initialFullscreen, onFullscreenChange,
                 onDevModeChange, devModeEnabled,
                 onAutosaveChange, autosaveEnabled,
                 onAutosaveToastChange, autosaveToastEnabled,
-                null);
+                null, null, null);
     }
 
-    /**
-     * Builds the settings view, optionally with a Save Game button.
-     *
-     * @param onSave called when Save Game is pressed; {@code null} = no button shown
-     */
-    public static BorderPane build(
+    // ── Full overload ─────────────────────────────────────────────────────────
+
+    public static StackPane build(
             Runnable onBack,
+            Stage stage,
             DoubleConsumer onMusicVolumeChange, double initialMusicVolume,
             boolean initialMusicMuted, Consumer<Boolean> onMusicMutedChange,
             DoubleConsumer onSfxVolumeChange, double initialSfxVolume,
             boolean initialSfxMuted, Consumer<Boolean> onSfxMutedChange,
             Consumer<Boolean> onAnimationsChange, boolean animationsEnabled,
+            boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
             Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
             Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
             Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
+            Path currentSavePath,
+            Runnable onResetAll,
             Runnable onSave) {
+
+        StackPane overlay = new StackPane();
+        overlay.setPickOnBounds(false);
 
         BorderPane root = new BorderPane();
         root.getStyleClass().addAll("home-page", "background-overlay");
 
-        Button backButton = new Button("\u2190 Back");
+        // ── Top bar ───────────────────────────────────────────────────────────
+        Button backButton = new Button("\u2190  Back");
         backButton.getStyleClass().add("back-button");
         backButton.setOnAction(e -> onBack.run());
 
-        HBox topBar = new HBox(backButton);
+        Button resetBtn = new Button("↺  Reset to Defaults");
+        resetBtn.getStyleClass().add("settings-reset-btn");
+        if (onResetAll != null) {
+            resetBtn.setOnAction(e -> onResetAll.run());
+        } else {
+            resetBtn.setVisible(false);
+            resetBtn.setManaged(false);
+        }
+
+        Region topSpacer = new Region();
+        HBox.setHgrow(topSpacer, Priority.ALWAYS);
+        HBox topBar = new HBox(backButton, topSpacer, resetBtn);
+        topBar.setAlignment(Pos.CENTER_LEFT);
         topBar.setPadding(new Insets(24, 32, 0, 32));
         root.setTop(topBar);
 
+        // ── Title ─────────────────────────────────────────────────────────────
         Label title = new Label("Settings");
         title.getStyleClass().add("page-title");
+        title.setPadding(new Insets(0, 0, 8, 0));
 
-        // ── Music Volume ──────────────────────────────────────────────────────
-        VBox musicBlock = volumeBlock("Music Volume", initialMusicVolume * 100.0,
-                initialMusicMuted, onMusicVolumeChange, onMusicMutedChange);
+        // ── Sections ──────────────────────────────────────────────────────────
+        VBox audioSection = buildAudioSection(
+                onMusicVolumeChange, initialMusicVolume, initialMusicMuted, onMusicMutedChange,
+                onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange);
 
-        // ── SFX Volume ────────────────────────────────────────────────────────
-        VBox sfxBlock = volumeBlock("Sound Effects Volume", initialSfxVolume * 100.0,
-                initialSfxMuted, onSfxVolumeChange, onSfxMutedChange);
+        VBox displaySection = buildDisplaySection(
+                animationsEnabled, onAnimationsChange,
+                initialFullscreen, onFullscreenChange,
+                stage);
 
-        // ── Animations ────────────────────────────────────────────────────────
-        VBox animRow = toggleRow("Background Animations", animationsEnabled,
-                "settings-mute-button", onAnimationsChange);
+        VBox gameSection = buildGameSection(
+                autosaveEnabled, onAutosaveChange,
+                autosaveToastEnabled, onAutosaveToastChange,
+                onSave);
 
-        // ── Dev Mode ──────────────────────────────────────────────────────────
-        VBox devRow = toggleRow("Developer Mode", devModeEnabled,
-                "settings-mute-button settings-dev-button", isOn -> {
-                    AppConfig.DEV_MODE.set(isOn);
-                    onDevModeChange.accept(isOn);
-                });
+        VBox dataSection = buildDataSection(stage, currentSavePath);
+        VBox keybindsSection = buildKeybindsSection(overlay);
+        VBox devSection = buildDevSection(devModeEnabled, onDevModeChange);
 
-        // ── Autosave ──────────────────────────────────────────────────────────
-        VBox autosaveRow = toggleRow("Autosave (every minute)", autosaveEnabled,
-                "settings-mute-button", onAutosaveChange);
+        VBox allSections = new VBox(22,
+                title, audioSection, displaySection, gameSection,
+                dataSection, keybindsSection, devSection);
+        allSections.setAlignment(Pos.TOP_LEFT);
+        allSections.setMaxWidth(700);
+        HBox.setHgrow(allSections, Priority.ALWAYS);
 
-        // ── Autosave Toast ────────────────────────────────────────────────────
-        VBox toastRow = toggleRow("Show Autosave Notification", autosaveToastEnabled,
-                "settings-mute-button", onAutosaveToastChange);
+        HBox centeringBox = new HBox(allSections);
+        centeringBox.setAlignment(Pos.TOP_CENTER);
+        centeringBox.setPadding(new Insets(28, 48, 56, 48));
 
-        VBox settingsBlock = new VBox(28, musicBlock, sfxBlock, animRow, devRow, autosaveRow, toastRow);
-        settingsBlock.setAlignment(Pos.CENTER_LEFT);
-        settingsBlock.setMaxWidth(500);
+        ScrollPane scroll = new ScrollPane(centeringBox);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(false);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.getStyleClass().add("settings-scroll");
 
-        // ── Save Game (only in game context) ──────────────────────────────────
-        if (onSave != null) {
-            Button saveBtn = new Button("\uD83D\uDCBE  Save Game");
-            saveBtn.getStyleClass().addAll("settings-mute-button", "save-game-button");
-            saveBtn.setMaxWidth(Double.MAX_VALUE);
-            saveBtn.setOnAction(e -> onSave.run());
-            settingsBlock.getChildren().add(saveBtn);
-        }
+        root.setCenter(scroll);
 
-        VBox center = new VBox(32, title, settingsBlock);
-        center.setAlignment(Pos.CENTER);
-        root.setCenter(center);
-
-        // ── Keybindings ───────────────────────────────────────────────────────
-        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ESCAPE) { onBack.run(); e.consume(); }
+        // ── Key bindings ────────────────────────────────────────────────────────────────
+        StackPane rootPane = new StackPane(root, overlay);
+        rootPane.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
+                if (!overlay.getChildren().isEmpty()) {
+                    overlay.getChildren().clear();
+                    e.consume();
+                } else {
+                    onBack.run();
+                    e.consume();
+                }
+            }
         });
 
-        return root;
+        return rootPane;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Section builders
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static VBox buildAudioSection(
+            DoubleConsumer onMusicVolumeChange, double initialMusicVolume,
+            boolean initialMusicMuted, Consumer<Boolean> onMusicMutedChange,
+            DoubleConsumer onSfxVolumeChange, double initialSfxVolume,
+            boolean initialSfxMuted, Consumer<Boolean> onSfxMutedChange) {
+
+        VBox musicBlock = volumeBlock("Music Volume", initialMusicVolume * 100.0,
+                initialMusicMuted, onMusicVolumeChange, onMusicMutedChange);
+        VBox sfxBlock = volumeBlock("Sound Effects", initialSfxVolume * 100.0,
+                initialSfxMuted, onSfxVolumeChange, onSfxMutedChange);
+        return sectionCard("\uD83D\uDD0A  Audio", musicBlock, sfxBlock);
+    }
+
+    private static VBox buildDisplaySection(
+            boolean animationsEnabled, Consumer<Boolean> onAnimationsChange,
+            boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
+            Stage stage) {
+
+        VBox animRow = toggleRow("Background Animations", animationsEnabled, false, true, onAnimationsChange);
+        VBox fullscreenRow = toggleRow("Fullscreen", initialFullscreen, false, false, enabled -> {
+            stage.setFullScreen(enabled);
+            onFullscreenChange.accept(enabled);
+        });
+        VBox resBlock = buildResolutionBlock(stage);
+        return sectionCard("\uD83D\uDDA5  Display", animRow, fullscreenRow, resBlock);
+    }
+
+    private static VBox buildResolutionBlock(Stage stage) {
+        Label label = new Label("Window Size");
+        label.getStyleClass().add("settings-label");
+
+        String[] presetLabels = {"1280 \u00d7 720", "1600 \u00d7 900", "1920 \u00d7 1080", "2560 \u00d7 1440", "Custom\u2026"};
+        int[]    presetW      = {1280, 1600, 1920, 2560, 0};
+        int[]    presetH      = {720,  900,  1080, 1440, 0};
+
+        ComboBox<String> presetBox = new ComboBox<>();
+        presetBox.getItems().addAll(presetLabels);
+        presetBox.setPromptText("Pick a preset\u2026");
+        presetBox.getStyleClass().add("settings-combo");
+        presetBox.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(presetBox, Priority.ALWAYS);
+
+        Button maximizeBtn = new Button("\u26F6  Maximize");
+        maximizeBtn.getStyleClass().add("settings-toggle");
+
+        TextField wField = new TextField();
+        wField.setPromptText("W");
+        wField.getStyleClass().add("settings-resolution-field");
+        wField.setPrefWidth(65);
+
+        TextField hField = new TextField();
+        hField.setPromptText("H");
+        hField.getStyleClass().add("settings-resolution-field");
+        hField.setPrefWidth(65);
+
+        Label xLabel = new Label("\u00d7");
+        xLabel.getStyleClass().add("settings-label");
+
+        Button applyBtn = new Button("Apply");
+        applyBtn.getStyleClass().add("settings-apply-btn");
+
+        HBox customRow = new HBox(8, wField, xLabel, hField, applyBtn);
+        customRow.setAlignment(Pos.CENTER_LEFT);
+        customRow.setVisible(false);
+        customRow.setManaged(false);
+
+        presetBox.getSelectionModel().selectedIndexProperty().addListener((obs, o, idx) -> {
+            int i = idx.intValue();
+            if (i < 0) return;
+            boolean isCustom = presetW[i] == 0;
+            customRow.setVisible(isCustom);
+            customRow.setManaged(isCustom);
+            if (!isCustom) {
+                stage.setFullScreen(false);
+                stage.setMaximized(false);
+                stage.setWidth(presetW[i]);
+                stage.setHeight(presetH[i]);
+            }
+        });
+
+        applyBtn.setOnAction(e -> {
+            try {
+                int w = Integer.parseInt(wField.getText().trim());
+                int h = Integer.parseInt(hField.getText().trim());
+                if (w >= (int) AppConfig.MIN_WIDTH && h >= (int) AppConfig.MIN_HEIGHT) {
+                    stage.setFullScreen(false);
+                    stage.setMaximized(false);
+                    stage.setWidth(w);
+                    stage.setHeight(h);
+                }
+            } catch (NumberFormatException ignored) {}
+        });
+
+        maximizeBtn.setOnAction(e -> {
+            stage.setFullScreen(false);
+            stage.setMaximized(true);
+            presetBox.getSelectionModel().clearSelection();
+        });
+
+        HBox topRow = new HBox(10, presetBox, maximizeBtn);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+        return new VBox(8, label, topRow, customRow);
+    }
+
+    private static VBox buildGameSection(
+            boolean autosaveEnabled, Consumer<Boolean> onAutosaveChange,
+            boolean autosaveToastEnabled, Consumer<Boolean> onAutosaveToastChange,
+            Runnable onSave) {
+
+        VBox autosaveRow = toggleRow("Autosave (every minute)", autosaveEnabled, false, false, onAutosaveChange);
+        VBox toastRow = toggleRow("Show Autosave Notification", autosaveToastEnabled, false, true, onAutosaveToastChange);
+
+        if (onSave != null) {
+            Button saveBtn = new Button("\uD83D\uDCBE  Save Game Now");
+            saveBtn.getStyleClass().add("settings-save-game-btn");
+            saveBtn.setMaxWidth(Double.MAX_VALUE);
+            saveBtn.setOnAction(e -> onSave.run());
+            return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow, new VBox(12, saveBtn));
+        }
+        return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow);
+    }
+
+    private static VBox buildDataSection(Stage stage, Path currentSavePath) {
+        Label label = new Label("Export Stock Data");
+        label.getStyleClass().add("settings-label");
+
+        Label subLabel = new Label("Pick a save to export its stock price history as a CSV file.");
+        subLabel.getStyleClass().add("settings-sublabel");
+        subLabel.setWrapText(true);
+
+        ComboBox<SaveMeta> saveCombo = new ComboBox<>();
+        saveCombo.setPromptText("Select a save\u2026");
+        saveCombo.getStyleClass().add("settings-combo");
+        saveCombo.setMaxWidth(Double.MAX_VALUE);
+        saveCombo.setCellFactory(lv -> saveMetaCell(currentSavePath));
+        saveCombo.setButtonCell(saveMetaCell(currentSavePath));
+
+        try {
+            List<SaveMeta> saves = GameSaveLoader.listSaves();
+            saveCombo.getItems().setAll(saves);
+        } catch (IOException ignored) {}
+
+        Button exportBtn = new Button("\u2B07  Export CSV");
+        exportBtn.getStyleClass().add("settings-toggle");
+        exportBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
+
+        Label statusLbl = new Label();
+        statusLbl.getStyleClass().add("settings-sublabel");
+        statusLbl.setWrapText(true);
+
+        exportBtn.setOnAction(e -> {
+            SaveMeta selected = saveCombo.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+
+            FileChooser fc = new FileChooser();
+            fc.setTitle("Export Stock Data");
+            fc.setInitialFileName(
+                    selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_stocks.csv");
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
+            File dest = fc.showSaveDialog(stage);
+            if (dest == null) return;
+
+            try {
+                Files.copy(
+                        selected.saveDir().resolve("stocks.csv"),
+                        dest.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                statusLbl.setText("\u2713  Exported to: " + dest.getName());
+                statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+            } catch (IOException ex) {
+                statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
+                statusLbl.setStyle("-fx-text-fill: #e05a5a;");
+            }
+        });
+
+        HBox btnRow = new HBox(exportBtn);
+        btnRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox content = new VBox(8, subLabel, saveCombo, btnRow, statusLbl);
+        return sectionCard("\uD83D\uDCC4  Data", new VBox(6, label, content));
+    }
+
+    private static VBox buildKeybindsSection(StackPane overlay) {
+        Button viewBtn = new Button("\u2328  View All Keybinds");
+        viewBtn.getStyleClass().add("settings-toggle");
+        viewBtn.setOnAction(e -> showKeybindsPopup(overlay));
+
+        HBox btnRow = new HBox(viewBtn);
+        btnRow.setAlignment(Pos.CENTER_LEFT);
+        return sectionCard("\u2328  Keybinds", btnRow);
+    }
+
+    private static void showKeybindsPopup(StackPane overlay) {
+        // ── Dim layer ────────────────────────────────────────────────────────────────
+        StackPane dim = new StackPane();
+        dim.getStyleClass().add("keybind-popup-dim");
+        dim.setAlignment(Pos.CENTER);
+
+        // ── Card ────────────────────────────────────────────────────────────────────
+        Label title = new Label("\u2328  Keyboard Shortcuts");
+        title.getStyleClass().add("keybind-popup-title");
+        HBox.setHgrow(title, Priority.ALWAYS);
+
+        Button closeBtn = new Button("\u2715");
+        closeBtn.getStyleClass().add("keybind-popup-close");
+        closeBtn.setOnAction(e -> overlay.getChildren().clear());
+
+        HBox headerRow = new HBox(title, closeBtn);
+        headerRow.setAlignment(Pos.CENTER_LEFT);        headerRow.setMaxWidth(Double.MAX_VALUE);
+        Separator headerSep = new Separator();
+        headerSep.getStyleClass().add("settings-section-sep");
+        headerSep.setMaxWidth(Double.MAX_VALUE);
+
+        VBox content = new VBox(20,
+            keybindGroup("Main Menu", new String[][]{
+                {"Enter",         "Start / Continue game"},
+                {"S",             "Open Settings"},
+            }),
+            keybindGroup("Navigation (All Pages)", new String[][]{
+                {"Esc",           "Go back / close popup"},
+            }),
+            keybindGroup("New Game Setup", new String[][]{
+                {"Enter",         "Confirm / advance step"},
+            }),
+            keybindGroup("Import CSV / Save Select", new String[][]{
+                {"Enter / Space", "Confirm selection"},
+                {"Esc",          "Go back"},
+            }),
+            keybindGroup("CSV Editor", new String[][]{
+                {"Tab",           "Move to next cell"},
+                {"Enter",         "Commit cell edit"},
+                {"Esc",           "Cancel edit"},
+            }),
+            keybindGroup("In-Game", new String[][]{
+                {"N / Space",     "Advance to next week"},
+                {"/",             "Focus stock search"},
+                {"Ctrl + F",      "Focus stock search"},
+                {"M",             "Open Market Movers"},
+                {"H",             "Open Transaction History"},
+                {"Esc",           "Clear search / go back"},
+            })
+        );
+        content.setPadding(new Insets(4, 0, 4, 0));
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.getStyleClass().add("settings-scroll");
+        scroll.setPrefHeight(400);
+        scroll.setMaxHeight(500);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        VBox card = new VBox(14, headerRow, headerSep, scroll);
+        card.getStyleClass().add("keybind-popup-card");
+        card.setPadding(new Insets(22, 26, 22, 26));
+        card.setMaxWidth(580);
+        card.setMaxHeight(560);
+
+        dim.getChildren().add(card);
+        dim.setOnMouseClicked(e -> {
+            if (e.getTarget() == dim) overlay.getChildren().clear();
+        });
+
+        overlay.getChildren().setAll(dim);
+    }
+
+    private static VBox keybindGroup(String groupName, String[][] binds) {
+        Label groupLabel = new Label(groupName.toUpperCase());
+        groupLabel.getStyleClass().add("keybind-popup-group");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(20);
+        grid.setVgap(8);
+
+        for (int i = 0; i < binds.length; i++) {
+            Label keyLbl = new Label(binds[i][0]);
+            keyLbl.getStyleClass().add("settings-keybind-key");
+
+            Label descLbl = new Label(binds[i][1]);
+            descLbl.getStyleClass().add("settings-keybind-desc");
+
+            grid.add(keyLbl, 0, i);
+            grid.add(descLbl, 1, i);
+        }
+
+        return new VBox(8, groupLabel, grid);
+    }
+
+    private static VBox buildDevSection(boolean devModeEnabled, Consumer<Boolean> onDevModeChange) {
+        VBox devRow = toggleRow("Developer Mode", devModeEnabled, true, false, isOn -> {
+            AppConfig.DEV_MODE.set(isOn);
+            onDevModeChange.accept(isOn);
+        });
+        Label note = new Label("Shows extra debug information during gameplay.");
+        note.getStyleClass().add("settings-sublabel");
+        return sectionCard("\uD83D\uDEE0  Developer", devRow, new VBox(note));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Shared helpers
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static VBox sectionCard(String sectionTitle, Node... content) {
+        Label header = new Label(sectionTitle);
+        header.getStyleClass().add("settings-section-title");
+
+        Separator sep = new Separator();
+        sep.getStyleClass().add("settings-section-sep");
+        sep.setMaxWidth(Double.MAX_VALUE);
+
+        VBox body = new VBox(14, content);
+
+        VBox card = new VBox(10, header, sep, body);
+        card.getStyleClass().add("settings-section-card");
+        card.setMaxWidth(Double.MAX_VALUE);
+        return card;
     }
 
     private static VBox toggleRow(String labelText, boolean initialOn,
-                                   String styleClasses, Consumer<Boolean> onChange) {
+                                   boolean isDanger, boolean defaultOn,
+                                   Consumer<Boolean> onChange) {
         Label label = new Label(labelText);
         label.getStyleClass().add("settings-label");
 
+        Label defaultTag = new Label("Default: " + (defaultOn ? "ON" : "OFF"));
+        defaultTag.getStyleClass().add("settings-default-tag");
+
+        VBox labelCol = new VBox(2, label, defaultTag);
+        HBox.setHgrow(labelCol, Priority.ALWAYS);
+
         ToggleButton toggle = new ToggleButton(initialOn ? "ON" : "OFF");
         toggle.setSelected(initialOn);
-        for (String cls : styleClasses.split(" ")) toggle.getStyleClass().add(cls);
+        toggle.getStyleClass().add("settings-toggle");
+        if (isDanger) toggle.getStyleClass().add("settings-toggle-danger");
+
         toggle.selectedProperty().addListener((obs, wasOn, isOn) -> {
             toggle.setText(isOn ? "ON" : "OFF");
             onChange.accept(isOn);
         });
 
-        HBox row = new HBox(12, label, toggle);
+        HBox row = new HBox(12, labelCol, toggle);
         row.setAlignment(Pos.CENTER_LEFT);
-        return new VBox(6, row);
+        row.setMaxWidth(Double.MAX_VALUE);
+        return new VBox(row);
     }
 
     private static VBox volumeBlock(String labelText, double initialValue,
@@ -149,6 +525,9 @@ public final class SettingsView {
                                      Consumer<Boolean> onMuteChange) {
         Label label = new Label(labelText);
         label.getStyleClass().add("settings-label");
+
+        Label defaultVolumeTag = new Label("Default: 50%");
+        defaultVolumeTag.getStyleClass().add("settings-default-tag");
 
         Slider slider = new Slider(0.0, 100.0, initialValue);
         slider.getStyleClass().add("settings-slider");
@@ -159,11 +538,10 @@ public final class SettingsView {
 
         ToggleButton muteToggle = new ToggleButton(initialMuted ? "MUTED" : "ON");
         muteToggle.setSelected(initialMuted);
-        muteToggle.getStyleClass().addAll("settings-mute-button", "settings-mute-toggle");
-        muteToggle.setMinWidth(90);
-        muteToggle.setMaxWidth(90);
+        muteToggle.getStyleClass().addAll("settings-toggle", "settings-mute-toggle");
+        muteToggle.setMinWidth(80);
+        muteToggle.setMaxWidth(80);
 
-        // When the slider moves while NOT muted, push the real volume
         slider.valueProperty().addListener((obs, old, val) -> {
             if (!muteToggle.isSelected()) {
                 onVolumeChange.accept(val.doubleValue() / 100.0);
@@ -177,7 +555,31 @@ public final class SettingsView {
 
         HBox sliderRow = new HBox(12, slider, muteToggle);
         sliderRow.setAlignment(Pos.CENTER_LEFT);
+        sliderRow.setMaxWidth(Double.MAX_VALUE);
 
-        return new VBox(6, label, sliderRow);
+        return new VBox(4, label, defaultVolumeTag, sliderRow);
+    }
+
+    private static ListCell<SaveMeta> saveMetaCell(Path currentSavePath) {
+        return new ListCell<>() {
+            @Override
+            protected void updateItem(SaveMeta item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    boolean isCurrent = currentSavePath != null
+                            && item.saveDir() != null
+                            && item.saveDir().equals(currentSavePath);
+                    String prefix = isCurrent ? "▶  " : (item.autosave() ? "⌛ " : "");
+                    setText(prefix + item.displayName()
+                            + "  •  Wk " + item.week()
+                            + "  •  " + item.savedAt()
+                            + (isCurrent ? "  — Playing" : ""));
+                    setStyle(isCurrent ? "-fx-text-fill: #f5a201; -fx-font-weight: bold;" : "");
+                }
+            }
+        };
     }
 }

@@ -86,8 +86,10 @@ public class App extends Application {
     private boolean devModeEnabled    = false;
     private boolean autosaveEnabled   = false;
     private boolean autosaveToast     = true;
+    private boolean fullscreenEnabled = false;
     private double  musicVolume       = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
     private double  sfxVolume         = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
+    private Stage   primaryStage;
     private Timeline autosaveTimer;
     private SfxController sfxController;
     private GameView currentGameView;
@@ -106,10 +108,10 @@ public class App extends Application {
         animationsEnabled = gs.animations();
         musicMuted        = gs.musicMuted();
         sfxMuted          = gs.sfxMuted();
-        devModeEnabled    = gs.devMode();
         autosaveEnabled   = gs.autosave();
         autosaveToast     = gs.autosaveToast();
-        AppConfig.DEV_MODE.set(gs.devMode());
+
+        primaryStage = stage;
 
         homePage = LandingPageView.build(
                 this::goToSaveSelect,
@@ -143,6 +145,7 @@ public class App extends Application {
         );
 
         configureStage(stage, scene);
+        if (fullscreenEnabled) stage.setFullScreen(true);
         stage.show();
 
         homePageMusicController.play(
@@ -383,25 +386,57 @@ public class App extends Application {
             sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0));
             onBack.run();
         };
+        Runnable onResetAll = () -> {
+            musicVolume       = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
+            sfxVolume         = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
+            animationsEnabled = GlobalSettingsManager.DEFAULT_ANIMATIONS;
+            musicMuted        = GlobalSettingsManager.DEFAULT_MUSIC_MUTED;
+            sfxMuted          = GlobalSettingsManager.DEFAULT_SFX_MUTED;
+            devModeEnabled    = GlobalSettingsManager.DEFAULT_DEV_MODE;
+            autosaveEnabled   = GlobalSettingsManager.DEFAULT_AUTOSAVE;
+            autosaveToast     = GlobalSettingsManager.DEFAULT_AUTOSAVE_TOAST;
+            fullscreenEnabled = GlobalSettingsManager.DEFAULT_FULLSCREEN;
+            homePageMusicController.setVolume(musicVolume);
+            sfxController.setVolume(sfxVolume);
+            backgroundCanvas.setAnimationsEnabled(animationsEnabled);
+            primaryStage.setFullScreen(false);
+            AppConfig.DEV_MODE.set(false);
+            if (autosaveEnabled) startAutosaveTimer(); else stopAutosaveTimer();
+            saveSettings();
+            navigateKeepMusic(buildSettingsView(onBack, onSave));
+        };
         return SettingsView.build(
-                onBackWithSfx,
-                vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
-                musicVolume,
-                musicMuted,
-                muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
-                vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
-                sfxVolume,
-                sfxMuted,
-                muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
-                enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
-                animationsEnabled,
-                enabled -> { devModeEnabled = enabled; saveSettings(); },
-                devModeEnabled,
-                enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
-                autosaveEnabled,
-                enabled -> { autosaveToast = enabled; saveSettings(); },
-                autosaveToast,
-                onSave
+        onBackWithSfx,
+        primaryStage,
+
+        vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
+        musicVolume,
+        musicMuted,
+        muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
+
+        vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
+        sfxVolume,
+        sfxMuted,
+        muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
+
+        enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
+        animationsEnabled,
+
+        fullscreenEnabled,
+        enabled -> { fullscreenEnabled = enabled; primaryStage.setFullScreen(enabled); },
+
+        enabled -> { devModeEnabled = enabled; saveSettings(); },
+        devModeEnabled,
+
+        enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
+        autosaveEnabled,
+
+        enabled -> { autosaveToast = enabled; saveSettings(); },
+        autosaveToast,
+
+        currentSavePath,
+        onResetAll,
+        onSave
         );
     }
 
@@ -412,7 +447,6 @@ public class App extends Application {
                 animationsEnabled,
                 musicMuted,
                 sfxMuted,
-                devModeEnabled,
                 autosaveEnabled,
                 autosaveToast));
     }

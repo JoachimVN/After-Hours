@@ -13,12 +13,16 @@ import java.nio.file.Path;
  * Loads and saves global (cross-game) settings to
  * {@code ~/.afterhours/settings.json}.
  *
- * <p>Fields:
- * <ul>
- *   <li>{@code musicVolume}   — 0.0–1.0</li>
- *   <li>{@code sfxVolume}     — 0.0–1.0</li>
- *   <li>{@code animations}    — true/false</li>
- * </ul>
+ * Only the following fields are persisted:
+ *   - musicVolume (0.0–1.0)
+ *   - sfxVolume   (0.0–1.0)
+ *   - animations
+ *   - musicMuted
+ *   - sfxMuted
+ *   - autosave
+ *   - autosaveToast
+ *
+ * fullscreen + devMode have defaults but are NOT saved or loaded.
  */
 public final class GlobalSettingsManager {
 
@@ -33,19 +37,23 @@ public final class GlobalSettingsManager {
     public static final boolean DEFAULT_ANIMATIONS      = true;
     public static final boolean DEFAULT_MUSIC_MUTED     = false;
     public static final boolean DEFAULT_SFX_MUTED       = false;
-    public static final boolean DEFAULT_DEV_MODE        = false;
+    public static final boolean DEFAULT_DEV_MODE        = false;   // runtime only
     public static final boolean DEFAULT_AUTOSAVE        = false;
     public static final boolean DEFAULT_AUTOSAVE_TOAST  = true;
+    public static final boolean DEFAULT_FULLSCREEN      = false;   // runtime only
 
+    /**
+     * Only the fields that are actually persisted.
+     */
     public record Settings(
             double  musicVolume,
             double  sfxVolume,
             boolean animations,
             boolean musicMuted,
             boolean sfxMuted,
-            boolean devMode,
             boolean autosave,
-            boolean autosaveToast) {}
+            boolean autosaveToast
+    ) {}
 
     private GlobalSettingsManager() {}
 
@@ -58,15 +66,25 @@ public final class GlobalSettingsManager {
         try {
             String raw = Files.readString(SETTINGS_FILE, StandardCharsets.UTF_8);
             JsonObject obj = GSON.fromJson(raw, JsonObject.class);
+
             double  music         = obj.has("musicVolume")    ? obj.get("musicVolume").getAsDouble()    : DEFAULT_MUSIC_VOLUME;
             double  sfx           = obj.has("sfxVolume")      ? obj.get("sfxVolume").getAsDouble()      : DEFAULT_SFX_VOLUME;
             boolean anim          = !obj.has("animations")    || obj.get("animations").getAsBoolean();
             boolean musicMuted    = obj.has("musicMuted")     && obj.get("musicMuted").getAsBoolean();
             boolean sfxMuted      = obj.has("sfxMuted")       && obj.get("sfxMuted").getAsBoolean();
-            boolean devMode       = obj.has("devMode")        && obj.get("devMode").getAsBoolean();
             boolean autosave      = obj.has("autosave")       && obj.get("autosave").getAsBoolean();
             boolean autosaveToast = !obj.has("autosaveToast") || obj.get("autosaveToast").getAsBoolean();
-            return new Settings(clamp(music), clamp(sfx), anim, musicMuted, sfxMuted, devMode, autosave, autosaveToast);
+
+            return new Settings(
+                    clamp(music),
+                    clamp(sfx),
+                    anim,
+                    musicMuted,
+                    sfxMuted,
+                    autosave,
+                    autosaveToast
+            );
+
         } catch (Exception e) {
             return defaults();
         }
@@ -74,28 +92,41 @@ public final class GlobalSettingsManager {
 
     /**
      * Persists settings to disk. Silently ignores IO errors.
+     * fullscreen + devMode are intentionally NOT saved.
      */
     public static void save(Settings s) {
         try {
             Files.createDirectories(SETTINGS_FILE.getParent());
             JsonObject obj = new JsonObject();
+
             obj.addProperty("musicVolume",    s.musicVolume());
             obj.addProperty("sfxVolume",      s.sfxVolume());
             obj.addProperty("animations",     s.animations());
             obj.addProperty("musicMuted",     s.musicMuted());
             obj.addProperty("sfxMuted",       s.sfxMuted());
-            obj.addProperty("devMode",        s.devMode());
             obj.addProperty("autosave",       s.autosave());
             obj.addProperty("autosaveToast",  s.autosaveToast());
+
             Files.writeString(SETTINGS_FILE, GSON.toJson(obj), StandardCharsets.UTF_8);
         } catch (IOException ignored) {}
     }
 
+    /**
+     * Defaults for persistent fields only.
+     */
     private static Settings defaults() {
-        return new Settings(DEFAULT_MUSIC_VOLUME, DEFAULT_SFX_VOLUME, DEFAULT_ANIMATIONS,
-                DEFAULT_MUSIC_MUTED, DEFAULT_SFX_MUTED, DEFAULT_DEV_MODE,
-                DEFAULT_AUTOSAVE, DEFAULT_AUTOSAVE_TOAST);
+        return new Settings(
+                DEFAULT_MUSIC_VOLUME,
+                DEFAULT_SFX_VOLUME,
+                DEFAULT_ANIMATIONS,
+                DEFAULT_MUSIC_MUTED,
+                DEFAULT_SFX_MUTED,
+                DEFAULT_AUTOSAVE,
+                DEFAULT_AUTOSAVE_TOAST
+        );
     }
 
-    private static double clamp(double v) { return Math.max(0.0, Math.min(1.0, v)); }
+    private static double clamp(double v) {
+        return Math.max(0.0, Math.min(1.0, v));
+    }
 }
