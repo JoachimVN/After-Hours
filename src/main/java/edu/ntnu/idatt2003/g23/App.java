@@ -90,6 +90,9 @@ public class App extends Application {
     private boolean fullscreenEnabled = false;
     private double  musicVolume       = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
     private double  sfxVolume         = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
+    /** Non-maximised window dimensions (0 = not set, start maximised). */
+    private int     windowWidth       = GlobalSettingsManager.DEFAULT_WINDOW_WIDTH;
+    private int     windowHeight      = GlobalSettingsManager.DEFAULT_WINDOW_HEIGHT;
     private Stage   primaryStage;
     private Timeline autosaveTimer;
     private SfxController sfxController;
@@ -113,6 +116,8 @@ public class App extends Application {
         autosaveEnabled   = gs.autosave();
         autosaveToast     = gs.autosaveToast();
         fullscreenEnabled = gs.fullscreen();
+        windowWidth       = gs.windowWidth();
+        windowHeight      = gs.windowHeight();
         AppConfig.DEV_MODE.set(gs.devMode());
 
         primaryStage = stage;
@@ -149,8 +154,24 @@ public class App extends Application {
         );
 
         configureStage(stage, scene);
-        if (fullscreenEnabled) stage.setFullScreen(true);
+        // Apply saved window size (if any) — must come after configureStage
+        if (fullscreenEnabled) {
+            stage.setFullScreen(true);
+        } else if (windowWidth > 0 && windowHeight > 0) {
+            stage.setMaximized(false);
+            stage.setWidth(windowWidth);
+            stage.setHeight(windowHeight);
+        }
         stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+
+        // Track window size changes so we can persist them
+        stage.widthProperty().addListener((obs, o, w) -> {
+            if (!stage.isFullScreen() && !stage.isMaximized()) windowWidth  = w.intValue();
+        });
+        stage.heightProperty().addListener((obs, o, h) -> {
+            if (!stage.isFullScreen() && !stage.isMaximized()) windowHeight = h.intValue();
+        });
+
         stage.show();
 
         homePageMusicController.play(
@@ -401,10 +422,13 @@ public class App extends Application {
             autosaveEnabled   = GlobalSettingsManager.DEFAULT_AUTOSAVE;
             autosaveToast     = GlobalSettingsManager.DEFAULT_AUTOSAVE_TOAST;
             fullscreenEnabled = GlobalSettingsManager.DEFAULT_FULLSCREEN;
+            windowWidth       = GlobalSettingsManager.DEFAULT_WINDOW_WIDTH;
+            windowHeight      = GlobalSettingsManager.DEFAULT_WINDOW_HEIGHT;
             homePageMusicController.setVolume(musicVolume);
             sfxController.setVolume(sfxVolume);
             backgroundCanvas.setAnimationsEnabled(animationsEnabled);
             primaryStage.setFullScreen(false);
+            primaryStage.setMaximized(true);
             AppConfig.DEV_MODE.set(false);
             if (autosaveEnabled) startAutosaveTimer(); else stopAutosaveTimer();
             saveSettings();
@@ -424,7 +448,11 @@ public class App extends Application {
                 enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
                 animationsEnabled,
                 fullscreenEnabled,
-                enabled -> { fullscreenEnabled = enabled; saveSettings(); },
+                enabled -> { fullscreenEnabled = enabled; primaryStage.setFullScreen(enabled); saveSettings(); },
+                dims   -> { primaryStage.setFullScreen(false); primaryStage.setMaximized(false);
+                            primaryStage.setWidth(dims[0]); primaryStage.setHeight(dims[1]); },
+                ()     -> { primaryStage.setFullScreen(false); primaryStage.setMaximized(true); },
+                file   -> { /* export already completed in view; reserved for future controller logic */ },
                 enabled -> { devModeEnabled = enabled; saveSettings(); },
                 devModeEnabled,
                 enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
@@ -438,16 +466,21 @@ public class App extends Application {
     }
 
     private void saveSettings() {
+        // Only persist a custom size when we actually have one (non-fullscreen, non-maximised)
+        int savedW = (primaryStage.isFullScreen() || primaryStage.isMaximized()) ? windowWidth  : (int) primaryStage.getWidth();
+        int savedH = (primaryStage.isFullScreen() || primaryStage.isMaximized()) ? windowHeight : (int) primaryStage.getHeight();
         GlobalSettingsManager.save(new GlobalSettingsManager.Settings(
                 musicVolume,
                 sfxVolume,
                 animationsEnabled,
                 musicMuted,
                 sfxMuted,
-                devModeEnabled,
                 autosaveEnabled,
                 autosaveToast,
-                fullscreenEnabled));
+                fullscreenEnabled,
+                devModeEnabled,
+                savedW,
+                savedH));
     }
 
     // ── Music-aware navigation primitives ────────────────────────────────────
@@ -590,6 +623,7 @@ public class App extends Application {
     public void stop() {
         stopAutosaveTimer();
         if (autosaveEnabled) performAutosave();
+        saveSettings(); // persist final window size
         if (homePageMusicController != null) homePageMusicController.stop();
         if (backgroundCanvas != null) backgroundCanvas.stop();
     }

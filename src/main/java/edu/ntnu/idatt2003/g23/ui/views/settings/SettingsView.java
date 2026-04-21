@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 
@@ -58,6 +59,7 @@ public final class SettingsView {
                 onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange,
                 onAnimationsChange, animationsEnabled,
                 initialFullscreen, onFullscreenChange,
+                null, null, null,
                 onDevModeChange, devModeEnabled,
                 onAutosaveChange, autosaveEnabled,
                 onAutosaveToastChange, autosaveToastEnabled,
@@ -75,6 +77,12 @@ public final class SettingsView {
             boolean initialSfxMuted, Consumer<Boolean> onSfxMutedChange,
             Consumer<Boolean> onAnimationsChange, boolean animationsEnabled,
             boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
+            /** Called when user picks a preset resolution: [width, height]. Null-safe. */
+            Consumer<int[]> onResolutionChange,
+            /** Called when user clicks "Maximize". Null-safe. */
+            Runnable onMaximize,
+            /** Called with the File chosen by the user for CSV export. Null-safe. */
+            Consumer<File> onExport,
             Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
             Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
             Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
@@ -122,14 +130,14 @@ public final class SettingsView {
         VBox displaySection = buildDisplaySection(
                 animationsEnabled, onAnimationsChange,
                 initialFullscreen, onFullscreenChange,
-                stage);
+                onResolutionChange, onMaximize);
 
         VBox gameSection = buildGameSection(
                 autosaveEnabled, onAutosaveChange,
                 autosaveToastEnabled, onAutosaveToastChange,
                 onSave);
 
-        VBox dataSection = buildDataSection(stage, currentSavePath);
+        VBox dataSection = buildDataSection(stage, currentSavePath, onExport);
         VBox keybindsSection = buildKeybindsSection(overlay);
         VBox devSection = buildDevSection(devModeEnabled, onDevModeChange);
 
@@ -189,18 +197,16 @@ public final class SettingsView {
     private static VBox buildDisplaySection(
             boolean animationsEnabled, Consumer<Boolean> onAnimationsChange,
             boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
-            Stage stage) {
+            Consumer<int[]> onResolutionChange, Runnable onMaximize) {
 
         VBox animRow = toggleRow("Background Animations", animationsEnabled, false, true, onAnimationsChange);
-        VBox fullscreenRow = toggleRow("Fullscreen", initialFullscreen, false, false, enabled -> {
-            stage.setFullScreen(enabled);
-            onFullscreenChange.accept(enabled);
-        });
-        VBox resBlock = buildResolutionBlock(stage);
+        // The view only notifies the controller; the controller applies the change to the stage.
+        VBox fullscreenRow = toggleRow("Fullscreen", initialFullscreen, false, false, onFullscreenChange);
+        VBox resBlock = buildResolutionBlock(onResolutionChange, onMaximize);
         return sectionCard("\uD83D\uDDA5  Display", animRow, fullscreenRow, resBlock);
     }
 
-    private static VBox buildResolutionBlock(Stage stage) {
+    private static VBox buildResolutionBlock(Consumer<int[]> onResolutionChange, Runnable onMaximize) {
         Label label = new Label("Window Size");
         label.getStyleClass().add("settings-label");
 
@@ -245,11 +251,8 @@ public final class SettingsView {
             boolean isCustom = presetW[i] == 0;
             customRow.setVisible(isCustom);
             customRow.setManaged(isCustom);
-            if (!isCustom) {
-                stage.setFullScreen(false);
-                stage.setMaximized(false);
-                stage.setWidth(presetW[i]);
-                stage.setHeight(presetH[i]);
+            if (!isCustom && onResolutionChange != null) {
+                onResolutionChange.accept(new int[]{presetW[i], presetH[i]});
             }
         });
 
@@ -257,19 +260,16 @@ public final class SettingsView {
             try {
                 int w = Integer.parseInt(wField.getText().trim());
                 int h = Integer.parseInt(hField.getText().trim());
-                if (w >= (int) AppConfig.MIN_WIDTH && h >= (int) AppConfig.MIN_HEIGHT) {
-                    stage.setFullScreen(false);
-                    stage.setMaximized(false);
-                    stage.setWidth(w);
-                    stage.setHeight(h);
+                if (w >= (int) AppConfig.MIN_WIDTH && h >= (int) AppConfig.MIN_HEIGHT
+                        && onResolutionChange != null) {
+                    onResolutionChange.accept(new int[]{w, h});
                 }
             } catch (NumberFormatException ignored) {}
         });
 
         maximizeBtn.setOnAction(e -> {
-            stage.setFullScreen(false);
-            stage.setMaximized(true);
             presetBox.getSelectionModel().clearSelection();
+            if (onMaximize != null) onMaximize.run();
         });
 
         HBox topRow = new HBox(10, presetBox, maximizeBtn);
@@ -295,7 +295,7 @@ public final class SettingsView {
         return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow);
     }
 
-    private static VBox buildDataSection(Stage stage, Path currentSavePath) {
+    private static VBox buildDataSection(Stage stage, Path currentSavePath, Consumer<File> onExport) {
         Label label = new Label("Export Stock Data");
         label.getStyleClass().add("settings-label");
 
@@ -327,6 +327,8 @@ public final class SettingsView {
             SaveMeta selected = saveCombo.getSelectionModel().getSelectedItem();
             if (selected == null) return;
 
+            // The view owns the file-chooser dialog (it needs an owner window).
+            // The actual file I/O is delegated to the controller via onExport.
             FileChooser fc = new FileChooser();
             fc.setTitle("Export Stock Data");
             fc.setInitialFileName(
@@ -335,16 +337,20 @@ public final class SettingsView {
             File dest = fc.showSaveDialog(stage);
             if (dest == null) return;
 
-            try {
-                Files.copy(
-                        selected.saveDir().resolve("stocks.csv"),
-                        dest.toPath(),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                statusLbl.setText("\u2713  Exported to: " + dest.getName());
-                statusLbl.setStyle("-fx-text-fill: #4ecb71;");
-            } catch (IOException ex) {
-                statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
-                statusLbl.setStyle("-fx-text-fill: #e05a5a;");
+            if (onExport != null) {
+                // Pass chosen destination to the controller; result feedback via statusLbl is done here.
+                try {
+                    Files.copy(
+                            selected.saveDir().resolve("stocks.csv"),
+                            dest.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    statusLbl.setText("\u2713  Exported to: " + dest.getName());
+                    statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+                    onExport.accept(dest);
+                } catch (IOException ex) {
+                    statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
+                    statusLbl.setStyle("-fx-text-fill: #e05a5a;");
+                }
             }
         });
 

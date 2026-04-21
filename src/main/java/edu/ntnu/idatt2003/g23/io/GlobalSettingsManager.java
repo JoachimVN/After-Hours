@@ -41,6 +41,9 @@ public final class GlobalSettingsManager {
     public static final boolean DEFAULT_AUTOSAVE        = false;
     public static final boolean DEFAULT_AUTOSAVE_TOAST  = true;
     public static final boolean DEFAULT_FULLSCREEN      = false;
+    /** 0 = no saved size (start maximized). */
+    public static final int     DEFAULT_WINDOW_WIDTH    = 0;
+    public static final int     DEFAULT_WINDOW_HEIGHT   = 0;
 
     /**
      * All persisted fields.
@@ -54,7 +57,9 @@ public final class GlobalSettingsManager {
             boolean autosave,
             boolean autosaveToast,
             boolean fullscreen,
-            boolean devMode
+            boolean devMode,
+            int     windowWidth,
+            int     windowHeight
     ) {}
 
     private GlobalSettingsManager() {}
@@ -88,7 +93,9 @@ public final class GlobalSettingsManager {
                     autosave,
                     autosaveToast,
                     fullscreen,
-                    devMode
+                    devMode,
+                    windowWidth(obj),
+                    windowHeight(obj)
             );
 
         } catch (Exception e) {
@@ -113,6 +120,8 @@ public final class GlobalSettingsManager {
             obj.addProperty("autosaveToast",  s.autosaveToast());
             obj.addProperty("fullscreen",     s.fullscreen());
             obj.addProperty("devMode",        s.devMode());
+            obj.addProperty("windowWidth",    s.windowWidth());
+            obj.addProperty("windowHeight",   s.windowHeight());
 
             Files.writeString(SETTINGS_FILE, GSON.toJson(obj), StandardCharsets.UTF_8);
         } catch (IOException ignored) {}
@@ -131,11 +140,25 @@ public final class GlobalSettingsManager {
                 DEFAULT_AUTOSAVE,
                 DEFAULT_AUTOSAVE_TOAST,
                 DEFAULT_FULLSCREEN,
-                DEFAULT_DEV_MODE
+                DEFAULT_DEV_MODE,
+                DEFAULT_WINDOW_WIDTH,
+                DEFAULT_WINDOW_HEIGHT
         );
     }
 
     private static double clamp(double v) {
         return Math.max(0.0, Math.min(1.0, v));
+    }
+
+    private static int windowWidth(JsonObject obj) {
+        if (!obj.has("windowWidth")) return DEFAULT_WINDOW_WIDTH;
+        int v = obj.get("windowWidth").getAsInt();
+        return v >= 860 ? v : DEFAULT_WINDOW_WIDTH;
+    }
+
+    private static int windowHeight(JsonObject obj) {
+        if (!obj.has("windowHeight")) return DEFAULT_WINDOW_HEIGHT;
+        int v = obj.get("windowHeight").getAsInt();
+        return v >= 620 ? v : DEFAULT_WINDOW_HEIGHT;
     }
 }

@@ -38,73 +38,79 @@ public final class SaveSelectView {
     // ── Build ─────────────────────────────────────────────────────────────────
 
     private BorderPane buildUI() {
-        BorderPane pane = new BorderPane();
-        pane.getStyleClass().addAll("home-page", "background-overlay");
+    BorderPane pane = new BorderPane();
+    pane.getStyleClass().addAll("home-page", "background-overlay");
 
-        // ── Top bar ───────────────────────────────────────────────────────────
-        Button backBtn = new Button("\u2190 Back");
-        backBtn.getStyleClass().add("back-button");
-        backBtn.setOnAction(e -> controller.handleBack());
+    // ── Top bar ───────────────────────────────────────────────────────────
+    Button backBtn = new Button("\u2190 Back");
+    backBtn.getStyleClass().add("back-button");
+    backBtn.setOnAction(e -> controller.handleBack());
 
-        Button newGameBtn = new Button("+ New Game");
-        newGameBtn.getStyleClass().addAll("start-button", "new-game-button");
-        newGameBtn.setOnAction(e -> controller.handleNewGame());
+    Button newGameBtn = new Button("+ New Game");
+    newGameBtn.getStyleClass().addAll("start-button", "new-game-button");
+    newGameBtn.setOnAction(e -> controller.handleNewGame());
 
-        HBox topBar = new HBox(backBtn);
-        topBar.setAlignment(Pos.CENTER_LEFT);
-        topBar.setPadding(new Insets(24, 32, 0, 32));
-        pane.setTop(topBar);
+    HBox topBar = new HBox(backBtn);
+    topBar.setAlignment(Pos.CENTER_LEFT);
+    topBar.setPadding(new Insets(24, 32, 0, 32));
 
-        // ── Title ─────────────────────────────────────────────────────────────
-        Label title = new Label("Continue Game");
-        title.getStyleClass().add("page-title");
+    // ── Title ─────────────────────────────────────────────────────────────
+    Label title = new Label("Continue Game");
+    title.getStyleClass().add("page-title");
 
-        // ── Save list ─────────────────────────────────────────────────────────
-        List<SaveMeta> saves = controller.loadSaveList();
+    // ── Save list ─────────────────────────────────────────────────────────
+    List<SaveMeta> saves = controller.loadSaveList();
 
-        VBox cardList = new VBox(16);
-        cardList.setAlignment(Pos.TOP_CENTER);
-        cardList.setPadding(new Insets(8, 0, 24, 0));
+    VBox cardList = new VBox(16);
+    cardList.setAlignment(Pos.TOP_CENTER);
+    cardList.setPadding(new Insets(8, 0, 24, 0));
 
-        // In-memory resume card (shown before saved games, never persisted)
-        if (controller.hasSession()) {
-            cardList.getChildren().add(buildResumeCard());
-        }
-
-        if (saves.isEmpty() && !controller.hasSession()) {
-            Label empty = new Label("No save files found.");
-            empty.getStyleClass().add("settings-label");
-            cardList.getChildren().add(empty);
-        } else {
-            for (SaveMeta meta : saves) {
-                cardList.getChildren().add(buildCard(meta, cardList));
-            }
-        }
-
-        // "New Game" card always at bottom
-        cardList.getChildren().add(buildNewGameCard());
-
-        ScrollPane scroll = new ScrollPane(cardList);
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.getStyleClass().add("save-scroll");
-        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
-
-        VBox center = new VBox(24, title, scroll);
-        center.setAlignment(Pos.TOP_CENTER);
-        center.setPadding(new Insets(32, 64, 32, 64));
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        pane.setCenter(center);
-
-        // Escape → back
-        pane.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ESCAPE && overlay.getChildren().isEmpty()) {
-                controller.handleBack(); e.consume();
-            }
-        });
-
-        return pane;
+    if (controller.hasSession()) {
+        cardList.getChildren().add(buildResumeCard());
     }
+
+    if (saves.isEmpty() && !controller.hasSession()) {
+        Label empty = new Label("No save files found.");
+        empty.getStyleClass().add("settings-label");
+        cardList.getChildren().add(empty);
+    } else {
+        for (SaveMeta meta : saves) {
+            cardList.getChildren().add(buildCard(meta, cardList));
+        }
+    }
+
+    cardList.getChildren().add(buildNewGameCard());
+
+    ScrollPane scroll = new ScrollPane(cardList);
+    scroll.setFitToWidth(true);
+    scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    scroll.getStyleClass().add("save-scroll");
+    scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+
+    // ── Center wrapper (vertical centering) ───────────────────────────────
+    VBox centerContent = new VBox(24, title, scroll);
+    centerContent.setAlignment(Pos.TOP_CENTER);
+    centerContent.setPadding(new Insets(32, 64, 32, 64));
+    VBox.setVgrow(scroll, Priority.ALWAYS);
+
+    VBox centerWrapper = new VBox(centerContent);
+    centerWrapper.setAlignment(Pos.CENTER); // <-- vertical centering
+    centerWrapper.setFillWidth(true);
+
+    pane.setTop(topBar);
+    pane.setCenter(centerWrapper);
+
+    // Escape → back
+    pane.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+        if (e.getCode() == KeyCode.ESCAPE && overlay.getChildren().isEmpty()) {
+            controller.handleBack();
+            e.consume();
+        }
+    });
+
+    return pane;
+}
+
 
     // ── Card builders ─────────────────────────────────────────────────────────
 
