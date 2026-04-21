@@ -65,7 +65,7 @@ import edu.ntnu.idatt2003.g23.util.NumberParser;
 import java.util.function.DoubleSupplier;
 import javafx.scene.media.AudioClip;
 
-public final class GameView {
+public final class GameView implements GameViewInterface {
     private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
 
     private final GameController gameController;

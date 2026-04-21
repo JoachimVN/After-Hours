@@ -4,6 +4,7 @@ import edu.ntnu.idatt2003.g23.model.Stock;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -83,6 +84,33 @@ public final class StockCsvExporter {
                 }
                 writer.write(priceStr.toString());
                 writer.newLine();
+            }
+        }
+    }
+
+    /**
+     * Writes a list of {@link CsvRow} objects to a file in the
+     * {@code symbol,company,prices} format used by the CSV editor.
+     *
+     * <p>This is the I/O counterpart of the CSV editor view.  The view collects
+     * the destination {@link java.io.File} via a {@link javafx.stage.FileChooser}
+     * and delegates the actual writing to this method (controller/io layer).
+     *
+     * @param target the destination file path
+     * @param rows   the validated rows to write
+     * @throws IOException if the file cannot be written
+     */
+    public static void writeCsvRows(Path target, List<CsvRow> rows) throws IOException {
+        if (target == null) throw new IllegalArgumentException("target cannot be null");
+        if (rows   == null) throw new IllegalArgumentException("rows cannot be null");
+        Files.createDirectories(target.getParent() == null ? target : target.getParent());
+        try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(target, StandardCharsets.UTF_8))) {
+            pw.println("symbol,company,prices");
+            for (CsvRow row : rows) {
+                pw.printf("%s,%s,%s%n",
+                        csv(row.getSymbol()),
+                        csv(row.getCompany()),
+                        row.getPrices() == null ? "" : row.getPrices().trim());
             }
         }
     }

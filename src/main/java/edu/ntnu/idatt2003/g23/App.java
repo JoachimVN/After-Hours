@@ -292,7 +292,8 @@ public class App extends Application {
         Parent editorPage = CsvEditorView.build(
                 result,
                 withBack(this::goHomeKeepMusic),
-                stocks -> buildAndStartGame(name, cash, stocks, true, "Custom Market")
+                rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
+                (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file)
         );
         navigateKeepMusic(editorPage);
         fadeInPage(editorPage);
@@ -315,10 +316,28 @@ public class App extends Application {
         Parent editorPage = CsvEditorView.build(
                 result,
                 withBack(() -> goToImportCsv(name, cash, selectedFile)),
-                stocks -> buildAndStartGame(name, cash, stocks, true, "Custom Market")
+                rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
+                (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file)
         );
         navigateKeepMusic(editorPage);
         fadeInPage(editorPage);
+    }
+
+    private List<Stock> rowsToStocks(List<edu.ntnu.idatt2003.g23.io.CsvRow> rows) {
+        return rows.stream()
+                .map(edu.ntnu.idatt2003.g23.io.StockCsvLoader::rowToStock)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private void saveCsvRowsAndStartGame(String name, double cash,
+                                          List<edu.ntnu.idatt2003.g23.io.CsvRow> rows, File file) {
+        try {
+            edu.ntnu.idatt2003.g23.io.StockCsvExporter.writeCsvRows(file.toPath(), rows);
+        } catch (IOException e) {
+            showAppNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+            return;
+        }
+        buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market");
     }
 
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor) {

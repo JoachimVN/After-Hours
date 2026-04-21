@@ -133,6 +133,107 @@ class StockCsvExporterTest {
         assertEquals("Apple Inc.", invokeCsv("Apple Inc."));
     }
 
+    // ─── writeHistory tests ───────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("writeHistory throws for null file")
+    void writeHistoryNullFileThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> StockCsvExporter.writeHistory(null, List.of()));
+    }
+
+    @Test
+    @DisplayName("writeHistory throws for null stock collection")
+    void writeHistoryNullStocksThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> StockCsvExporter.writeHistory(tempDir.resolve("h.csv"), null));
+    }
+
+    @Test
+    @DisplayName("writeHistory writes symbol,company,prices semicolon-delimited")
+    void writeHistoryWritesCorrectFormat() throws IOException {
+        Stock stock = new Stock("AAPL", "Apple Inc.",
+                new ArrayList<>(List.of(new BigDecimal("100"), new BigDecimal("110"), new BigDecimal("120"))));
+        Path out = tempDir.resolve("history.csv");
+
+        StockCsvExporter.writeHistory(out, List.of(stock));
+
+        List<String> lines = Files.readAllLines(out);
+        assertEquals(1, lines.size());
+        assertEquals("AAPL,Apple Inc.,100;110;120", lines.get(0));
+    }
+
+    @Test
+    @DisplayName("writeHistory skips null elements")
+    void writeHistorySkipsNullElements() throws IOException {
+        List<Stock> stocks = new ArrayList<>();
+        stocks.add(null);
+        Path out = tempDir.resolve("history_null.csv");
+
+        StockCsvExporter.writeHistory(out, stocks);
+
+        List<String> lines = Files.readAllLines(out);
+        assertEquals(0, lines.size());
+    }
+
+    @Test
+    @DisplayName("writeHistory writes multiple stocks")
+    void writeHistoryMultipleStocks() throws IOException {
+        Stock aapl = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("100"))));
+        Stock googl = new Stock("GOOGL", "Google LLC", new ArrayList<>(List.of(new BigDecimal("200"), new BigDecimal("210"))));
+        Path out = tempDir.resolve("history_multi.csv");
+
+        StockCsvExporter.writeHistory(out, List.of(aapl, googl));
+
+        List<String> lines = Files.readAllLines(out);
+        assertEquals(2, lines.size());
+        assertEquals("AAPL,Apple Inc.,100", lines.get(0));
+        assertEquals("GOOGL,Google LLC,200;210", lines.get(1));
+    }
+
+    // ─── writeCsvRows tests ───────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("writeCsvRows throws for null target")
+    void writeCsvRowsNullTargetThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> StockCsvExporter.writeCsvRows(null, List.of()));
+    }
+
+    @Test
+    @DisplayName("writeCsvRows throws for null rows list")
+    void writeCsvRowsNullRowsThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> StockCsvExporter.writeCsvRows(tempDir.resolve("rows.csv"), null));
+    }
+
+    @Test
+    @DisplayName("writeCsvRows writes header and one row")
+    void writeCsvRowsWritesHeaderAndRow() throws IOException {
+        CsvRow row = new CsvRow(1, "AAPL", "Apple Inc.", "100;110;120", null);
+        Path out = tempDir.resolve("rows.csv");
+
+        StockCsvExporter.writeCsvRows(out, List.of(row));
+
+        List<String> lines = Files.readAllLines(out);
+        assertEquals(2, lines.size());
+        assertEquals("symbol,company,prices", lines.get(0));
+        assertTrue(lines.get(1).startsWith("AAPL,Apple Inc.,"));
+        assertTrue(lines.get(1).contains("100;110;120"));
+    }
+
+    @Test
+    @DisplayName("writeCsvRows writes header only for empty row list")
+    void writeCsvRowsEmptyList() throws IOException {
+        Path out = tempDir.resolve("rows_empty.csv");
+
+        StockCsvExporter.writeCsvRows(out, List.of());
+
+        List<String> lines = Files.readAllLines(out);
+        assertEquals(1, lines.size());
+        assertEquals("symbol,company,prices", lines.get(0));
+    }
+
     // ─── Private constructor ──────────────────────────────────────────────────
 
     @Test

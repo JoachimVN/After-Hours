@@ -11,7 +11,6 @@ import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -166,13 +165,7 @@ public final class GameSaveExporter {
                 uiState.stockSort(),
                 uiState.selectedSymbol());
 
-        // Compute net worth: cash + portfolio market value
-        BigDecimal netWorth = player.getMoney();
-        for (var share : player.getPortfolio().getShares()) {
-            BigDecimal price = share.getStock().getSalesPrice();
-            netWorth = netWorth.add(price.multiply(share.getQuantity())
-                    .setScale(2, RoundingMode.HALF_UP));
-        }
+        BigDecimal netWorth = player.getNetWorth();
 
         SaveJson json = new SaveJson(
                 player.getName(),

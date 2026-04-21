@@ -403,4 +403,63 @@ class PlayerTest {
             assertTrue(player.ownsStock("AAPL"));
         }
     }
+
+    // ── setMoney ─────────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("setMoney tests")
+    class SetMoneyTests {
+
+        @Test
+        @DisplayName("setMoney updates money to new valid value")
+        void testSetMoneyUpdatesValue() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            player.setMoney(new BigDecimal("500.00"));
+            assertEquals(new BigDecimal("500.00"), player.getMoney());
+        }
+
+        @Test
+        @DisplayName("setMoney allows zero")
+        void testSetMoneyAllowsZero() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            player.setMoney(BigDecimal.ZERO);
+            assertEquals(0, BigDecimal.ZERO.compareTo(player.getMoney()));
+        }
+
+        @Test
+        @DisplayName("setMoney throws on null")
+        void testSetMoneyThrowsOnNull() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            assertThrows(IllegalArgumentException.class, () -> player.setMoney(null));
+        }
+
+        @Test
+        @DisplayName("setMoney throws on negative value")
+        void testSetMoneyThrowsOnNegative() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            assertThrows(IllegalArgumentException.class, () -> player.setMoney(new BigDecimal("-1")));
+        }
+    }
+
+    // ── setStatus ────────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("setStatus tests")
+    class SetStatusTests {
+
+        @Test
+        @DisplayName("setStatus updates status to given value")
+        void testSetStatusUpdatesValue() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            player.setStatus(PlayerStatus.INVESTOR);
+            assertEquals(PlayerStatus.INVESTOR, player.getStatus());
+        }
+
+        @Test
+        @DisplayName("setStatus throws on null")
+        void testSetStatusThrowsOnNull() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            assertThrows(IllegalArgumentException.class, () -> player.setStatus(null));
+        }
+    }
 }
