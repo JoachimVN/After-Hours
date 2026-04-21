@@ -160,4 +160,24 @@ public class Player {
             .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
             .compareTo(BigDecimal.ZERO) > 0;
     }
+
+    /**
+     * Directly sets the player's current money. Used when restoring a saved game.
+     * @param money the money value to set
+     */
+    public void setMoney(BigDecimal money) {
+        if (money == null || money.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Money cannot be null or negative");
+        }
+        this.money = money;
+    }
+
+    /**
+     * Directly sets the player's status. Used when restoring a saved game.
+     * @param status the status to set
+     */
+    public void setStatus(PlayerStatus status) {
+        if (status == null) throw new IllegalArgumentException("Status cannot be null");
+        this.status = status;
+    }
 }

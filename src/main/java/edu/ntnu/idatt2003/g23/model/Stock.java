@@ -125,12 +125,8 @@ public class Stock {
     /**
      * Calculates the percentage change from the previous price to the latest price
      * @return the percentage change, or 0 if only one price available or previous price is zero
-     * @throws IllegalStateException if no prices are available for the stock
      */
     public BigDecimal percentageChange() {
-        if (prices == null || prices.isEmpty()) {
-            throw new IllegalStateException("No prices available for the stock");
-        }
         if (prices.size() < 2) return BigDecimal.ZERO;
         BigDecimal prev    = prices.get(prices.size() - 2);
         BigDecimal current = prices.get(prices.size() - 1);
@@ -142,24 +138,32 @@ public class Stock {
     /**
      * Calculates the all-time high price of the stock
      * @return the all-time high price of the stock
-     * @throws IllegalStateException if no prices are available for the stock
      */
     public BigDecimal allTimeHigh() {
-        if (prices == null || prices.isEmpty()) {
-            throw new IllegalStateException("No prices available for the stock");
-        }
         return getHistoricalPrices().stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
     }
 
     /**
      * Calculates the all-time low price of the stock
      * @return the all-time low price of the stock
-     * @throws IllegalStateException if no prices are available for the stock
      */
     public BigDecimal allTimeLow() {
-        if (prices == null || prices.isEmpty()) {
-            throw new IllegalStateException("No prices available for the stock");
-        }
         return getHistoricalPrices().stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Calculates the percentage return over the last {@code weeks} weeks.
+     * Pass a negative value to get the all-time return.
+     * @param weeks number of weeks to look back (negative = all-time)
+     * @return percentage return, or 0 if insufficient price history
+     */
+    public BigDecimal percentageChangeOverWeeks(int weeks) {
+        if (prices.size() < 2) return BigDecimal.ZERO;
+        int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
+        BigDecimal from = prices.get(fromIdx);
+        BigDecimal to   = prices.get(prices.size() - 1);
+        if (from.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+        return to.subtract(from).divide(from, 6, RoundingMode.HALF_UP)
+                 .multiply(BigDecimal.valueOf(100));
     }
 }

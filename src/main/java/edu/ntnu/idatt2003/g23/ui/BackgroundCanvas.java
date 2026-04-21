@@ -28,14 +28,16 @@ public class BackgroundCanvas extends Canvas {
     private long pausedAt  = -1;   // wall-clock ns when paused
     private long totalPausedNs = 0; // cumulative ns spent paused
 
+    private boolean animationsEnabled = true;
+
     public BackgroundCanvas() {
         Random rng = new Random(7L);
         for (int i = 0; i < STAR_COUNT; i++) {
-            stars[i][0] = rng.nextDouble();                      // x fraction of canvas width
-            stars[i][1] = rng.nextDouble();                      // y fraction of canvas height
-            stars[i][2] = 0.5 + rng.nextDouble() * 1.8;         // radius in px (0.5–2.3)
-            stars[i][3] = rng.nextDouble() * Math.PI * 2.0;     // twinkle phase offset
-            stars[i][4] = 0.3 + rng.nextDouble() * 1.1;         // twinkle speed (rad/s)
+            stars[i][0] = rng.nextDouble();
+            stars[i][1] = rng.nextDouble();
+            stars[i][2] = 0.5 + rng.nextDouble() * 1.8;
+            stars[i][3] = rng.nextDouble() * Math.PI * 2.0;
+            stars[i][4] = 0.3 + rng.nextDouble() * 1.1;
         }
 
         timer = new AnimationTimer() {
@@ -46,7 +48,12 @@ public class BackgroundCanvas extends Canvas {
         };
         timer.start();
         setEffect(new GaussianBlur(3.5));
-    }  
+
+        // When animations are off, redraw at the paused timestamp on resize
+        // (handles startup case where canvas gets a valid size after being disabled)
+        widthProperty().addListener((obs, o, n)  -> { if (!animationsEnabled && pausedAt >= 0) draw((pausedAt - totalPausedNs) / 1_000_000_000.0); });
+        heightProperty().addListener((obs, o, n) -> { if (!animationsEnabled && pausedAt >= 0) draw((pausedAt - totalPausedNs) / 1_000_000_000.0); });
+    }
 
     private void draw(double t) {
         double w = getWidth();
@@ -111,6 +118,7 @@ public class BackgroundCanvas extends Canvas {
     }
 
     public void setAnimationsEnabled(boolean enabled) {
+        animationsEnabled = enabled;
         if (enabled) {
             if (pausedAt >= 0) {
                 totalPausedNs += System.nanoTime() - pausedAt;
@@ -118,8 +126,9 @@ public class BackgroundCanvas extends Canvas {
             }
             timer.start();
         } else {
-            timer.stop();
+            // Record pause time — last rendered frame stays on screen, no redraw needed
             pausedAt = System.nanoTime();
+            timer.stop();
         }
     }
 }

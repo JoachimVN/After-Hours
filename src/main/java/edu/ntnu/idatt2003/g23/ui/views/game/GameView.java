@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.Set;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
-import edu.ntnu.idatt2003.g23.model.Exchange;
-import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import static edu.ntnu.idatt2003.g23.ui.util.LabelUtil.labelSmall;
+import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -43,7 +43,10 @@ import javafx.scene.control.TextField;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -62,7 +65,7 @@ import edu.ntnu.idatt2003.g23.util.NumberParser;
 import java.util.function.DoubleSupplier;
 import javafx.scene.media.AudioClip;
 
-public final class GameView {
+public final class GameView implements GameViewInterface {
     private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
 
     private final GameController gameController;
@@ -80,38 +83,41 @@ public final class GameView {
     private final VBox stockListBox;
     private final Set<String> favorites;
     private final Node[] selectedCardRef;
-    private final Player player;
-    private final Exchange exchange;
-    private String stockFilter;
+    private final Set<String> activeFilters;
+    private final List<String> filterChipOrder;
+    private FlowPane filterChipsPane;
     private String stockSort;
     private ScrollPane stockScroll;
+    private TxRow highlightedTx = null;
+    private AnimationTimer highlightFadeTimer = null;
 
     private final VBox detailArea;
 
     private StackPane overlayRef = null;
     private Node rootRef = null;
 
-    public GameView(Player player, Exchange exchange, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier) {
-        this.gameController = new GameController(player, exchange);
+    public GameView(GameController gameController, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier) {
+        this(gameController, onBack, onSettings, sfxVolumeSupplier, null);
+    }
+
+    public GameView(GameController gameController, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
+        this.gameController = gameController;
         this.gameController.setView(this);
 
-        this.overlayRef = null;
-        this.rootRef = null;
         this.cashVal = new Label();
         this.portVal = new Label();
         this.nwVal = new Label();
         this.weekNumLbl = new Label();
 
-        this.player = player;
-        this.exchange = exchange;
-
-        this.allStocks = FXCollections.observableArrayList(exchange.getStocks());
+        this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
         this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
-        this.portfolioItems = FXCollections.observableArrayList(player.getPortfolio().getShares());
+        this.portfolioItems = FXCollections.observableArrayList(gameController.getPortfolioShares());
         this.selectedStock = new SimpleObjectProperty<>(null);
 
         this.favorites = new HashSet<>();
-        this.stockFilter = "ALL";
+        this.activeFilters = new HashSet<>();
+        this.filterChipOrder = new ArrayList<>(List.of("FAVORITES", "OWNED", "UP", "DOWN"));
+        this.filterChipsPane = new FlowPane(4, 4);
         this.stockSort   = "NAME";
         this.selectedCardRef = new Node[]{null};
 
@@ -135,11 +141,26 @@ public final class GameView {
         searchField.setPromptText("\uD83D\uDD0D  Search stocks\u2026");
         searchField.getStyleClass().add("game-search-field");
 
+        // Apply initial UI state if provided
+        if (initialState != null) {
+            this.favorites.addAll(initialState.favorites());
+            this.activeFilters.addAll(initialState.activeFilters());
+            if (!initialState.filterChipOrder().isEmpty()) {
+                this.filterChipOrder.clear();
+                this.filterChipOrder.addAll(initialState.filterChipOrder());
+            }
+            if (initialState.stockSort() != null) this.stockSort = initialState.stockSort();
+        }
+
         // Initial stock list population
         applyFilter();
 
-        // Rebuild detail when selection changes
+        // Rebuild detail when selection changes; clear tx highlight when switching to a different stock
         selectedStock.addListener((obs, old, stock) -> {
+            if (highlightedTx != null && (stock == null || !highlightedTx.symbol().equals(stock.getSymbol()))) {
+                highlightedTx = null;
+                if (highlightFadeTimer != null) { highlightFadeTimer.stop(); highlightFadeTimer = null; }
+            }
             rebuildDetail();
         });
 
@@ -149,35 +170,30 @@ public final class GameView {
         // ── Search field listener ──────────────────────────────────────────────
         searchField.textProperty().addListener((obs, old, val) -> applyFilter());
 
-        // ── Stock filter chips ────────────────────────────────────────────────
-        String[] chipKeys   = {"ALL", "FAVORITES", "OWNED", "UP", "DOWN"};
-        String[] chipLabels = {"All",  "\u2605 Favorites", "Owned", "\u25B2 Up", "\u25BC Down"};
-        FlowPane filterChips = new FlowPane(4, 4);
-        for (int i = 0; i < chipLabels.length; i++) {
-            final int idx = i;
-            Button chip = new Button(chipLabels[i]);
-            chip.getStyleClass().add("stock-filter-chip");
-            if (i == 0) chip.getStyleClass().add("stock-filter-chip-active");
-            chip.setOnAction(ev -> {
-                stockFilter = chipKeys[idx];
-                for (Node n : filterChips.getChildren()) n.getStyleClass().remove("stock-filter-chip-active");
-                chip.getStyleClass().add("stock-filter-chip-active");
-                applyFilter();
-            });
-            filterChips.getChildren().add(chip);
-        }
+        // ── Stock filter chips (multi-select, drag-reorderable) ───────────────
+        rebuildFilterChips();
         Label filterLabel = new Label("FILTER");
         filterLabel.getStyleClass().add("stock-row-section-label");
-        VBox filterRow = new VBox(3, filterLabel, filterChips);
+        VBox filterRow = new VBox(3, filterLabel, filterChipsPane);
         filterRow.getStyleClass().add("stock-filter-row");
 
         // ── Sort row ──────────────────────────────────────────────────────────
         Button sortName  = new Button("A\u2013Z");
         Button sortPrice = new Button("Price \u25bc");
         Button sortChg   = new Button("Change \u25bc");
-        sortName.getStyleClass().addAll("stock-sort-chip", "stock-sort-chip-active");
+        sortName.getStyleClass().add("stock-sort-chip");
         sortPrice.getStyleClass().add("stock-sort-chip");
         sortChg.getStyleClass().add("stock-sort-chip");
+        if (stockSort.startsWith("PRICE")) {
+            sortPrice.getStyleClass().add("stock-sort-chip-active");
+            sortPrice.setText("Price " + (stockSort.equals("PRICE_DESC") ? "\u25bc" : "\u25b2"));
+        } else if (stockSort.startsWith("CHG")) {
+            sortChg.getStyleClass().add("stock-sort-chip-active");
+            sortChg.setText("Change " + (stockSort.equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
+        } else {
+            sortName.getStyleClass().add("stock-sort-chip-active");
+            if (stockSort.equals("NAME_DESC")) sortName.setText("Z\u2013A");
+        }
         FlowPane sortChips = new FlowPane(4, 4);
         sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
 
@@ -224,7 +240,7 @@ public final class GameView {
         VBox sortRow = new VBox(3, sortLabel, sortChips);
         sortRow.getStyleClass().add("stock-sort-row");
 
-        Label marketTitle = new Label("Market Stocks");
+        Label marketTitle = new Label(gameController.getExchangeName());
         marketTitle.getStyleClass().add("game-panel-title");
 
         this.stockScroll = new ScrollPane(stockListBox);
@@ -389,7 +405,7 @@ public final class GameView {
         root.setCenter(body);
 
         // ── Dev panel ─────────────────────────────────────────────────────────
-        VBox devPanel = buildDevPanel(player, exchange);
+        VBox devPanel = buildDevPanel();
         devPanel.visibleProperty().bind(AppConfig.DEV_MODE);
         devPanel.managedProperty().bind(AppConfig.DEV_MODE);
         StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
@@ -397,7 +413,15 @@ public final class GameView {
         StackPane overlay = new StackPane(root, devPanel);
         overlayRef = overlay;
 
-        
+        // Restore selected stock from saved UI state
+        if (initialState != null && initialState.selectedSymbol() != null) {
+            String sym = initialState.selectedSymbol();
+            allStocks.stream()
+                     .filter(s -> s.getSymbol().equals(sym))
+                     .findFirst()
+                     .ifPresent(selectedStock::set);
+        }
+
         // ── Global keybindings ──────────────────────────────────────────────────
         // N / Space → Next Week  |  / → Focus search  |  M → Market Movers  |  H → History
         // Escape → clear search, then go back to landing page
@@ -443,33 +467,112 @@ public final class GameView {
         return overlayRef;
     }
 
+    public GameUiState getUiState() {
+        String selSym = selectedStock.get() != null ? selectedStock.get().getSymbol() : null;
+        return new GameUiState(
+                List.copyOf(favorites),
+                List.copyOf(activeFilters),
+                List.copyOf(filterChipOrder),
+                stockSort,
+                selSym);
+    }
+
     public void updateData() {
-        weekNumLbl.setText(String.valueOf(exchange.getWeek()));
-        cashVal.setText(CurrencyFormatter.format(player.getMoney()));
-        portVal.setText(CurrencyFormatter.format(player.getPortfolio().getNetWorth()));
-        nwVal.setText(CurrencyFormatter.format(player.getNetWorth()));
-        portfolioItems.setAll(player.getPortfolio().getShares());
+        weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
+        cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
+        portVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
+        nwVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
+        portfolioItems.setAll(gameController.getPortfolioShares());
         applyFilter();
         rebuildDetail();
     }
 
+    private void rebuildFilterChips() {
+        filterChipsPane.getChildren().clear();
+
+        // ── "All" chip always first (clears active filters) ──────────────────
+        Button allChip = new Button("All");
+        allChip.getStyleClass().add("stock-filter-chip");
+        if (activeFilters.isEmpty()) allChip.getStyleClass().add("stock-filter-chip-active");
+        allChip.setOnAction(ev -> {
+            activeFilters.clear();
+            rebuildFilterChips();
+            applyFilter();
+        });
+        filterChipsPane.getChildren().add(allChip);
+
+        // ── Reorderable filter chips ──────────────────────────────────────────
+        for (String key : filterChipOrder) {
+            String label = switch (key) {
+                case "FAVORITES" -> "\u2605 Favorites";
+                case "OWNED"     -> "Owned";
+                case "UP"        -> "\u25B2 Up";
+                case "DOWN"      -> "\u25BC Down";
+                default          -> key;
+            };
+            Button chip = new Button(label);
+            chip.getStyleClass().add("stock-filter-chip");
+            if (activeFilters.contains(key)) chip.getStyleClass().add("stock-filter-chip-active");
+
+            chip.setOnAction(ev -> {
+                if (activeFilters.contains(key)) activeFilters.remove(key);
+                else activeFilters.add(key);
+                rebuildFilterChips();
+                applyFilter();
+            });
+
+            // ── Drag to reorder ───────────────────────────────────────────────
+            chip.setOnDragDetected(ev -> {
+                Dragboard db = chip.startDragAndDrop(TransferMode.MOVE);
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString(key);
+                db.setContent(cc);
+                chip.getStyleClass().add("stock-filter-chip-dragging");
+                ev.consume();
+            });
+            chip.setOnDragOver(ev -> {
+                if (ev.getDragboard().hasString() && !ev.getDragboard().getString().equals(key)) {
+                    ev.acceptTransferModes(TransferMode.MOVE);
+                }
+                ev.consume();
+            });
+            chip.setOnDragDropped(ev -> {
+                String dragged = ev.getDragboard().getString();
+                int fromIdx = filterChipOrder.indexOf(dragged);
+                int toIdx   = filterChipOrder.indexOf(key);
+                if (fromIdx >= 0 && toIdx >= 0 && fromIdx != toIdx) {
+                    filterChipOrder.remove(fromIdx);
+                    filterChipOrder.add(toIdx, dragged);
+                    rebuildFilterChips();
+                    applyFilter();
+                }
+                ev.setDropCompleted(true);
+                ev.consume();
+            });
+            chip.setOnDragDone(ev -> chip.getStyleClass().remove("stock-filter-chip-dragging"));
+
+            filterChipsPane.getChildren().add(chip);
+        }
+    }
+
     private void applyFilter() {
         String lower = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
+
+        // Active filters in chip order (so priority = left-to-right order the user set)
+        List<String> orderedFilters = filterChipOrder.stream()
+                .filter(activeFilters::contains).toList();
+
         filteredStocks.setPredicate(s -> {
             boolean textMatch = lower.isEmpty()
                     || s.getSymbol().toLowerCase().contains(lower)
                     || s.getCompany().toLowerCase().contains(lower);
-            boolean typeMatch = switch (stockFilter) {
-                case "OWNED"     -> player.getPortfolio().getShareBySymbol(s.getSymbol())
-                        .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .compareTo(BigDecimal.ZERO) > 0;
-                case "UP"        -> s.percentageChange().compareTo(BigDecimal.ZERO) > 0;
-                case "DOWN"      -> s.percentageChange().compareTo(BigDecimal.ZERO) < 0;
-                case "FAVORITES" -> favorites.contains(s.getSymbol());
-                default          -> true;
-            };
-            return textMatch && typeMatch;
+            if (!textMatch) return false;
+            // With no filters active show everything; otherwise show stocks that
+            // match at least one active filter (ordering is handled in sort below)
+            if (orderedFilters.isEmpty()) return true;
+            return orderedFilters.stream().anyMatch(f -> matchesFilter(s, f));
         });
+
         java.util.Comparator<Stock> sortCmp = switch (stockSort) {
             case "PRICE_ASC"  -> java.util.Comparator.comparing(Stock::getSalesPrice);
             case "PRICE_DESC" -> java.util.Comparator.comparing(Stock::getSalesPrice).reversed();
@@ -478,8 +581,36 @@ public final class GameView {
             case "NAME_DESC"  -> java.util.Comparator.comparing(Stock::getSymbol).reversed();
             default           -> java.util.Comparator.comparing(Stock::getSymbol);
         };
+
+        if (orderedFilters.size() > 1) {
+            // Primary sort by group:
+            //   rank 0 = matches ALL active filters (the intersection)
+            //   rank 1 = matches only orderedFilters[0]
+            //   rank 2 = matches only orderedFilters[1]  … etc.
+            // This respects the chip order the user has dragged them into.
+            java.util.Comparator<Stock> filterPriority = java.util.Comparator.comparingInt((Stock s) -> {
+                boolean matchesAll = orderedFilters.stream().allMatch(f -> matchesFilter(s, f));
+                if (matchesAll) return 0;
+                for (int i = 0; i < orderedFilters.size(); i++) {
+                    if (matchesFilter(s, orderedFilters.get(i))) return i + 1;
+                }
+                return orderedFilters.size() + 1; // shouldn't occur (predicate already excluded)
+            });
+            sortCmp = filterPriority.thenComparing(sortCmp);
+        }
+
         rebuildStockList(sortCmp);
-    };
+    }
+
+    private boolean matchesFilter(Stock s, String filter) {
+        return switch (filter) {
+            case "OWNED"     -> gameController.isOwned(s.getSymbol());
+            case "UP"        -> s.percentageChange().compareTo(BigDecimal.ZERO) > 0;
+            case "DOWN"      -> s.percentageChange().compareTo(BigDecimal.ZERO) < 0;
+            case "FAVORITES" -> favorites.contains(s.getSymbol());
+            default          -> true;
+        };
+    }
 
     private void focusStockCardInList(String symbol) {
         Platform.runLater(() -> {
@@ -524,6 +655,28 @@ public final class GameView {
         Label pctBadge  = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
         pctBadge.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "detail-badge-up" : "detail-badge-down");
 
+        // ── Fav star button (right of symbol) ────────────────────────────────
+        boolean isFavDetail = favorites.contains(stock.getSymbol());
+        Button detailFavBtn = new Button(isFavDetail ? "\u2605" : "\u2606");
+        detailFavBtn.getStyleClass().add("detail-fav-btn");
+        if (isFavDetail) detailFavBtn.getStyleClass().add("detail-fav-btn-active");
+        detailFavBtn.setOnAction(ev -> {
+            if (favorites.contains(stock.getSymbol())) favorites.remove(stock.getSymbol());
+            else favorites.add(stock.getSymbol());
+            boolean nowFav = favorites.contains(stock.getSymbol());
+            detailFavBtn.setText(nowFav ? "\u2605" : "\u2606");
+            if (nowFav) detailFavBtn.getStyleClass().add("detail-fav-btn-active");
+            else detailFavBtn.getStyleClass().remove("detail-fav-btn-active");
+            applyFilter();
+        });
+
+        Region symSpacer = new Region();
+        HBox.setHgrow(symSpacer, Priority.ALWAYS);
+        HBox symRow = new HBox(8, sym, symSpacer, detailFavBtn);
+        symRow.setAlignment(Pos.CENTER_LEFT);
+
+        // ── Owned badge (right of price row) ─────────────────────────────────
+        BigDecimal ownedQtyDetail = gameController.getOwnedQuantity(stock.getSymbol());
         HBox priceRow = new HBox(12, price, pctBadge);
         priceRow.setAlignment(Pos.BASELINE_LEFT);
 
@@ -533,8 +686,17 @@ public final class GameView {
 
         VBox hiBox = new VBox(2, labelSmall("ALL TIME HIGH"), new Label(CurrencyFormatter.format(hi)) {{ getStyleClass().add("stat-hl-value-up"); }});
         VBox loBox = new VBox(2, labelSmall("ALL TIME LOW"),  new Label(CurrencyFormatter.format(lo)) {{ getStyleClass().add("stat-hl-value-down"); }});
-        Region hlSpacer = new Region(); HBox.setHgrow(hlSpacer, Priority.ALWAYS);
-        HBox hlRow = new HBox(24, hiBox, loBox);
+
+        // Always include ownedBox so hlRow height stays constant regardless of ownership
+        Label ownedBadge = new Label(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0
+                ? ownedQtyDetail.stripTrailingZeros().toPlainString() + " owned" : "");
+        ownedBadge.getStyleClass().add("detail-owned-badge");
+        VBox ownedBox = new VBox(2, labelSmall("HOLDING"), ownedBadge);
+        ownedBox.setAlignment(Pos.BOTTOM_RIGHT);
+        ownedBox.setVisible(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0);
+        Region hlSpacer = new Region();
+        HBox.setHgrow(hlSpacer, Priority.ALWAYS);
+        HBox hlRow = new HBox(24, hiBox, loBox, hlSpacer, ownedBox);
 
         // ── quantity stepper: [−] [field] [+] ─────────────────────────────────────
         Button decBtn = new Button("\u2212");
@@ -628,7 +790,7 @@ public final class GameView {
         };
         final Runnable applyMaxForBuy = () -> {
             BigDecimal unitCostWithFee = gameController.unitCostWithFee(stock);
-            int maxBuyquantity = player.getMoney().divide(unitCostWithFee, 0, RoundingMode.DOWN).intValue();
+            int maxBuyquantity = gameController.maxBuyQuantity(stock);
             maxBuyquantity = Math.max(0, maxBuyquantity);
             amountTracksSell[0] = false;
             syncingFields[0] = true;
@@ -661,11 +823,18 @@ public final class GameView {
             if (syncingFields[0]) {
                 return;
             }
+            // Allow the field to be empty while the user is typing
+            if (val == null || val.isBlank()) {
+                updateBuyAmount.run();
+                updateSellAmount.run();
+                return;
+            }
             int quantity;
             try {
                 quantity = NumberParser.parse(val).intValue();
             } catch (NumberFormatException ex) {
-                quantity = 1;
+                // Don't overwrite while user is mid-type
+                return;
             }
             quantity = Math.max(0, quantity);
             syncingFields[0] = true;
@@ -722,7 +891,9 @@ public final class GameView {
         buyBtn.getStyleClass().add("trade-buy-button");
         buyBtn.setOnAction(e -> {
             int parsedquantity;
-            try { parsedquantity = NumberParser.parse(quantityField.getText()).intValue(); }
+            String qText = quantityField.getText();
+            if (qText == null || qText.isBlank()) { showError("Quantity must be at least 1 whole share."); return; }
+            try { parsedquantity = NumberParser.parse(qText).intValue(); }
             catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
 
             if (parsedquantity < 1) {
@@ -745,7 +916,9 @@ public final class GameView {
         sellBtn.getStyleClass().add("trade-sell-button");
         sellBtn.setOnAction(e -> {
             int parsedquantity;
-            try { parsedquantity = NumberParser.parse(quantityField.getText()).intValue(); }
+            String qText = quantityField.getText();
+            if (qText == null || qText.isBlank()) { showError("Quantity must be at least 1 whole share."); return; }
+            try { parsedquantity = NumberParser.parse(qText).intValue(); }
             catch (NumberFormatException ex) { showError("Enter a valid quantity."); return; }
 
             if (parsedquantity < 1) {
@@ -754,8 +927,7 @@ public final class GameView {
             }
 
             BigDecimal sellquantity = BigDecimal.valueOf(parsedquantity);
-            BigDecimal totalOwned = player.getPortfolio().getShareBySymbol(stock.getSymbol())
-                    .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalOwned = gameController.getOwnedQuantity(stock.getSymbol());
             if (totalOwned.compareTo(BigDecimal.ZERO) == 0) {
                 showError("You don't own any shares of " + stock.getSymbol()); return;
             }
@@ -787,10 +959,11 @@ public final class GameView {
         VBox tradePanel = new VBox(0, tradeRow);
         tradePanel.getStyleClass().add("trade-panel");
 
+        // ── Graph + header ────────────────────────────────────────────────────
         Pane graphPlaceholder = buildPriceChart(stock);
         VBox.setVgrow(graphPlaceholder, Priority.ALWAYS);
 
-        VBox header = new VBox(4, sym, comp, priceRow, hlRow, graphPlaceholder, tradePanel);
+        VBox header = new VBox(4, symRow, comp, priceRow, hlRow, graphPlaceholder, tradePanel);
         header.getStyleClass().add("game-detail-header");
 
         detailArea.getChildren().add(header);
@@ -1115,13 +1288,11 @@ public final class GameView {
                 case "All" -> -1;
                 default    -> 1;
             };
-            List<Stock> all = exchange.getStocks();
+            List<Stock> all = gameController.getStocks();
             List<Stock> gainers = all.stream()
-                    .sorted((a, b) -> compoundReturn(b, weeks).compareTo(compoundReturn(a, weeks)))
-                    .limit(10).toList();
+                    .sorted((a, b) -> b.percentageChangeOverWeeks(weeks).compareTo(a.percentageChangeOverWeeks(weeks)))                    .limit(10).toList();
             List<Stock> losers = all.stream()
-                    .sorted((a, b) -> compoundReturn(a, weeks).compareTo(compoundReturn(b, weeks)))
-                    .limit(10).toList();
+                    .sorted((a, b) -> a.percentageChangeOverWeeks(weeks).compareTo(b.percentageChangeOverWeeks(weeks)))                    .limit(10).toList();
             VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true, weeks, dismissRef);
             VBox losersCol  = buildMoversColumn("\u25BC  TOP LOSERS",  losers,  false, weeks, dismissRef);
             HBox.setHgrow(gainersCol, Priority.ALWAYS);
@@ -1204,7 +1375,7 @@ public final class GameView {
         VBox rows = new VBox(0);
         for (int i = 0; i < stocks.size(); i++) {
             Stock s = stocks.get(i);
-            BigDecimal pct = compoundReturn(s, weeks);
+            BigDecimal pct = s.percentageChangeOverWeeks(weeks);
             String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
 
             Label rankLbl = new Label("#" + (i + 1));
@@ -1217,7 +1388,27 @@ public final class GameView {
             symLbl.getStyleClass().add("movers-symbol");
             Label compLbl = new Label(s.getCompany());
             compLbl.getStyleClass().add("movers-company");
-            VBox textBox  = new VBox(1, symLbl, compLbl);
+
+            // Fav star inline next to symbol (only if favorited)
+            HBox symRow;
+            if (favorites.contains(s.getSymbol())) {
+                Label moversStarLbl = new Label("\u2605");
+                moversStarLbl.getStyleClass().add("movers-fav-star");
+                symRow = new HBox(4, symLbl, moversStarLbl);
+            } else {
+                symRow = new HBox(symLbl);
+            }
+            symRow.setAlignment(Pos.CENTER_LEFT);
+
+            VBox textBox = new VBox(1, symRow, compLbl);
+
+            // Show owned quantity only if player owns shares
+            BigDecimal moversOwnedQuantity = gameController.getOwnedQuantity(s.getSymbol());
+            if (moversOwnedQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                Label moversOwnedLbl = new Label(moversOwnedQuantity.stripTrailingZeros().toPlainString() + " owned");
+                moversOwnedLbl.getStyleClass().add("movers-owned-label");
+                textBox.getChildren().add(moversOwnedLbl);
+            }
 
             Label priceLbl = new Label(CurrencyFormatter.format(s.getSalesPrice()));
             priceLbl.getStyleClass().add("movers-price");
@@ -1404,6 +1595,45 @@ public final class GameView {
         emptyLbl.getStyleClass().add("market-movers-col-title");
         table.setPlaceholder(emptyLbl);
 
+        // ── Row click: select stock and highlight its dot on the graph ────────
+        Runnable[] dismissRef = {null};
+        table.setRowFactory(tv -> {
+            TableRow<TxRow> row = new TableRow<>() {
+                @Override protected void updateItem(TxRow item, boolean empty) {
+                    super.updateItem(item, empty);
+                    getStyleClass().removeAll("tx-row-buy", "tx-row-sell");
+                    if (!empty && item != null) {
+                        getStyleClass().add(item.isBuy() ? "tx-row-buy" : "tx-row-sell");
+                    }
+                }
+            };
+            row.setOnMouseClicked(ev -> {
+                if (!row.isEmpty() && ev.getClickCount() == 1) {
+                    TxRow tx = row.getItem();
+                    if (dismissRef[0] != null) dismissRef[0].run();
+                    if (highlightFadeTimer != null) { highlightFadeTimer.stop(); highlightFadeTimer = null; }
+                    highlightedTx = tx;
+                    String sym = tx.symbol();
+                    if (filteredStocks.stream().noneMatch(s -> s.getSymbol().equals(sym))) {
+                        searchField.setText("");
+                    }
+                    allStocks.stream()
+                            .filter(s -> s.getSymbol().equals(sym))
+                            .findFirst()
+                            .ifPresent(target -> {
+                                if (target == selectedStock.get()) {
+                                    // Same stock already selected — listener won't fire, force chart rebuild
+                                    rebuildDetail();
+                                } else {
+                                    selectedStock.set(target);
+                                }
+                                focusStockCardInList(sym, stockScroll);
+                            });
+                }
+            });
+            return row;
+        });
+
         // ── Layout ────────────────────────────────────────────────────────────
         Label titleLbl = new Label("\uD83D\uDCCB  Transaction History");
         titleLbl.getStyleClass().add("market-movers-title");
@@ -1463,6 +1693,7 @@ public final class GameView {
                 rootRef.setEffect(null);
             });
         };
+        dismissRef[0] = dismiss;
         closeBtn.setOnAction(ev -> dismiss.run());
         dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
         popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
@@ -1485,22 +1716,19 @@ public final class GameView {
         return box;
     }
 
-    private VBox buildDevPanel(Player player, Exchange exchange) {
+    private VBox buildDevPanel() {
         Label title = new Label("🛠  DEV MODE");
         title.getStyleClass().add("dev-panel-title");
 
         // Week counter
-        Label weekDisplay = new Label("Week: " + exchange.getWeek());
+        Label weekDisplay = new Label("Week: " + gameController.getCurrentWeek());
         weekDisplay.getStyleClass().add("dev-panel-stat");
 
         // Net worth snapshot (declared early so all handlers below can reference it)
         Label nwLabel = new Label();
         nwLabel.getStyleClass().add("dev-panel-stat");
         Runnable updateNw = () -> {
-            BigDecimal portVal = player.getPortfolio().getShares().stream()
-                    .map(sh -> sh.getStock().getSalesPrice().multiply(sh.getQuantity()))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            nwLabel.setText("NW: $" + player.getMoney().add(portVal)
+            nwLabel.setText("NW: $" + gameController.getPlayerNetWorth()
                     .setScale(0, RoundingMode.HALF_UP).toPlainString());
         };
         updateNw.run();
@@ -1515,14 +1743,14 @@ public final class GameView {
         advRow.setAlignment(Pos.CENTER_LEFT);
 
         Runnable doAdvance = () -> {
-            weekDisplay.setText("Week: " + exchange.getWeek());
+            weekDisplay.setText("Week: " + gameController.getCurrentWeek());
             updateNw.run();
             updateData();
         };
         advCustom.setOnAction(e -> {
             try {
                 int n = NumberParser.parse(advInput.getText()).intValue();
-                if (n > 0) { for (int i=0;i<n;i++) exchange.advance(); doAdvance.run(); advInput.clear(); }
+                if (n > 0) { gameController.advanceWeeks(n); doAdvance.run(); advInput.clear(); }
             } catch (NumberFormatException ignored) { advInput.selectAll(); }
         });
 
@@ -1530,9 +1758,9 @@ public final class GameView {
         Button cash1k   = devBtn("+$1K");
         Button cash10k  = devBtn("+$10K");
         Button cash100k = devBtn("+$100K");
-        cash1k  .setOnAction(e -> { player.addMoney(BigDecimal.valueOf(1_000));    updateNw.run(); updateData(); });
-        cash10k .setOnAction(e -> { player.addMoney(BigDecimal.valueOf(10_000));   updateNw.run(); updateData(); });
-        cash100k.setOnAction(e -> { player.addMoney(BigDecimal.valueOf(100_000));  updateNw.run(); updateData(); });
+        cash1k  .setOnAction(e -> { gameController.addCash(BigDecimal.valueOf(1_000));    updateNw.run(); updateData(); });
+        cash10k .setOnAction(e -> { gameController.addCash(BigDecimal.valueOf(10_000));   updateNw.run(); updateData(); });
+        cash100k.setOnAction(e -> { gameController.addCash(BigDecimal.valueOf(100_000));  updateNw.run(); updateData(); });
         HBox cashRow = new HBox(4, cash1k, cash10k, cash100k);
         cashRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -1546,12 +1774,7 @@ public final class GameView {
             try {
                 BigDecimal amount = NumberParser.parse(cashInput.getText());
                 if (amount.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal current = player.getMoney();
-                    if (amount.compareTo(current) > 0) {
-                        player.addMoney(amount.subtract(current));
-                    } else {
-                        player.withdrawMoney(current.subtract(amount));
-                    }
+                    gameController.setCash(amount);
                     cashInput.clear();
                     updateNw.run();
                     updateData();
@@ -1568,7 +1791,7 @@ public final class GameView {
         Button freezeBtn = devBtn("Freeze Prices");
         freezeBtn.setOnAction(e -> {
             frozen[0] = !frozen[0];
-            exchange.setFrozen(frozen[0]);
+            gameController.setFrozen(frozen[0]);
             freezeBtn.setText(frozen[0] ? "Unfreeze Prices" : "Freeze Prices");
             if (frozen[0]) freezeBtn.getStyleClass().add("dev-btn-active");
             else           freezeBtn.getStyleClass().remove("dev-btn-active");
@@ -1621,8 +1844,7 @@ public final class GameView {
         Label pctLbl    = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
         pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
 
-        BigDecimal ownedQuantity = player.getPortfolio().getShareBySymbol(stock.getSymbol())
-                .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
         Label ownedLbl = null;
         if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
             ownedLbl = new Label("Owned: " + ownedQuantity.stripTrailingZeros().toPlainString());
@@ -1741,15 +1963,12 @@ public final class GameView {
         record TradeDot(int week, BigDecimal quantity, BigDecimal price, boolean isSell) {}
 
         String sym = stock.getSymbol();
-        List<TradeDot> tradeDots = new ArrayList<>();
-        player.getTransactionArchive().getAllPurchases().stream()
-                .filter(p -> p.getShare().getStock().getSymbol().equals(sym))
-                .map(p -> new TradeDot(p.getWeek(), p.getShare().getQuantity(), p.getShare().getPurchasePrice(), false))
-                .forEach(tradeDots::add);
-        player.getTransactionArchive().getAllSales().stream()
-                .filter(s -> s.getShare().getStock().getSymbol().equals(sym))
-                .map(s -> new TradeDot(s.getWeek(), s.getShare().getQuantity(), s.getShare().getPurchasePrice(), true))
-                .forEach(tradeDots::add);
+        List<TradeDot> tradeDots = gameController.getTradePointsForStock(sym).stream()
+                .map(tp -> new TradeDot(tp.week(), tp.quantity(), tp.price(), tp.isSell()))
+                .collect(java.util.stream.Collectors.toList());
+
+        // Fade state for tx highlight (1.0 = fully visible, 0.0 = gone)
+        double[] highlightFade = {highlightedTx != null && highlightedTx.symbol().equals(sym) ? 1.0 : 0.0};
 
         // State for hover crosshair — rebuilt on each draw
         List<double[]> drawnDots = new ArrayList<>();
@@ -1869,26 +2088,100 @@ public final class GameView {
                 gc.fillText(chipTxt, chipX, chipY + 11);
             }
 
-            // Trade dots — buys first (behind), then sells (on top)
-            for (int pass = 0; pass < 2; pass++) {
-                boolean drawingSells = (pass == 1);
+            // Pre-compute which weeks have buys, sells, or both
+            java.util.Set<Integer> weeksWithBuys  = new java.util.HashSet<>();
+            java.util.Set<Integer> weeksWithSells = new java.util.HashSet<>();
+            for (TradeDot d : tradeDots) {
+                if (d.isSell()) weeksWithSells.add(d.week()); else weeksWithBuys.add(d.week());
+            }
+            java.util.Set<Integer> weeksWithBoth = new java.util.HashSet<>(weeksWithBuys);
+            weeksWithBoth.retainAll(weeksWithSells);
+
+            // Trade dots — one dot per week (merged if both buy+sell that week)
+            java.util.Set<Integer> drawnWeeks = new java.util.HashSet<>();
+            // pass 0 = buy-only, pass 1 = sell-only, pass 2 = mixed (drawn last / on top)
+            for (int pass = 0; pass < 3; pass++) {
                 for (TradeDot dot : tradeDots) {
-                    if (dot.isSell() != drawingSells) continue;
-                    int idx = dot.week() - 1;
+                    int week = dot.week();
+                    int idx = week - 1;
                     if (idx < 0 || idx >= n) continue;
+                    boolean isMixed = weeksWithBoth.contains(week);
+                    if (pass == 0 && (isMixed || dot.isSell())) continue;  // buy-only pass
+                    if (pass == 1 && (isMixed || !dot.isSell())) continue; // sell-only pass
+                    if (pass == 2 && !isMixed) continue;                   // mixed pass
+                    if (!drawnWeeks.add(week)) continue; // already drew this week
                     double dotX = xs[idx], dotY = ys[idx];
-                    if (dot.isSell()) {
+                    if (isMixed) {
+                        // Blended: green outer halo, split inner (left=buy green, right=sell)
+                        gc.setFill(Color.web("#1e7a40", 0.28));
+                        gc.fillOval(dotX - 7, dotY - 7, 14, 14);
+                        // Left half — buy green
+                        gc.save();
+                        gc.beginPath();
+                        gc.rect(dotX - 10, dotY - 10, 10, 20);
+                        gc.clip();
+                        gc.setFill(Color.web("#4ecb71"));
+                        gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        gc.restore();
+                        // Right half — sell red
+                        gc.save();
+                        gc.beginPath();
+                        gc.rect(dotX, dotY - 10, 10, 20);
+                        gc.clip();
+                        gc.setFill(Color.web("#e05a5a"));
+                        gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        gc.restore();
+                        // Thin dividing line
+                        gc.setStroke(Color.web("#060d20", 0.55));
+                        gc.setLineWidth(1);
+                        gc.strokeLine(dotX, dotY - 4, dotX, dotY + 4);
+                        // 2 = mixed sentinel for hit detection
+                        drawnDots.add(new double[]{dotX, dotY, week, 0, 0, 2});
+                    } else if (dot.isSell()) {
                         gc.setFill(Color.web("#e05a5a", 0.28));
                         gc.fillOval(dotX - 7, dotY - 7, 14, 14);
                         gc.setFill(Color.web("#e05a5a"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        drawnDots.add(new double[]{dotX, dotY, week, dot.quantity().doubleValue(), dot.price().doubleValue(), 1});
                     } else {
-                        gc.setFill(Color.web("#f5a201", 0.30));
+                        gc.setFill(Color.web("#4ecb71", 0.30));
                         gc.fillOval(dotX - 7, dotY - 7, 14, 14);
-                        gc.setFill(Color.web("#f5a201"));
+                        gc.setFill(Color.web("#4ecb71"));
                         gc.fillOval(dotX - 4, dotY - 4, 8, 8);
+                        drawnDots.add(new double[]{dotX, dotY, week, dot.quantity().doubleValue(), dot.price().doubleValue(), 0});
                     }
-                    drawnDots.add(new double[]{dotX, dotY, dot.week(), dot.quantity().doubleValue(), dot.price().doubleValue(), dot.isSell() ? 1 : 0});
+                    // Highlight when selected from transaction history
+                    boolean isHighlighted = highlightedTx != null
+                            && highlightedTx.symbol().equals(sym)
+                            && highlightedTx.week() == week
+                            && (isMixed || highlightedTx.isBuy() != dot.isSell());
+                    if (isHighlighted && highlightFade[0] > 0) {
+                        double fa = highlightFade[0];
+                        String dotColor = isMixed ? "#1e7a40" : (dot.isSell() ? "#e05a5a" : "#4ecb71");
+                        gc.setStroke(Color.web(dotColor, 0.22 * fa));
+                        gc.setLineWidth(1);
+                        gc.setLineDashes(3, 4);
+                        gc.strokeLine(dotX, padT + 18, dotX, dotY - 9);
+                        gc.setLineDashes((double[]) null);
+                        gc.setStroke(Color.web(dotColor, 0.12 * fa));
+                        gc.setLineWidth(7);
+                        gc.strokeOval(dotX - 13, dotY - 13, 26, 26);
+                        gc.setStroke(Color.web(dotColor, 0.30 * fa));
+                        gc.setLineWidth(2);
+                        gc.strokeOval(dotX - 9, dotY - 9, 18, 18);
+                        gc.setStroke(Color.web("#ffffff", 0.40 * fa));
+                        gc.setLineWidth(1);
+                        gc.strokeOval(dotX - 6, dotY - 6, 12, 12);
+                        String txLabel = (isMixed ? "BUY/SELL" : (dot.isSell() ? "SELL" : "BUY")) + "  Week " + week;
+                        gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 9));
+                        double tw = txLabel.length() * 5.3;
+                        double chipX = Math.min(dotX + 5, w - tw - 12);
+                        double chipY = padT + 2;
+                        gc.setFill(Color.web("#060d20", 0.75 * fa));
+                        gc.fillRoundRect(chipX - 4, chipY - 2, tw + 8, 13, 5, 5);
+                        gc.setFill(Color.web(dotColor, 0.85 * fa));
+                        gc.fillText(txLabel, chipX, chipY + 9);
+                    }
                 }
             }
 
@@ -1916,27 +2209,56 @@ public final class GameView {
             if (hit != null) {
                 onDot[0]    = true;
                 hoverIdx[0] = -1;
-                final double[] h = hit;
-                boolean isSell = h[5] == 1;
+                int hitWeek = (int) hit[2];
+                List<TradeDot> weekBuys  = tradeDots.stream().filter(d -> d.week() == hitWeek && !d.isSell()).toList();
+                List<TradeDot> weekSells = tradeDots.stream().filter(d -> d.week() == hitWeek && d.isSell()).toList();
                 tooltip.getChildren().clear();
-                Label weekLbl = new Label((isSell ? "Sold" : "Bought") + " · Week " + (int) h[2]);
-                weekLbl.getStyleClass().add(isSell ? "chart-tooltip-sell-week" : "chart-tooltip-week");
-                Label quantityLbl = new Label("Quantity: " + BigDecimal.valueOf(h[3]).stripTrailingZeros().toPlainString());
-                quantityLbl.getStyleClass().add("chart-tooltip-row");
-                Label priceLbl = new Label("Price: " + CurrencyFormatter.format(BigDecimal.valueOf(h[4])));
-                priceLbl.getStyleClass().add("chart-tooltip-row");
-                tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl);
-                if (!isSell) {
-                    BigDecimal gain = stock.getSalesPrice().subtract(BigDecimal.valueOf(h[4]))
-                            .multiply(BigDecimal.valueOf(h[3]));
+                // ── Buys section ──────────────────────────────────────────
+                if (!weekBuys.isEmpty()) {
+                    BigDecimal totalQty = weekBuys.stream().map(TradeDot::quantity)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal avgPrice = weekBuys.stream().map(d -> d.price().multiply(d.quantity()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(totalQty, 4, RoundingMode.HALF_UP);
+                    Label weekLbl = new Label("Bought · Week " + hitWeek + (weekBuys.size() > 1 ? "  ×" + weekBuys.size() : ""));
+                    weekLbl.getStyleClass().add("chart-tooltip-week");
+                    Label quantityLbl = new Label("Quantity: " + totalQty.stripTrailingZeros().toPlainString());
+                    quantityLbl.getStyleClass().add("chart-tooltip-row");
+                    Label priceLbl = new Label((weekBuys.size() > 1 ? "Avg price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
+                    priceLbl.getStyleClass().add("chart-tooltip-row");
+                    BigDecimal gain = stock.getSalesPrice().subtract(avgPrice).multiply(totalQty);
                     String sign = gain.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
                     Label gainLbl = new Label("P&L: " + sign + CurrencyFormatter.format(gain));
                     gainLbl.getStyleClass().add(gain.compareTo(BigDecimal.ZERO) >= 0 ? "chart-tooltip-gain" : "chart-tooltip-loss");
-                    tooltip.getChildren().add(gainLbl);
+                    tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl, gainLbl);
                 }
-                double tx = h[0] + 12, ty = h[1] - 70;
-                if (ty < 4)                    ty = h[1] + 14;
-                if (tx + 150 > pane.getWidth()) tx = h[0] - 155;
+                // ── Divider when both types present ───────────────────────
+                if (!weekBuys.isEmpty() && !weekSells.isEmpty()) {
+                    Region divider = new Region();
+                    divider.setMaxWidth(Double.MAX_VALUE);
+                    divider.setMinHeight(3);
+                    divider.setMaxHeight(3);
+                    divider.setStyle("-fx-background-color:rgba(92, 116, 255, 0.25);");
+                    tooltip.getChildren().add(divider);
+                }
+                // ── Sells section ─────────────────────────────────────────
+                if (!weekSells.isEmpty()) {
+                    BigDecimal totalQty = weekSells.stream().map(TradeDot::quantity)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal avgPrice = weekSells.stream().map(d -> d.price().multiply(d.quantity()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(totalQty, 4, RoundingMode.HALF_UP);
+                    Label weekLbl = new Label("Sold · Week " + hitWeek + (weekSells.size() > 1 ? "  ×" + weekSells.size() : ""));
+                    weekLbl.getStyleClass().add("chart-tooltip-sell-week");
+                    Label quantityLbl = new Label("Quantity: " + totalQty.stripTrailingZeros().toPlainString());
+                    quantityLbl.getStyleClass().add("chart-tooltip-row");
+                    Label priceLbl = new Label((weekSells.size() > 1 ? "Avg price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
+                    priceLbl.getStyleClass().add("chart-tooltip-row");
+                    tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl);
+                }
+                double tx = hit[0] + 12, ty = hit[1] - 70;
+                if (ty < 4)                    ty = hit[1] + 14;
+                if (tx + 150 > pane.getWidth()) tx = hit[0] - 155;
                 tooltip.setLayoutX(tx);
                 tooltip.setLayoutY(ty);
                 tooltip.setVisible(true);
@@ -1966,6 +2288,36 @@ public final class GameView {
 
         canvas.widthProperty().addListener((obs, o, nv) -> drawRef[0].run());
         canvas.heightProperty().addListener((obs, o, nv) -> drawRef[0].run());
+
+        // Start fade timer if this chart has a highlight
+        if (highlightedTx != null && highlightedTx.symbol().equals(sym)) {
+            if (highlightFadeTimer != null) highlightFadeTimer.stop();
+            long[] startNano = {-1};
+            AnimationTimer timer = new AnimationTimer() {
+                @Override public void handle(long now) {
+                    if (startNano[0] < 0) startNano[0] = now;
+                    long elapsed  = now - startNano[0];
+                    long WAIT_NS  =  5_000_000_000L; //  5 s
+                    long FADE_NS  =    800_000_000L; //  0.8 s
+                    if (elapsed >= WAIT_NS + FADE_NS) {
+                        highlightFade[0] = 0.0;
+                        highlightedTx    = null;
+                        highlightFadeTimer = null;
+                        stop();
+                        drawRef[0].run();
+                    } else if (elapsed >= WAIT_NS) {
+                        double t = (elapsed - WAIT_NS) / (double) FADE_NS;
+                        // ease-in curve so fade feels natural
+                        highlightFade[0] = 1.0 - (t * t);
+                        drawRef[0].run();
+                    }
+                    // still in wait window — no redraw needed
+                }
+            };
+            highlightFadeTimer = timer;
+            timer.start();
+        }
+
         Platform.runLater(drawRef[0]);
         return pane;
     }
@@ -1976,17 +2328,6 @@ public final class GameView {
         c.setCellValueFactory(cell -> new SimpleStringProperty(fn.apply(cell.getValue())));
         c.setMinWidth(min); c.setMaxWidth(max);
         return c;
-    }
-
-     private static BigDecimal compoundReturn(Stock stock, int weeks) {
-        java.util.List<BigDecimal> prices = stock.getHistoricalPrices();
-        if (prices.size() < 2) return BigDecimal.ZERO;
-        int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
-        BigDecimal from = prices.get(fromIdx);
-        BigDecimal to   = prices.get(prices.size() - 1);
-        if (from.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
-        return to.subtract(from).divide(from, 6, RoundingMode.HALF_UP)
-                 .multiply(BigDecimal.valueOf(100));
     }
 
     private static AudioClip loadAudioClip(String resourcePath) {

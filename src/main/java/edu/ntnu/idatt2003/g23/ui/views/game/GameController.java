@@ -22,14 +22,14 @@ public final class GameController {
 
     private final Player player;
     private final Exchange exchange;
-    private GameView view;
+    private GameViewInterface view;
 
     public GameController(Player player, Exchange exchange) {
         this.player = player;
         this.exchange = exchange;
     }
 
-    public void setView(GameView view) {
+    public void setView(GameViewInterface view) {
         this.view = view;
     }
 
@@ -80,6 +80,11 @@ public final class GameController {
         return player.getPortfolio().getShareBySymbol(stock.getSymbol())
             .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
             .setScale(0, RoundingMode.DOWN).intValue();
+    }
+
+    public BigDecimal getOwnedQuantity(String symbol) {
+        return player.getPortfolio().getShareBySymbol(symbol)
+                .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public void handleNextWeek() {
@@ -157,7 +162,7 @@ public final class GameController {
         BigDecimal fee   = gross.multiply(new BigDecimal("0.005"));
         BigDecimal total = gross.add(fee);
         view.showTradeConfirm("BUY", stock, quantity, gross, fee, BigDecimal.ZERO, total);
-    };
+    }
 
     public void executeBuy(Stock stock, BigDecimal quantity, BigDecimal total, BigDecimal fee) {
             try {
@@ -168,7 +173,7 @@ public final class GameController {
             } catch (Exception ex) { 
                 view.showError(ex.getMessage()); 
             }
-    };
+    }
 
     public void handleSellAll(StackPane overlay) {
         BigDecimal totalOwnedquantity = player.getPortfolio().getShares().stream()
@@ -188,6 +193,51 @@ public final class GameController {
                 preview.get(1),
                 preview.get(2),
                 preview.get(3));
+    }
+
+    // ── Model data accessors (keep view free of direct model references) ─────
+
+    public List<Stock> getStocks() { return exchange.getStocks(); }
+    public String getExchangeName() { return exchange.getName(); }
+    public int getCurrentWeek() { return exchange.getWeek(); }
+    public BigDecimal getPlayerCash() { return player.getMoney(); }
+    public BigDecimal getPortfolioNetWorth() { return player.getPortfolio().getNetWorth(); }
+    public BigDecimal getPlayerNetWorth() { return player.getNetWorth(); }
+    public List<Share> getPortfolioShares() { return player.getPortfolio().getShares(); }
+    public boolean isOwned(String symbol) {
+        return getOwnedQuantity(symbol).compareTo(BigDecimal.ZERO) > 0;
+    }
+    public int maxBuyQuantity(Stock stock) {
+        BigDecimal cost = unitCostWithFee(stock);
+        return player.getMoney().divide(cost, 0, RoundingMode.DOWN).max(BigDecimal.ZERO).intValue();
+    }
+
+    // ── Dev-panel helpers ─────────────────────────────────────────────────────
+
+    public void addCash(BigDecimal amount) { player.addMoney(amount); }
+    public void setCash(BigDecimal amount) {
+        BigDecimal current = player.getMoney();
+        if (amount.compareTo(current) > 0) player.addMoney(amount.subtract(current));
+        else player.withdrawMoney(current.subtract(amount));
+    }
+    public void advanceWeeks(int n) { for (int i = 0; i < n; i++) exchange.advance(); }
+    public void setFrozen(boolean frozen) { exchange.setFrozen(frozen); }
+
+    // ── Chart trade-point data ────────────────────────────────────────────────
+
+    public record StockTradePoint(int week, BigDecimal quantity, BigDecimal price, boolean isSell) {}
+
+    public List<StockTradePoint> getTradePointsForStock(String symbol) {
+        List<StockTradePoint> result = new ArrayList<>();
+        for (var p : player.getTransactionArchive().getAllPurchases()) {
+            if (p.getShare().getStock().getSymbol().equals(symbol))
+                result.add(new StockTradePoint(p.getWeek(), p.getShare().getQuantity(), p.getShare().getPurchasePrice(), false));
+        }
+        for (var s : player.getTransactionArchive().getAllSales()) {
+            if (s.getShare().getStock().getSymbol().equals(symbol))
+                result.add(new StockTradePoint(s.getWeek(), s.getShare().getQuantity(), s.getShare().getPurchasePrice(), true));
+        }
+        return result;
     }
 
     public List<TxRow> getTransactionHistory() {

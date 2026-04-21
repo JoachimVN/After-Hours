@@ -360,7 +360,7 @@
 .chart-tooltip-week {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: #f5a201;
+    -fx-text-fill: #4ecb71;
 }
 
 .chart-tooltip-sell-week {
@@ -605,6 +605,15 @@
 
 .game-table .table-row-cell:filled:selected {
     -fx-background-color: rgba(245, 162, 1, 0.16);
+}
+
+.game-table .table-row-cell:filled:hover {
+    -fx-background-color: rgba(245, 162, 1, 0.08);
+    -fx-cursor: hand;
+}
+
+.game-table .table-row-cell:filled:selected:hover {
+    -fx-background-color: rgba(245, 162, 1, 0.22);
 }
 
 .game-table .table-row-cell:filled:selected .table-cell {
@@ -1070,6 +1079,58 @@
     -fx-text-fill: #f5a201;
 }
 
+/* ── Detail panel – fav button (inline with symbol) ─────────────────────── */
+
+.detail-fav-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #666;
+    -fx-font-size: 22px;
+    -fx-cursor: hand;
+    -fx-padding: 0 2 0 2;
+}
+
+.detail-fav-btn:hover {
+    -fx-text-fill: #f5a201;
+}
+
+.detail-fav-btn-active {
+    -fx-text-fill: #f5a201;
+}
+
+/* ── Detail panel – owned badge (next to price) ──────────────────────────── */
+
+.detail-owned-badge {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8ff0b0;
+    -fx-background-color: rgba(30, 158, 74, 0.18);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(46, 184, 92, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 2 8 2 8;
+}
+
+/* ── Market Movers extras ────────────────────────────────────────────────── */
+
+.movers-fav-star {
+    -fx-font-size: 11px;
+    -fx-text-fill: #f5a201;
+}
+
+.movers-owned-label {
+    -fx-font-size: 9px;
+    -fx-text-fill: #7ab8f5;
+    -fx-font-style: italic;
+}
+
+/* ── Filter chip drag indicator ─────────────────────────────────────────── */
+
+.stock-filter-chip-dragging {
+    -fx-opacity: 0.5;
+}
+
 .stock-card-favorited {
     -fx-border-color: rgba(245, 162, 1, 0.35);
 }
@@ -1123,6 +1184,12 @@
     -fx-background-color: #7a9fc8;
 }
 
+/* Hide the empty filler column that appears to the right of the last column */
+.history-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
 .history-table .table-row-cell {
     -fx-background-color: transparent;
     -fx-border-color: transparent transparent rgba(30, 64, 128, 0.10) transparent;
@@ -1138,20 +1205,43 @@
     -fx-background-color: rgba(25, 45, 95, 0.80);
 }
 
+.history-table .table-row-cell:hover {
+    -fx-background-color: rgba(78, 203, 113, 0.07);
+    -fx-cursor: hand;
+}
+
+.history-table .table-row-cell:selected:hover {
+    -fx-background-color: rgba(78, 203, 113, 0.13);
+}
+
 .history-table .table-cell {
     -fx-text-fill: #c8d8ee;
     -fx-font-size: 11px;
     -fx-padding: 5 6 5 6;
 }
 
-.tx-type-buy {
+.tx-type-buy,
+.history-table .table-cell.tx-type-buy {
     -fx-text-fill: #4ecb71;
     -fx-font-weight: bold;
 }
 
-.tx-type-sell {
+.tx-type-sell,
+.history-table .table-cell.tx-type-sell {
     -fx-text-fill: #e05a5a;
     -fx-font-weight: bold;
+}
+
+.tx-row-buy {
+    -fx-border-color: rgba(78, 203, 113, 0.18) transparent rgba(78, 203, 113, 0.18) transparent;
+    -fx-border-width: 0 0 0 2;
+    -fx-border-insets: 0;
+}
+
+.tx-row-sell {
+    -fx-border-color: rgba(224, 90, 90, 0.18) transparent rgba(224, 90, 90, 0.18) transparent;
+    -fx-border-width: 0 0 0 2;
+    -fx-border-insets: 0;
 }
 
 /* ── History table scrollbar ─────────────────────────────────────────────── */

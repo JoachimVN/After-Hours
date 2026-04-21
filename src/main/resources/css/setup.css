@@ -78,3 +78,63 @@
     -fx-background-color: linear-gradient(from 0% 0% to 100% 0%, #d48a00, #f5a201 55%, #ffba42);
     -fx-border-color: #ffba4270;
 }
+
+/* ── Market dropdown ─────────────────────────────────────────────────────── */
+
+.market-combo-box {
+    -fx-font-size: 14px;
+    -fx-background-color: #050d1a;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-pref-height: 44;
+}
+
+.market-combo-box .list-view {
+    -fx-background-color: #07152c;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+.market-combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 8 12;
+}
+
+.market-combo-box .list-cell:hover {
+    -fx-background-color: #0f2d5e;
+}
+
+.market-combo-box .list-view .list-cell:selected {
+    -fx-background-color: rgba(245, 162, 1, 0.15);
+}
+
+.market-combo-box .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.market-combo-box .arrow {
+    -fx-background-color: #4a6899;
+}
+
+.market-combo-name {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+}
+
+.market-combo-desc {
+    -fx-font-size: 11px;
+    -fx-text-fill: #4a6899;
+}
+
+.market-description-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #4a6899;
+    -fx-font-style: italic;
+    -fx-padding: 2 0 0 2;
+}
+

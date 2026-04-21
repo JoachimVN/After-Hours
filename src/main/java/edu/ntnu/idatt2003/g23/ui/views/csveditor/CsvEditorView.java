@@ -1,19 +1,15 @@
 package edu.ntnu.idatt2003.g23.ui.views.csveditor;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.CsvRow;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
-import edu.ntnu.idatt2003.g23.model.Stock;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -58,13 +54,17 @@ public final class CsvEditorView {
     /**
      * Builds the CSV editor view.
      *
-     * @param result    the parse result to display and edit
-     * @param onCancel  called when the user presses Back
-     * @param onSuccess called with the corrected {@link Stock} list when the
-     *                  user saves and continues
+     * @param result      the parse result to display and edit
+     * @param onCancel    called when the user presses Back
+     * @param onContinue  called with the validated {@link CsvRow} list when the
+     *                    user chooses "Continue (no save)"
+     * @param onSaveAs    called with the validated row list and the chosen
+     *                    destination file when the user chooses "Save As &amp; Continue";
+     *                    the controller is responsible for writing and starting the game
      */
     public static Parent build(CsvParseResult result, Runnable onCancel,
-                               Consumer<List<Stock>> onSuccess) {
+                               Consumer<List<CsvRow>> onContinue,
+                               BiConsumer<List<CsvRow>, File> onSaveAs) {
 
         ObservableList<CsvRow> rows =
                 FXCollections.observableArrayList(result.getRows());
@@ -332,20 +332,25 @@ public final class CsvEditorView {
         continueBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
         continueBtn.disableProperty().bind(hasErrors);
         continueBtn.setOnAction(e -> {
-            rows.forEach(StockCsvLoader::validateRow);
             if (rows.stream().anyMatch(CsvRow::hasError)) return;
-            List<Stock> stocks = rows.stream()
-                    .map(StockCsvLoader::rowToStock)
-                    .collect(Collectors.toList());
-            onSuccess.accept(stocks);
+            onContinue.accept(List.copyOf(rows));
         });
 
-        // "Save As & Continue" — writes to a new file then starts game
+        // "Save As & Continue" — shows file picker, delegates I/O to the controller
         Button saveBtn = new Button("\u2714  Save As & Continue");
         saveBtn.getStyleClass().add("start-button");
         saveBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 15;");
         saveBtn.disableProperty().bind(hasErrors);
-        saveBtn.setOnAction(e -> handleSaveAndContinue(root, rows, onSuccess));
+        saveBtn.setOnAction(e -> {
+            if (rows.stream().anyMatch(CsvRow::hasError)) return;
+            FileChooser fc = new FileChooser();
+            fc.setTitle("Save Fixed CSV As\u2026");
+            fc.setInitialFileName("stocks_fixed.csv");
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+            File target = fc.showSaveDialog(root.getScene().getWindow());
+            if (target == null) return; // user cancelled
+            onSaveAs.accept(List.copyOf(rows), target);
+        });
 
         Region bottomSpacer = new Region();
         HBox.setHgrow(bottomSpacer, Priority.ALWAYS);
@@ -388,70 +393,6 @@ public final class CsvEditorView {
             label.getStyleClass().removeAll("csv-error-count-ok");
             label.getStyleClass().add("csv-error-count-bad");
         }
-    }
-
-    private static void handleSaveAndContinue(BorderPane root,
-                                               ObservableList<CsvRow> rows,
-                                               Consumer<List<Stock>> onSuccess) {
-        // Re-validate before saving
-        rows.forEach(StockCsvLoader::validateRow);
-        if (rows.stream().anyMatch(CsvRow::hasError)) {
-            return;
-        }
-
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Save Fixed CSV As…");
-        fc.setInitialFileName("stocks_fixed.csv");
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-        File target = fc.showSaveDialog(root.getScene().getWindow());
-
-        if (target == null) {
-            return; // user cancelled the save dialog
-        }
-
-        try {
-            writeCsv(target, rows);
-        } catch (IOException ex) {
-            // Surface the write error — keep editor open
-            javafx.scene.control.Alert alert =
-                    new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
-            alert.setTitle("Save Error");
-            alert.setHeaderText("Could not save the CSV file");
-            alert.setContentText(ex.getMessage());
-            alert.showAndWait();
-            return;
-        }
-
-        List<Stock> stocks = rows.stream()
-                .map(StockCsvLoader::rowToStock)
-                .collect(Collectors.toList());
-        onSuccess.accept(stocks);
-    }
-
-    /** Writes all rows to a CSV file with a header line. */
-    private static void writeCsv(File target, List<CsvRow> rows) throws IOException {
-        try (PrintWriter pw = new PrintWriter(target, StandardCharsets.UTF_8)) {
-            pw.println("symbol,company,prices");
-            for (CsvRow row : rows) {
-                pw.printf("%s,%s,%s%n",
-                        escapeCsvField(row.getSymbol()),
-                        escapeCsvField(row.getCompany()),
-                        row.getPrices().trim());
-            }
-        }
-    }
-
-    /** Wraps a CSV field in double-quotes if it contains commas, quotes, or
-     * newlines; doubles any embedded quote characters.
-     */
-    private static String escapeCsvField(String value) {
-        if (value == null) {
-            return "";
-        }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
     }
 
     /**
