@@ -17,7 +17,7 @@ public final class AvatarUtil {
     private static final String EMOJI_PATH = "/images/emojis/";
     private static final String DEFAULT_AVATAR = "bust-in-silhouette";
     private static final SequencedSet<String> HIDDEN_SELECTABLE_AVATARS = new LinkedHashSet<>(List.of(
-            "frog",
+            "fox",
             "smiling-face-with-horns"
     ));
 

@@ -25,6 +25,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
@@ -217,6 +218,71 @@ public final class ProfileView {
                 statLine("Growth Ratio", growthRatio.toPlainString() + "x"),
                 statLine("Performance", growthPercent)
         );
+
+        PlayerStatus[] statusPath = PlayerStatus.values();
+        int currentStatusIndex = status.ordinal();
+        PlayerStatus nextStatus = currentStatusIndex < statusPath.length - 1
+            ? statusPath[currentStatusIndex + 1]
+            : null;
+
+        BigDecimal weeksProgressValue = controller.getPlayerWeeksProgress();
+        BigDecimal netWorthProgressValue = controller.getPlayerNetWorthProgress();
+        BigDecimal statusProgressValue = controller.getPlayerStatusProgress();
+        int weeksTargetForNextStatus = controller.getPlayerWeeksTargetForNextStatus();
+        BigDecimal growthTargetForNextStatus = controller.getPlayerGrowthTargetForNextStatus();
+
+        double weeksProgress = weeksProgressValue.doubleValue();
+        double netWorthProgress = netWorthProgressValue.doubleValue();
+        double statusProgress = statusProgressValue.doubleValue();
+
+        HBox statusSteps = new HBox(8);
+        statusSteps.getStyleClass().add("profile-status-steps");
+        for (int i = 0; i < statusPath.length; i++) {
+            PlayerStatus stepStatus = statusPath[i];
+            Label stepLabel = new Label(formatStatusName(stepStatus));
+            stepLabel.getStyleClass().add("profile-status-step");
+            if (i < currentStatusIndex) {
+                stepLabel.getStyleClass().add("profile-status-step-complete");
+            } else if (i == currentStatusIndex) {
+                stepLabel.getStyleClass().add("profile-status-step-current");
+            } else {
+                stepLabel.getStyleClass().add("profile-status-step-upcoming");
+            }
+            statusSteps.getChildren().add(stepLabel);
+        }
+
+        Label statusTargetLine = new Label(nextStatus == null
+            ? "Maximum rank reached. Every avatar tier is unlocked."
+            : "Progress toward " + formatStatusName(nextStatus));
+        statusTargetLine.getStyleClass().add("profile-status-target");
+
+        ProgressBar statusProgressBar = new ProgressBar(statusProgress);
+        statusProgressBar.getStyleClass().add("profile-status-progress");
+        statusProgressBar.setMaxWidth(Double.MAX_VALUE);
+
+        Label statusProgressText = new Label(nextStatus == null
+            ? "100%"
+            : String.valueOf(statusProgressValue
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(0, RoundingMode.HALF_UP)
+                .intValue()) + "%");
+        statusProgressText.getStyleClass().add("profile-status-progress-text");
+
+        HBox statusMetrics = new HBox(10,
+            statusMetricChip(
+                "Weeks " + controller.getPlayerWeeksTraded() + "/" + weeksTargetForNextStatus,
+                weeksProgress >= 1.0),
+            statusMetricChip(
+                "Growth " + growthRatio.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    + "x/" + growthTargetForNextStatus.toPlainString() + "x",
+                netWorthProgress >= 1.0)
+        );
+        statusMetrics.getStyleClass().add("profile-status-metrics");
+
+        VBox statusBody = new VBox(10, statusSteps, statusTargetLine, statusProgressBar, statusProgressText, statusMetrics);
+        statusBody.getStyleClass().add("profile-status-body");
+        VBox statusCard = statCard("Status Progression", statusBody);
+        statusCard.getStyleClass().add("profile-status-card");
 
         VBox holdings = new VBox(8);
         holdings.getStyleClass().add("profile-list");
@@ -541,7 +607,7 @@ public final class ProfileView {
         HBox.setHgrow(infoCard, Priority.ALWAYS);
         HBox.setHgrow(statsCard, Priority.ALWAYS);
 
-        VBox content = new VBox(18, hero, cardsRow, portfolioCard, replayCard);
+        VBox content = new VBox(18, hero, statusCard, cardsRow, portfolioCard, replayCard);
         content.getStyleClass().add("profile-content");
 
         ScrollPane scroll = new ScrollPane(content);
@@ -592,6 +658,15 @@ public final class ProfileView {
         Label badge = new Label(value);
         badge.getStyleClass().add("profile-badge");
         return badge;
+    }
+
+    private static Label statusMetricChip(String text, boolean completed) {
+        Label chip = new Label(text);
+        chip.getStyleClass().add("profile-status-metric-chip");
+        chip.getStyleClass().add(completed
+            ? "profile-status-metric-chip-complete"
+            : "profile-status-metric-chip-pending");
+        return chip;
     }
 
     private static PlayerStatus requiredStatusForAvatar(String avatar) {

@@ -60,6 +60,26 @@ public final class ProfileController {
         return gameController.getPlayerWeeksTraded();
     }
 
+    public BigDecimal getPlayerStatusProgress() {
+        return gameController.getPlayerStatusProgress();
+    }
+
+    public int getPlayerWeeksTargetForNextStatus() {
+        return gameController.getPlayerWeeksTargetForNextStatus();
+    }
+
+    public BigDecimal getPlayerWeeksProgress() {
+        return gameController.getPlayerWeeksProgress();
+    }
+
+    public BigDecimal getPlayerGrowthTargetForNextStatus() {
+        return gameController.getPlayerGrowthTargetForNextStatus();
+    }
+
+    public BigDecimal getPlayerNetWorthProgress() {
+        return gameController.getPlayerNetWorthProgress();
+    }
+
     public List<Share> getPortfolioShares() {
         return gameController.getPortfolioShares();
     }

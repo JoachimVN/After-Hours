@@ -16,6 +16,6 @@ wolf
 monkey
 bear
 pig
-fox
+frog
 rabbit
 

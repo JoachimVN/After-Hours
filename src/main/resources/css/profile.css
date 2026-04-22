@@ -168,6 +168,102 @@
   -fx-padding: 2 0 0 0;
 }
 
+.profile-status-card {
+  -fx-border-color: rgba(129, 187, 238, 0.36);
+  -fx-background-color:
+    linear-gradient(to right, rgba(10, 24, 46, 0.92), rgba(7, 18, 35, 0.88));
+}
+
+.profile-status-body {
+  -fx-padding: 2 0 0 0;
+}
+
+.profile-status-steps {
+  -fx-alignment: center-left;
+}
+
+.profile-status-step {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 11px;
+  -fx-font-weight: 800;
+  -fx-padding: 4 9 4 9;
+  -fx-background-radius: 12;
+  -fx-border-radius: 12;
+  -fx-border-width: 1;
+}
+
+.profile-status-step-complete {
+  -fx-background-color: rgba(78, 203, 113, 0.22);
+  -fx-border-color: rgba(78, 203, 113, 0.52);
+  -fx-text-fill: #7fe1a0;
+}
+
+.profile-status-step-current {
+  -fx-background-color: rgba(245, 162, 1, 0.18);
+  -fx-border-color: rgba(245, 162, 1, 0.58);
+  -fx-text-fill: #ffd07a;
+}
+
+.profile-status-step-upcoming {
+  -fx-background-color: rgba(133, 157, 181, 0.14);
+  -fx-border-color: rgba(133, 157, 181, 0.33);
+  -fx-text-fill: #9bb6cd;
+}
+
+.profile-status-target {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 12px;
+  -fx-text-fill: #b6cde0;
+}
+
+.profile-status-progress {
+  -fx-pref-height: 10;
+  -fx-background-insets: 0;
+}
+
+.profile-status-progress > .track {
+  -fx-background-color: rgba(12, 34, 61, 0.86);
+  -fx-background-radius: 999;
+}
+
+.profile-status-progress > .bar {
+  -fx-background-color: linear-gradient(to right, #f5a201, #4ecb71);
+  -fx-background-radius: 999;
+}
+
+.profile-status-progress-text {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 12px;
+  -fx-font-weight: 800;
+  -fx-text-fill: #f4fbff;
+}
+
+.profile-status-metrics {
+  -fx-alignment: center-left;
+}
+
+.profile-status-metric-chip {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 11px;
+  -fx-font-weight: 700;
+  -fx-padding: 4 8 4 8;
+  -fx-background-radius: 10;
+  -fx-border-radius: 10;
+  -fx-border-width: 1;
+}
+
+.profile-status-metric-chip-complete {
+  -fx-background-color: rgba(78, 203, 113, 0.16);
+  -fx-border-color: rgba(78, 203, 113, 0.4);
+  -fx-text-fill: #85dba3;
+}
+
+.profile-status-metric-chip-pending {
+  -fx-background-color: rgba(120, 154, 186, 0.13);
+  -fx-border-color: rgba(120, 154, 186, 0.32);
+  -fx-text-fill: #a6c1d8;
+}
+
 .profile-key {
   -fx-font-family: "Sans Serif";
   -fx-font-size: 12.5px;
