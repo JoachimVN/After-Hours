@@ -2,7 +2,10 @@ package edu.ntnu.idatt2003.g23.ui.views.profile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 import edu.ntnu.idatt2003.g23.model.PlayerStatus;
@@ -12,6 +15,7 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -30,6 +34,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Path;
+import javafx.util.StringConverter;
 import javafx.util.Duration;
 
 public final class ProfileView {
@@ -180,7 +185,18 @@ public final class ProfileView {
         xAxis.setAutoRanging(false);
         xAxis.setLowerBound(1);
         xAxis.setUpperBound(Math.max(2, maxWeek));
-        xAxis.setTickUnit(Math.max(1, maxWeek / 8.0));
+        xAxis.setTickUnit(Math.max(1, Math.ceil(maxWeek / 8.0)));
+        xAxis.setTickLabelFormatter(new StringConverter<>() {
+            @Override
+            public String toString(Number object) {
+                return String.valueOf((int) Math.round(object.doubleValue()));
+            }
+
+            @Override
+            public Number fromString(String string) {
+                throw new UnsupportedOperationException("Axis label parsing is not supported.");
+            }
+        });
 
         double minNetWorth = replayPoints.stream()
             .map(GameController.ReplayPoint::netWorth)
@@ -202,6 +218,18 @@ public final class ProfileView {
         yAxis.setLowerBound(center - deviation);
         yAxis.setUpperBound(center + deviation);
         yAxis.setTickUnit(Math.max(1.0, deviation / 4.0));
+        DecimalFormat integerFormatter = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
+        yAxis.setTickLabelFormatter(new StringConverter<>() {
+            @Override
+            public String toString(Number object) {
+                return integerFormatter.format(object.doubleValue());
+            }
+
+            @Override
+            public Number fromString(String string) {
+                throw new UnsupportedOperationException("Axis label parsing is not supported.");
+            }
+        });
 
         LineChart<Number, Number> replayChart = new LineChart<>(xAxis, yAxis);
         replayChart.getStyleClass().add("profile-replay-chart");
@@ -209,11 +237,22 @@ public final class ProfileView {
         replayChart.setLegendVisible(false);
         replayChart.setCreateSymbols(false);
         replayChart.setMinHeight(320);
-        replayChart.setMouseTransparent(true);
+        replayChart.setMouseTransparent(false);
         replayChart.setFocusTraversable(false);
 
+        Label hoverValueChip = new Label();
+        hoverValueChip.getStyleClass().add("profile-crosshair-label");
+        hoverValueChip.setManaged(false);
+        hoverValueChip.setMouseTransparent(true);
+        hoverValueChip.setVisible(false);
+
+        StackPane replayChartLayer = new StackPane(replayChart, hoverValueChip);
+        replayChartLayer.getStyleClass().add("profile-crosshair-layer");
+
         XYChart.Series<Number, Number> replaySeries = new XYChart.Series<>();
+        XYChart.Series<Number, Number> verticalMarkerSeries = new XYChart.Series<>();
         replayChart.getData().add(replaySeries);
+        replayChart.getData().add(verticalMarkerSeries);
 
         Runnable applyReplayLineGradient = () -> Platform.runLater(() -> {
             Node lineNode = replaySeries.getNode();
@@ -234,25 +273,104 @@ public final class ProfileView {
         replaySlider.setShowTickMarks(true);
         replaySlider.setShowTickLabels(true);
 
+        final int[] hoverWeekRef = {-1};
+
         final Runnable refreshReplay = () -> {
             if (replayPoints.isEmpty()) {
                 replaySeries.getData().clear();
+                verticalMarkerSeries.getData().clear();
                 replayStatus.setText("No replay data available yet.");
                 return;
             }
-            int week = (int) Math.max(1, Math.round(replaySlider.getValue()));
+            int playbackWeek = (int) Math.max(1, Math.round(replaySlider.getValue()));
+            int markerWeek = hoverWeekRef[0] > 0 ? hoverWeekRef[0] : playbackWeek;
             replaySeries.getData().clear();
+            verticalMarkerSeries.getData().clear();
             for (GameController.ReplayPoint point : replayPoints) {
-                if (point.week() > week) break;
+                if (point.week() > playbackWeek) break;
                 replaySeries.getData().add(new XYChart.Data<>(point.week(), point.netWorth().doubleValue()));
             }
-            GameController.ReplayPoint point = replayPoints.get(Math.min(week - 1, replayPoints.size() - 1));
+            verticalMarkerSeries.getData().add(new XYChart.Data<>(markerWeek, yAxis.getLowerBound()));
+            verticalMarkerSeries.getData().add(new XYChart.Data<>(markerWeek, yAxis.getUpperBound()));
+            GameController.ReplayPoint point = replayPoints.get(Math.min(markerWeek - 1, replayPoints.size() - 1));
             replayStatus.setText("Week " + point.week() + " • Net Worth " + CurrencyFormatter.format(point.netWorth()));
 
             applyReplayLineGradient.run();
+
+            Platform.runLater(() -> {
+                Node markerNode = verticalMarkerSeries.getNode();
+                if (markerNode != null) {
+                    Node markerLine = markerNode.lookup(".chart-series-line");
+                    if (markerLine instanceof Path markerPath) {
+                        markerPath.setStyle("-fx-stroke: rgba(226,239,255,0.50); -fx-stroke-width: 1; -fx-stroke-dash-array: 5 4;");
+                    }
+                }
+
+                if (hoverWeekRef[0] > 0) {
+                    Node plotBackground = replayChart.lookup(".chart-plot-background");
+                    if (plotBackground == null) {
+                        hoverValueChip.setVisible(false);
+                        return;
+                    }
+                    GameController.ReplayPoint hoverPoint = replayPoints.get(Math.min(markerWeek - 1, replayPoints.size() - 1));
+                    hoverValueChip.setText("Week " + markerWeek + "  " + CurrencyFormatter.format(hoverPoint.netWorth()));
+
+                    Bounds plotBoundsScene = plotBackground.localToScene(plotBackground.getBoundsInLocal());
+                    Bounds plotBounds = replayChartLayer.sceneToLocal(plotBoundsScene);
+
+                    double xFrac = maxWeek <= 1 ? 0.0 : (markerWeek - 1.0) / (maxWeek - 1.0);
+                    double lineX = plotBounds.getMinX() + xFrac * plotBounds.getWidth();
+
+                    double yRange = yAxis.getUpperBound() - yAxis.getLowerBound();
+                    double yFrac = yRange <= 0 ? 0.5 : (hoverPoint.netWorth().doubleValue() - yAxis.getLowerBound()) / yRange;
+                    yFrac = Math.max(0.0, Math.min(1.0, yFrac));
+                    double lineY = plotBounds.getMaxY() - yFrac * plotBounds.getHeight();
+
+                    hoverValueChip.applyCss();
+                    hoverValueChip.autosize();
+
+                    double chipW = hoverValueChip.prefWidth(-1);
+                    double chipH = hoverValueChip.prefHeight(-1);
+                    double chipX = Math.min(Math.max(lineX + 8, plotBounds.getMinX() + 4), plotBounds.getMaxX() - chipW - 4);
+                    double chipY = Math.min(Math.max(lineY - chipH - 8, plotBounds.getMinY() + 4), plotBounds.getMaxY() - chipH - 4);
+
+                    hoverValueChip.resizeRelocate(chipX, chipY, chipW, chipH);
+                    hoverValueChip.setVisible(true);
+                } else {
+                    hoverValueChip.setVisible(false);
+                }
+            });
         };
 
         replaySlider.valueProperty().addListener((obs, oldV, newV) -> refreshReplay.run());
+
+        replayChart.setOnMouseMoved(e -> {
+            if (replayPoints.isEmpty()) return;
+            Node plotBackground = replayChart.lookup(".chart-plot-background");
+            if (plotBackground == null) return;
+            Bounds plotBounds = plotBackground.localToScene(plotBackground.getBoundsInLocal());
+            double sceneX = e.getSceneX();
+            if (sceneX < plotBounds.getMinX() || sceneX > plotBounds.getMaxX() || plotBounds.getWidth() <= 0) {
+                if (hoverWeekRef[0] != -1) {
+                    hoverWeekRef[0] = -1;
+                    refreshReplay.run();
+                }
+                return;
+            }
+            double frac = (sceneX - plotBounds.getMinX()) / plotBounds.getWidth();
+            int week = (int) Math.round(1 + frac * (maxWeek - 1));
+            week = Math.max(1, Math.min(maxWeek, week));
+            if (hoverWeekRef[0] != week) {
+                hoverWeekRef[0] = week;
+                refreshReplay.run();
+            }
+        });
+        replayChart.setOnMouseExited(e -> {
+            if (hoverWeekRef[0] != -1) {
+                hoverWeekRef[0] = -1;
+                refreshReplay.run();
+            }
+        });
 
         final double[] speedStep = {1.0};
         final boolean[] playing = {false};
@@ -320,7 +438,7 @@ public final class ProfileView {
 
         VBox replayCard = statCard("Net Worth Timeline",
             new Label("Playback view from saved weekly snapshots."),
-            replayChart,
+                replayChartLayer,
                 replaySlider,
                 replayControls
         );
