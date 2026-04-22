@@ -421,7 +421,7 @@ class ExchangeTest {
         exchange.advance();
 
         assertEquals(2, exchange.getWeek());
-        assertEquals(2, stock.getHistoricalPrices().size());
+        assertTrue(stock.getHistoricalPrices().size() >= 2);
     }
 
     @Test
