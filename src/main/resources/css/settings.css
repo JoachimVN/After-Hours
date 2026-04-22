@@ -341,6 +341,50 @@
     -fx-text-fill: #f5a201;
 }
 
+.save-card-title-harlow {
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 34;
+    -fx-text-fill: #f0f7ff;
+}
+
+.save-card-avatar {
+    -fx-font-size: 50;
+    -fx-min-width: 84;
+    -fx-pref-width: 84;
+    -fx-max-width: 84;
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: rgba(140, 185, 236, 0.42);
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+}
+
+.save-card-edit-hint {
+    -fx-font-size: 12;
+    -fx-text-fill: rgba(245, 162, 1, 0.55);
+    -fx-font-weight: 700;
+}
+
+.save-card-name-field {
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 34;
+    -fx-text-fill: #f0f7ff;
+    -fx-control-inner-background: transparent;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.save-card-name-field:focused {
+    -fx-background-color: rgba(30, 50, 80, 0.4);
+    -fx-border-width: 1;
+    -fx-border-color: rgba(150, 180, 220, 0.3);
+    -fx-border-radius: 4;
+    -fx-padding: 2;
+}
+
 /* Status badge pill */
 .save-card-status {
     -fx-font-size: 10;

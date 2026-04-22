@@ -253,7 +253,7 @@ public class Exchange {
             stock.addNewSalesPrice(newPrice);
         }
 
-        // Per-stock volatility phase transitions — 50% chance per week to shift phase (avg ~2 weeks per state)
+        // Per-stock volatility phase transitions — 50% chance per week to shift phase (average ~2 weeks per state)
         for (Stock s : stockMap.values()) {
             if (random.nextDouble() < 0.50) {
                 s.setVolatility(pickNextVolatility(s.getVolatility()));

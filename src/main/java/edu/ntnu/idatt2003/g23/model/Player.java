@@ -2,17 +2,25 @@ package edu.ntnu.idatt2003.g23.model;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionArchive;
 
 // Represents a player in the stock market game.
 public class Player {
+    public record WeeklySnapshot(int week, BigDecimal cash, BigDecimal portfolioValue, BigDecimal netWorth) {}
+    private static final String DEFAULT_PROFILE_AVATAR = "\uD83E\uDDD1";
+
     private final String name;
     private final BigDecimal startingMoney;
     private BigDecimal money;
     private final Portfolio portfolio;
     private final TransactionArchive transactionArchive;
+    private final List<WeeklySnapshot> weeklySnapshots;
     private PlayerStatus status;
+    private String profileAvatar;
 
     // Constructor for creating a new Player instance.
     public Player(String name, BigDecimal startingMoney) {
@@ -33,7 +41,49 @@ public class Player {
         this.money = startingMoney;
         this.portfolio = new Portfolio();
         this.transactionArchive = new TransactionArchive();
+        this.weeklySnapshots = new ArrayList<>();
         this.status = PlayerStatus.NOVICE;
+        this.profileAvatar = DEFAULT_PROFILE_AVATAR;
+        recordWeeklySnapshot(1);
+    }
+
+    public void recordWeeklySnapshot(int week) {
+        if (week < 1) {
+            throw new IllegalArgumentException("Week must be positive");
+        }
+        BigDecimal portfolioValue = portfolio.getNetWorth();
+        BigDecimal netWorth = money.add(portfolioValue);
+        WeeklySnapshot snapshot = new WeeklySnapshot(week, money, portfolioValue, netWorth);
+
+        for (int i = 0; i < weeklySnapshots.size(); i++) {
+            if (weeklySnapshots.get(i).week() == week) {
+                weeklySnapshots.set(i, snapshot);
+                return;
+            }
+        }
+        weeklySnapshots.add(snapshot);
+        weeklySnapshots.sort(Comparator.comparingInt(WeeklySnapshot::week));
+    }
+
+    public List<WeeklySnapshot> getWeeklySnapshots() {
+        return List.copyOf(weeklySnapshots);
+    }
+
+    public void setWeeklySnapshots(List<WeeklySnapshot> snapshots) {
+        weeklySnapshots.clear();
+        if (snapshots == null) {
+            return;
+        }
+        for (WeeklySnapshot snapshot : snapshots) {
+            if (snapshot == null) {
+                continue;
+            }
+            if (snapshot.week() < 1) {
+                continue;
+            }
+            weeklySnapshots.add(snapshot);
+        }
+        weeklySnapshots.sort(Comparator.comparingInt(WeeklySnapshot::week));
     }
 
     /**
@@ -250,6 +300,18 @@ public class Player {
      */
     public PlayerStatus getStatus() {
         return status;
+    }
+
+    public String getProfileAvatar() {
+        return profileAvatar;
+    }
+
+    public void setProfileAvatar(String profileAvatar) {
+        if (profileAvatar == null || profileAvatar.isBlank()) {
+            this.profileAvatar = DEFAULT_PROFILE_AVATAR;
+            return;
+        }
+        this.profileAvatar = profileAvatar;
     }
 
     /**

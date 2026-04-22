@@ -39,6 +39,7 @@ public final class GameSaveLoader {
     public record SaveMeta(
             Path   saveDir,
             String displayName,
+            String profileAvatar,
             String exchangeName,
             String savedAt,
             int    week,
@@ -152,6 +153,9 @@ public final class GameSaveLoader {
         // ── Build player ───────────────────────────────────────────────────
         Player player = new Player(playerName, starting);
         player.setMoney(money);
+        if (obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()) {
+            player.setProfileAvatar(obj.get("profileAvatar").getAsString());
+        }
         try {
             player.setStatus(PlayerStatus.valueOf(statusStr));
         } catch (IllegalArgumentException ignored) {
@@ -164,13 +168,13 @@ public final class GameSaveLoader {
             for (JsonElement el : portfolio) {
                 JsonObject s = el.getAsJsonObject();
                 String symbol       = s.get("symbol").getAsString();
-                BigDecimal qty      = new BigDecimal(s.get("quantity").getAsString());
+                BigDecimal quantity      = new BigDecimal(s.get("quantity").getAsString());
                 BigDecimal purchase = new BigDecimal(s.get("purchasePrice").getAsString());
 
                 // Find the matching Stock object from the exchange
                 if (!exchange.hasStock(symbol)) continue;
                 Stock stock = exchange.getStock(symbol);
-                player.getPortfolio().addShare(new Share(stock, qty, purchase));
+                player.getPortfolio().addShare(new Share(stock, quantity, purchase));
             }
         }
 
@@ -181,13 +185,13 @@ public final class GameSaveLoader {
                 JsonObject t = el.getAsJsonObject();
                 String type     = t.get("type").getAsString();
                 String symbol   = t.get("symbol").getAsString();
-                BigDecimal qty  = new BigDecimal(t.get("quantity").getAsString());
+                BigDecimal quantity  = new BigDecimal(t.get("quantity").getAsString());
                 BigDecimal price = new BigDecimal(t.get("purchasePrice").getAsString());
                 int txWeek      = t.get("week").getAsInt();
 
                 if (!exchange.hasStock(symbol)) continue;
                 Stock stock = exchange.getStock(symbol);
-                Share share = new Share(stock, qty, price);
+                Share share = new Share(stock, quantity, price);
 
                 if ("BUY".equals(type)) {
                     player.getTransactionArchive().add(new Purchase(share, txWeek));
@@ -195,6 +199,23 @@ public final class GameSaveLoader {
                     player.getTransactionArchive().add(new Sale(share, txWeek));
                 }
             }
+        }
+
+        JsonArray weeklySnapshots = obj.getAsJsonArray("weeklySnapshots");
+        if (weeklySnapshots != null) {
+            List<Player.WeeklySnapshot> snapshots = new ArrayList<>();
+            for (JsonElement el : weeklySnapshots) {
+                JsonObject s = el.getAsJsonObject();
+                int snapWeek = s.get("week").getAsInt();
+                BigDecimal cashValue = new BigDecimal(s.get("cash").getAsString());
+                BigDecimal portfolioValue = new BigDecimal(s.get("portfolioValue").getAsString());
+                BigDecimal netWorthValue = new BigDecimal(s.get("netWorth").getAsString());
+                snapshots.add(new Player.WeeklySnapshot(snapWeek, cashValue, portfolioValue, netWorthValue));
+            }
+            player.setWeeklySnapshots(snapshots);
+        }
+        if (player.getWeeklySnapshots().isEmpty()) {
+            player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
         }
 
         // ── Restore UI state (optional — absent in saves from older versions) ──
@@ -226,6 +247,9 @@ public final class GameSaveLoader {
         JsonObject obj = GSON.fromJson(raw, JsonObject.class);
 
         String playerName   = obj.get("playerName").getAsString();
+        String profileAvatar = obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()
+            ? obj.get("profileAvatar").getAsString()
+            : "\uD83E\uDDD1";
         String exchangeName = obj.get("exchangeName").getAsString();
         String savedAt      = obj.get("savedAt").getAsString();
         int week            = obj.get("week").getAsInt();
@@ -247,7 +271,7 @@ public final class GameSaveLoader {
             }
         }
 
-        return new SaveMeta(saveDir, playerName, exchangeName, savedAt,
+        return new SaveMeta(saveDir, playerName, profileAvatar, exchangeName, savedAt,
                 week, money, netWorth, portfolioSize, totalShares, status, isAutosave);
     }
 }

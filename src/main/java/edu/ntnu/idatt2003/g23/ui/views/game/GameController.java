@@ -28,6 +28,7 @@ public final class GameController {
     public GameController(Player player, Exchange exchange) {
         this.player = player;
         this.exchange = exchange;
+        this.player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
     }
 
     public void setView(GameViewInterface view) {
@@ -90,6 +91,7 @@ public final class GameController {
 
     public void handleNextWeek() {
         exchange.advance();
+        player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
     }
 
     public void executeSellAll() {
@@ -154,6 +156,7 @@ public final class GameController {
 
         }
         view.showReceipt("SELL", stock, sellQuantity, tGross.subtract(tFee).subtract(tTax), tFee, tTax, player.getMoney());
+        player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
         view.updateData();
         return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax));
     }
@@ -170,6 +173,7 @@ public final class GameController {
                 Transaction tx = exchange.buy(stock.getSymbol(), quantity, player);
                 tx.commit(player);
                 view.showReceipt("BUY", stock, quantity, total, fee, BigDecimal.ZERO, player.getMoney());
+                player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
                 view.updateData();
             } catch (Exception ex) { 
                 view.showError(ex.getMessage()); 
@@ -246,7 +250,12 @@ public final class GameController {
         if (amount.compareTo(current) > 0) player.addMoney(amount.subtract(current));
         else player.withdrawMoney(current.subtract(amount));
     }
-    public void advanceWeeks(int n) { for (int i = 0; i < n; i++) exchange.advance(); }
+    public void advanceWeeks(int n) {
+        for (int i = 0; i < n; i++) {
+            exchange.advance();
+            player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
+        }
+    }
     public void setFrozen(boolean frozen) { exchange.setFrozen(frozen); }
 
     // ── Chart trade-point data ────────────────────────────────────────────────
@@ -298,6 +307,91 @@ public final class GameController {
         }
         allTx.sort((a, b) -> b.week() - a.week());
         return allTx;
+    }
+
+    public String getPlayerName() {
+        return player.getName();
+    }
+
+    public String getPlayerAvatar() {
+        return player.getProfileAvatar();
+    }
+
+    public void setPlayerAvatar(String avatar) {
+        player.setProfileAvatar(avatar);
+    }
+
+    public BigDecimal getPlayerStartingMoney() {
+        return player.getStartingMoney();
+    }
+
+    public int getTransactionCount() {
+        return player.getTransactionArchive().getAll().size();
+    }
+
+    public record ReplayPoint(int week, BigDecimal netWorth) {}
+
+    /**
+     * Reconstructs a weekly net-worth timeline from transaction flows and historical prices.
+     */
+    public List<ReplayPoint> getReplaySeries() {
+        List<Player.WeeklySnapshot> snapshots = player.getWeeklySnapshots();
+        if (!snapshots.isEmpty()) {
+            Map<Integer, BigDecimal> netWorthByWeek = new LinkedHashMap<>();
+            for (Player.WeeklySnapshot s : snapshots) {
+                netWorthByWeek.put(s.week(), s.netWorth());
+            }
+            int lastWeek = Math.max(1, exchange.getWeek());
+            BigDecimal carry = player.getStartingMoney();
+            List<ReplayPoint> points = new ArrayList<>();
+            for (int week = 1; week <= lastWeek; week++) {
+                if (netWorthByWeek.containsKey(week)) {
+                    carry = netWorthByWeek.get(week);
+                }
+                points.add(new ReplayPoint(week, carry));
+            }
+            return points;
+        }
+
+        List<Transaction> tx = new ArrayList<>(player.getTransactionArchive().getAll());
+        tx.sort((a, b) -> Integer.compare(a.getWeek(), b.getWeek()));
+
+        Map<String, BigDecimal> holdings = new LinkedHashMap<>();
+        BigDecimal cash = player.getStartingMoney();
+        int txIndex = 0;
+        int lastWeek = Math.max(1, exchange.getWeek());
+        List<ReplayPoint> points = new ArrayList<>();
+
+        for (int week = 1; week <= lastWeek; week++) {
+            while (txIndex < tx.size() && tx.get(txIndex).getWeek() == week) {
+                Transaction t = tx.get(txIndex++);
+                String symbol = t.getShare().getStock().getSymbol();
+                BigDecimal quantity = t.getShare().getQuantity();
+                if (t instanceof Purchase) {
+                    cash = cash.subtract(t.getCalculator().calculateTotal());
+                    holdings.merge(symbol, quantity, BigDecimal::add);
+                } else if (t instanceof Sale) {
+                    cash = cash.add(t.getCalculator().calculateTotal());
+                    BigDecimal currentQty = holdings.getOrDefault(symbol, BigDecimal.ZERO);
+                    BigDecimal nextQty = currentQty.subtract(quantity);
+                    if (nextQty.compareTo(BigDecimal.ZERO) <= 0) holdings.remove(symbol);
+                    else holdings.put(symbol, nextQty);
+                }
+            }
+
+            BigDecimal portfolioValue = BigDecimal.ZERO;
+            for (var entry : holdings.entrySet()) {
+                if (!exchange.hasStock(entry.getKey())) continue;
+                Stock stock = exchange.getStock(entry.getKey());
+                List<BigDecimal> prices = stock.getHistoricalPrices();
+                if (prices.isEmpty()) continue;
+                int index = Math.min(week - 1, prices.size() - 1);
+                BigDecimal weekPrice = prices.get(index);
+                portfolioValue = portfolioValue.add(weekPrice.multiply(entry.getValue()));
+            }
+            points.add(new ReplayPoint(week, cash.add(portfolioValue)));
+        }
+        return points;
     }
     
 }

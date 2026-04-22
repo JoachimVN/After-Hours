@@ -93,7 +93,7 @@ class ShareTest {
         }
 
         @Test
-        @DisplayName("Single share passes through unchanged (by symbol+qty)")
+        @DisplayName("Single share passes through unchanged (by symbol+quantity)")
         void singleSharePassesThrough() {
             Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("150"))));
             Share share = new Share(stock, new BigDecimal("5"), new BigDecimal("100"));
@@ -114,7 +114,7 @@ class ShareTest {
 
             List<Share> result = Share.getOwnedShares(List.of(s1, s2));
 
-            // One consolidated share: qty = 5, avg purchase = 560/5 = 112
+            // One consolidated share: quantity = 5, average purchase = 560/5 = 112
             assertEquals(1, result.size());
             assertEquals(0, new BigDecimal("5").compareTo(result.get(0).getQuantity()));
             assertEquals(0, new BigDecimal("112").compareTo(result.get(0).getPurchasePrice().stripTrailingZeros()));

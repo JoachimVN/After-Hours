@@ -26,6 +26,8 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.importcsv.ImportCsvView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
+import edu.ntnu.idatt2003.g23.ui.views.profile.ProfileView;
+import edu.ntnu.idatt2003.g23.ui.views.profile.ProfileController;
 import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
 import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
@@ -98,7 +100,9 @@ public class App extends Application {
     private Timeline autosaveTimer;
     private SfxController sfxController;
     private GameView currentGameView;
+    private GameController currentGameController;
     private GameUiState currentUiState;
+    private String currentProfileAvatar = "\uD83E\uDDD1";
 
     @Override
     public void start(Stage stage) {
@@ -151,17 +155,14 @@ public class App extends Application {
             getClass().getResource("/css/dialogs.css").toExternalForm(),
             getClass().getResource("/css/csv-editor.css").toExternalForm(),
             getClass().getResource("/css/no-stocks.css").toExternalForm(),
+            getClass().getResource("/css/profile.css").toExternalForm(),
             getClass().getResource("/css/scrollbar.css").toExternalForm()
         );
 
         configureStage(stage, scene);
-        // Apply saved window size (if any) — must come after configureStage
+        // Respect fullscreen setting; otherwise keep forced maximized startup.
         if (fullscreenEnabled) {
             stage.setFullScreen(true);
-        } else if (windowWidth > 0 && windowHeight > 0) {
-            stage.setMaximized(false);
-            stage.setWidth(windowWidth);
-            stage.setHeight(windowHeight);
         }
         stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
@@ -214,11 +215,13 @@ public class App extends Application {
         currentPlayer   = null;
         currentExchange = null;
         currentSavePath = null;
+        currentGameController = null;
         currentUiState  = null;
         currentSetupPage = new SetupView(
                 withBack(this::goHomeKeepMusic),
                 (name, cash, csvResource) -> startGame(name, cash, csvResource),
-                (name, cash) -> goToImportCsv(name, cash)
+            (name, cash) -> goToImportCsv(name, cash),
+            currentProfileAvatar
         ).getRoot();
         navigateKeepMusic(currentSetupPage);
         fadeInPage(currentSetupPage);
@@ -353,6 +356,7 @@ public class App extends Application {
         Player player = new Player(
                 name == null || name.isBlank() ? "Player" : name,
                 BigDecimal.valueOf(cash));
+        player.setProfileAvatar(currentProfileAvatar);
         Exchange exchange = new Exchange(exchangeName, stocks);
         buildAndStartGameFromSave(player, exchange, null, null);
     }
@@ -366,6 +370,7 @@ public class App extends Application {
         currentPlayer   = player;
         currentExchange = exchange;
         currentSavePath = savePath;
+        currentProfileAvatar = player.getProfileAvatar();
         // Each game instance gets a distinct autosave slot:
         //  • loaded saves  → use the existing save folder name
         //  • new games     → use playerName + start timestamp
@@ -381,12 +386,16 @@ public class App extends Application {
         GameView gameview = new GameView(gameController, withBack(this::goHome),
                 () -> {
                     sfxController.play(SfxController.SETTINGS);
-                    navigateKeepMusic(buildSettingsView(
-                            () -> navigateKeepMusic(currentGamePage),
-                            this::performSave));
+                navigateKeepMusic(buildProfileView(
+                    () -> {
+                        if (currentGameView != null) currentGameView.updateData();
+                        navigateKeepMusic(currentGamePage);
+                    },
+                    this::performSave));
                 },
                 sfxController::getVolume,
                 uiState);
+        currentGameController = gameController;
         currentGameView = gameview;
         currentGamePage = gameview.getRoot();
         navigateToGame(currentGamePage);
@@ -493,6 +502,27 @@ public class App extends Application {
                 currentSavePath,
                 onResetAll,
                 onSave
+        );
+    }
+
+    private Parent buildProfileView(Runnable onBackToGame, Runnable onSave) {
+        if (currentGameController == null) {
+            return buildSettingsView(onBackToGame, onSave);
+        }
+        ProfileController profileController = new ProfileController(currentGameController);
+        Runnable openSettingsFromProfile = () -> navigateKeepMusic(buildSettingsView(
+                () -> navigateKeepMusic(buildProfileView(onBackToGame, onSave)),
+                onSave));
+        return ProfileView.build(
+                profileController,
+                onBackToGame,
+                openSettingsFromProfile,
+                currentProfileAvatar,
+                avatar -> {
+                    currentProfileAvatar = avatar;
+                    currentGameController.setPlayerAvatar(avatar);
+                    if (currentGameView != null) currentGameView.updateData();
+                }
         );
     }
 

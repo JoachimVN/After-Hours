@@ -60,6 +60,14 @@ public final class SaveSelectController {
     /** Whether there is an in-memory game session to resume. */
     public boolean hasSession() { return sessionPlayer != null; }
 
+    public String getSessionPlayerName() {
+        return sessionPlayer != null ? sessionPlayer.getName() : "Player";
+    }
+
+    public String getSessionPlayerAvatar() {
+        return sessionPlayer != null ? sessionPlayer.getProfileAvatar() : "\uD83E\uDDD1";
+    }
+
     /** Fires {@code onLoad} with the in-memory session (no disk I/O). */
     public void resumeSession() {
         onLoad.accept(new Object[]{sessionPlayer, sessionExchange, sessionSavePath, sessionUiState});

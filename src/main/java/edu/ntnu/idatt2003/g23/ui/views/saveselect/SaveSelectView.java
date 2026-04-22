@@ -88,7 +88,7 @@ public final class SaveSelectView {
     scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
 
     // ── Center wrapper (vertical centering) ───────────────────────────────
-    VBox centerContent = new VBox(24, title, scroll);
+    VBox centerContent = new VBox(20, title, scroll);
     centerContent.setAlignment(Pos.TOP_CENTER);
     centerContent.setPadding(new Insets(32, 64, 32, 64));
     VBox.setVgrow(scroll, Priority.ALWAYS);
@@ -116,9 +116,40 @@ public final class SaveSelectView {
 
     private VBox buildCard(SaveMeta meta, VBox cardList) {
         // ── Info lines ─────────────────────────────────────────────────────
-        Label nameLabel = new Label(meta.displayName()
-                + (meta.autosave() ? "  \u231B" : ""));
-        nameLabel.getStyleClass().add("save-card-title");
+        TextField nameField = new TextField(meta.displayName());
+        nameField.getStyleClass().add("save-card-name-field");
+        nameField.setStyle("-fx-font-family: 'Harlow Solid Italic'; -fx-font-size: 34; -fx-text-fill: #f0f7ff;");
+        
+        
+        Runnable saveName = () -> {
+            String newName = nameField.getText().strip();
+            if (!newName.isEmpty() && !newName.equals(meta.displayName())) {
+                String safe = meta.saveDir().getFileName().toString()
+                        .replaceFirst("^[^_]+", newName.replaceAll("[^A-Za-z0-9_\\-]", "_"));
+                Path newPath = controller.renameSave(meta.saveDir(), safe);
+                if (newPath != null) {
+                    // Rebuild card list to reflect the rename
+                    rebuildCardList(cardList);
+                } else {
+                    nameField.setText(meta.displayName());
+                }
+            } else {
+                nameField.setText(meta.displayName());
+            }
+        };
+        
+        nameField.focusedProperty().addListener((obs, oldV, focused) -> {
+            if (!focused) saveName.run();
+        });
+        nameField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                saveName.run();
+                nameField.getParent().requestFocus();
+            }
+        });
+
+        Label avatarLabel = new Label(meta.profileAvatar());
+        avatarLabel.getStyleClass().add("save-card-avatar");
 
         Label detailLabel = new Label(
                 meta.exchangeName() + "  \u2022  Week " + meta.week() +
@@ -134,12 +165,12 @@ public final class SaveSelectView {
         Label dateLabel = new Label((meta.autosave() ? "Autosaved:  " : "Saved: ") + meta.savedAt());
         dateLabel.getStyleClass().add("save-card-date");
 
-        VBox info = new VBox(5, nameLabel, detailLabel, netWorthLabel, dateLabel);
+        VBox info = new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel);
         info.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(info, Priority.ALWAYS);
 
         // ── Action buttons ─────────────────────────────────────────────────
-        Button loadBtn = new Button("\u25B6  Load");
+        Button loadBtn = new Button("Load");
         loadBtn.getStyleClass().addAll("setup-start-button", "save-load-button");
         loadBtn.setMaxWidth(Double.MAX_VALUE);
         loadBtn.setOnAction(e -> {
@@ -147,26 +178,26 @@ public final class SaveSelectView {
             if (err != null) showError("Load Failed", err);
         });
 
-        Button renameBtn = new Button("\u270E  Rename");
-        renameBtn.getStyleClass().addAll("save-rename-button");
-        renameBtn.setMaxWidth(Double.MAX_VALUE);
-        renameBtn.setOnAction(e -> handleRename(meta, nameLabel, cardList));
-
-        Button deleteBtn = new Button("\uD83D\uDDD1  Delete");
+        Button deleteBtn = new Button("Delete");
         deleteBtn.getStyleClass().addAll("save-delete-button");
         deleteBtn.setMaxWidth(Double.MAX_VALUE);
         deleteBtn.setOnAction(e -> handleDelete(meta, cardList));
 
-        VBox buttons = new VBox(8, loadBtn, renameBtn, deleteBtn);
+        VBox buttons = new VBox(6, loadBtn, deleteBtn);
         buttons.setAlignment(Pos.CENTER);
         buttons.setFillWidth(true);
 
-        HBox card = new HBox(20, info, buttons);
-        card.setAlignment(Pos.CENTER);
+        HBox card = new HBox(12, avatarLabel, info, buttons);
+        card.setAlignment(Pos.CENTER_LEFT);
         card.getStyleClass().add("save-card");
         if (meta.autosave()) card.getStyleClass().add("save-card-autosave");
-        card.setPadding(new Insets(20, 24, 20, 24));
+        card.setPadding(new Insets(12, 16, 12, 16));
         card.setMaxWidth(700);
+        
+        // Make avatar full height of card
+        VBox.setVgrow(avatarLabel, Priority.ALWAYS);
+        avatarLabel.setMaxHeight(Double.MAX_VALUE);
+        avatarLabel.setStyle("-fx-alignment: center;");
 
         VBox wrapper = new VBox(card);
         wrapper.setAlignment(Pos.CENTER);
