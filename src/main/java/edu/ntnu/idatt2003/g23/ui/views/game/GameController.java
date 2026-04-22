@@ -209,7 +209,6 @@ public final class GameController {
         return player.getStatus();
     }
     public BigDecimal getPlayerStatusProgress() {
-        player.calculateStatus();
         return player.calculateStatusProgress();
     }
     public int getPlayerWeeksTraded() {
@@ -219,18 +218,15 @@ public final class GameController {
         return player.getWeeksTargetForNextStatus();
     }
     public BigDecimal getPlayerWeeksProgress() {
-        player.calculateStatus();
         return player.calculateWeeksProgress();
     }
     public BigDecimal getPlayerGrowthRatio() {
         return player.getNetWorthGrowthRatio();
     }
     public BigDecimal getPlayerGrowthTargetForNextStatus() {
-        player.calculateStatus();
         return player.getGrowthTargetForNextStatus();
     }
     public BigDecimal getPlayerNetWorthProgress() {
-        player.calculateStatus();
         return player.calculateNetWorthProgress();
     }
     public List<Share> getPortfolioShares() { return player.getPortfolio().getShares(); }
