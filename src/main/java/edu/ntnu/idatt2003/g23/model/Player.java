@@ -7,6 +7,11 @@ import edu.ntnu.idatt2003.g23.model.transaction.TransactionArchive;
 
 // Represents a player in the stock market game.
 public class Player {
+    private static final int INVESTOR_WEEKS_REQUIRED = 10;
+    private static final BigDecimal INVESTOR_GROWTH_REQUIRED = BigDecimal.valueOf(1.2);
+    private static final int SPECULATOR_WEEKS_REQUIRED = 20;
+    private static final BigDecimal SPECULATOR_GROWTH_REQUIRED = BigDecimal.valueOf(2.0);
+
     private final String name;
     private final BigDecimal startingMoney;
     private BigDecimal money;
@@ -132,9 +137,9 @@ public class Player {
         } else {
             BigDecimal growth = netWorth.divide(startingMoney, 4, RoundingMode.HALF_UP);
 
-            if (weeks >= 20 &&  growth.compareTo(BigDecimal.valueOf(2.0)) >= 0) {
+            if (weeks >= SPECULATOR_WEEKS_REQUIRED &&  growth.compareTo(SPECULATOR_GROWTH_REQUIRED) >= 0) {
                 status = PlayerStatus.SPECULATOR;
-            } else if (weeks >= 10 && growth.compareTo(BigDecimal.valueOf(1.2)) >= 0) {
+            } else if (weeks >= INVESTOR_WEEKS_REQUIRED && growth.compareTo(INVESTOR_GROWTH_REQUIRED) >= 0) {
                 status = PlayerStatus.INVESTOR;
             } else {
                 status = PlayerStatus.NOVICE;
@@ -142,6 +147,86 @@ public class Player {
         }        
     }
 
+    /**
+     * Calculates the player's progress towards the next status level as a value between 0 and 1.
+     * @return the progress towards the next status level
+     */
+    public BigDecimal calculateStatusProgress() {
+        BigDecimal weeksProgress = calculateWeeksProgress();
+        BigDecimal networthProgress = calculateNetWorthProgress();
+        return weeksProgress.add(networthProgress).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateNetWorthProgress() {
+        BigDecimal progress = BigDecimal.ZERO;
+        switch (status) {
+            case NOVICE -> {
+                progress = getNetWorth().subtract(startingMoney).divide(startingMoney.multiply(INVESTOR_GROWTH_REQUIRED).subtract(startingMoney), 4, RoundingMode.HALF_UP);
+            }
+            case INVESTOR -> {
+                progress = getNetWorth().subtract(startingMoney.multiply(INVESTOR_GROWTH_REQUIRED)).divide(startingMoney.multiply(SPECULATOR_GROWTH_REQUIRED).subtract(startingMoney.multiply(INVESTOR_GROWTH_REQUIRED)), 4, RoundingMode.HALF_UP);
+            }
+            case SPECULATOR -> {
+                progress = BigDecimal.ONE;
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + status);
+        }
+
+        if (progress.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        } else if (progress.compareTo(BigDecimal.ONE) > 0) {
+            return BigDecimal.ONE;
+        } else {
+            return progress;
+        }
+    }
+
+    public BigDecimal calculateWeeksProgress() {
+        BigDecimal progress = BigDecimal.ZERO;
+        switch (status) {
+            case NOVICE -> {
+                progress = BigDecimal.valueOf(getWeeksTraded()).divide(BigDecimal.valueOf(INVESTOR_WEEKS_REQUIRED), 4, RoundingMode.HALF_UP);
+            }
+            case INVESTOR -> {
+                progress = BigDecimal.valueOf(getWeeksTraded() - INVESTOR_WEEKS_REQUIRED).divide(BigDecimal.valueOf(SPECULATOR_WEEKS_REQUIRED - INVESTOR_WEEKS_REQUIRED), 4, RoundingMode.HALF_UP);
+            }
+            case SPECULATOR -> {
+                progress = BigDecimal.ONE;
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + status);
+        }
+
+        if (progress.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        } else if (progress.compareTo(BigDecimal.ONE) > 0) {
+            return BigDecimal.ONE;
+        } else {
+            return progress;
+        }
+    }
+
+    public BigDecimal getNetWorthGrowthRatio() {
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return getNetWorth().divide(startingMoney, 4, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getGrowthTargetForNextStatus() {
+        return switch (status) {
+            case NOVICE -> INVESTOR_GROWTH_REQUIRED;
+            case INVESTOR -> SPECULATOR_GROWTH_REQUIRED;
+            case SPECULATOR -> SPECULATOR_GROWTH_REQUIRED;
+        };
+    }
+
+    public int getWeeksTargetForNextStatus() {
+        return switch (status) {
+            case NOVICE -> INVESTOR_WEEKS_REQUIRED;
+            case INVESTOR -> SPECULATOR_WEEKS_REQUIRED;
+            case SPECULATOR -> SPECULATOR_WEEKS_REQUIRED;
+        };
+    }
     /**
      * Gets the player's status.
      * @return the player's status
