@@ -321,6 +321,10 @@ public final class GameController {
         player.setProfileAvatar(avatar);
     }
 
+    public void setPlayerName(String name) {
+        player.setName(name);
+    }
+
     public BigDecimal getPlayerStartingMoney() {
         return player.getStartingMoney();
     }

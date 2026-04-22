@@ -38,6 +38,24 @@
     -fx-text-fill: #c8d8f0;
 }
 
+.settings-profile-name-field {
+    -fx-background-color: rgba(15, 45, 94, 0.32);
+    -fx-text-fill: #f0f7ff;
+    -fx-prompt-text-fill: rgba(200, 216, 240, 0.45);
+    -fx-font-size: 14;
+    -fx-font-weight: 700;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(74, 104, 153, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 8 12 8 12;
+}
+
+.settings-profile-name-field:focused {
+    -fx-border-color: rgba(245, 162, 1, 0.7);
+    -fx-background-color: rgba(15, 45, 94, 0.42);
+}
+
 .settings-sublabel {
     -fx-font-size: 12;
     -fx-text-fill: #4a6899;
@@ -336,7 +354,7 @@
 }
 
 .save-card-title {
-    -fx-font-family: "Sans Serif Collection";
+    -fx-font-family: "Sans Serif";
     -fx-font-size: 22;
     -fx-text-fill: #f5a201;
 }

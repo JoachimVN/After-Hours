@@ -13,7 +13,7 @@ public class Player {
     public record WeeklySnapshot(int week, BigDecimal cash, BigDecimal portfolioValue, BigDecimal netWorth) {}
     private static final String DEFAULT_PROFILE_AVATAR = "\uD83E\uDDD1";
 
-    private final String name;
+    private String name;
     private final BigDecimal startingMoney;
     private BigDecimal money;
     private final Portfolio portfolio;
@@ -92,6 +92,21 @@ public class Player {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Sets the player's name.
+     * @param name the new player name (must not be null or blank)
+     * @throws IllegalArgumentException if the name is null or blank
+     */
+    public void setName(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("Name cannot be null");
+        }
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be blank");
+        }
+        this.name = name;
     }
 
     /**

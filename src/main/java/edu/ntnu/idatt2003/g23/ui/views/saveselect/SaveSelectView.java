@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.ui.views.saveselect;
 
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
+import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -148,7 +149,8 @@ public final class SaveSelectView {
             }
         });
 
-        Label avatarLabel = new Label(meta.profileAvatar());
+        Label avatarLabel = new Label();
+        avatarLabel.setGraphic(AvatarUtil.createImageView(meta.profileAvatar(), 46.8));
         avatarLabel.getStyleClass().add("save-card-avatar");
 
         Label detailLabel = new Label(
@@ -244,74 +246,6 @@ public final class SaveSelectView {
 
     // ── Handlers ──────────────────────────────────────────────────────────────
 
-    private void handleRename(SaveMeta meta, Label nameLabel, VBox cardList) {
-        // ── Header ────────────────────────────────────────────────────────────
-        Label iconLbl  = new Label("✏");
-        iconLbl.getStyleClass().add("dialog-action-icon-buy");
-        Label titleLbl = new Label("RENAME SAVE");
-        titleLbl.getStyleClass().add("dialog-title");
-        HBox header = new HBox(10, iconLbl, titleLbl);
-        header.getStyleClass().add("dialog-header");
-        header.setAlignment(Pos.CENTER_LEFT);
-
-        // ── Input ─────────────────────────────────────────────────────────────
-        TextField field = new TextField(meta.displayName());
-        field.getStyleClass().add("save-rename-field");
-        field.setMaxWidth(280);
-        Label hint = new Label("Enter a new display name");
-        hint.getStyleClass().add("dialog-row-key");
-        VBox body = new VBox(8, hint, field);
-        body.getStyleClass().add("error-dialog-body");
-        body.setPadding(new Insets(16, 22, 8, 22));
-
-        // ── Buttons ───────────────────────────────────────────────────────────
-        Button cancelBtn  = new Button("Cancel");
-        cancelBtn.getStyleClass().add("dialog-cancel-btn");
-        Button confirmBtn = new Button("Rename");
-        confirmBtn.getStyleClass().add("dialog-confirm-buy-btn");
-        confirmBtn.setDefaultButton(true);
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox btnRow = new HBox(10, cancelBtn, spacer, confirmBtn);
-        btnRow.getStyleClass().add("dialog-btn-row");
-
-        VBox card = new VBox(0, header, body, btnRow);
-        card.getStyleClass().add("trade-dialog-root");
-        card.setMaxWidth(360);
-        card.setMaxHeight(Region.USE_PREF_SIZE);
-
-        Region backdrop = new Region();
-        backdrop.getStyleClass().add("dialog-backdrop");
-
-        StackPane popup = new StackPane(backdrop, card);
-        StackPane.setAlignment(card, Pos.CENTER);
-
-        Runnable dismiss = () -> overlay.getChildren().remove(popup);
-        cancelBtn.setOnAction(ev -> dismiss.run());
-        backdrop.setOnMouseClicked(ev -> dismiss.run());
-        confirmBtn.setOnAction(ev -> {
-            String newName = field.getText().strip();
-            if (newName.isEmpty()) return;
-            String safe = meta.saveDir().getFileName().toString()
-                    .replaceFirst("^[^_]+", newName.replaceAll("[^A-Za-z0-9_\\-]", "_"));
-            Path newPath = controller.renameSave(meta.saveDir(), safe, newName);
-            dismiss.run();
-            if (newPath != null) {
-                nameLabel.setText(newName);
-            } else {
-                showError("Rename Failed", "Could not rename the save file.");
-            }
-        });
-        popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
-            if (ev.getCode() == KeyCode.ESCAPE) { dismiss.run(); ev.consume(); }
-        });
-
-        overlay.getChildren().add(popup);
-        field.requestFocus();
-        field.selectAll();
-    }
-
     private void handleDelete(SaveMeta meta, VBox cardList) {
         // ── Header ────────────────────────────────────────────────────────────
         Label iconLbl  = new Label("🗑");
@@ -334,7 +268,7 @@ public final class SaveSelectView {
         Button cancelBtn = new Button("Cancel");
         cancelBtn.getStyleClass().add("dialog-cancel-btn");
         Button deleteBtn = new Button("Delete");
-        deleteBtn.getStyleClass().add("dialog-confirm-sell-btn");
+        deleteBtn.getStyleClass().add("dialog-confirm-delete-btn");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);

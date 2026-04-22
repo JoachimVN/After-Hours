@@ -13,6 +13,7 @@ import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.model.PlayerStatus;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
+import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import static edu.ntnu.idatt2003.g23.ui.util.LabelUtil.labelSmall;
 import edu.ntnu.idatt2003.g23.util.NumberParser;
@@ -409,7 +410,8 @@ public final class GameView implements GameViewInterface {
         Node portPill  = statPill("Portfolio Value",  portVal);
         Node nwPill    = statPill("Total Net Worth",  nwVal);
 
-        profileBtn.setText(gameController.getPlayerAvatar());
+        profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
+        profileBtn.setText("");
         profileBtn.getStyleClass().add("game-icon-button");
         profileBtn.setOnAction(e -> onProfile.run());
 
@@ -519,7 +521,7 @@ public final class GameView implements GameViewInterface {
         cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
         portVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
         nwVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
-        profileBtn.setText(gameController.getPlayerAvatar());
+        profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
         portfolioItems.setAll(gameController.getPortfolioShares());
         applyFilter();
         rebuildDetail();

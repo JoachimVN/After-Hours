@@ -17,7 +17,7 @@
 .profile-settings-btn,
 .profile-action-btn,
 .profile-secondary-btn {
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 12px;
   -fx-font-weight: 700;
   -fx-text-fill: #7a9fc8;
@@ -86,7 +86,7 @@
 }
 
 .profile-subtitle {
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 14px;
   -fx-text-fill: #b8d3e8;
 }
@@ -109,9 +109,38 @@
   -fx-background-color: rgba(31, 72, 104, 0.95);
 }
 
+.profile-avatar-btn-locked {
+  -fx-background-color: rgba(15, 22, 32, 0.92);
+  -fx-border-color: rgba(133, 147, 163, 0.22);
+  -fx-opacity: 0.92;
+}
+
+.profile-avatar-btn-locked:hover {
+  -fx-background-color: rgba(15, 22, 32, 0.92);
+}
+
 .profile-avatar-btn-active {
   -fx-background-color: linear-gradient(to bottom right, #1e658a, #255378);
   -fx-border-color: #94d9ff;
+}
+
+.profile-name-field {
+  -fx-padding: 0 4 0 4;
+  -fx-min-height: 72;
+  -fx-pref-height: 72;
+  -fx-max-height: 72;
+  -fx-min-width: 360;
+  -fx-background-color: rgba(10, 20, 40, 0.18);
+  -fx-background-insets: 0;
+  -fx-background-radius: 6;
+  -fx-border-width: 0;
+  -fx-highlight-fill: rgba(245, 162, 1, 0.35);
+  -fx-highlight-text-fill: #f4fbff;
+  -fx-prompt-text-fill: rgba(184, 211, 232, 0.60);
+}
+
+.profile-name-field:focused {
+  -fx-background-color: rgba(11, 24, 46, 0.28);
 }
 
 .profile-card-row {
@@ -128,7 +157,7 @@
 }
 
 .profile-card-title {
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 14px;
   -fx-font-weight: 800;
   -fx-text-fill: rgba(245, 162, 1, 0.78);
@@ -140,13 +169,13 @@
 }
 
 .profile-key {
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 12.5px;
   -fx-text-fill: #9ec1da;
 }
 
 .profile-value {
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 13px;
   -fx-font-weight: 700;
   -fx-text-fill: #f2f8ff;
@@ -193,7 +222,7 @@
   -fx-text-fill: #e8f6ff;
   -fx-background-radius: 8;
   -fx-padding: 3 7;
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 12px;
   -fx-font-weight: 800;
 }
@@ -236,7 +265,7 @@
   -fx-border-radius: 7;
   -fx-padding: 4 7;
   -fx-text-fill: #e8f4ff;
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 12px;
   -fx-font-weight: 700;
 }
@@ -256,7 +285,7 @@
 }
 
 .profile-replay-status {
-  -fx-font-family: "SansSerifCollection";
+  -fx-font-family: "Sans Serif";
   -fx-font-size: 13px;
   -fx-font-weight: 700;
   -fx-text-fill: #d6efff;

@@ -102,7 +102,7 @@ public class App extends Application {
     private GameView currentGameView;
     private GameController currentGameController;
     private GameUiState currentUiState;
-    private String currentProfileAvatar = "\uD83E\uDDD1";
+    private String currentProfileAvatar = "bust-in-silhouette";
 
     @Override
     public void start(Stage stage) {
@@ -344,10 +344,6 @@ public class App extends Application {
         buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market");
     }
 
-    private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor) {
-        buildAndStartGame(name, cash, stocks, fromEditor, "Custom Market");
-    }
-
     private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor, String exchangeName) {
         if (stocks.isEmpty()) {
             showNoStocksPage(fromEditor);
@@ -385,13 +381,13 @@ public class App extends Application {
         GameController gameController = new GameController(player, exchange);
         GameView gameview = new GameView(gameController, withBack(this::goHome),
                 () -> {
-                    sfxController.play(SfxController.SETTINGS);
-                navigateKeepMusic(buildProfileView(
-                    () -> {
-                        if (currentGameView != null) currentGameView.updateData();
-                        navigateKeepMusic(currentGamePage);
-                    },
-                    this::performSave));
+                    navigateKeepMusic(buildProfileView(
+                        () -> {
+                            sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0));
+                            if (currentGameView != null) currentGameView.updateData();
+                            navigateKeepMusic(currentGamePage);
+                        },
+                        this::performSave));
                 },
                 sfxController::getVolume,
                 uiState);
@@ -474,35 +470,67 @@ public class App extends Application {
             saveSettings();
             navigateKeepMusic(buildSettingsView(onBack, onSave));
         };
-        return SettingsView.build(
-                onBackWithSfx,
-                primaryStage,
-                vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
-                musicVolume,
-                musicMuted,
-                muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
-                vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
-                sfxVolume,
-                sfxMuted,
-                muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
-                enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
-                animationsEnabled,
-                fullscreenEnabled,
-                enabled -> { fullscreenEnabled = enabled; primaryStage.setFullScreen(enabled); saveSettings(); },
-                dims   -> { primaryStage.setFullScreen(false); primaryStage.setMaximized(false);
-                            primaryStage.setWidth(dims[0]); primaryStage.setHeight(dims[1]); },
-                ()     -> { primaryStage.setFullScreen(false); primaryStage.setMaximized(true); },
-                file   -> { /* export already completed in view; reserved for future controller logic */ },
-                enabled -> { devModeEnabled = enabled; saveSettings(); },
-                devModeEnabled,
-                enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
-                autosaveEnabled,
-                enabled -> { autosaveToast = enabled; saveSettings(); },
-                autosaveToast,
-                currentSavePath,
-                onResetAll,
-                onSave
-        );
+        
+        // Use simpler overload for home/setup (onSave == null), full overload for in-game (onSave != null)
+        if (onSave == null) {
+            return SettingsView.build(
+                    onBackWithSfx,
+                    primaryStage,
+                    vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
+                    musicVolume,
+                    musicMuted,
+                    muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
+                    vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
+                    sfxVolume,
+                    sfxMuted,
+                    muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
+                    enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
+                    animationsEnabled,
+                    fullscreenEnabled,
+                    enabled -> { fullscreenEnabled = enabled; primaryStage.setFullScreen(enabled); saveSettings(); },
+                    enabled -> { devModeEnabled = enabled; saveSettings(); },
+                    devModeEnabled,
+                    enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
+                    autosaveEnabled,
+                    enabled -> { autosaveToast = enabled; saveSettings(); },
+                    autosaveToast
+            );
+        } else {
+            return SettingsView.build(
+                    onBackWithSfx,
+                    primaryStage,
+                    vol -> { musicVolume = vol; homePageMusicController.setVolume(musicMuted ? 0.0 : vol); saveSettings(); },
+                    musicVolume,
+                    musicMuted,
+                    muted -> { musicMuted = muted; homePageMusicController.setVolume(muted ? 0.0 : musicVolume); saveSettings(); },
+                    vol -> { sfxVolume = vol; sfxController.setVolume(sfxMuted ? 0.0 : vol); saveSettings(); },
+                    sfxVolume,
+                    sfxMuted,
+                    muted -> { sfxMuted = muted; sfxController.setVolume(muted ? 0.0 : sfxVolume); saveSettings(); },
+                    enabled -> { animationsEnabled = enabled; backgroundCanvas.setAnimationsEnabled(enabled); saveSettings(); },
+                    animationsEnabled,
+                    fullscreenEnabled,
+                    enabled -> { fullscreenEnabled = enabled; primaryStage.setFullScreen(enabled); saveSettings(); },
+                    dims   -> { primaryStage.setFullScreen(false); primaryStage.setMaximized(false);
+                                primaryStage.setWidth(dims[0]); primaryStage.setHeight(dims[1]); },
+                    ()     -> { primaryStage.setFullScreen(false); primaryStage.setMaximized(true); },
+                    file   -> { /* export already completed in view; reserved for future controller logic */ },
+                    enabled -> { devModeEnabled = enabled; saveSettings(); },
+                    devModeEnabled,
+                    enabled -> { autosaveEnabled = enabled; if (enabled) startAutosaveTimer(); else stopAutosaveTimer(); saveSettings(); },
+                    autosaveEnabled,
+                    enabled -> { autosaveToast = enabled; saveSettings(); },
+                    autosaveToast,
+                    currentSavePath,
+                    onResetAll,
+                    onSave,
+                    currentGameController != null ? currentGameController.getPlayerName() : null,
+                    currentGameController != null ? name -> {
+                        currentGameController.setPlayerName(name);
+                        onSave.run();
+                    } : null
+            );
+        }
     }
 
     private Parent buildProfileView(Runnable onBackToGame, Runnable onSave) {
@@ -510,9 +538,12 @@ public class App extends Application {
             return buildSettingsView(onBackToGame, onSave);
         }
         ProfileController profileController = new ProfileController(currentGameController);
-        Runnable openSettingsFromProfile = () -> navigateKeepMusic(buildSettingsView(
+        Runnable openSettingsFromProfile = () -> {
+            sfxController.play(SfxController.SETTINGS);
+            navigateKeepMusic(buildSettingsView(
                 () -> navigateKeepMusic(buildProfileView(onBackToGame, onSave)),
                 onSave));
+        };
         return ProfileView.build(
                 profileController,
                 onBackToGame,
@@ -522,6 +553,10 @@ public class App extends Application {
                     currentProfileAvatar = avatar;
                     currentGameController.setPlayerAvatar(avatar);
                     if (currentGameView != null) currentGameView.updateData();
+                },
+                name -> {
+                    currentGameController.setPlayerName(name);
+                    onSave.run();
                 }
         );
     }

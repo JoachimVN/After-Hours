@@ -309,11 +309,6 @@ public final class NoStocksView {
     }
 
     private static SequentialTransition buildPhaseSequence(
-            List<Message> messages, VBox labelsBox, StackPane overlay) {
-        return buildPhaseSequence(messages, labelsBox, overlay, null, false);
-    }
-
-    private static SequentialTransition buildPhaseSequence(
             List<Message> messages, VBox labelsBox, StackPane overlay,
             Map<Integer, Runnable> onDisplayHooks) {
         return buildPhaseSequence(messages, labelsBox, overlay, onDisplayHooks, false);

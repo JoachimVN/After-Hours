@@ -1,0 +1,21 @@
+# Avatar display order — one stem (filename without .png) per line.
+# Any .png in this folder that is NOT listed here will be appended alphabetically at the end.
+# Lines starting with # are ignored.
+# Note: bust-in-silhouette is the default avatar and is not selectable in the profile picker.
+boy
+girl
+man
+woman
+man-office-worker
+woman-office-worker
+man-in-tuxedo
+woman-in-tuxedo
+dog
+cat
+wolf
+monkey
+bear
+pig
+fox
+rabbit
+

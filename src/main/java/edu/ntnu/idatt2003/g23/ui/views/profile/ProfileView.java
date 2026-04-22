@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 import edu.ntnu.idatt2003.g23.model.PlayerStatus;
 import edu.ntnu.idatt2003.g23.model.Share;
+import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
 import javafx.animation.KeyFrame;
@@ -26,24 +27,21 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.effect.ColorAdjust;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Path;
 import javafx.util.StringConverter;
 import javafx.util.Duration;
 
 public final class ProfileView {
-
-    private static final List<String> BUILT_IN_AVATARS = List.of(
-            "\uD83E\uDDD1", "\uD83D\uDC68", "\uD83D\uDC69", "\uD83E\uDDD4",
-            "\uD83E\uDDD1\u200D\uD83D\uDCBC", "\uD83D\uDC69\u200D\uD83D\uDCBC",
-            "\uD83D\uDC7D", "\uD83E\uDD16", "\uD83E\uDD84", "\uD83D\uDC3A"
-    );
 
     private ProfileView() {
     }
@@ -53,17 +51,53 @@ public final class ProfileView {
             Runnable onBackToGame,
             Runnable onOpenSettings,
             String currentAvatar,
-            Consumer<String> onAvatarChanged) {
+            Consumer<String> onAvatarChanged,
+            Consumer<String> onNameChanged) {
 
-        String initialAvatar = (currentAvatar == null || currentAvatar.isBlank()) ? "\uD83E\uDDD1" : currentAvatar;
+        List<String> avatarNames = AvatarUtil.loadSelectableAvatarNames();
+        String initialAvatar = (currentAvatar == null || currentAvatar.isBlank()) ? "bust-in-silhouette" : currentAvatar;
+        final String[] selectedAvatar = {initialAvatar};
+
+        // Track name changes for auto-save
+        final String[] originalName = {controller.getPlayerName()};
+        final boolean[] nameChanged = {false};
+
+        TextField profileNameField = new TextField(controller.getPlayerName());
+        profileNameField.getStyleClass().addAll("profile-title", "profile-name-field");
+        profileNameField.setMaxWidth(Double.MAX_VALUE);
+        profileNameField.setPrefColumnCount(Math.max(18, controller.getPlayerName().length() + 2));
+
+        Runnable commitPendingName = () -> {
+            String newName = profileNameField.getText().strip();
+            if (newName.isEmpty()) {
+                profileNameField.setText(originalName[0]);
+                nameChanged[0] = false;
+                return;
+            }
+            if (!newName.equals(originalName[0])) {
+                onNameChanged.accept(newName);
+                originalName[0] = newName;
+            }
+            nameChanged[0] = false;
+        };
 
         Button backBtn = new Button("\u2190 Back To Market");
         backBtn.getStyleClass().add("profile-back-btn");
-        backBtn.setOnAction(e -> onBackToGame.run());
+        backBtn.setOnAction(e -> {
+            if (nameChanged[0]) {
+                commitPendingName.run();
+            }
+            onBackToGame.run();
+        });
 
         Button settingsBtn = new Button("\u2699 Settings");
         settingsBtn.getStyleClass().add("profile-settings-btn");
-        settingsBtn.setOnAction(e -> onOpenSettings.run());
+        settingsBtn.setOnAction(e -> {
+            if (nameChanged[0]) {
+                commitPendingName.run();
+            }
+            onOpenSettings.run();
+        });
 
         Region topSpacer = new Region();
         HBox.setHgrow(topSpacer, Priority.ALWAYS);
@@ -71,39 +105,97 @@ public final class ProfileView {
         topBar.getStyleClass().add("profile-top-bar");
         topBar.setAlignment(Pos.CENTER_LEFT);
 
-        Label avatarDisplay = new Label(initialAvatar);
+        Label avatarDisplay = new Label();
+        avatarDisplay.setGraphic(AvatarUtil.createImageView(initialAvatar, 57.6));
         avatarDisplay.getStyleClass().add("profile-avatar-display");
-
-        Label profileTitle = new Label(controller.getPlayerName());
-        profileTitle.getStyleClass().add("profile-title");
 
         PlayerStatus status = controller.getPlayerStatus();
         Label profileSubtitle = new Label("Status: " + status.name() + "  •  Week " + controller.getCurrentWeek());
         profileSubtitle.getStyleClass().add("profile-subtitle");
 
-        FlowPane avatarPicker = new FlowPane(8, 8);
+        profileNameField.focusedProperty().addListener((obs, oldV, focused) -> {
+            if (!focused) {
+                String newName = profileNameField.getText().strip();
+                if (newName.isEmpty()) {
+                    profileNameField.setText(originalName[0]);
+                    nameChanged[0] = false;
+                } else {
+                    nameChanged[0] = !newName.equals(originalName[0]);
+                }
+            }
+        });
+        profileNameField.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                String newName = profileNameField.getText().strip();
+                if (newName.isEmpty()) {
+                    profileNameField.setText(originalName[0]);
+                    nameChanged[0] = false;
+                } else {
+                    nameChanged[0] = !newName.equals(originalName[0]);
+                }
+                profileNameField.getParent().requestFocus();
+            }
+        });
+
+        TilePane avatarPicker = new TilePane();
         avatarPicker.getStyleClass().add("profile-avatar-picker");
-        for (String avatar : BUILT_IN_AVATARS) {
-            Button avatarBtn = new Button(avatar);
+        avatarPicker.setHgap(8);
+        avatarPicker.setVgap(8);
+        avatarPicker.setPrefColumns(8);
+        avatarPicker.setPrefRows(2);
+        avatarPicker.setMaxWidth(8 * 38 + 7 * 8);
+        for (String avatar : avatarNames) {
+            Button avatarBtn = new Button();
+            var avatarGraphic = AvatarUtil.createImageView(avatar, 25.2);
+            avatarBtn.setGraphic(avatarGraphic);
+            avatarBtn.setMinSize(38, 38);
+            avatarBtn.setPrefSize(38, 38);
+            avatarBtn.setMaxSize(38, 38);
             avatarBtn.getStyleClass().add("profile-avatar-btn");
+            PlayerStatus requiredStatus = requiredStatusForAvatar(avatar);
+            boolean unlocked = isAvatarUnlocked(status, requiredStatus);
+            if (!unlocked) {
+                ColorAdjust grayscale = new ColorAdjust();
+                grayscale.setSaturation(-1.0);
+                avatarGraphic.setEffect(grayscale);
+                avatarGraphic.setOpacity(0.45);
+                avatarBtn.getStyleClass().add("profile-avatar-btn-locked");
+                Tooltip tooltip = new Tooltip("Unlocks at " + formatStatusName(requiredStatus));
+                tooltip.setShowDelay(Duration.millis(120));
+                tooltip.setShowDuration(Duration.seconds(20));
+                avatarBtn.setTooltip(tooltip);
+            }
             if (avatar.equals(initialAvatar)) {
                 avatarBtn.getStyleClass().add("profile-avatar-btn-active");
             }
             avatarBtn.setOnAction(e -> {
-                avatarDisplay.setText(avatar);
-                onAvatarChanged.accept(avatar);
+                if (!unlocked) {
+                    return;
+                }
                 avatarPicker.getChildren().forEach(node -> node.getStyleClass().remove("profile-avatar-btn-active"));
+                if (avatar.equals(selectedAvatar[0])) {
+                    selectedAvatar[0] = "bust-in-silhouette";
+                    avatarDisplay.setGraphic(AvatarUtil.createImageView(selectedAvatar[0], 57.6));
+                    onAvatarChanged.accept(selectedAvatar[0]);
+                    return;
+                }
+                selectedAvatar[0] = avatar;
+                avatarDisplay.setGraphic(AvatarUtil.createImageView(avatar, 57.6));
+                onAvatarChanged.accept(avatar);
                 avatarBtn.getStyleClass().add("profile-avatar-btn-active");
             });
             avatarPicker.getChildren().add(avatarBtn);
         }
 
-        VBox heroText = new VBox(6, profileTitle, profileSubtitle, avatarPicker);
+        VBox heroText = new VBox(6, profileNameField, profileSubtitle, avatarPicker);
+    heroText.setFillWidth(true);
+    heroText.setMaxWidth(Double.MAX_VALUE);
         heroText.setAlignment(Pos.TOP_LEFT);
 
         HBox hero = new HBox(16, avatarDisplay, heroText);
         hero.getStyleClass().add("profile-hero");
         hero.setAlignment(Pos.CENTER_LEFT);
+    HBox.setHgrow(heroText, Priority.ALWAYS);
 
         VBox infoCard = statCard("Player",
             statLine("Starting Cash", CurrencyFormatter.format(controller.getPlayerStartingMoney())),
@@ -500,5 +592,25 @@ public final class ProfileView {
         Label badge = new Label(value);
         badge.getStyleClass().add("profile-badge");
         return badge;
+    }
+
+    private static PlayerStatus requiredStatusForAvatar(String avatar) {
+        return switch (avatar) {
+            case "man-office-worker", "woman-office-worker" -> PlayerStatus.INVESTOR;
+            case "man-in-tuxedo", "woman-in-tuxedo" -> PlayerStatus.SPECULATOR;
+            default -> null;
+        };
+    }
+
+    private static boolean isAvatarUnlocked(PlayerStatus currentStatus, PlayerStatus requiredStatus) {
+        return requiredStatus == null || currentStatus.ordinal() >= requiredStatus.ordinal();
+    }
+
+    private static String formatStatusName(PlayerStatus status) {
+        if (status == null) {
+            return "";
+        }
+        String lower = status.name().toLowerCase(Locale.ROOT);
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 }

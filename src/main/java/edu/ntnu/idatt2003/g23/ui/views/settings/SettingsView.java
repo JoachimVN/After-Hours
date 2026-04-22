@@ -62,7 +62,7 @@ public final class SettingsView {
                 onDevModeChange, devModeEnabled,
                 onAutosaveChange, autosaveEnabled,
                 onAutosaveToastChange, autosaveToastEnabled,
-                null, null, null);
+                null, null, null, null, null);
     }
 
     // ── Full overload ─────────────────────────────────────────────────────────
@@ -87,7 +87,11 @@ public final class SettingsView {
             Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
             Path currentSavePath,
             Runnable onResetAll,
-            Runnable onSave) {
+            Runnable onSave,
+            /** Current player name if in-game context (null-safe). */
+            String currentPlayerName,
+            /** Called with new player name if in-game (null-safe). */
+            Consumer<String> onNameChanged) {
 
         StackPane overlay = new StackPane();
         overlay.setPickOnBounds(false);
@@ -141,9 +145,21 @@ public final class SettingsView {
         VBox keybindsSection = buildKeybindsSection(overlay);
         VBox devSection = buildDevSection(devModeEnabled, onDevModeChange);
 
-        VBox allSections = new VBox(22,
-                title, audioSection, displaySection, gameSection,
-                dataSection, keybindsSection, devSection);
+        VBox profileSection = null;
+        if (currentPlayerName != null && onNameChanged != null) {
+            profileSection = buildProfileSection(currentPlayerName, onNameChanged);
+        }
+
+        VBox allSections;
+        if (profileSection != null) {
+            allSections = new VBox(22,
+                    title, profileSection, audioSection, displaySection, gameSection,
+                    dataSection, keybindsSection, devSection);
+        } else {
+            allSections = new VBox(22,
+                    title, audioSection, displaySection, gameSection,
+                    dataSection, keybindsSection, devSection);
+        }
         allSections.setAlignment(Pos.TOP_LEFT);
         allSections.setMaxWidth(700);
         HBox.setHgrow(allSections, Priority.ALWAYS);
@@ -180,6 +196,36 @@ public final class SettingsView {
     // ──────────────────────────────────────────────────────────────────────────
     // Section builders
     // ──────────────────────────────────────────────────────────────────────────
+
+    private static VBox buildProfileSection(String currentPlayerName, Consumer<String> onNameChanged) {
+        TextField nameField = new TextField(currentPlayerName);
+        nameField.getStyleClass().addAll("settings-text-field", "settings-profile-name-field");
+        nameField.setMaxWidth(Double.MAX_VALUE);
+        nameField.setPromptText("Player name");
+
+        Runnable saveName = () -> {
+            String newName = nameField.getText().strip();
+            if (!newName.isEmpty() && !newName.equals(currentPlayerName)) {
+                onNameChanged.accept(newName);
+            } else if (newName.isEmpty()) {
+                nameField.setText(currentPlayerName);
+            }
+        };
+
+        nameField.focusedProperty().addListener((obs, oldV, focused) -> {
+            if (!focused) saveName.run();
+        });
+        nameField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                saveName.run();
+                nameField.getParent().requestFocus();
+            }
+        });
+
+        Label label = new Label("Player Name");
+        label.getStyleClass().add("settings-label");
+        return sectionCard("👤  Profile", label, nameField);
+    }
 
     private static VBox buildAudioSection(
             DoubleConsumer onMusicVolumeChange, double initialMusicVolume,
