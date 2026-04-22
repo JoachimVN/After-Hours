@@ -224,7 +224,7 @@ public class Exchange {
             double percentageChange = (random.nextDouble() * (max - min)) + min;
             BigDecimal multiplicativeChange = BigDecimal.valueOf(1 + (percentageChange / 100));  // 1 to 1.10
 
-            boolean randomBool = Math.random() < 0.5; // 50% chance to be negative
+                boolean randomBool = random.nextBoolean();
             boolean directional = stock.getVolatility() == Volatility.SLOW_FALL
                     || stock.getVolatility() == Volatility.NORMAL_FALL
                     || stock.getVolatility() == Volatility.SLOW_RISE
@@ -241,7 +241,7 @@ public class Exchange {
             // At 2× initial → ~1.4% pull/week; at 10× → ~4.6%; at 8000× → ~18%.
             BigDecimal initialPrice = stock.getHistoricalPrices().get(0);
             double logRatio = Math.log(newPrice.doubleValue() / initialPrice.doubleValue());
-            double reversionFactor = 1.0 - logRatio * 0.02;
+            double reversionFactor = 1.0 - logRatio * ExchangeSimulationConfig.MEAN_REVERSION_STRENGTH;
             reversionFactor = Math.max(0.50, Math.min(1.50, reversionFactor));
             newPrice = newPrice.multiply(BigDecimal.valueOf(reversionFactor)).setScale(6, RoundingMode.HALF_UP);
 
@@ -262,10 +262,10 @@ public class Exchange {
 
         // Spike events — each tier independently fires and applies to one random stock
         List<Stock> allStocks = new ArrayList<>(stockMap.values());
-        applySpike(allStocks, 0.10,  5,  30);
-        applySpike(allStocks, 0.05, 10,  50);
-        applySpike(allStocks, 0.02, 20,  70);
-        applySpike(allStocks, 0.01, 30,  90);
+        applySpike(allStocks, 0.18,  5,  30);
+        applySpike(allStocks, 0.10, 10,  50);
+        applySpike(allStocks, 0.05, 20,  70);
+        applySpike(allStocks, 0.02, 30,  90);
 
         // Re-apply price floor after spikes — a downward spike can bypass the per-stock floor above
         BigDecimal priceFloor = BigDecimal.valueOf(0.01);
@@ -278,16 +278,28 @@ public class Exchange {
 
     private void applySpike(List<Stock> stocks, double chance, double minPct, double maxPct) {
         if (random.nextDouble() >= chance) return;
-        Stock target = stocks.get(random.nextInt(stocks.size()));
-        double pct = minPct + random.nextDouble() * (maxPct - minPct);
-        BigDecimal factor = BigDecimal.valueOf(1.0 + pct / 100.0).setScale(6, RoundingMode.HALF_UP);
-        BigDecimal newPrice;
-        if (random.nextBoolean()) {
-            newPrice = target.getSalesPrice().multiply(factor);
-        } else {
-            newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
+        int targets = 1;
+        while (targets < ExchangeSimulationConfig.MAX_SPIKE_TARGETS_PER_EVENT
+            && random.nextDouble() < ExchangeSimulationConfig.ADDITIONAL_SPIKE_TARGET_CHANCE) {
+            targets++;
         }
-        target.addNewSalesPrice(newPrice);
+
+        List<Stock> shuffled = new ArrayList<>(stocks);
+        Collections.shuffle(shuffled, random);
+        int affected = Math.min(targets, shuffled.size());
+
+        for (int i = 0; i < affected; i++) {
+            Stock target = shuffled.get(i);
+            double pct = minPct + random.nextDouble() * (maxPct - minPct);
+            BigDecimal factor = BigDecimal.valueOf(1.0 + pct / 100.0).setScale(6, RoundingMode.HALF_UP);
+            BigDecimal newPrice;
+            if (random.nextBoolean()) {
+                newPrice = target.getSalesPrice().multiply(factor);
+            } else {
+                newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
+            }
+            target.addNewSalesPrice(newPrice);
+        }
     
     }
 

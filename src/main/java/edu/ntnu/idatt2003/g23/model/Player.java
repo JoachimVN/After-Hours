@@ -157,7 +157,12 @@ public class Player {
         }
         BigDecimal weeksProgress = calculateWeeksProgress();
         BigDecimal networthProgress = calculateNetWorthProgress();
-        return weeksProgress.add(networthProgress).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+        BigDecimal progress = weeksProgress.add(networthProgress)
+                .divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+        if (progress.compareTo(BigDecimal.ONE) == 0) {
+            return BigDecimal.ONE;
+        }
+        return progress;
     }
 
     public BigDecimal calculateNetWorthProgress() {
