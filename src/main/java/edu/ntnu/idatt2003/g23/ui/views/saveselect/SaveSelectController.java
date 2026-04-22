@@ -124,9 +124,9 @@ public final class SaveSelectController {
      *
      * @return the new path on success, or {@code null} on failure
      */
-    public Path renameSave(Path saveDir, String newFolderName) {
+    public Path renameSave(Path saveDir, String newFolderName, String newDisplayName) {
         try {
-            return GameSaveLoader.renameSave(saveDir, newFolderName);
+            return GameSaveLoader.renameSave(saveDir, newFolderName, newDisplayName);
         } catch (IOException e) {
             return null;
         }

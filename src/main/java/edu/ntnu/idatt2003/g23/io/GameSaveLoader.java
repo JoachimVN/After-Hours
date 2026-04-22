@@ -95,9 +95,29 @@ public final class GameSaveLoader {
      * JSON playerName).
      */
     public static Path renameSave(Path saveDir, String newFolderName) throws IOException {
+        return renameSave(saveDir, newFolderName, null);
+    }
+
+    /**
+     * Renames a save folder and optionally updates a UI display label in
+     * {@code save.json}. When {@code newDisplayName} is blank or null, the
+     * existing JSON label is preserved.
+     */
+    public static Path renameSave(Path saveDir, String newFolderName, String newDisplayName) throws IOException {
         Path parent = saveDir.getParent();
         Path target = parent.resolve(newFolderName);
-        return Files.move(saveDir, target);
+        Path moved = Files.move(saveDir, target);
+
+        if (newDisplayName != null && !newDisplayName.isBlank()) {
+            Path jsonPath = moved.resolve("save.json");
+            if (Files.exists(jsonPath)) {
+                JsonObject obj = GSON.fromJson(Files.readString(jsonPath, StandardCharsets.UTF_8), JsonObject.class);
+                obj.addProperty("displayName", newDisplayName.strip());
+                Files.writeString(jsonPath, GSON.toJson(obj), StandardCharsets.UTF_8);
+            }
+        }
+
+        return moved;
     }
 
     /**
@@ -247,6 +267,10 @@ public final class GameSaveLoader {
         JsonObject obj = GSON.fromJson(raw, JsonObject.class);
 
         String playerName   = obj.get("playerName").getAsString();
+        String displayName  = obj.has("displayName") && !obj.get("displayName").isJsonNull()
+            ? obj.get("displayName").getAsString().strip()
+            : playerName;
+        if (displayName.isBlank()) displayName = playerName;
         String profileAvatar = obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()
             ? obj.get("profileAvatar").getAsString()
             : "\uD83E\uDDD1";
@@ -271,7 +295,7 @@ public final class GameSaveLoader {
             }
         }
 
-        return new SaveMeta(saveDir, playerName, profileAvatar, exchangeName, savedAt,
+        return new SaveMeta(saveDir, displayName, profileAvatar, exchangeName, savedAt,
                 week, money, netWorth, portfolioSize, totalShares, status, isAutosave);
     }
 }

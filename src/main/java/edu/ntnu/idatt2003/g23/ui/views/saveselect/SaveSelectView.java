@@ -126,7 +126,7 @@ public final class SaveSelectView {
             if (!newName.isEmpty() && !newName.equals(meta.displayName())) {
                 String safe = meta.saveDir().getFileName().toString()
                         .replaceFirst("^[^_]+", newName.replaceAll("[^A-Za-z0-9_\\-]", "_"));
-                Path newPath = controller.renameSave(meta.saveDir(), safe);
+                Path newPath = controller.renameSave(meta.saveDir(), safe, newName);
                 if (newPath != null) {
                     // Rebuild card list to reflect the rename
                     rebuildCardList(cardList);
@@ -295,7 +295,7 @@ public final class SaveSelectView {
             if (newName.isEmpty()) return;
             String safe = meta.saveDir().getFileName().toString()
                     .replaceFirst("^[^_]+", newName.replaceAll("[^A-Za-z0-9_\\-]", "_"));
-            Path newPath = controller.renameSave(meta.saveDir(), safe);
+            Path newPath = controller.renameSave(meta.saveDir(), safe, newName);
             dismiss.run();
             if (newPath != null) {
                 nameLabel.setText(newName);
