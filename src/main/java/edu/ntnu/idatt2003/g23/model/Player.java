@@ -152,12 +152,21 @@ public class Player {
      * @return the progress towards the next status level
      */
     public BigDecimal calculateStatusProgress() {
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        if (status == PlayerStatus.SPECULATOR) {
+            return BigDecimal.ONE;
+        }
         BigDecimal weeksProgress = calculateWeeksProgress();
         BigDecimal networthProgress = calculateNetWorthProgress();
         return weeksProgress.add(networthProgress).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calculateNetWorthProgress() {
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
         BigDecimal progress = BigDecimal.ZERO;
         switch (status) {
             case NOVICE -> {
