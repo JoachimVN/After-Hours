@@ -9,6 +9,7 @@ import java.util.Map;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.model.PlayerStatus;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
@@ -203,6 +204,35 @@ public final class GameController {
     public BigDecimal getPlayerCash() { return player.getMoney(); }
     public BigDecimal getPortfolioNetWorth() { return player.getPortfolio().getNetWorth(); }
     public BigDecimal getPlayerNetWorth() { return player.getNetWorth(); }
+    public PlayerStatus getPlayerStatus() {
+        player.calculateStatus();
+        return player.getStatus();
+    }
+    public BigDecimal getPlayerStatusProgress() {
+        player.calculateStatus();
+        return player.calculateStatusProgress();
+    }
+    public int getPlayerWeeksTraded() {
+        return player.getWeeksTraded();
+    }
+    public int getPlayerWeeksTargetForNextStatus() {
+        return player.getWeeksTargetForNextStatus();
+    }
+    public BigDecimal getPlayerWeeksProgress() {
+        player.calculateStatus();
+        return player.calculateWeeksProgress();
+    }
+    public BigDecimal getPlayerGrowthRatio() {
+        return player.getNetWorthGrowthRatio();
+    }
+    public BigDecimal getPlayerGrowthTargetForNextStatus() {
+        player.calculateStatus();
+        return player.getGrowthTargetForNextStatus();
+    }
+    public BigDecimal getPlayerNetWorthProgress() {
+        player.calculateStatus();
+        return player.calculateNetWorthProgress();
+    }
     public List<Share> getPortfolioShares() { return player.getPortfolio().getShares(); }
     public boolean isOwned(String symbol) {
         return getOwnedQuantity(symbol).compareTo(BigDecimal.ZERO) > 0;
