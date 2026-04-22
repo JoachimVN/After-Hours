@@ -6,13 +6,16 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
+import edu.ntnu.idatt2003.g23.model.PlayerStatus;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import static edu.ntnu.idatt2003.g23.ui.util.LabelUtil.labelSmall;
+import edu.ntnu.idatt2003.g23.util.NumberParser;
 import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -40,6 +43,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -55,24 +59,28 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
-import edu.ntnu.idatt2003.g23.util.NumberParser;
-
-import java.util.function.DoubleSupplier;
-import javafx.scene.media.AudioClip;
 
 public final class GameView implements GameViewInterface {
     private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
 
     private final GameController gameController;
+    private final Label statusVal;
     private final Label cashVal;
     private final Label portVal;
     private final Label nwVal;
     private final Label weekNumLbl;
+    private final Arc statusProgressArc;
+    private final Tooltip statusTooltip;
 
     private final ObservableList<Stock> allStocks;
     private final FilteredList<Stock> filteredStocks;
@@ -104,10 +112,13 @@ public final class GameView implements GameViewInterface {
         this.gameController = gameController;
         this.gameController.setView(this);
 
+        this.statusVal = new Label();
         this.cashVal = new Label();
         this.portVal = new Label();
         this.nwVal = new Label();
         this.weekNumLbl = new Label();
+        this.statusProgressArc = new Arc(0, 0, 11, 11, 90, 0);
+        this.statusTooltip = new Tooltip();
 
         this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
         this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
@@ -122,10 +133,19 @@ public final class GameView implements GameViewInterface {
         this.selectedCardRef = new Node[]{null};
 
         // ── Stat pill labels ─────────────────────────────────────────────────
+        statusVal.getStyleClass().addAll("stat-pill-value", "status-pill-value");
         cashVal.getStyleClass().add("stat-pill-value");
         portVal.getStyleClass().add("stat-pill-value");
         nwVal.getStyleClass().add("stat-pill-value");
         weekNumLbl.getStyleClass().add("week-number");
+
+        statusProgressArc.setType(ArcType.OPEN);
+        statusProgressArc.setFill(Color.TRANSPARENT);
+        statusProgressArc.setStrokeLineCap(StrokeLineCap.ROUND);
+        statusProgressArc.getStyleClass().add("status-pill-ring-progress");
+
+        statusTooltip.setShowDelay(Duration.millis(120));
+        statusTooltip.getStyleClass().add("status-pill-tooltip");
 
         // ── Detail panel (right) — rebuilt on stock selection ────────────────
         this.detailArea = new VBox();
@@ -382,6 +402,7 @@ public final class GameView implements GameViewInterface {
             appTitle = new ImageView();
         }
 
+        Node statusPill = statusPill("Player Status", statusVal, statusProgressArc, statusTooltip);
         Node cashPill  = statPill("Available Cash",   cashVal);
         Node portPill  = statPill("Portfolio Value",  portVal);
         Node nwPill    = statPill("Total Net Worth",  nwVal);
@@ -391,7 +412,7 @@ public final class GameView implements GameViewInterface {
         settingsBtn.setOnAction(e -> onSettings.run());
 
         Region tl = new Region(); HBox.setHgrow(tl, Priority.ALWAYS);
-        HBox topBar = new HBox(10, backBtn, appTitle, tl, cashPill, portPill, nwPill, settingsBtn);
+        HBox topBar = new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill, settingsBtn);
         topBar.getStyleClass().add("game-top-bar");
         topBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -478,6 +499,20 @@ public final class GameView implements GameViewInterface {
     }
 
     public void updateData() {
+        PlayerStatus status = gameController.getPlayerStatus();
+        BigDecimal overallProgress = gameController.getPlayerStatusProgress();
+        BigDecimal weeksProgress = gameController.getPlayerWeeksProgress();
+        BigDecimal growthProgress = gameController.getPlayerNetWorthProgress();
+        int weeksTraded = gameController.getPlayerWeeksTraded();
+        int targetWeeks = gameController.getPlayerWeeksTargetForNextStatus();
+        BigDecimal growthRatio = gameController.getPlayerGrowthRatio();
+        BigDecimal growthTarget = gameController.getPlayerGrowthTargetForNextStatus();
+
+        statusVal.setText(formatStatus(status));
+        statusProgressArc.setLength(-360 * clamp01(overallProgress).doubleValue());
+        statusTooltip.setText(buildStatusTooltip(status, overallProgress, weeksTraded, targetWeeks,
+            weeksProgress, growthRatio, growthTarget, growthProgress));
+
         weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
         cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
         portVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
@@ -1714,6 +1749,83 @@ public final class GameView implements GameViewInterface {
         box.getStyleClass().add("stat-pill");
         box.setAlignment(Pos.CENTER_LEFT);
         return box;
+    }
+
+    private static Node statusPill(String key, Label valueLabel, Arc progressArc, Tooltip tooltip) {
+        Label keyLbl = new Label(key);
+        keyLbl.getStyleClass().add("stat-pill-key");
+
+        VBox textBox = new VBox(1, keyLbl, valueLabel);
+        textBox.setAlignment(Pos.CENTER_LEFT);
+
+        Circle track = new Circle(12, 12, 11);
+        track.getStyleClass().add("status-pill-ring-track");
+
+        Circle center = new Circle(12, 12, 8);
+        center.getStyleClass().add("status-pill-ring-core");
+
+        progressArc.setCenterX(12);
+        progressArc.setCenterY(12);
+
+        Pane ring = new Pane(track, progressArc, center);
+        ring.getStyleClass().add("status-pill-ring");
+        ring.setMinSize(24, 24);
+        ring.setPrefSize(24, 24);
+        ring.setMaxSize(24, 24);
+
+        HBox box = new HBox(10, textBox, ring);
+        box.getStyleClass().addAll("stat-pill", "status-pill");
+        box.setAlignment(Pos.CENTER_LEFT);
+
+        Tooltip.install(box, tooltip);
+        return box;
+    }
+
+    private static BigDecimal clamp01(BigDecimal value) {
+        if (value.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
+        if (value.compareTo(BigDecimal.ONE) > 0) return BigDecimal.ONE;
+        return value;
+    }
+
+    private static String formatStatus(PlayerStatus status) {
+        String lower = status.name().toLowerCase();
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+    }
+
+    private static String formatPercent(BigDecimal ratio) {
+        return clamp01(ratio)
+            .multiply(BigDecimal.valueOf(100))
+            .setScale(1, RoundingMode.HALF_UP)
+            .toPlainString() + "%";
+    }
+
+    private static String formatGrowth(BigDecimal growthRatio) {
+        return growthRatio.setScale(2, RoundingMode.HALF_UP).toPlainString() + "x";
+    }
+
+    private static String buildStatusTooltip(
+            PlayerStatus status,
+            BigDecimal overallProgress,
+            int weeksTraded,
+            int targetWeeks,
+            BigDecimal weeksProgress,
+            BigDecimal growthRatio,
+            BigDecimal growthTarget,
+            BigDecimal growthProgress) {
+        if (status == PlayerStatus.SPECULATOR) {
+            return "Status: Speculator\n"
+                + "Overall progress: 100.0%\n"
+                + "Weeks traded: " + weeksTraded + " / " + targetWeeks + " (" + formatPercent(weeksProgress) + ")\n"
+                + "Net worth growth: " + formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget)
+                + " (" + formatPercent(growthProgress) + ")\n"
+                + "Max status reached.";
+        }
+
+        return "Status: " + formatStatus(status) + "\n"
+            + "Overall progress: " + formatPercent(overallProgress) + "\n"
+            + "Weeks traded: " + weeksTraded + " / " + targetWeeks + " (" + formatPercent(weeksProgress) + ")\n"
+            + "Net worth growth: " + formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget)
+            + " (" + formatPercent(growthProgress) + ")";
     }
 
     private VBox buildDevPanel() {

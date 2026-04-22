@@ -132,9 +132,11 @@ public class Player {
         } else {
             BigDecimal growth = netWorth.divide(startingMoney, 4, RoundingMode.HALF_UP);
 
-            if (weeks >= 20 &&  growth.compareTo(BigDecimal.valueOf(2.0)) >= 0) {
+            if (weeks >= PlayerStatus.INVESTOR.getWeeksTargetForNextStatus()
+                && growth.compareTo(PlayerStatus.INVESTOR.getGrowthTargetForNextStatus()) >= 0) {
                 status = PlayerStatus.SPECULATOR;
-            } else if (weeks >= 10 && growth.compareTo(BigDecimal.valueOf(1.2)) >= 0) {
+            } else if (weeks >= PlayerStatus.NOVICE.getWeeksTargetForNextStatus()
+                && growth.compareTo(PlayerStatus.NOVICE.getGrowthTargetForNextStatus()) >= 0) {
                 status = PlayerStatus.INVESTOR;
             } else {
                 status = PlayerStatus.NOVICE;
@@ -142,6 +144,101 @@ public class Player {
         }        
     }
 
+    /**
+     * Calculates the player's progress towards the next status level as a value between 0 and 1.
+     * @return the progress towards the next status level
+     */
+    public BigDecimal calculateStatusProgress() {
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        if (status == PlayerStatus.SPECULATOR) {
+            return BigDecimal.ONE;
+        }
+        BigDecimal weeksProgress = calculateWeeksProgress();
+        BigDecimal networthProgress = calculateNetWorthProgress();
+        return weeksProgress.add(networthProgress).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateNetWorthProgress() {
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal progress = BigDecimal.ZERO;
+        switch (status) {
+            case NOVICE -> {
+                progress = getNetWorth().subtract(startingMoney)
+                    .divide(startingMoney.multiply(PlayerStatus.NOVICE.getGrowthTargetForNextStatus()).subtract(startingMoney),
+                        4,
+                        RoundingMode.HALF_UP);
+            }
+            case INVESTOR -> {
+                BigDecimal investorGrowthTarget = PlayerStatus.NOVICE.getGrowthTargetForNextStatus();
+                BigDecimal speculatorGrowthTarget = PlayerStatus.INVESTOR.getGrowthTargetForNextStatus();
+                progress = getNetWorth().subtract(startingMoney.multiply(investorGrowthTarget))
+                    .divide(
+                        startingMoney.multiply(speculatorGrowthTarget)
+                            .subtract(startingMoney.multiply(investorGrowthTarget)),
+                        4,
+                        RoundingMode.HALF_UP);
+            }
+            case SPECULATOR -> {
+                progress = BigDecimal.ONE;
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + status);
+        }
+
+        if (progress.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        } else if (progress.compareTo(BigDecimal.ONE) > 0) {
+            return BigDecimal.ONE;
+        } else {
+            return progress;
+        }
+    }
+
+    public BigDecimal calculateWeeksProgress() {
+        BigDecimal progress = BigDecimal.ZERO;
+        switch (status) {
+            case NOVICE -> {
+                progress = BigDecimal.valueOf(getWeeksTraded())
+                    .divide(BigDecimal.valueOf(PlayerStatus.NOVICE.getWeeksTargetForNextStatus()), 4, RoundingMode.HALF_UP);
+            }
+            case INVESTOR -> {
+                int noviceWeeksTarget = PlayerStatus.NOVICE.getWeeksTargetForNextStatus();
+                int investorWeeksTarget = PlayerStatus.INVESTOR.getWeeksTargetForNextStatus();
+                progress = BigDecimal.valueOf(getWeeksTraded() - noviceWeeksTarget)
+                    .divide(BigDecimal.valueOf(investorWeeksTarget - noviceWeeksTarget), 4, RoundingMode.HALF_UP);
+            }
+            case SPECULATOR -> {
+                progress = BigDecimal.ONE;
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + status);
+        }
+
+        if (progress.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        } else if (progress.compareTo(BigDecimal.ONE) > 0) {
+            return BigDecimal.ONE;
+        } else {
+            return progress;
+        }
+    }
+
+    public BigDecimal getNetWorthGrowthRatio() {
+        if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return getNetWorth().divide(startingMoney, 4, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getGrowthTargetForNextStatus() {
+        return status.getGrowthTargetForNextStatus();
+    }
+
+    public int getWeeksTargetForNextStatus() {
+        return status.getWeeksTargetForNextStatus();
+    }
     /**
      * Gets the player's status.
      * @return the player's status

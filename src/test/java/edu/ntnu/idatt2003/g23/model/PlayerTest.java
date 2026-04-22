@@ -344,6 +344,121 @@ class PlayerTest {
 
             assertEquals(PlayerStatus.NOVICE, player.getStatus());
         }
+
+        @Test
+        @DisplayName("calculateStatusProgress returns 0 with zero starting money")
+        void testCalculateStatusProgressZeroStartingMoney() {
+            Player player = new Player("Walter", BigDecimal.ZERO);
+
+            assertEquals(BigDecimal.ZERO, player.calculateStatusProgress());
+        }
+    }
+
+    @Nested
+    @DisplayName("calculateStatusProgress tests")
+    class CalculateStatusProgressTests {
+
+        @Test
+        @DisplayName("calculateNetWorthProgress returns 0 when net worth has not grown")
+        void testCalculateNetWorthProgressZeroGrowth() {
+            Player player = new Player("Dana", new BigDecimal("10000.00"));
+            player.calculateStatus();
+
+            assertEquals(new BigDecimal("0.0000"), player.calculateNetWorthProgress());
+        }
+
+        @Test
+        @DisplayName("calculateNetWorthProgress clamps to 0 when value is negative")
+        void testCalculateNetWorthProgressClampsBelowZero() {
+            Player player = new Player("Eli", new BigDecimal("1000.00"));
+            player.setStatus(PlayerStatus.INVESTOR);
+
+            assertEquals(new BigDecimal("0"), player.calculateNetWorthProgress());
+        }
+
+        @Test
+        @DisplayName("calculateNetWorthProgress clamps to 1 when value is above one")
+        void testCalculateNetWorthProgressClampsAboveOne() {
+            Player player = new Player("Faye", new BigDecimal("1000.00"));
+            player.addMoney(new BigDecimal("1500.00"));
+            player.setStatus(PlayerStatus.INVESTOR);
+
+            assertEquals(new BigDecimal("1"), player.calculateNetWorthProgress());
+        }
+
+        @Test
+        @DisplayName("calculateStatusProgress returns average progress for NOVICE")
+        void testCalculateStatusProgressForNovice() {
+            Player player = new Player("Alice", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+
+            for (int i = 1; i <= 5; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            player.addMoney(new BigDecimal("200.00"));
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.NOVICE, player.getStatus());
+            assertEquals(new BigDecimal("0.7500"), player.calculateStatusProgress());
+        }
+
+        @Test
+        @DisplayName("calculateStatusProgress returns progress toward SPECULATOR for INVESTOR")
+        void testCalculateStatusProgressForInvestor() {
+            Player player = new Player("Bob", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+
+            for (int i = 1; i <= 15; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            player.addMoney(new BigDecimal("500.00"));
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.INVESTOR, player.getStatus());
+            assertEquals(new BigDecimal("0.4375"), player.calculateStatusProgress());
+        }
+
+        @Test
+        @DisplayName("calculateStatusProgress returns 1 for SPECULATOR")
+        void testCalculateStatusProgressForSpeculator() {
+            Player player = new Player("Carol", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+
+            for (int i = 1; i <= 20; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            player.addMoney(new BigDecimal("1000.00"));
+            player.calculateStatus();
+
+            assertEquals(PlayerStatus.SPECULATOR, player.getStatus());
+            assertEquals(new BigDecimal("1"), player.calculateStatusProgress());
+        }
+
+        @Test
+        @DisplayName("calculateWeeksProgress clamps to 0 when value is negative")
+        void testCalculateWeeksProgressClampsBelowZero() {
+            Player player = new Player("Gina", new BigDecimal("1000.00"));
+            player.setStatus(PlayerStatus.INVESTOR);
+
+            assertEquals(new BigDecimal("0"), player.calculateWeeksProgress());
+        }
+
+        @Test
+        @DisplayName("calculateWeeksProgress clamps to 1 when value is above one")
+        void testCalculateWeeksProgressClampsAboveOne() {
+            Player player = new Player("Hugo", new BigDecimal("1000.00"));
+            Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+            Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+            for (int i = 1; i <= 25; i++) {
+                player.getTransactionArchive().add(new Purchase(share, i));
+            }
+            player.setStatus(PlayerStatus.INVESTOR);
+
+            assertEquals(new BigDecimal("1"), player.calculateWeeksProgress());
+        }
     }
 
     @Nested
@@ -460,6 +575,59 @@ class PlayerTest {
         void testSetStatusThrowsOnNull() {
             Player player = new Player("Alice", new BigDecimal("1000"));
             assertThrows(IllegalArgumentException.class, () -> player.setStatus(null));
+        }
+    }
+
+    @Nested
+    @DisplayName("Status target helper tests")
+    class StatusTargetHelperTests {
+
+        @Test
+        @DisplayName("getNetWorthGrowthRatio returns zero when starting money is zero")
+        void testGetNetWorthGrowthRatioZeroStartingMoney() {
+            Player player = new Player("Alice", BigDecimal.ZERO);
+            player.addMoney(new BigDecimal("500"));
+
+            assertEquals(0, BigDecimal.ZERO.compareTo(player.getNetWorthGrowthRatio()));
+        }
+
+        @Test
+        @DisplayName("getNetWorthGrowthRatio returns net worth divided by starting money")
+        void testGetNetWorthGrowthRatio() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+            player.addMoney(new BigDecimal("200"));
+
+            assertEquals(0, new BigDecimal("1.2000").compareTo(player.getNetWorthGrowthRatio()));
+        }
+
+        @Test
+        @DisplayName("getGrowthTargetForNextStatus returns correct target by status")
+        void testGetGrowthTargetForNextStatus() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+
+            player.setStatus(PlayerStatus.NOVICE);
+            assertEquals(0, new BigDecimal("1.2").compareTo(player.getGrowthTargetForNextStatus()));
+
+            player.setStatus(PlayerStatus.INVESTOR);
+            assertEquals(0, new BigDecimal("2.0").compareTo(player.getGrowthTargetForNextStatus()));
+
+            player.setStatus(PlayerStatus.SPECULATOR);
+            assertEquals(0, new BigDecimal("2.0").compareTo(player.getGrowthTargetForNextStatus()));
+        }
+
+        @Test
+        @DisplayName("getWeeksTargetForNextStatus returns correct target by status")
+        void testGetWeeksTargetForNextStatus() {
+            Player player = new Player("Alice", new BigDecimal("1000"));
+
+            player.setStatus(PlayerStatus.NOVICE);
+            assertEquals(10, player.getWeeksTargetForNextStatus());
+
+            player.setStatus(PlayerStatus.INVESTOR);
+            assertEquals(20, player.getWeeksTargetForNextStatus());
+
+            player.setStatus(PlayerStatus.SPECULATOR);
+            assertEquals(20, player.getWeeksTargetForNextStatus());
         }
     }
 }

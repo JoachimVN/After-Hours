@@ -1,16 +1,23 @@
 package edu.ntnu.idatt2003.g23.ui.views.game;
 
-import edu.ntnu.idatt2003.g23.model.Exchange;
-import edu.ntnu.idatt2003.g23.model.Player;
-import edu.ntnu.idatt2003.g23.model.Stock;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import edu.ntnu.idatt2003.g23.model.Exchange;
+import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.model.PlayerStatus;
+import edu.ntnu.idatt2003.g23.model.Share;
+import edu.ntnu.idatt2003.g23.model.Stock;
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 
 /**
  * Unit tests for {@link GameController} using a no-op stub for
@@ -159,6 +166,57 @@ class GameControllerTest {
     @Test
     void getPortfolioNetWorth_withNoShares_isZero() {
         assertEquals(0, BigDecimal.ZERO.compareTo(controller.getPortfolioNetWorth()));
+    }
+
+    @Test
+    void getPlayerStatus_withNoTrades_isNovice() {
+        assertEquals(PlayerStatus.NOVICE, controller.getPlayerStatus());
+    }
+
+    @Test
+    void getPlayerStatusProgress_withNoTrades_isZero() {
+        assertEquals(0, new BigDecimal("0.0000").compareTo(controller.getPlayerStatusProgress()));
+    }
+
+    @Test
+    void getPlayerWeeksTraded_withNoTrades_isZero() {
+        assertEquals(0, controller.getPlayerWeeksTraded());
+    }
+
+    @Test
+    void getPlayerWeeksTargetForNextStatus_forNovice_isTen() {
+        assertEquals(10, controller.getPlayerWeeksTargetForNextStatus());
+    }
+
+    @Test
+    void getPlayerWeeksProgress_withNoTrades_isZero() {
+        assertEquals(0, new BigDecimal("0.0000").compareTo(controller.getPlayerWeeksProgress()));
+    }
+
+    @Test
+    void getPlayerGrowthRatio_withNoChange_isOne() {
+        assertEquals(0, new BigDecimal("1.0000").compareTo(controller.getPlayerGrowthRatio()));
+    }
+
+    @Test
+    void getPlayerGrowthTargetForNextStatus_forNovice_isOnePointTwo() {
+        assertEquals(0, new BigDecimal("1.2").compareTo(controller.getPlayerGrowthTargetForNextStatus()));
+    }
+
+    @Test
+    void getPlayerNetWorthProgress_withNoTrades_isZero() {
+        assertEquals(0, new BigDecimal("0.0000").compareTo(controller.getPlayerNetWorthProgress()));
+    }
+
+    @Test
+    void getPlayerStatus_afterInvestorThreshold_isInvestor() {
+        Share share = new Share(stock, BigDecimal.ONE, stock.getSalesPrice());
+        for (int i = 1; i <= 10; i++) {
+            player.getTransactionArchive().add(new Purchase(share, i));
+        }
+        player.addMoney(new BigDecimal("200000"));
+
+        assertEquals(PlayerStatus.INVESTOR, controller.getPlayerStatus());
     }
 
     @Test
