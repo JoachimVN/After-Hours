@@ -8,73 +8,78 @@ import edu.ntnu.idatt2003.g23.model.transaction.calculator.TransactionCalculator
  * Abstract class representing a transaction
  */
 public abstract class Transaction {
-    private final Share share;
-    private final int week;
-    private final TransactionCalculator calculator;
-    protected boolean committed;
+  private final Share share;
+  private final int week;
+  private final TransactionCalculator calculator;
+  protected boolean committed;
 
-    /**
-     * Constructor for Transaction
-     * @param share being used in the transaction
-     * @param week of the transaction
-     * @param calculator used to calculate costs for the transaction
-     * @throws IllegalArgumentException if share or calculator is null, or if week is invalid
-     */
-    protected Transaction(Share share, int week, TransactionCalculator calculator) {
-        if (share == null) {
-            throw new IllegalArgumentException("Share cannot be null");
-        }
-        if (week <= 0) {
-            throw new IllegalArgumentException("Week must be positive");
-        }
-        if (calculator == null) {
-            throw new IllegalArgumentException("Calculator cannot be null");
-        }
-        this.share = share;
-        this.week = week;
-        this.calculator = calculator;
-        this.committed = false;
+  /**
+   * Constructor for Transaction
+   *
+   * @param share      being used in the transaction
+   * @param week       of the transaction
+   * @param calculator used to calculate costs for the transaction
+   * @throws IllegalArgumentException if share or calculator is null, or if week is invalid
+   */
+  protected Transaction(Share share, int week, TransactionCalculator calculator) {
+    if (share == null) {
+      throw new IllegalArgumentException("Share cannot be null");
     }
-
-    /**
-     * Getter for the share used in the transaction
-     * @return the share used in the transaction
-     */
-    public Share getShare() {
-        return share;
+    if (week <= 0) {
+      throw new IllegalArgumentException("Week must be positive");
     }
-
-    /**
-     * Getter for the week of the transaction
-     * @return the week of the transaction
-     */
-    public int getWeek() {
-        return week;
+    if (calculator == null) {
+      throw new IllegalArgumentException("Calculator cannot be null");
     }
+    this.share = share;
+    this.week = week;
+    this.calculator = calculator;
+    this.committed = false;
+  }
 
-    /**
-     * Getter for the calculator used in the transaction
-     * @return the calculator used in the transaction
-     */
-    public TransactionCalculator getCalculator() {
-        return calculator;
-    }
+  /**
+   * Getter for the share used in the transaction
+   *
+   * @return the share used in the transaction
+   */
+  public Share getShare() {
+    return share;
+  }
 
-    /**
-     * Checks if the transaction has been committed
-     * @return true if the transaction has been committed, false otherwise
-     */
-    public boolean isCommitted() {
-        return committed;
-    }
+  /**
+   * Getter for the week of the transaction
+   *
+   * @return the week of the transaction
+   */
+  public int getWeek() {
+    return week;
+  }
 
-    /**
-     * Commits the transaction for the specified player.
-     * This method executes the transaction, updating the player's portfolio and balance accordingly.
-     * Once committed, the transaction cannot be committed again.
-     *
-     * @param player the player for whom the transaction is being committed
-     * @throws IllegalStateException if the transaction has already been committed
-     */
-    public abstract void commit(Player player);
+  /**
+   * Getter for the calculator used in the transaction
+   *
+   * @return the calculator used in the transaction
+   */
+  public TransactionCalculator getCalculator() {
+    return calculator;
+  }
+
+  /**
+   * Checks if the transaction has been committed
+   *
+   * @return true if the transaction has been committed, false otherwise
+   */
+  public boolean isCommitted() {
+    return committed;
+  }
+
+  /**
+   * Commits the transaction for the specified player.
+   * This method executes the transaction, updating the player's portfolio and balance accordingly.
+   * Once committed, the transaction cannot be committed again.
+   *
+   * @param player the player for whom the transaction is being committed
+   * @throws IllegalStateException if the transaction has already been committed
+   */
+  public abstract void commit(Player player);
 }

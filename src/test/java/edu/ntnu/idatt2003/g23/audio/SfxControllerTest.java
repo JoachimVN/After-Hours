@@ -9,48 +9,48 @@ import org.junit.jupiter.api.Test;
 @DisplayName("SfxController")
 class SfxControllerTest {
 
-    private SfxController sfx;
+  private SfxController sfx;
 
-    @BeforeEach
-    void setUp() {
-        sfx = new SfxController(getClass());
-    }
+  @BeforeEach
+  void setUp() {
+    sfx = new SfxController(getClass());
+  }
 
-    @Test
-    @DisplayName("Default volume is 0.5")
-    void testDefaultVolume() {
-        assertEquals(0.5, sfx.getVolume(), 1e-9);
-    }
+  @Test
+  @DisplayName("Default volume is 0.5")
+  void testDefaultVolume() {
+    assertEquals(0.5, sfx.getVolume(), 1e-9);
+  }
 
-    @Test
-    @DisplayName("setVolume updates getVolume")
-    void testSetVolume() {
-        sfx.setVolume(0.8);
-        assertEquals(0.8, sfx.getVolume(), 1e-9);
-    }
+  @Test
+  @DisplayName("setVolume updates getVolume")
+  void testSetVolume() {
+    sfx.setVolume(0.8);
+    assertEquals(0.8, sfx.getVolume(), 1e-9);
+  }
 
-    @Test
-    @DisplayName("SETTINGS constant is correct path")
-    void testSettingsConstant() {
-        assertEquals("/audio/sfx/Settings.mp3", SfxController.SETTINGS);
-    }
+  @Test
+  @DisplayName("SETTINGS constant is correct path")
+  void testSettingsConstant() {
+    assertEquals("/audio/sfx/Settings.mp3", SfxController.SETTINGS);
+  }
 
-    @Test
-    @DisplayName("BACK constant is correct path")
-    void testBackConstant() {
-        assertEquals("/audio/sfx/Back.mp3", SfxController.BACK);
-    }
+  @Test
+  @DisplayName("BACK constant is correct path")
+  void testBackConstant() {
+    assertEquals("/audio/sfx/Back.mp3", SfxController.BACK);
+  }
 
-    @Test
-    @DisplayName("play(String) with missing resource does not throw")
-    void testPlayMissingResourceNoThrow() {
-        // getResource returns null → NPE on .toExternalForm() → caught by catch(Exception)
-        assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3"));
-    }
+  @Test
+  @DisplayName("play(String) with missing resource does not throw")
+  void testPlayMissingResourceNoThrow() {
+    // getResource returns null → NPE on .toExternalForm() → caught by catch(Exception)
+    assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3"));
+  }
 
-    @Test
-    @DisplayName("play(String, double) with missing resource does not throw")
-    void testPlayExplicitVolumeNoThrow() {
-        assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3", 0.3));
-    }
+  @Test
+  @DisplayName("play(String, double) with missing resource does not throw")
+  void testPlayExplicitVolumeNoThrow() {
+    assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3", 0.3));
+  }
 }

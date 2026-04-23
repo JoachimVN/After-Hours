@@ -5,5 +5,5 @@ package edu.ntnu.idatt2003.g23.ui.views.setup;
  */
 @FunctionalInterface
 public interface MarketStartHandler {
-    void start(String playerName, double startingCash, String csvResourcePath);
+  void start(String playerName, double startingCash, String csvResourcePath);
 }

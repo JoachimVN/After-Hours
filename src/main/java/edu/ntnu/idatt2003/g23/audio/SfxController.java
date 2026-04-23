@@ -14,58 +14,58 @@ import java.util.Set;
  */
 public class SfxController {
 
-    public static final String SETTINGS = "/audio/sfx/Settings.mp3";
-    public static final String BACK     = "/audio/sfx/Back.mp3";
+  public static final String SETTINGS = "/audio/sfx/Settings.mp3";
+  public static final String BACK = "/audio/sfx/Back.mp3";
 
-    private static final double DEFAULT_VOLUME = 0.5;
+  private static final double DEFAULT_VOLUME = 0.5;
 
-    private final Class<?> resourceOwner;
-    private double volume = DEFAULT_VOLUME;
-    // Keeps a strong reference to each active player so the GC cannot collect
-    // it before playback finishes.
-    private final Set<MediaPlayer> activePlayers = new HashSet<>();
+  private final Class<?> resourceOwner;
+  private double volume = DEFAULT_VOLUME;
+  // Keeps a strong reference to each active player so the GC cannot collect
+  // it before playback finishes.
+  private final Set<MediaPlayer> activePlayers = new HashSet<>();
 
-    public SfxController(Class<?> resourceOwner) {
-        this.resourceOwner = resourceOwner;
+  public SfxController(Class<?> resourceOwner) {
+    this.resourceOwner = resourceOwner;
+  }
+
+  /**
+   * Plays the sound effect at {@code resourcePath} at the current SFX volume.
+   *
+   * @param resourcePath classpath-relative path, e.g. {@code "/audio/sfx/Back.mp3"}
+   */
+  public void play(String resourcePath) {
+    play(resourcePath, volume);
+  }
+
+  /**
+   * Plays the sound effect at {@code resourcePath} at an explicit {@code volume},
+   * ignoring the stored SFX volume. Useful for music-controller-driven stings.
+   *
+   * @param resourcePath classpath-relative path
+   * @param volume       playback volume in [0.0, 1.0]
+   */
+  public void play(String resourcePath, double volume) {
+    try {
+      String path = resourceOwner.getResource(resourcePath).toExternalForm();
+      MediaPlayer sfx = new MediaPlayer(new Media(path));
+      sfx.setVolume(volume);
+      activePlayers.add(sfx);
+      sfx.setOnEndOfMedia(() -> {
+        sfx.stop();
+        sfx.dispose();
+        activePlayers.remove(sfx);
+      });
+      sfx.play();
+    } catch (Exception ignored) {
     }
+  }
 
-    /**
-     * Plays the sound effect at {@code resourcePath} at the current SFX volume.
-     *
-     * @param resourcePath classpath-relative path, e.g. {@code "/audio/sfx/Back.mp3"}
-     */
-    public void play(String resourcePath) {
-        play(resourcePath, volume);
-    }
+  public void setVolume(double volume) {
+    this.volume = volume;
+  }
 
-    /**
-     * Plays the sound effect at {@code resourcePath} at an explicit {@code volume},
-     * ignoring the stored SFX volume. Useful for music-controller-driven stings.
-     *
-     * @param resourcePath classpath-relative path
-     * @param volume       playback volume in [0.0, 1.0]
-     */
-    public void play(String resourcePath, double volume) {
-        try {
-            String path = resourceOwner.getResource(resourcePath).toExternalForm();
-            MediaPlayer sfx = new MediaPlayer(new Media(path));
-            sfx.setVolume(volume);
-            activePlayers.add(sfx);
-            sfx.setOnEndOfMedia(() -> {
-                sfx.stop();
-                sfx.dispose();
-                activePlayers.remove(sfx);
-            });
-            sfx.play();
-        } catch (Exception ignored) {
-        }
-    }
-
-    public void setVolume(double volume) {
-        this.volume = volume;
-    }
-
-    public double getVolume() {
-        return volume;
-    }
+  public double getVolume() {
+    return volume;
+  }
 }

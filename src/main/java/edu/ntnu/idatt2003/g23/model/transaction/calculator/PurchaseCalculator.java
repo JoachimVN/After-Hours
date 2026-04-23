@@ -8,57 +8,62 @@ import edu.ntnu.idatt2003.g23.model.Share;
  * Calculator for purchases
  */
 public class PurchaseCalculator implements TransactionCalculator {
-    private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.005");
+  private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.005");
 
-    private final BigDecimal purchasePrice;
-    private final BigDecimal quantity;
+  private final BigDecimal purchasePrice;
+  private final BigDecimal quantity;
 
-    /**
-     * Constructor for PurchaseCalculator
-     * @param share used to calculate costs
-     * @throws IllegalArgumentException if share is null
-     */
-    public PurchaseCalculator(Share share) {
-        if (share == null) {
-            throw new IllegalArgumentException("Share cannot be null");
-        }
-        this.purchasePrice = share.getPurchasePrice();
-        this.quantity = share.getQuantity();
+  /**
+   * Constructor for PurchaseCalculator
+   *
+   * @param share used to calculate costs
+   * @throws IllegalArgumentException if share is null
+   */
+  public PurchaseCalculator(Share share) {
+    if (share == null) {
+      throw new IllegalArgumentException("Share cannot be null");
     }
+    this.purchasePrice = share.getPurchasePrice();
+    this.quantity = share.getQuantity();
+  }
 
-    /**
-     * Calculates the gross amount for the purchase
-     * @return the gross amount
-     */
-    @Override
-    public BigDecimal calculateGross() {
-        return purchasePrice.multiply(quantity);
-    }
+  /**
+   * Calculates the gross amount for the purchase
+   *
+   * @return the gross amount
+   */
+  @Override
+  public BigDecimal calculateGross() {
+    return purchasePrice.multiply(quantity);
+  }
 
-    /**
-     * Calculates the commission for the purchase
-     * @return the commission amount
-     */
-    @Override
-    public BigDecimal calculateCommission() {
-        return calculateGross().multiply(COMMISSION_RATE);
-    }
+  /**
+   * Calculates the commission for the purchase
+   *
+   * @return the commission amount
+   */
+  @Override
+  public BigDecimal calculateCommission() {
+    return calculateGross().multiply(COMMISSION_RATE);
+  }
 
-    /**
-     * Calculates the tax for the purchase
-     * @return the tax amount
-     */
-    @Override
-    public BigDecimal calculateTax() {
-        return new BigDecimal("0");
-    }
+  /**
+   * Calculates the tax for the purchase
+   *
+   * @return the tax amount
+   */
+  @Override
+  public BigDecimal calculateTax() {
+    return new BigDecimal("0");
+  }
 
-    /**
-     * Calculates the total amount for the purchase
-     * @return the total amount
-     */
-    @Override
-    public BigDecimal calculateTotal() {
-        return calculateGross().add(calculateCommission()).add(calculateTax());
-    }
+  /**
+   * Calculates the total amount for the purchase
+   *
+   * @return the total amount
+   */
+  @Override
+  public BigDecimal calculateTotal() {
+    return calculateGross().add(calculateCommission()).add(calculateTax());
+  }
 }
