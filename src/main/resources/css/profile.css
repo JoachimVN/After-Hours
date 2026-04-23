@@ -343,7 +343,7 @@
 }
 
 .profile-crosshair-line {
-  -fx-stroke: rgba(226, 239, 255, 0.52);
+  -fx-stroke: rgba(30, 64, 128, 0.5);
   -fx-stroke-width: 1;
   -fx-stroke-dash-array: 5 4;
 }

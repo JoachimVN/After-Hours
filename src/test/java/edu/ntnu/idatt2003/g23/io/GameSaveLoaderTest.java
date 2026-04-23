@@ -75,6 +75,22 @@ class GameSaveLoaderTest {
     }
 
     @Test
+    @DisplayName("load restores chick avatar selection and progression")
+    void loadRestoresChickAvatarProgression() throws IOException {
+        player.setProfileAvatar("cracking-egg");
+        player.setWeeksUsingChickAvatar(17);
+        GameSaveExporter.overwrite(saveDir, player, exchange);
+
+        Object[] result = GameSaveLoader.load(saveDir);
+        Player loaded = (Player) result[0];
+
+        assertEquals("egg", loaded.getProfileAvatar());
+        assertEquals("cracking-egg", loaded.getDisplayedProfileAvatar());
+        assertEquals(17, loaded.getWeeksUsingChickAvatar());
+        assertEquals(1, loaded.getChickPhaseUnlocked());
+    }
+
+    @Test
     @DisplayName("load throws IOException when save.json is missing")
     void loadThrowsWhenSaveJsonMissing() throws IOException {
         Path emptyDir = tempDir.resolve("no_save");

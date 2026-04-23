@@ -92,6 +92,7 @@ public final class GameController {
     public void handleNextWeek() {
         exchange.advance();
         player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
+        player.updateChickAvatarProgression();
     }
 
     public void executeSellAll() {
@@ -254,6 +255,7 @@ public final class GameController {
         for (int i = 0; i < n; i++) {
             exchange.advance();
             player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
+            player.updateChickAvatarProgression();
         }
     }
     public void setFrozen(boolean frozen) { exchange.setFrozen(frozen); }
@@ -314,6 +316,10 @@ public final class GameController {
     }
 
     public String getPlayerAvatar() {
+        return player.getDisplayedProfileAvatar();
+    }
+
+    public String getSelectedPlayerAvatar() {
         return player.getProfileAvatar();
     }
 
@@ -396,6 +402,18 @@ public final class GameController {
             points.add(new ReplayPoint(week, cash.add(portfolioValue)));
         }
         return points;
+    }
+
+    public int getChickPhaseUnlocked() {
+        return player.getChickPhaseUnlocked();
+    }
+
+    public int getWeeksUsingChickAvatar() {
+        return player.getWeeksUsingChickAvatar();
+    }
+
+    public boolean isChickAvatarEquipped() {
+        return player.isChickAvatarEquipped();
     }
     
 }

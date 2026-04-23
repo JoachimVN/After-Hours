@@ -89,6 +89,20 @@ class GameSaveExporterTest {
     }
 
     @Test
+    @DisplayName("save.json persists chick avatar progression fields")
+    void saveJsonPersistsChickAvatarProgression() throws IOException {
+        player.setProfileAvatar("hatching-chick");
+        player.setWeeksUsingChickAvatar(24);
+
+        GameSaveExporter.overwrite(tempDir, player, exchange);
+
+        String content = Files.readString(tempDir.resolve("save.json"), StandardCharsets.UTF_8);
+        JsonObject json = JsonParser.parseString(content).getAsJsonObject();
+        assertEquals("egg", json.get("profileAvatar").getAsString());
+        assertEquals(24, json.get("weeksUsingChickAvatar").getAsInt());
+    }
+
+    @Test
     @DisplayName("overwrite with null uiState does not write uiState field")
     void overwriteNullUiStateOmitsUiState() throws IOException {
         GameSaveExporter.overwrite(tempDir, player, exchange, null);

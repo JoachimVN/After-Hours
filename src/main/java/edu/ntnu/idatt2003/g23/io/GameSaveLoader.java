@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
+
 /**
  * Lists and loads game saves from {@link GameSaveExporter#SAVES_DIR}.
  */
@@ -173,8 +175,18 @@ public final class GameSaveLoader {
         // ── Build player ───────────────────────────────────────────────────
         Player player = new Player(playerName, starting);
         player.setMoney(money);
+        String savedProfileAvatar = null;
         if (obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()) {
-            player.setProfileAvatar(obj.get("profileAvatar").getAsString());
+            savedProfileAvatar = obj.get("profileAvatar").getAsString();
+            player.setProfileAvatar(savedProfileAvatar);
+        }
+        int derivedLegacyPhase = deriveLegacyChickPhase(savedProfileAvatar);
+        if (derivedLegacyPhase > 0) {
+            player.setWeeksUsingChickAvatar(derivedLegacyPhase * 10);
+        }
+        // Restore chicks avatar progression if present
+        if (obj.has("weeksUsingChickAvatar") && !obj.get("weeksUsingChickAvatar").isJsonNull()) {
+            player.setWeeksUsingChickAvatar(obj.get("weeksUsingChickAvatar").getAsInt());
         }
         try {
             player.setStatus(PlayerStatus.valueOf(statusStr));
@@ -274,6 +286,11 @@ public final class GameSaveLoader {
         String profileAvatar = obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()
             ? obj.get("profileAvatar").getAsString()
             : "\uD83E\uDDD1";
+        int weeksUsingChick = obj.has("weeksUsingChickAvatar") && !obj.get("weeksUsingChickAvatar").isJsonNull()
+            ? obj.get("weeksUsingChickAvatar").getAsInt()
+            : deriveLegacyChickPhase(profileAvatar) * 10;
+        int chickPhaseUnlocked = weeksUsingChick >= 30 ? 3 : weeksUsingChick >= 20 ? 2 : weeksUsingChick >= 10 ? 1 : 0;
+        profileAvatar = AvatarUtil.getDisplayAvatarStem(profileAvatar, chickPhaseUnlocked);
         String exchangeName = obj.get("exchangeName").getAsString();
         String savedAt      = obj.get("savedAt").getAsString();
         int week            = obj.get("week").getAsInt();
@@ -297,5 +314,17 @@ public final class GameSaveLoader {
 
         return new SaveMeta(saveDir, displayName, profileAvatar, exchangeName, savedAt,
                 week, money, netWorth, portfolioSize, totalShares, status, isAutosave);
+    }
+
+    private static int deriveLegacyChickPhase(String avatar) {
+        if (avatar == null) {
+            return 0;
+        }
+        return switch (avatar) {
+            case "cracking-egg" -> 1;
+            case "hatching-chick" -> 2;
+            case "chick" -> 3;
+            default -> 0;
+        };
     }
 }

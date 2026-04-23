@@ -87,4 +87,20 @@ public final class ProfileController {
     public List<GameController.ReplayPoint> getReplaySeries() {
         return gameController.getReplaySeries();
     }
+
+    public String getDisplayedPlayerAvatar() {
+        return gameController.getPlayerAvatar();
+    }
+
+    public boolean isChickAvatarEquipped() {
+        return gameController.isChickAvatarEquipped();
+    }
+
+    public int getChickPhaseUnlocked() {
+        return gameController.getChickPhaseUnlocked();
+    }
+
+    public int getWeeksUsingChickAvatar() {
+        return gameController.getWeeksUsingChickAvatar();
+    }
 }

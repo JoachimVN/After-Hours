@@ -12,6 +12,10 @@ import edu.ntnu.idatt2003.g23.model.transaction.TransactionArchive;
 public class Player {
     public record WeeklySnapshot(int week, BigDecimal cash, BigDecimal portfolioValue, BigDecimal netWorth) {}
     private static final String DEFAULT_PROFILE_AVATAR = "\uD83E\uDDD1";
+    private static final String CHICK_AVATAR_SELECTION = "egg";
+    private static final int CHICK_MAX_PHASE = 3;
+    private static final int CHICK_PHASE_WEEKS = 10;
+    private static final int CHICK_MAX_WEEKS = 30;
 
     private String name;
     private final BigDecimal startingMoney;
@@ -21,6 +25,9 @@ public class Player {
     private final List<WeeklySnapshot> weeklySnapshots;
     private PlayerStatus status;
     private String profileAvatar;
+
+    // Chicks avatar progression
+    private int weeksUsingChickAvatar = 0;
 
     // Constructor for creating a new Player instance.
     public Player(String name, BigDecimal startingMoney) {
@@ -321,12 +328,81 @@ public class Player {
         return profileAvatar;
     }
 
+    public String getDisplayedProfileAvatar() {
+        if (!isChickAvatarEquipped()) {
+            return profileAvatar;
+        }
+        return getChickPhaseStem(calculateChickPhase(weeksUsingChickAvatar));
+    }
+
     public void setProfileAvatar(String profileAvatar) {
         if (profileAvatar == null || profileAvatar.isBlank()) {
             this.profileAvatar = DEFAULT_PROFILE_AVATAR;
             return;
         }
-        this.profileAvatar = profileAvatar;
+        this.profileAvatar = normalizeAvatarSelection(profileAvatar);
+    }
+
+    /**
+     * Call this at the end of each week to update chick avatar progression.
+     */
+    public void updateChickAvatarProgression() {
+        if (!isChickAvatarEquipped()) {
+            return;
+        }
+        weeksUsingChickAvatar = Math.min(CHICK_MAX_WEEKS, weeksUsingChickAvatar + 1);
+    }
+
+    public int getWeeksUsingChickAvatar() {
+        return weeksUsingChickAvatar;
+    }
+
+    public int getChickPhaseUnlocked() {
+        return calculateChickPhase(weeksUsingChickAvatar);
+    }
+
+    public void setWeeksUsingChickAvatar(int weeks) {
+        this.weeksUsingChickAvatar = Math.max(0, Math.min(weeks, CHICK_MAX_WEEKS));
+    }
+
+    public boolean isChickAvatarEquipped() {
+        return isChickAvatar(profileAvatar);
+    }
+
+    private String normalizeAvatarSelection(String avatar) {
+        if (isChickAvatar(avatar)) {
+            return CHICK_AVATAR_SELECTION;
+        }
+        return avatar;
+    }
+
+    private boolean isChickAvatar(String avatar) {
+        if (avatar == null) {
+            return false;
+        }
+        return avatar.equals("egg") || avatar.equals("cracking-egg") || avatar.equals("hatching-chick") || avatar.equals("chick");
+    }
+
+    private int calculateChickPhase(int weeks) {
+        if (weeks >= CHICK_MAX_WEEKS) {
+            return 3;
+        }
+        if (weeks >= CHICK_PHASE_WEEKS * 2) {
+            return 2;
+        }
+        if (weeks >= CHICK_PHASE_WEEKS) {
+            return 1;
+        }
+        return 0;
+    }
+
+    private String getChickPhaseStem(int phase) {
+        return switch (Math.max(0, Math.min(phase, CHICK_MAX_PHASE))) {
+            case 0 -> "egg";
+            case 1 -> "cracking-egg";
+            case 2 -> "hatching-chick";
+            default -> "chick";
+        };
     }
 
     /**

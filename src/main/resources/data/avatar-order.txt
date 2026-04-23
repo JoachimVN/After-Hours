@@ -10,12 +10,13 @@ man-office-worker
 woman-office-worker
 man-in-tuxedo
 woman-in-tuxedo
+
 dog
 cat
-wolf
-monkey
-bear
+cow
 pig
-frog
+monkey
 rabbit
+frog
+egg
 

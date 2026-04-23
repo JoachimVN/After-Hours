@@ -210,6 +210,39 @@ class PlayerTest {
         assertEquals(0, player.getWeeksTraded());
     }
 
+    @Test
+    @DisplayName("Chick avatar progresses every 10 equipped weeks and does not regress when unequipped")
+    void chickAvatarProgressPersistsAcrossAvatarSwitches() {
+        Player player = new Player("Uma", new BigDecimal("1000.00"));
+
+        player.setProfileAvatar("egg");
+        for (int i = 0; i < 15; i++) {
+            player.updateChickAvatarProgression();
+        }
+
+        assertEquals(15, player.getWeeksUsingChickAvatar());
+        assertEquals(1, player.getChickPhaseUnlocked());
+        assertEquals("cracking-egg", player.getDisplayedProfileAvatar());
+
+        player.setProfileAvatar("fox");
+        for (int i = 0; i < 5; i++) {
+            player.updateChickAvatarProgression();
+        }
+
+        assertEquals(15, player.getWeeksUsingChickAvatar());
+        assertEquals(1, player.getChickPhaseUnlocked());
+
+        player.setProfileAvatar("chick");
+        for (int i = 0; i < 15; i++) {
+            player.updateChickAvatarProgression();
+        }
+
+        assertEquals(30, player.getWeeksUsingChickAvatar());
+        assertEquals(3, player.getChickPhaseUnlocked());
+        assertEquals("chick", player.getDisplayedProfileAvatar());
+        assertEquals("egg", player.getProfileAvatar());
+    }
+
     @Nested
     @DisplayName("calculateStatus Tests")
     class CalculateStatusTests {

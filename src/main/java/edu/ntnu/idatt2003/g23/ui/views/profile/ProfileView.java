@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -18,6 +19,7 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.chart.LineChart;
@@ -38,6 +40,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.Path;
 import javafx.util.StringConverter;
 import javafx.util.Duration;
@@ -56,7 +61,9 @@ public final class ProfileView {
             Consumer<String> onNameChanged) {
 
         List<String> avatarNames = AvatarUtil.loadSelectableAvatarNames();
-        String initialAvatar = (currentAvatar == null || currentAvatar.isBlank()) ? "bust-in-silhouette" : currentAvatar;
+        String initialAvatar = (currentAvatar == null || currentAvatar.isBlank())
+            ? "bust-in-silhouette"
+            : AvatarUtil.normalizeAvatarStem(currentAvatar);
         final String[] selectedAvatar = {initialAvatar};
 
         // Track name changes for auto-save
@@ -106,8 +113,25 @@ public final class ProfileView {
         topBar.getStyleClass().add("profile-top-bar");
         topBar.setAlignment(Pos.CENTER_LEFT);
 
+
+        // Chick avatar logic
+        boolean isChick = controller.isChickAvatarEquipped();
+        int chickPhaseUnlocked = 0;
+        int weeksUsingChick = 0;
+        String displayedAvatar = controller.getDisplayedPlayerAvatar();
+        try {
+            chickPhaseUnlocked = controller.getChickPhaseUnlocked();
+            weeksUsingChick = controller.getWeeksUsingChickAvatar();
+        } catch (Exception ignored) {}
+        final int chickPhaseUnlockedValue = chickPhaseUnlocked;
+        final int weeksUsingChickValue = weeksUsingChick;
         Label avatarDisplay = new Label();
-        avatarDisplay.setGraphic(AvatarUtil.createImageView(initialAvatar, 57.6));
+        if (isChick) {
+            avatarDisplay.setGraphic(AvatarUtil.createImageView(displayedAvatar, 57.6));
+        } else {
+            avatarDisplay.setGraphic(AvatarUtil.createImageView(displayedAvatar, 57.6));
+            avatarDisplay.setTooltip(null);
+        }
         avatarDisplay.getStyleClass().add("profile-avatar-display");
 
         PlayerStatus status = controller.getPlayerStatus();
@@ -147,7 +171,8 @@ public final class ProfileView {
         avatarPicker.setMaxWidth(8 * 38 + 7 * 8);
         for (String avatar : avatarNames) {
             Button avatarBtn = new Button();
-            var avatarGraphic = AvatarUtil.createImageView(avatar, 25.2);
+            String pickerDisplayAvatar = AvatarUtil.getDisplayAvatarStem(avatar, chickPhaseUnlockedValue);
+            var avatarGraphic = AvatarUtil.createImageView(pickerDisplayAvatar, 25.2);
             avatarBtn.setGraphic(avatarGraphic);
             avatarBtn.setMinSize(38, 38);
             avatarBtn.setPrefSize(38, 38);
@@ -177,11 +202,13 @@ public final class ProfileView {
                 if (avatar.equals(selectedAvatar[0])) {
                     selectedAvatar[0] = "bust-in-silhouette";
                     avatarDisplay.setGraphic(AvatarUtil.createImageView(selectedAvatar[0], 57.6));
+                    avatarDisplay.setTooltip(null);
                     onAvatarChanged.accept(selectedAvatar[0]);
                     return;
                 }
                 selectedAvatar[0] = avatar;
-                avatarDisplay.setGraphic(AvatarUtil.createImageView(avatar, 57.6));
+                String nextDisplayAvatar = AvatarUtil.getDisplayAvatarStem(avatar, chickPhaseUnlockedValue);
+                avatarDisplay.setGraphic(AvatarUtil.createImageView(nextDisplayAvatar, 57.6));
                 onAvatarChanged.accept(avatar);
                 avatarBtn.getStyleClass().add("profile-avatar-btn-active");
             });
@@ -211,12 +238,17 @@ public final class ProfileView {
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP)
                 .toPlainString() + "%";
+        boolean growthUp = growthRatio.compareTo(BigDecimal.ONE) >= 0;
+        Label growthRatioValue = valueText(growthRatio.toPlainString() + "x");
+        growthRatioValue.getStyleClass().add(growthUp ? "profile-value-up" : "profile-value-down");
+        Label performanceValue = valueText(growthPercent);
+        performanceValue.getStyleClass().add(growthUp ? "profile-value-up" : "profile-value-down");
 
         VBox statsCard = statCard("Run Statistics",
             statLine("Transactions", String.valueOf(controller.getTransactionCount())),
             statLine("Weeks Traded", String.valueOf(controller.getPlayerWeeksTraded())),
-                statLine("Growth Ratio", growthRatio.toPlainString() + "x"),
-                statLine("Performance", growthPercent)
+            statLine("Growth Ratio", growthRatioValue),
+            statLine("Performance", performanceValue)
         );
 
         PlayerStatus[] statusPath = PlayerStatus.values();
@@ -340,10 +372,13 @@ public final class ProfileView {
         yAxis.setLabel("Net Worth");
 
         int maxWeek = replayPoints.isEmpty() ? 1 : replayPoints.get(replayPoints.size() - 1).week();
+        int replayTickUnit = Math.max(1, (int) Math.ceil(Math.max(1, maxWeek - 1) / 10.0));
         xAxis.setAutoRanging(false);
         xAxis.setLowerBound(1);
         xAxis.setUpperBound(Math.max(2, maxWeek));
-        xAxis.setTickUnit(Math.max(1, Math.ceil(maxWeek / 8.0)));
+        xAxis.setTickUnit(replayTickUnit);
+        xAxis.setMinorTickVisible(false);
+        xAxis.setMinorTickCount(0);
         xAxis.setTickLabelFormatter(new StringConverter<>() {
             @Override
             public String toString(Number object) {
@@ -372,10 +407,20 @@ public final class ProfileView {
             deviation = Math.max(10.0, Math.abs(center) * 0.05 + 1.0);
         }
 
+        double yLowerBound = center - deviation;
+        double yUpperBound = center + deviation;
+        if (yLowerBound < 0.0) {
+            yLowerBound = 0.0;
+            yUpperBound = Math.max(yUpperBound, maxNetWorth);
+        }
+        if (yUpperBound <= yLowerBound) {
+            yUpperBound = yLowerBound + 1.0;
+        }
+
         yAxis.setAutoRanging(false);
-        yAxis.setLowerBound(center - deviation);
-        yAxis.setUpperBound(center + deviation);
-        yAxis.setTickUnit(Math.max(1.0, deviation / 4.0));
+        yAxis.setLowerBound(yLowerBound);
+        yAxis.setUpperBound(yUpperBound);
+        yAxis.setTickUnit(Math.max(1.0, (yUpperBound - yLowerBound) / 4.0));
         DecimalFormat integerFormatter = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
         yAxis.setTickLabelFormatter(new StringConverter<>() {
             @Override
@@ -415,9 +460,37 @@ public final class ProfileView {
         Runnable applyReplayLineGradient = () -> Platform.runLater(() -> {
             Node lineNode = replaySeries.getNode();
             if (lineNode == null) return;
+            Node plotBackground = replayChart.lookup(".chart-plot-background");
+            if (plotBackground == null) return;
             Node chartLine = lineNode.lookup(".chart-series-line");
             if (chartLine instanceof Path path) {
-                path.setStyle("-fx-stroke: linear-gradient(from 0% 100% to 0% 0%, #e05a5a 0%, #4ecb71 100%); -fx-stroke-width: 3;");
+            double valueRange = yAxis.getUpperBound() - yAxis.getLowerBound();
+            if (valueRange <= 0) {
+                path.setStyle("-fx-stroke: #4ecb71; -fx-stroke-width: 3;");
+                return;
+            }
+
+            double minOffset = Math.max(0.0, Math.min(1.0,
+                (minNetWorth - yAxis.getLowerBound()) / valueRange));
+            double maxOffset = Math.max(0.0, Math.min(1.0,
+                (maxNetWorth - yAxis.getLowerBound()) / valueRange));
+
+            Bounds plotBoundsScene = plotBackground.localToScene(plotBackground.getBoundsInLocal());
+            Point2D bottomInPath = path.sceneToLocal(plotBoundsScene.getMinX(), plotBoundsScene.getMaxY());
+            Point2D topInPath = path.sceneToLocal(plotBoundsScene.getMinX(), plotBoundsScene.getMinY());
+
+            path.setStroke(new LinearGradient(
+                0, bottomInPath.getY(),
+                0, topInPath.getY(),
+                false,
+                CycleMethod.NO_CYCLE,
+                List.of(
+                    new Stop(0.0, javafx.scene.paint.Color.web("#e05a5a")),
+                    new Stop(minOffset, javafx.scene.paint.Color.web("#e05a5a")),
+                    new Stop(maxOffset, javafx.scene.paint.Color.web("#4ecb71")),
+                    new Stop(1.0, javafx.scene.paint.Color.web("#4ecb71"))
+                )));
+            path.setStrokeWidth(3);
             }
         });
 
@@ -426,10 +499,39 @@ public final class ProfileView {
 
         Slider replaySlider = new Slider(1, Math.max(1, maxWeek), Math.max(1, maxWeek));
         replaySlider.getStyleClass().add("profile-replay-slider");
-        replaySlider.setMajorTickUnit(Math.max(1, maxWeek / 10.0));
-        replaySlider.setMinorTickCount(4);
+        replaySlider.setMajorTickUnit(replayTickUnit);
+        replaySlider.setMinorTickCount(0);
         replaySlider.setShowTickMarks(true);
         replaySlider.setShowTickLabels(true);
+
+        Region replaySliderLeftPad = new Region();
+        Region replaySliderRightPad = new Region();
+        HBox replaySliderRow = new HBox(replaySliderLeftPad, replaySlider, replaySliderRightPad);
+        replaySliderRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(replaySlider, Priority.ALWAYS);
+        replaySlider.setMaxWidth(Double.MAX_VALUE);
+
+        Runnable alignReplaySliderToPlot = () -> Platform.runLater(() -> {
+            Node plotBackground = replayChart.lookup(".chart-plot-background");
+            final double extraSideWidth = 8.0;
+            if (plotBackground == null) {
+                replaySliderLeftPad.setMinWidth(0);
+                replaySliderLeftPad.setPrefWidth(0);
+                replaySliderRightPad.setMinWidth(0);
+                replaySliderRightPad.setPrefWidth(0);
+                return;
+            }
+
+            Bounds plotBoundsScene = plotBackground.localToScene(plotBackground.getBoundsInLocal());
+            Bounds plotBounds = replayChartLayer.sceneToLocal(plotBoundsScene);
+            double leftPad = Math.max(0, plotBounds.getMinX() - extraSideWidth);
+            double rightPad = Math.max(0, replayChartLayer.getWidth() - plotBounds.getMaxX() - extraSideWidth);
+
+            replaySliderLeftPad.setMinWidth(leftPad);
+            replaySliderLeftPad.setPrefWidth(leftPad);
+            replaySliderRightPad.setMinWidth(rightPad);
+            replaySliderRightPad.setPrefWidth(rightPad);
+        });
 
         final int[] hoverWeekRef = {-1};
 
@@ -440,13 +542,24 @@ public final class ProfileView {
                 replayStatus.setText("No replay data available yet.");
                 return;
             }
-            int playbackWeek = (int) Math.max(1, Math.round(replaySlider.getValue()));
-            int markerWeek = hoverWeekRef[0] > 0 ? hoverWeekRef[0] : playbackWeek;
+            double sliderValue = replaySlider.getValue();
+            int floorWeek = (int) Math.max(1, Math.floor(sliderValue));
+            int nearestWeek = (int) Math.max(1, Math.round(sliderValue));
+            int markerWeek = hoverWeekRef[0] > 0 ? hoverWeekRef[0] : nearestWeek;
             replaySeries.getData().clear();
             verticalMarkerSeries.getData().clear();
             for (GameController.ReplayPoint point : replayPoints) {
-                if (point.week() > playbackWeek) break;
+                if (point.week() > floorWeek) break;
                 replaySeries.getData().add(new XYChart.Data<>(point.week(), point.netWorth().doubleValue()));
+            }
+            // Interpolate a fractional trailing point for smooth animation
+            double fraction = sliderValue - floorWeek;
+            if (fraction > 0 && floorWeek >= 1 && floorWeek < replayPoints.size()) {
+                GameController.ReplayPoint p0 = replayPoints.get(floorWeek - 1);
+                GameController.ReplayPoint p1 = replayPoints.get(floorWeek);
+                double interpY = p0.netWorth().doubleValue()
+                        + fraction * (p1.netWorth().doubleValue() - p0.netWorth().doubleValue());
+                replaySeries.getData().add(new XYChart.Data<>(sliderValue, interpY));
             }
             verticalMarkerSeries.getData().add(new XYChart.Data<>(markerWeek, yAxis.getLowerBound()));
             verticalMarkerSeries.getData().add(new XYChart.Data<>(markerWeek, yAxis.getUpperBound()));
@@ -460,7 +573,7 @@ public final class ProfileView {
                 if (markerNode != null) {
                     Node markerLine = markerNode.lookup(".chart-series-line");
                     if (markerLine instanceof Path markerPath) {
-                        markerPath.setStyle("-fx-stroke: rgba(226,239,255,0.50); -fx-stroke-width: 1; -fx-stroke-dash-array: 5 4;");
+                        markerPath.getStyleClass().add("profile-crosshair-line");
                     }
                 }
 
@@ -501,6 +614,9 @@ public final class ProfileView {
         };
 
         replaySlider.valueProperty().addListener((obs, oldV, newV) -> refreshReplay.run());
+        replayChart.widthProperty().addListener((obs, oldV, newV) -> alignReplaySliderToPlot.run());
+        replayChart.heightProperty().addListener((obs, oldV, newV) -> alignReplaySliderToPlot.run());
+        replayChart.layoutBoundsProperty().addListener((obs, oldV, newV) -> alignReplaySliderToPlot.run());
 
         replayChart.setOnMouseMoved(e -> {
             if (replayPoints.isEmpty()) return;
@@ -530,7 +646,14 @@ public final class ProfileView {
             }
         });
 
-        final double[] speedStep = {1.0};
+        List<Double> replaySpeedOptions = new ArrayList<>(List.of(0.5, 1.0, 2.0, 4.0));
+        if (maxWeek > 100) replaySpeedOptions.add(8.0);
+        if (maxWeek > 200) replaySpeedOptions.add(16.0);
+        if (maxWeek > 500) replaySpeedOptions.add(32.0);
+        if (maxWeek > 1000) replaySpeedOptions.add(64.0);
+
+        final int[] speedIndex = {Math.max(0, replaySpeedOptions.indexOf(1.0))};
+        final double[] speedStep = {replaySpeedOptions.get(speedIndex[0]) / 4.0};
         final boolean[] playing = {false};
         final Timeline[] replayTimelineRef = new Timeline[1];
         final Timeline replayTimeline = new Timeline(new KeyFrame(Duration.millis(75), e -> {
@@ -572,11 +695,13 @@ public final class ProfileView {
         Button speedBtn = new Button("Speed: 1x");
         speedBtn.getStyleClass().add("profile-secondary-btn");
         speedBtn.setOnAction(e -> {
-            if (speedStep[0] == 0.5) speedStep[0] = 1.0;
-            else if (speedStep[0] == 1.0) speedStep[0] = 2.0;
-            else if (speedStep[0] == 2.0) speedStep[0] = 4.0;
-            else speedStep[0] = 0.5;
-            speedBtn.setText("Speed: " + (speedStep[0] == 0.5 ? "0.5" : String.valueOf((int) speedStep[0])) + "x");
+            speedIndex[0] = (speedIndex[0] + 1) % replaySpeedOptions.size();
+            double speedX = replaySpeedOptions.get(speedIndex[0]);
+            speedStep[0] = speedX / 4.0;
+            String speedLabel = speedX == Math.rint(speedX)
+                ? String.valueOf((int) speedX)
+                : String.valueOf(speedX);
+            speedBtn.setText("Speed: " + speedLabel + "x");
         });
 
         if (replayPoints.isEmpty()) {
@@ -590,6 +715,7 @@ public final class ProfileView {
         replayChart.focusedProperty().addListener((obs, oldV, focused) -> applyReplayLineGradient.run());
 
         refreshReplay.run();
+        alignReplaySliderToPlot.run();
 
         HBox replayControls = new HBox(10, playBtn, restartBtn, speedBtn, replayStatus);
         replayControls.setAlignment(Pos.CENTER_LEFT);
@@ -597,7 +723,7 @@ public final class ProfileView {
         VBox replayCard = statCard("Net Worth Timeline",
             new Label("Playback view from saved weekly snapshots."),
                 replayChartLayer,
-                replaySlider,
+                replaySliderRow,
                 replayControls
         );
         replayCard.getStyleClass().add("profile-replay-card");
@@ -641,6 +767,16 @@ public final class ProfileView {
         Label keyLbl = new Label(key);
         keyLbl.getStyleClass().add("profile-key");
         Label valueLbl = valueText(value);
+        return statLine(keyLbl, valueLbl);
+    }
+
+    private static HBox statLine(String key, Label valueLbl) {
+        Label keyLbl = new Label(key);
+        keyLbl.getStyleClass().add("profile-key");
+        return statLine(keyLbl, valueLbl);
+    }
+
+    private static HBox statLine(Label keyLbl, Label valueLbl) {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox row = new HBox(10, keyLbl, spacer, valueLbl);

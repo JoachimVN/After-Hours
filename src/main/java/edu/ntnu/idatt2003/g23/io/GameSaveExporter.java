@@ -69,7 +69,8 @@ public final class GameSaveExporter {
             List<ShareDto>       portfolio,
             List<TransactionDto> transactions,
             List<WeeklySnapshotDto> weeklySnapshots,
-            UiStateJson          uiState) {}
+            UiStateJson          uiState,
+            Integer weeksUsingChickAvatar) {}
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -231,7 +232,8 @@ public final class GameSaveExporter {
                 portfolio,
                 transactions,
                 weeklySnapshots,
-                uiStateJson);
+                uiStateJson,
+                player.getWeeksUsingChickAvatar());
 
         Path jsonFile = saveDir.resolve("save.json");
         Files.writeString(jsonFile, GSON.toJson(json), StandardCharsets.UTF_8);
