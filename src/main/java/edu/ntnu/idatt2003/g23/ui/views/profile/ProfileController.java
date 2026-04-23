@@ -11,96 +11,96 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
  * Controller for ProfileView (MVC).
  */
 public final class ProfileController {
-    private final GameController gameController;
+  private final GameController gameController;
 
-    public ProfileController(GameController gameController) {
-        if (gameController == null) {
-            throw new IllegalArgumentException("gameController cannot be null");
-        }
-        this.gameController = gameController;
+  public ProfileController(GameController gameController) {
+    if (gameController == null) {
+      throw new IllegalArgumentException("gameController cannot be null");
     }
+    this.gameController = gameController;
+  }
 
-    public String getPlayerName() {
-        return gameController.getPlayerName();
-    }
+  public String getPlayerName() {
+    return gameController.getPlayerName();
+  }
 
-    public PlayerStatus getPlayerStatus() {
-        return gameController.getPlayerStatus();
-    }
+  public PlayerStatus getPlayerStatus() {
+    return gameController.getPlayerStatus();
+  }
 
-    public int getCurrentWeek() {
-        return gameController.getCurrentWeek();
-    }
+  public int getCurrentWeek() {
+    return gameController.getCurrentWeek();
+  }
 
-    public BigDecimal getPlayerStartingMoney() {
-        return gameController.getPlayerStartingMoney();
-    }
+  public BigDecimal getPlayerStartingMoney() {
+    return gameController.getPlayerStartingMoney();
+  }
 
-    public BigDecimal getPlayerCash() {
-        return gameController.getPlayerCash();
-    }
+  public BigDecimal getPlayerCash() {
+    return gameController.getPlayerCash();
+  }
 
-    public BigDecimal getPortfolioNetWorth() {
-        return gameController.getPortfolioNetWorth();
-    }
+  public BigDecimal getPortfolioNetWorth() {
+    return gameController.getPortfolioNetWorth();
+  }
 
-    public BigDecimal getPlayerNetWorth() {
-        return gameController.getPlayerNetWorth();
-    }
+  public BigDecimal getPlayerNetWorth() {
+    return gameController.getPlayerNetWorth();
+  }
 
-    public BigDecimal getPlayerGrowthRatio() {
-        return gameController.getPlayerGrowthRatio();
-    }
+  public BigDecimal getPlayerGrowthRatio() {
+    return gameController.getPlayerGrowthRatio();
+  }
 
-    public int getTransactionCount() {
-        return gameController.getTransactionCount();
-    }
+  public int getTransactionCount() {
+    return gameController.getTransactionCount();
+  }
 
-    public int getPlayerWeeksTraded() {
-        return gameController.getPlayerWeeksTraded();
-    }
+  public int getPlayerWeeksTraded() {
+    return gameController.getPlayerWeeksTraded();
+  }
 
-    public BigDecimal getPlayerStatusProgress() {
-        return gameController.getPlayerStatusProgress();
-    }
+  public BigDecimal getPlayerStatusProgress() {
+    return gameController.getPlayerStatusProgress();
+  }
 
-    public int getPlayerWeeksTargetForNextStatus() {
-        return gameController.getPlayerWeeksTargetForNextStatus();
-    }
+  public int getPlayerWeeksTargetForNextStatus() {
+    return gameController.getPlayerWeeksTargetForNextStatus();
+  }
 
-    public BigDecimal getPlayerWeeksProgress() {
-        return gameController.getPlayerWeeksProgress();
-    }
+  public BigDecimal getPlayerWeeksProgress() {
+    return gameController.getPlayerWeeksProgress();
+  }
 
-    public BigDecimal getPlayerGrowthTargetForNextStatus() {
-        return gameController.getPlayerGrowthTargetForNextStatus();
-    }
+  public BigDecimal getPlayerGrowthTargetForNextStatus() {
+    return gameController.getPlayerGrowthTargetForNextStatus();
+  }
 
-    public BigDecimal getPlayerNetWorthProgress() {
-        return gameController.getPlayerNetWorthProgress();
-    }
+  public BigDecimal getPlayerNetWorthProgress() {
+    return gameController.getPlayerNetWorthProgress();
+  }
 
-    public List<Share> getPortfolioShares() {
-        return gameController.getPortfolioShares();
-    }
+  public List<Share> getPortfolioShares() {
+    return gameController.getPortfolioShares();
+  }
 
-    public List<GameController.ReplayPoint> getReplaySeries() {
-        return gameController.getReplaySeries();
-    }
+  public List<GameController.ReplayPoint> getReplaySeries() {
+    return gameController.getReplaySeries();
+  }
 
-    public String getDisplayedPlayerAvatar() {
-        return gameController.getPlayerAvatar();
-    }
+  public String getDisplayedPlayerAvatar() {
+    return gameController.getPlayerAvatar();
+  }
 
-    public boolean isChickAvatarEquipped() {
-        return gameController.isChickAvatarEquipped();
-    }
+  public boolean isChickAvatarEquipped() {
+    return gameController.isChickAvatarEquipped();
+  }
 
-    public int getChickPhaseUnlocked() {
-        return gameController.getChickPhaseUnlocked();
-    }
+  public int getChickPhaseUnlocked() {
+    return gameController.getChickPhaseUnlocked();
+  }
 
-    public int getWeeksUsingChickAvatar() {
-        return gameController.getWeeksUsingChickAvatar();
-    }
+  public int getWeeksUsingChickAvatar() {
+    return gameController.getWeeksUsingChickAvatar();
+  }
 }

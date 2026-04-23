@@ -17,45 +17,48 @@ import java.math.BigDecimal;
  */
 public final class NumberParser {
 
-    private NumberParser() {}
+  private NumberParser() {
+  }
 
-    /**
-     * Parses {@code text} and returns a {@link BigDecimal}.
-     *
-     * @throws NumberFormatException if {@code text} is empty or not a valid number
-     */
-    public static BigDecimal parse(String text) {
-        String s = text.trim();
-        if (s.isEmpty()) throw new NumberFormatException("empty");
-
-        // Strip suffix before deciding comma handling
-        char lastChar = Character.toUpperCase(s.charAt(s.length() - 1));
-        BigDecimal multiplier = switch (lastChar) {
-            case 'K' -> BigDecimal.valueOf(1_000);
-            case 'M' -> BigDecimal.valueOf(1_000_000);
-            case 'B' -> BigDecimal.valueOf(1_000_000_000);
-            default  -> BigDecimal.ONE;
-        };
-        String digits = multiplier.equals(BigDecimal.ONE) ? s : s.substring(0, s.length() - 1);
-
-        // Comma handling:
-        // - exactly 1 comma, no period, and the part after the comma is NOT exactly
-        //   3 digits → decimal separator (e.g. "1,3" → 1.3, "1,30" → 1.30)
-        // - everything else (multiple commas, or 3-digit group after comma) →
-        //   thousands separator, strip commas (e.g. "1,300", "1,000,000")
-        long commaCount = digits.chars().filter(c -> c == ',').count();
-        if (commaCount == 1 && !digits.contains(".")) {
-            int commaIdx = digits.indexOf(',');
-            String afterComma = digits.substring(commaIdx + 1);
-            if (afterComma.length() != 3) {
-                digits = digits.replace(",", ".");
-            } else {
-                digits = digits.replace(",", "");
-            }
-        } else {
-            digits = digits.replace(",", "");
-        }
-
-        return new BigDecimal(digits).multiply(multiplier);
+  /**
+   * Parses {@code text} and returns a {@link BigDecimal}.
+   *
+   * @throws NumberFormatException if {@code text} is empty or not a valid number
+   */
+  public static BigDecimal parse(String text) {
+    String s = text.trim();
+    if (s.isEmpty()) {
+      throw new NumberFormatException("empty");
     }
+
+    // Strip suffix before deciding comma handling
+    char lastChar = Character.toUpperCase(s.charAt(s.length() - 1));
+    BigDecimal multiplier = switch (lastChar) {
+      case 'K' -> BigDecimal.valueOf(1_000);
+      case 'M' -> BigDecimal.valueOf(1_000_000);
+      case 'B' -> BigDecimal.valueOf(1_000_000_000);
+      default -> BigDecimal.ONE;
+    };
+    String digits = multiplier.equals(BigDecimal.ONE) ? s : s.substring(0, s.length() - 1);
+
+    // Comma handling:
+    // - exactly 1 comma, no period, and the part after the comma is NOT exactly
+    //   3 digits → decimal separator (e.g. "1,3" → 1.3, "1,30" → 1.30)
+    // - everything else (multiple commas, or 3-digit group after comma) →
+    //   thousands separator, strip commas (e.g. "1,300", "1,000,000")
+    long commaCount = digits.chars().filter(c -> c == ',').count();
+    if (commaCount == 1 && !digits.contains(".")) {
+      int commaIdx = digits.indexOf(',');
+      String afterComma = digits.substring(commaIdx + 1);
+      if (afterComma.length() != 3) {
+        digits = digits.replace(",", ".");
+      } else {
+        digits = digits.replace(",", "");
+      }
+    } else {
+      digits = digits.replace(",", "");
+    }
+
+    return new BigDecimal(digits).multiply(multiplier);
+  }
 }

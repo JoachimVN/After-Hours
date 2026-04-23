@@ -7,8 +7,9 @@ import java.util.List;
  * starred favourites). Written into {@code save.json} and restored on load.
  */
 public record GameUiState(
-        List<String> favorites,
-        List<String> activeFilters,
-        List<String> filterChipOrder,
-        String stockSort,
-        String selectedSymbol) {}
+    List<String> favorites,
+    List<String> activeFilters,
+    List<String> filterChipOrder,
+    String stockSort,
+    String selectedSymbol) {
+}

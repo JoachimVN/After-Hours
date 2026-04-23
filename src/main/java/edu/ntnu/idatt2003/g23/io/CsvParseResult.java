@@ -12,24 +12,30 @@ import java.util.List;
  */
 public class CsvParseResult {
 
-    private final List<CsvRow> rows;
+  private final List<CsvRow> rows;
 
-    public CsvParseResult(List<CsvRow> rows) {
-        this.rows = List.copyOf(rows);
-    }
+  public CsvParseResult(List<CsvRow> rows) {
+    this.rows = List.copyOf(rows);
+  }
 
-    /** All data rows in source order (valid and invalid). */
-    public List<CsvRow> getRows() {
-        return rows;
-    }
+  /**
+   * All data rows in source order (valid and invalid).
+   */
+  public List<CsvRow> getRows() {
+    return rows;
+  }
 
-    /** {@code true} if at least one row currently has a validation error. */
-    public boolean hasErrors() {
-        return rows.stream().anyMatch(CsvRow::hasError);
-    }
+  /**
+   * {@code true} if at least one row currently has a validation error.
+   */
+  public boolean hasErrors() {
+    return rows.stream().anyMatch(CsvRow::hasError);
+  }
 
-    /** Number of rows that currently carry a validation error. */
-    public long errorCount() {
-        return rows.stream().filter(CsvRow::hasError).count();
-    }
+  /**
+   * Number of rows that currently carry a validation error.
+   */
+  public long errorCount() {
+    return rows.stream().filter(CsvRow::hasError).count();
+  }
 }
