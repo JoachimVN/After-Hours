@@ -60,6 +60,14 @@ public final class SaveSelectController {
     /** Whether there is an in-memory game session to resume. */
     public boolean hasSession() { return sessionPlayer != null; }
 
+    public String getSessionPlayerName() {
+        return sessionPlayer != null ? sessionPlayer.getName() : "Player";
+    }
+
+    public String getSessionPlayerAvatar() {
+        return sessionPlayer != null ? sessionPlayer.getProfileAvatar() : "\uD83E\uDDD1";
+    }
+
     /** Fires {@code onLoad} with the in-memory session (no disk I/O). */
     public void resumeSession() {
         onLoad.accept(new Object[]{sessionPlayer, sessionExchange, sessionSavePath, sessionUiState});
@@ -116,9 +124,9 @@ public final class SaveSelectController {
      *
      * @return the new path on success, or {@code null} on failure
      */
-    public Path renameSave(Path saveDir, String newFolderName) {
+    public Path renameSave(Path saveDir, String newFolderName, String newDisplayName) {
         try {
-            return GameSaveLoader.renameSave(saveDir, newFolderName);
+            return GameSaveLoader.renameSave(saveDir, newFolderName, newDisplayName);
         } catch (IOException e) {
             return null;
         }

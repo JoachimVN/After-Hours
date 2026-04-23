@@ -190,7 +190,7 @@ public final class CsvEditorView {
                 event.consume();
             } else if (event.getCode() == KeyCode.ENTER) {
                 TableColumn<CsvRow, ?> col = pos.getTableColumn() != null
-                        ? pos.getTableColumn() : editableCols.get(0);
+                        ? (TableColumn<CsvRow, ?>) pos.getTableColumn() : editableCols.get(0);
                 if (event.isShiftDown()) {
                     if (ri > 0) selectCell(table, ri - 1, col);
                 } else {
@@ -246,7 +246,7 @@ public final class CsvEditorView {
             }
         });
 
-        table.getColumns().addAll(lineCol, symbolCol, companyCol, pricesCol, errorCol, skipRowCol);
+        table.getColumns().addAll(List.of(lineCol, symbolCol, companyCol, pricesCol, errorCol, skipRowCol));
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         // Row factory: highlight error rows

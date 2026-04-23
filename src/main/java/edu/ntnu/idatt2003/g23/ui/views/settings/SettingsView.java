@@ -1,6 +1,7 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
+import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import javafx.geometry.Insets;
@@ -30,7 +31,6 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
@@ -62,7 +62,7 @@ public final class SettingsView {
                 onDevModeChange, devModeEnabled,
                 onAutosaveChange, autosaveEnabled,
                 onAutosaveToastChange, autosaveToastEnabled,
-                null, null, null);
+                null, null, null, null, null);
     }
 
     // ── Full overload ─────────────────────────────────────────────────────────
@@ -87,7 +87,11 @@ public final class SettingsView {
             Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
             Path currentSavePath,
             Runnable onResetAll,
-            Runnable onSave) {
+            Runnable onSave,
+            /** Current player name if in-game context (null-safe). */
+            String currentPlayerName,
+            /** Called with new player name if in-game (null-safe). */
+            Consumer<String> onNameChanged) {
 
         StackPane overlay = new StackPane();
         overlay.setPickOnBounds(false);
@@ -125,6 +129,7 @@ public final class SettingsView {
         VBox audioSection = buildAudioSection(
                 onMusicVolumeChange, initialMusicVolume, initialMusicMuted, onMusicMutedChange,
                 onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange);
+        audioSection.getStyleClass().add("settings-section-card-top");
 
         VBox displaySection = buildDisplaySection(
                 animationsEnabled, onAnimationsChange,
@@ -140,9 +145,21 @@ public final class SettingsView {
         VBox keybindsSection = buildKeybindsSection(overlay);
         VBox devSection = buildDevSection(devModeEnabled, onDevModeChange);
 
-        VBox allSections = new VBox(22,
-                title, audioSection, displaySection, gameSection,
-                dataSection, keybindsSection, devSection);
+        VBox profileSection = null;
+        if (currentPlayerName != null && onNameChanged != null) {
+            profileSection = buildProfileSection(currentPlayerName, onNameChanged);
+        }
+
+        VBox allSections;
+        if (profileSection != null) {
+            allSections = new VBox(22,
+                    title, profileSection, audioSection, displaySection, gameSection,
+                    dataSection, keybindsSection, devSection);
+        } else {
+            allSections = new VBox(22,
+                    title, audioSection, displaySection, gameSection,
+                    dataSection, keybindsSection, devSection);
+        }
         allSections.setAlignment(Pos.TOP_LEFT);
         allSections.setMaxWidth(700);
         HBox.setHgrow(allSections, Priority.ALWAYS);
@@ -179,6 +196,36 @@ public final class SettingsView {
     // ──────────────────────────────────────────────────────────────────────────
     // Section builders
     // ──────────────────────────────────────────────────────────────────────────
+
+    private static VBox buildProfileSection(String currentPlayerName, Consumer<String> onNameChanged) {
+        TextField nameField = new TextField(currentPlayerName);
+        nameField.getStyleClass().addAll("settings-text-field", "settings-profile-name-field");
+        nameField.setMaxWidth(Double.MAX_VALUE);
+        nameField.setPromptText("Player name");
+
+        Runnable saveName = () -> {
+            String newName = nameField.getText().strip();
+            if (!newName.isEmpty() && !newName.equals(currentPlayerName)) {
+                onNameChanged.accept(newName);
+            } else if (newName.isEmpty()) {
+                nameField.setText(currentPlayerName);
+            }
+        };
+
+        nameField.focusedProperty().addListener((obs, oldV, focused) -> {
+            if (!focused) saveName.run();
+        });
+        nameField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                saveName.run();
+                nameField.getParent().requestFocus();
+            }
+        });
+
+        Label label = new Label("Player Name");
+        label.getStyleClass().add("settings-label");
+        return sectionCard("👤  Profile", label, nameField);
+    }
 
     private static VBox buildAudioSection(
             DoubleConsumer onMusicVolumeChange, double initialMusicVolume,
@@ -295,10 +342,10 @@ public final class SettingsView {
     }
 
     private static VBox buildDataSection(Stage stage, Path currentSavePath, Consumer<File> onExport) {
-        Label label = new Label("Export Stock Data");
+        Label label = new Label("Export Save Data");
         label.getStyleClass().add("settings-label");
 
-        Label subLabel = new Label("Pick a save to export its stock price history as a CSV file.");
+        Label subLabel = new Label("Pick a save to export it as two files: one JSON and one CSV.");
         subLabel.getStyleClass().add("settings-sublabel");
         subLabel.setWrapText(true);
 
@@ -314,7 +361,7 @@ public final class SettingsView {
             saveCombo.getItems().setAll(saves);
         } catch (IOException ignored) {}
 
-        Button exportBtn = new Button("\u2B07  Export CSV");
+        Button exportBtn = new Button("\u2B07  Export JSON + CSV");
         exportBtn.getStyleClass().add("settings-toggle");
         exportBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
 
@@ -329,21 +376,17 @@ public final class SettingsView {
             // The view owns the file-chooser dialog (it needs an owner window).
             // The actual file I/O is delegated to the controller via onExport.
             FileChooser fc = new FileChooser();
-            fc.setTitle("Export Stock Data");
+            fc.setTitle("Export Save Data (JSON + CSV)");
             fc.setInitialFileName(
-                    selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_stocks.csv");
+                    selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_save_export");
             fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
             File dest = fc.showSaveDialog(stage);
             if (dest == null) return;
 
             if (onExport != null) {
-                // Pass chosen destination to the controller; result feedback via statusLbl is done here.
                 try {
-                    Files.copy(
-                            selected.saveDir().resolve("stocks.csv"),
-                            dest.toPath(),
-                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    statusLbl.setText("\u2713  Exported to: " + dest.getName());
+                    Path[] exported = GameSaveExporter.exportSaveDataFiles(selected.saveDir(), dest.toPath());
+                    statusLbl.setText("\u2713  Exported: " + exported[0].getFileName() + " and " + exported[1].getFileName());
                     statusLbl.setStyle("-fx-text-fill: #4ecb71;");
                     onExport.accept(dest);
                 } catch (IOException ex) {
@@ -580,7 +623,7 @@ public final class SettingsView {
                             && item.saveDir().equals(currentSavePath);
                     String prefix = isCurrent ? "▶  " : (item.autosave() ? "⌛ " : "");
                     setText(prefix + item.displayName()
-                            + "  •  Wk " + item.week()
+                            + "  •  Week " + item.week()
                             + "  •  " + item.savedAt()
                             + (isCurrent ? "  — Playing" : ""));
                     setStyle(isCurrent ? "-fx-text-fill: #f5a201; -fx-font-weight: bold;" : "");

@@ -2,17 +2,32 @@ package edu.ntnu.idatt2003.g23.model;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionArchive;
 
 // Represents a player in the stock market game.
 public class Player {
-    private final String name;
+    public record WeeklySnapshot(int week, BigDecimal cash, BigDecimal portfolioValue, BigDecimal netWorth) {}
+    private static final String DEFAULT_PROFILE_AVATAR = "\uD83E\uDDD1";
+    private static final String CHICK_AVATAR_SELECTION = "egg";
+    private static final int CHICK_MAX_PHASE = 3;
+    private static final int CHICK_PHASE_WEEKS = 10;
+    private static final int CHICK_MAX_WEEKS = 30;
+
+    private String name;
     private final BigDecimal startingMoney;
     private BigDecimal money;
     private final Portfolio portfolio;
     private final TransactionArchive transactionArchive;
+    private final List<WeeklySnapshot> weeklySnapshots;
     private PlayerStatus status;
+    private String profileAvatar;
+
+    // Chicks avatar progression
+    private int weeksUsingChickAvatar = 0;
 
     // Constructor for creating a new Player instance.
     public Player(String name, BigDecimal startingMoney) {
@@ -33,7 +48,49 @@ public class Player {
         this.money = startingMoney;
         this.portfolio = new Portfolio();
         this.transactionArchive = new TransactionArchive();
+        this.weeklySnapshots = new ArrayList<>();
         this.status = PlayerStatus.NOVICE;
+        this.profileAvatar = DEFAULT_PROFILE_AVATAR;
+        recordWeeklySnapshot(1);
+    }
+
+    public void recordWeeklySnapshot(int week) {
+        if (week < 1) {
+            throw new IllegalArgumentException("Week must be positive");
+        }
+        BigDecimal portfolioValue = portfolio.getNetWorth();
+        BigDecimal netWorth = money.add(portfolioValue);
+        WeeklySnapshot snapshot = new WeeklySnapshot(week, money, portfolioValue, netWorth);
+
+        for (int i = 0; i < weeklySnapshots.size(); i++) {
+            if (weeklySnapshots.get(i).week() == week) {
+                weeklySnapshots.set(i, snapshot);
+                return;
+            }
+        }
+        weeklySnapshots.add(snapshot);
+        weeklySnapshots.sort(Comparator.comparingInt(WeeklySnapshot::week));
+    }
+
+    public List<WeeklySnapshot> getWeeklySnapshots() {
+        return List.copyOf(weeklySnapshots);
+    }
+
+    public void setWeeklySnapshots(List<WeeklySnapshot> snapshots) {
+        weeklySnapshots.clear();
+        if (snapshots == null) {
+            return;
+        }
+        for (WeeklySnapshot snapshot : snapshots) {
+            if (snapshot == null) {
+                continue;
+            }
+            if (snapshot.week() < 1) {
+                continue;
+            }
+            weeklySnapshots.add(snapshot);
+        }
+        weeklySnapshots.sort(Comparator.comparingInt(WeeklySnapshot::week));
     }
 
     /**
@@ -42,6 +99,21 @@ public class Player {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Sets the player's name.
+     * @param name the new player name (must not be null or blank)
+     * @throws IllegalArgumentException if the name is null or blank
+     */
+    public void setName(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("Name cannot be null");
+        }
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be blank");
+        }
+        this.name = name;
     }
 
     /**
@@ -250,6 +322,87 @@ public class Player {
      */
     public PlayerStatus getStatus() {
         return status;
+    }
+
+    public String getProfileAvatar() {
+        return profileAvatar;
+    }
+
+    public String getDisplayedProfileAvatar() {
+        if (!isChickAvatarEquipped()) {
+            return profileAvatar;
+        }
+        return getChickPhaseStem(calculateChickPhase(weeksUsingChickAvatar));
+    }
+
+    public void setProfileAvatar(String profileAvatar) {
+        if (profileAvatar == null || profileAvatar.isBlank()) {
+            this.profileAvatar = DEFAULT_PROFILE_AVATAR;
+            return;
+        }
+        this.profileAvatar = normalizeAvatarSelection(profileAvatar);
+    }
+
+    /**
+     * Call this at the end of each week to update chick avatar progression.
+     */
+    public void updateChickAvatarProgression() {
+        if (!isChickAvatarEquipped()) {
+            return;
+        }
+        weeksUsingChickAvatar = Math.min(CHICK_MAX_WEEKS, weeksUsingChickAvatar + 1);
+    }
+
+    public int getWeeksUsingChickAvatar() {
+        return weeksUsingChickAvatar;
+    }
+
+    public int getChickPhaseUnlocked() {
+        return calculateChickPhase(weeksUsingChickAvatar);
+    }
+
+    public void setWeeksUsingChickAvatar(int weeks) {
+        this.weeksUsingChickAvatar = Math.max(0, Math.min(weeks, CHICK_MAX_WEEKS));
+    }
+
+    public boolean isChickAvatarEquipped() {
+        return isChickAvatar(profileAvatar);
+    }
+
+    private String normalizeAvatarSelection(String avatar) {
+        if (isChickAvatar(avatar)) {
+            return CHICK_AVATAR_SELECTION;
+        }
+        return avatar;
+    }
+
+    private boolean isChickAvatar(String avatar) {
+        if (avatar == null) {
+            return false;
+        }
+        return avatar.equals("egg") || avatar.equals("cracking-egg") || avatar.equals("hatching-chick") || avatar.equals("chick");
+    }
+
+    private int calculateChickPhase(int weeks) {
+        if (weeks >= CHICK_MAX_WEEKS) {
+            return 3;
+        }
+        if (weeks >= CHICK_PHASE_WEEKS * 2) {
+            return 2;
+        }
+        if (weeks >= CHICK_PHASE_WEEKS) {
+            return 1;
+        }
+        return 0;
+    }
+
+    private String getChickPhaseStem(int phase) {
+        return switch (Math.max(0, Math.min(phase, CHICK_MAX_PHASE))) {
+            case 0 -> "egg";
+            case 1 -> "cracking-egg";
+            case 2 -> "hatching-chick";
+            default -> "chick";
+        };
     }
 
     /**

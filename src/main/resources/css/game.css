@@ -18,13 +18,13 @@
 .game-icon-button {
     -fx-background-color: rgba(15, 45, 94, 0.70);
     -fx-text-fill: #7a9fc8;
-    -fx-font-size: 15px;
+    -fx-font-size: 22px;
     -fx-font-family: "Sans Serif";
     -fx-background-radius: 50%;
-    -fx-min-width: 34px;
-    -fx-min-height: 34px;
-    -fx-max-width: 34px;
-    -fx-max-height: 34px;
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
+    -fx-max-width: 44px;
+    -fx-max-height: 44px;
     -fx-padding: 0;
     -fx-text-overrun: clip;
     -fx-border-color: rgba(30, 64, 128, 0.5);

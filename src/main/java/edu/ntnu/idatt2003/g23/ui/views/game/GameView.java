@@ -13,6 +13,7 @@ import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.model.PlayerStatus;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
+import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import static edu.ntnu.idatt2003.g23.ui.util.LabelUtil.labelSmall;
 import edu.ntnu.idatt2003.g23.util.NumberParser;
@@ -81,6 +82,7 @@ public final class GameView implements GameViewInterface {
     private final Label weekNumLbl;
     private final Arc statusProgressArc;
     private final Tooltip statusTooltip;
+    private final Button profileBtn;
 
     private final ObservableList<Stock> allStocks;
     private final FilteredList<Stock> filteredStocks;
@@ -104,11 +106,11 @@ public final class GameView implements GameViewInterface {
     private StackPane overlayRef = null;
     private Node rootRef = null;
 
-    public GameView(GameController gameController, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier) {
-        this(gameController, onBack, onSettings, sfxVolumeSupplier, null);
+    public GameView(GameController gameController, Runnable onBack, Runnable onProfile, DoubleSupplier sfxVolumeSupplier) {
+        this(gameController, onBack, onProfile, sfxVolumeSupplier, null);
     }
 
-    public GameView(GameController gameController, Runnable onBack, Runnable onSettings, DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
+    public GameView(GameController gameController, Runnable onBack, Runnable onProfile, DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
         this.gameController = gameController;
         this.gameController.setView(this);
 
@@ -119,6 +121,7 @@ public final class GameView implements GameViewInterface {
         this.weekNumLbl = new Label();
         this.statusProgressArc = new Arc(0, 0, 11, 11, 90, 0);
         this.statusTooltip = new Tooltip();
+        this.profileBtn = new Button();
 
         this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
         this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
@@ -407,12 +410,13 @@ public final class GameView implements GameViewInterface {
         Node portPill  = statPill("Portfolio Value",  portVal);
         Node nwPill    = statPill("Total Net Worth",  nwVal);
 
-        Button settingsBtn = new Button("\u2699");
-        settingsBtn.getStyleClass().add("game-icon-button");
-        settingsBtn.setOnAction(e -> onSettings.run());
+        profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
+        profileBtn.setText("");
+        profileBtn.getStyleClass().add("game-icon-button");
+        profileBtn.setOnAction(e -> onProfile.run());
 
         Region tl = new Region(); HBox.setHgrow(tl, Priority.ALWAYS);
-        HBox topBar = new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill, settingsBtn);
+        HBox topBar = new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill, profileBtn);
         topBar.getStyleClass().add("game-top-bar");
         topBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -517,6 +521,7 @@ public final class GameView implements GameViewInterface {
         cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
         portVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
         nwVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
+        profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
         portfolioItems.setAll(gameController.getPortfolioShares());
         applyFilter();
         rebuildDetail();
@@ -2336,7 +2341,7 @@ public final class GameView implements GameViewInterface {
                     weekLbl.getStyleClass().add("chart-tooltip-week");
                     Label quantityLbl = new Label("Quantity: " + totalQty.stripTrailingZeros().toPlainString());
                     quantityLbl.getStyleClass().add("chart-tooltip-row");
-                    Label priceLbl = new Label((weekBuys.size() > 1 ? "Avg price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
+                    Label priceLbl = new Label((weekBuys.size() > 1 ? "Average price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
                     priceLbl.getStyleClass().add("chart-tooltip-row");
                     BigDecimal gain = stock.getSalesPrice().subtract(avgPrice).multiply(totalQty);
                     String sign = gain.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
@@ -2364,7 +2369,7 @@ public final class GameView implements GameViewInterface {
                     weekLbl.getStyleClass().add("chart-tooltip-sell-week");
                     Label quantityLbl = new Label("Quantity: " + totalQty.stripTrailingZeros().toPlainString());
                     quantityLbl.getStyleClass().add("chart-tooltip-row");
-                    Label priceLbl = new Label((weekSells.size() > 1 ? "Avg price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
+                    Label priceLbl = new Label((weekSells.size() > 1 ? "Average price: " : "Price: ") + CurrencyFormatter.format(avgPrice));
                     priceLbl.getStyleClass().add("chart-tooltip-row");
                     tooltip.getChildren().addAll(weekLbl, quantityLbl, priceLbl);
                 }

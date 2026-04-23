@@ -45,9 +45,10 @@ public final class SetupView {
      */
     public SetupView(Runnable onBack,
                      MarketStartHandler onStartDefault,
-                     BiConsumer<String, Double> onStartCsv) {
+                     BiConsumer<String, Double> onStartCsv,
+                     String playerAvatar) {
         this.controller = new SetupController(onBack, onStartDefault, onStartCsv);
-        this.root = buildUI();
+        this.root = buildUI(playerAvatar);
     }
 
     public BorderPane getRoot() {
@@ -56,7 +57,7 @@ public final class SetupView {
 
     // ── UI Construction ───────────────────────────────────────────────────────
 
-    private BorderPane buildUI() {
+    private BorderPane buildUI(String playerAvatar) {
         List<MarketOption> markets = AppConfig.BUILT_IN_MARKETS;
 
         BorderPane root = new BorderPane();
@@ -243,7 +244,7 @@ public final class SetupView {
         Label pageTitle = new Label("New Game");
         pageTitle.getStyleClass().add("page-title");
 
-        VBox page = new VBox(28, pageTitle, form);
+        VBox page = new VBox(20, pageTitle, form);
         page.setAlignment(Pos.CENTER);
         page.setPadding(new Insets(0, 0, 40, 0));
         root.setCenter(page);

@@ -51,11 +51,13 @@ public final class GameSaveExporter {
     private record ShareDto(String symbol, String quantity, String purchasePrice) {}
     private record TransactionDto(String type, String symbol, String quantity,
                                   String purchasePrice, int week) {}
+        private record WeeklySnapshotDto(int week, String cash, String portfolioValue, String netWorth) {}
     private record UiStateJson(List<String> favorites, List<String> activeFilters,
                                List<String> filterChipOrder, String stockSort,
                                String selectedSymbol) {}
     private record SaveJson(
             String playerName,
+            String profileAvatar,
             String startingMoney,
             String money,
             String netWorth,
@@ -66,7 +68,9 @@ public final class GameSaveExporter {
             boolean autosave,
             List<ShareDto>       portfolio,
             List<TransactionDto> transactions,
-            UiStateJson          uiState) {}
+            List<WeeklySnapshotDto> weeklySnapshots,
+            UiStateJson          uiState,
+            Integer weeksUsingChickAvatar) {}
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -138,6 +142,40 @@ public final class GameSaveExporter {
                 exchange.getStocks());
     }
 
+        /**
+         * Exports a selected save to two files (JSON + CSV), following the same
+         * structure used internally by save folders.
+         *
+         * @param saveDir the save folder containing save.json and stocks.csv
+         * @param destinationBase chosen file path used as base name for output files
+         * @return array where index 0 is json destination and index 1 is csv destination
+         */
+        public static Path[] exportSaveDataFiles(Path saveDir, Path destinationBase) throws IOException {
+                if (saveDir == null) throw new IllegalArgumentException("saveDir cannot be null");
+                if (destinationBase == null) throw new IllegalArgumentException("destinationBase cannot be null");
+
+                Path saveJson = saveDir.resolve("save.json");
+                Path stocksCsv = saveDir.resolve("stocks.csv");
+                if (!Files.exists(saveJson)) throw new IOException("Missing save.json in selected save");
+                if (!Files.exists(stocksCsv)) throw new IOException("Missing stocks.csv in selected save");
+
+                Path parent = destinationBase.getParent();
+                if (parent != null) Files.createDirectories(parent);
+
+                String fileName = destinationBase.getFileName().toString();
+                String stem;
+                int dot = fileName.lastIndexOf('.');
+                if (dot > 0) stem = fileName.substring(0, dot);
+                else stem = fileName;
+
+                Path jsonDest = (parent == null ? Path.of(stem + ".json") : parent.resolve(stem + ".json"));
+                Path csvDest = (parent == null ? Path.of(stem + ".csv") : parent.resolve(stem + ".csv"));
+
+                Files.copy(saveJson, jsonDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(stocksCsv, csvDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                return new Path[]{jsonDest, csvDest};
+        }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static void writeJson(Path saveDir, Player player, Exchange exchange,
@@ -162,6 +200,15 @@ public final class GameSaveExporter {
                     t.getWeek()));
         }
 
+        List<WeeklySnapshotDto> weeklySnapshots = new ArrayList<>();
+        for (Player.WeeklySnapshot s : player.getWeeklySnapshots()) {
+            weeklySnapshots.add(new WeeklySnapshotDto(
+                    s.week(),
+                    s.cash().toPlainString(),
+                    s.portfolioValue().toPlainString(),
+                    s.netWorth().toPlainString()));
+        }
+
         UiStateJson uiStateJson = uiState == null ? null : new UiStateJson(
                 List.copyOf(uiState.favorites()),
                 List.copyOf(uiState.activeFilters()),
@@ -173,6 +220,7 @@ public final class GameSaveExporter {
 
         SaveJson json = new SaveJson(
                 player.getName(),
+                player.getProfileAvatar(),
                 player.getStartingMoney().toPlainString(),
                 player.getMoney().toPlainString(),
                 netWorth.toPlainString(),
@@ -183,7 +231,9 @@ public final class GameSaveExporter {
                 isAutosave,
                 portfolio,
                 transactions,
-                uiStateJson);
+                weeklySnapshots,
+                uiStateJson,
+                player.getWeeksUsingChickAvatar());
 
         Path jsonFile = saveDir.resolve("save.json");
         Files.writeString(jsonFile, GSON.toJson(json), StandardCharsets.UTF_8);
