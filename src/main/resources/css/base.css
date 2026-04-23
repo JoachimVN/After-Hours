@@ -15,6 +15,10 @@
     -fx-font-family: "Sans Serif";
 }
 
+.root {
+    -fx-font-family: "Sans Serif";
+}
+
 .home-page {
     -fx-background-color: transparent;
 }

@@ -38,6 +38,24 @@
     -fx-text-fill: #c8d8f0;
 }
 
+.settings-profile-name-field {
+    -fx-background-color: rgba(15, 45, 94, 0.32);
+    -fx-text-fill: #f0f7ff;
+    -fx-prompt-text-fill: rgba(200, 216, 240, 0.45);
+    -fx-font-size: 14;
+    -fx-font-weight: 700;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(74, 104, 153, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 8 12 8 12;
+}
+
+.settings-profile-name-field:focused {
+    -fx-border-color: rgba(245, 162, 1, 0.7);
+    -fx-background-color: rgba(15, 45, 94, 0.42);
+}
+
 .settings-sublabel {
     -fx-font-size: 12;
     -fx-text-fill: #4a6899;
@@ -336,9 +354,53 @@
 }
 
 .save-card-title {
-    -fx-font-family: "Sans Serif Collection";
+    -fx-font-family: "Sans Serif";
     -fx-font-size: 22;
     -fx-text-fill: #f5a201;
+}
+
+.save-card-title-harlow {
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 34;
+    -fx-text-fill: #f0f7ff;
+}
+
+.save-card-avatar {
+    -fx-font-size: 50;
+    -fx-min-width: 84;
+    -fx-pref-width: 84;
+    -fx-max-width: 84;
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: rgba(140, 185, 236, 0.42);
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+}
+
+.save-card-edit-hint {
+    -fx-font-size: 12;
+    -fx-text-fill: rgba(245, 162, 1, 0.55);
+    -fx-font-weight: 700;
+}
+
+.save-card-name-field {
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 34;
+    -fx-text-fill: #f0f7ff;
+    -fx-control-inner-background: transparent;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.save-card-name-field:focused {
+    -fx-background-color: rgba(30, 50, 80, 0.4);
+    -fx-border-width: 1;
+    -fx-border-color: rgba(150, 180, 220, 0.3);
+    -fx-border-radius: 4;
+    -fx-padding: 2;
 }
 
 /* Status badge pill */
