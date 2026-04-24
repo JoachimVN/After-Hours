@@ -95,6 +95,21 @@
     -fx-padding: 8 10 8 10;
 }
 
+.status-tooltip-progress {
+    -fx-pref-height: 6;
+    -fx-background-insets: 0;
+}
+
+.status-tooltip-progress > .track {
+    -fx-background-color: rgba(30, 64, 128, 0.45);
+    -fx-background-radius: 999;
+}
+
+.status-tooltip-progress > .bar {
+    -fx-background-color: linear-gradient(to right, #f5a201, #4ecb71);
+    -fx-background-radius: 999;
+}
+
 /* Sub-bar (week + next week) */
 .game-sub-bar {
     -fx-background-color: rgba(7, 9, 31, 0.80);

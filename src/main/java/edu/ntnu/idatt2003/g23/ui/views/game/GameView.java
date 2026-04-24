@@ -70,6 +70,7 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
 
@@ -553,8 +554,9 @@ public final class GameView implements GameViewInterface {
 
     statusVal.setText(formatStatus(status));
     statusProgressArc.setLength(-360 * clamp01(overallProgress).doubleValue());
-    statusTooltip.setText(buildStatusTooltip(status, overallProgress, weeksTraded, targetWeeks,
-        weeksProgress, growthRatio, growthTarget, growthProgress));
+    statusTooltip.setText(null);
+    statusTooltip.setGraphic(buildStatusTooltipContent(status, overallProgress, weeksTraded,
+      targetWeeks, weeksProgress, growthRatio, growthTarget, growthProgress));
 
     weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
     cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
@@ -1468,9 +1470,11 @@ public final class GameView implements GameViewInterface {
       };
       List<Stock> all = gameController.getStocks();
       List<Stock> gainers = all.stream()
+          .filter(s -> s.percentageChangeOverWeeks(weeks).compareTo(BigDecimal.ZERO) > 0)
           .sorted((a, b) -> b.percentageChangeOverWeeks(weeks)
               .compareTo(a.percentageChangeOverWeeks(weeks))).limit(10).toList();
       List<Stock> losers = all.stream()
+          .filter(s -> s.percentageChangeOverWeeks(weeks).compareTo(BigDecimal.ZERO) < 0)
           .sorted((a, b) -> a.percentageChangeOverWeeks(weeks)
               .compareTo(b.percentageChangeOverWeeks(weeks))).limit(10).toList();
       VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true, weeks, dismissRef);
@@ -1570,6 +1574,11 @@ public final class GameView implements GameViewInterface {
         .add(isGainers ? "market-movers-col-title-gainers" : "market-movers-col-title-losers");
 
     VBox rows = new VBox(0);
+    if (stocks.isEmpty()) {
+      Label none = new Label(isGainers ? "No gainers in this period." : "No losers in this period.");
+      none.getStyleClass().add("movers-company");
+      rows.getChildren().add(none);
+    }
     for (int i = 0; i < stocks.size(); i++) {
       Stock s = stocks.get(i);
       BigDecimal pct = s.percentageChangeOverWeeks(weeks);
@@ -1808,6 +1817,9 @@ public final class GameView implements GameViewInterface {
     table.getColumns().add(feeCol);
     table.getColumns().add(taxCol);
     table.getColumns().add(totalCol);
+    weekCol.setSortType(TableColumn.SortType.DESCENDING);
+    table.getSortOrder().add(weekCol);
+    table.sort();
     // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
     double rowH = 28;
     double headerH = 30;
@@ -1879,7 +1891,10 @@ public final class GameView implements GameViewInterface {
     titleRow.getStyleClass().add("market-movers-header");
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
-    HBox controlsRow = new HBox(10, txSearch, txFilterRow);
+    Label txSortLabel = new Label("Sort");
+    txSortLabel.getStyleClass().add("stock-row-section-label");
+
+    HBox controlsRow = new HBox(10, txSearch, txSortLabel, txFilterRow);
     controlsRow.getStyleClass().add("history-controls-row");
     controlsRow.setAlignment(Pos.CENTER_LEFT);
     HBox.setHgrow(txSearch, Priority.ALWAYS);
@@ -2030,7 +2045,7 @@ public final class GameView implements GameViewInterface {
     return growthRatio.setScale(2, RoundingMode.HALF_UP).toPlainString() + "x";
   }
 
-  private static String buildStatusTooltip(
+  private static VBox buildStatusTooltipContent(
       PlayerStatus status,
       BigDecimal overallProgress,
       int weeksTraded,
@@ -2039,22 +2054,57 @@ public final class GameView implements GameViewInterface {
       BigDecimal growthRatio,
       BigDecimal growthTarget,
       BigDecimal growthProgress) {
-    if (status == PlayerStatus.SPECULATOR) {
-      return "Status: Speculator\n"
-          + "Overall progress: 100.0%\n"
-          + "Weeks traded: " + weeksTraded + " / " + targetWeeks + " (" +
-          formatPercent(weeksProgress) + ")\n"
-          + "Net worth growth: " + formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget)
-          + " (" + formatPercent(growthProgress) + ")\n"
-          + "Max status reached.";
-    }
+    Label title = new Label("Player Status: " + formatStatus(status));
+    title.getStyleClass().add("chart-tooltip-week");
 
-    return "Status: " + formatStatus(status) + "\n"
-        + "Overall progress: " + formatPercent(overallProgress) + "\n"
-        + "Weeks traded: " + weeksTraded + " / " + targetWeeks + " (" +
-        formatPercent(weeksProgress) + ")\n"
-        + "Net worth growth: " + formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget)
-        + " (" + formatPercent(growthProgress) + ")";
+    String subtitle = status == PlayerStatus.SPECULATOR
+        ? "Top tier reached. Keep compounding."
+        : "Level up by filling both tracks.";
+    Label subtitleLbl = new Label(subtitle);
+    subtitleLbl.getStyleClass().add("chart-tooltip-row");
+
+    VBox overall = tooltipProgressRow("Overall", formatPercent(overallProgress), overallProgress);
+    VBox weeks = tooltipProgressRow("Weeks", weeksTraded + " / " + targetWeeks, weeksProgress);
+    VBox growth = tooltipProgressRow(
+        "Growth",
+        formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget),
+        growthProgress);
+
+    VBox root = new VBox(6, title, subtitleLbl, overall, weeks, growth);
+    root.setFillWidth(true);
+    return root;
+  }
+
+  private static VBox tooltipProgressRow(String label, String value, BigDecimal progress) {
+    Label rowLabel = new Label(label + "  " + value);
+    rowLabel.getStyleClass().add("chart-tooltip-row");
+
+    double width = 108;
+    double pct = clamp01(progress).doubleValue();
+
+    Rectangle track = new Rectangle(width, 6);
+    track.setArcWidth(6);
+    track.setArcHeight(6);
+    track.setFill(Color.rgb(30, 64, 128, 0.50));
+
+    Rectangle fill = new Rectangle(width * pct, 6);
+    fill.setArcWidth(6);
+    fill.setArcHeight(6);
+    fill.setFill(new LinearGradient(
+        0, 0, 1, 0, true,
+        CycleMethod.NO_CYCLE,
+        new Stop(0, Color.web("#f5a201")),
+        new Stop(1, Color.web("#4ecb71"))));
+
+    StackPane bar = new StackPane(track, fill);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.setMinWidth(width);
+    bar.setPrefWidth(width);
+    bar.setMaxWidth(width);
+
+    VBox row = new VBox(3, rowLabel, bar);
+    row.setFillWidth(true);
+    return row;
   }
 
   private VBox buildDevPanel() {
