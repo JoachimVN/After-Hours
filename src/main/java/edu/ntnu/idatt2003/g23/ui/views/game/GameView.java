@@ -34,6 +34,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
@@ -41,6 +42,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
@@ -85,6 +87,7 @@ public final class GameView implements GameViewInterface {
   private final Label weekNumLbl;
   private final Arc statusProgressArc;
   private final Tooltip statusTooltip;
+  private final Button settingsBtn;
   private final Button profileBtn;
 
   private final ObservableList<Stock> allStocks;
@@ -110,12 +113,19 @@ public final class GameView implements GameViewInterface {
   private Node rootRef = null;
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
-                  DoubleSupplier sfxVolumeSupplier) {
-    this(gameController, onBack, onProfile, sfxVolumeSupplier, null);
+                    DoubleSupplier sfxVolumeSupplier) {
+            this(gameController, onBack, onProfile, null, sfxVolumeSupplier, null);
   }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
-                  DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
+                    DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
+            this(gameController, onBack, onProfile, null, sfxVolumeSupplier, initialState);
+  }
+
+  public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
+                  Runnable onSettings,
+                  DoubleSupplier sfxVolumeSupplier,
+                  GameUiState initialState) {
     this.gameController = gameController;
     this.gameController.setView(this);
 
@@ -126,6 +136,7 @@ public final class GameView implements GameViewInterface {
     this.weekNumLbl = new Label();
     this.statusProgressArc = new Arc(0, 0, 11, 11, 90, 0);
     this.statusTooltip = new Tooltip();
+    this.settingsBtn = new Button();
     this.profileBtn = new Button();
 
     this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
@@ -435,10 +446,20 @@ public final class GameView implements GameViewInterface {
     profileBtn.getStyleClass().add("game-icon-button");
     profileBtn.setOnAction(e -> onProfile.run());
 
+    settingsBtn.setText("⚙");
+    settingsBtn.getStyleClass().add("game-icon-button");
+    settingsBtn.setDisable(onSettings == null);
+    settingsBtn.setOnAction(e -> {
+      if (onSettings != null) {
+        onSettings.run();
+      }
+    });
+
     Region tl = new Region();
     HBox.setHgrow(tl, Priority.ALWAYS);
     HBox topBar =
-        new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill, profileBtn);
+        new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill,
+            settingsBtn, profileBtn);
     topBar.getStyleClass().add("game-top-bar");
     topBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -785,6 +806,7 @@ public final class GameView implements GameViewInterface {
 
     // ── Owned badge (right of price row) ─────────────────────────────────
     BigDecimal ownedQtyDetail = gameController.getOwnedQuantity(stock.getSymbol());
+    BigDecimal capQtyDetail = gameController.getStockOwnershipCap(stock);
     HBox priceRow = new HBox(12, price, pctBadge);
     priceRow.setAlignment(Pos.BASELINE_LEFT);
 
@@ -800,12 +822,14 @@ public final class GameView implements GameViewInterface {
     }});
 
     // Always include ownedBox so hlRow height stays constant regardless of ownership
-    Label ownedBadge = new Label(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0
-        ? ownedQtyDetail.stripTrailingZeros().toPlainString() + " owned" : "");
+    Label ownedBadge = new Label("Owned: "
+      + ownedQtyDetail.stripTrailingZeros().toPlainString()
+      + " / "
+      + capQtyDetail.stripTrailingZeros().toPlainString()
+      + " max");
     ownedBadge.getStyleClass().add("detail-owned-badge");
     VBox ownedBox = new VBox(2, labelSmall("HOLDING"), ownedBadge);
     ownedBox.setAlignment(Pos.BOTTOM_RIGHT);
-    ownedBox.setVisible(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0);
     Region hlSpacer = new Region();
     HBox.setHgrow(hlSpacer, Priority.ALWAYS);
     HBox hlRow = new HBox(24, hiBox, loBox, hlSpacer, ownedBox);
@@ -2090,11 +2114,7 @@ public final class GameView implements GameViewInterface {
     Rectangle fill = new Rectangle(width * pct, 6);
     fill.setArcWidth(6);
     fill.setArcHeight(6);
-    fill.setFill(new LinearGradient(
-        0, 0, 1, 0, true,
-        CycleMethod.NO_CYCLE,
-        new Stop(0, Color.web("#f5a201")),
-        new Stop(1, Color.web("#4ecb71"))));
+    fill.setFill(Color.web("#f5a201"));
 
     StackPane bar = new StackPane(track, fill);
     bar.setAlignment(Pos.CENTER_LEFT);
@@ -2209,6 +2229,41 @@ public final class GameView implements GameViewInterface {
       }
     });
 
+    // Status override controls
+    Label statusDisplay = new Label("Status: " + formatStatus(gameController.getPlayerStatus()));
+    statusDisplay.getStyleClass().add("dev-panel-stat");
+
+    Button statusNoviceBtn = devBtn("NOVICE");
+    Button statusInvestorBtn = devBtn("INVESTOR");
+    Button statusSpeculatorBtn = devBtn("SPECULATOR");
+    Button statusAutoBtn = devBtn("Auto Status");
+
+    Runnable refreshStatusDisplay = () ->
+        statusDisplay.setText("Status: " + formatStatus(gameController.getPlayerStatus()));
+
+    statusNoviceBtn.setOnAction(e -> {
+      gameController.setPlayerStatusOverride(PlayerStatus.NOVICE);
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    statusInvestorBtn.setOnAction(e -> {
+      gameController.setPlayerStatusOverride(PlayerStatus.INVESTOR);
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    statusSpeculatorBtn.setOnAction(e -> {
+      gameController.setPlayerStatusOverride(PlayerStatus.SPECULATOR);
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    statusAutoBtn.setOnAction(e -> {
+      gameController.clearPlayerStatusOverride();
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    HBox statusRow = new HBox(4, statusNoviceBtn, statusInvestorBtn, statusSpeculatorBtn);
+    statusRow.setAlignment(Pos.CENTER_LEFT);
+
 
     VBox panel = new VBox(6,
         title,
@@ -2223,6 +2278,12 @@ public final class GameView implements GameViewInterface {
         }},
         cashRow,
         setCashRow,
+        new Label("Status:") {{
+          getStyleClass().add("dev-panel-section");
+        }},
+        statusDisplay,
+        statusRow,
+        statusAutoBtn,
         freezeBtn
     );
     panel.getStyleClass().add("dev-panel");
@@ -2261,11 +2322,14 @@ public final class GameView implements GameViewInterface {
         .add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
+    BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
     Label ownedLbl = null;
     if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
       ownedLbl = new Label("Owned: " + ownedQuantity.stripTrailingZeros().toPlainString());
       ownedLbl.getStyleClass().add("stock-owned-label");
     }
+    Label capLbl = new Label("Max: " + capQuantity.stripTrailingZeros().toPlainString());
+    capLbl.getStyleClass().add("stock-cap-label");
 
     // ── Favorite star button ─────────────────────────────────────────────
     boolean isFav = favorites.contains(stock.getSymbol());
@@ -2286,9 +2350,9 @@ public final class GameView implements GameViewInterface {
 
     VBox left;
     if (ownedLbl != null) {
-      left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl);
+      left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl, capLbl);
     } else {
-      left = new VBox(2, symLbl, compLbl, pctLbl);
+      left = new VBox(2, symLbl, compLbl, pctLbl, capLbl);
     }
     VBox right = new VBox(4);
     right.setAlignment(Pos.TOP_RIGHT);

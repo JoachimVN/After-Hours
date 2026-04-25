@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -124,9 +125,10 @@ public final class GameSaveExporter {
    */
   public static Path autosave(Player player, Exchange exchange, GameUiState uiState,
                               String slotId) throws IOException {
-    String safeSlot = slotId.replaceAll("[^A-Za-z0-9_\\-]", "_");
+    String safeSlot = normalizeAutosaveSlotId(slotId);
     String folderName = "autosave_" + safeSlot;
     Path saveDir = AUTOSAVE_DIR.resolve(folderName);
+    cleanupDuplicateAutosaveSlots(safeSlot, saveDir);
     Files.createDirectories(saveDir);
     writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, true);
     StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"), exchange.getStocks());
@@ -263,5 +265,66 @@ public final class GameSaveExporter {
 
     Path jsonFile = saveDir.resolve("save.json");
     Files.writeString(jsonFile, GSON.toJson(json), StandardCharsets.UTF_8);
+  }
+
+  private static void cleanupDuplicateAutosaveSlots(String safeSlot, Path canonicalSlotDir)
+      throws IOException {
+    if (!Files.exists(AUTOSAVE_DIR)) {
+      return;
+    }
+    try (var dirs = Files.list(AUTOSAVE_DIR)) {
+      List<Path> duplicates = dirs
+          .filter(Files::isDirectory)
+          .filter(p -> {
+            String folderName = p.getFileName().toString();
+            String normalized = normalizeAutosaveFolderName(folderName);
+            return normalized.equals(safeSlot);
+          })
+          .filter(p -> !p.equals(canonicalSlotDir))
+          .toList();
+      for (Path duplicate : duplicates) {
+        deleteDirectoryRecursively(duplicate);
+      }
+    }
+  }
+
+  private static String normalizeAutosaveSlotId(String slotId) {
+    String safe = slotId == null ? "" : slotId.replaceAll("[^A-Za-z0-9_\\-]", "_");
+    while (safe.startsWith("autosave_")) {
+      safe = safe.substring("autosave_".length());
+    }
+    if (safe.isBlank()) {
+      return "slot";
+    }
+    return safe;
+  }
+
+  private static String normalizeAutosaveFolderName(String folderName) {
+    String normalized = folderName;
+    while (normalized.startsWith("autosave_")) {
+      normalized = normalized.substring("autosave_".length());
+    }
+    return normalized;
+  }
+
+  private static void deleteDirectoryRecursively(Path directory) throws IOException {
+    if (!Files.exists(directory)) {
+      return;
+    }
+    try (var walk = Files.walk(directory)) {
+      walk.sorted(Comparator.reverseOrder())
+          .forEach(path -> {
+            try {
+              Files.deleteIfExists(path);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof IOException io) {
+        throw io;
+      }
+      throw e;
+    }
   }
 }

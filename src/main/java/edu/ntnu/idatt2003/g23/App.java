@@ -135,10 +135,9 @@ public class App extends Application {
     fullscreenEnabled = gs.fullscreen();
     windowWidth = gs.windowWidth();
     windowHeight = gs.windowHeight();
+
     AppConfig.DEV_MODE.set(gs.devMode());
-
     primaryStage = stage;
-
     homePage = LandingPageView.build(
         this::goToSaveSelect,
         () -> {
@@ -405,7 +404,7 @@ public class App extends Application {
     //  • loaded saves  → use the existing save folder name
     //  • new games     → use playerName + start timestamp
     if (savePath != null) {
-      currentAutosaveId = savePath.getFileName().toString();
+      currentAutosaveId = normalizeAutosaveSlotId(savePath.getFileName().toString());
     } else {
       String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
       currentAutosaveId = safeName + "_"
@@ -413,21 +412,42 @@ public class App extends Application {
           java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
     }
     GameController gameController = new GameController(player, exchange);
-    GameView gameview = new GameView(gameController, withBack(this::goHome),
+    GameView gameview = (uiState == null)
+      ? new GameView(
+        gameController,
+        withBack(this::goHome),
         () -> {
           navigateKeepMusic(buildProfileView(
-              () -> {
-                sfxController.play(SfxController.BACK,
-                    Math.min(sfxController.getVolume() * 1.5, 1.0));
-                if (currentGameView != null) {
-                  currentGameView.updateData();
-                }
-                navigateKeepMusic(currentGamePage);
-              },
-              this::performSave));
+            () -> {
+              sfxController.play(SfxController.BACK,
+                Math.min(sfxController.getVolume() * 1.5, 1.0));
+              if (currentGameView != null) {
+                currentGameView.updateData();
+              }
+              navigateKeepMusic(currentGamePage);
+            },
+            this::performSave));
+        },
+        sfxController::getVolume
+      )
+      : new GameView(
+        gameController,
+        withBack(this::goHome),
+        () -> {
+          navigateKeepMusic(buildProfileView(
+            () -> {
+              sfxController.play(SfxController.BACK,
+                Math.min(sfxController.getVolume() * 1.5, 1.0));
+              if (currentGameView != null) {
+                currentGameView.updateData();
+              }
+              navigateKeepMusic(currentGamePage);
+            },
+            this::performSave));
         },
         sfxController::getVolume,
-        uiState);
+        uiState
+      );
     currentGameController = gameController;
     currentGameView = gameview;
     currentGamePage = gameview.getRoot();
@@ -735,6 +755,17 @@ public class App extends Application {
         devModeEnabled,
         savedW,
         savedH));
+  }
+
+  private String normalizeAutosaveSlotId(String slotId) {
+    String safe = slotId == null ? "" : slotId.replaceAll("[^A-Za-z0-9_\\-]", "_");
+    while (safe.startsWith("autosave_")) {
+      safe = safe.substring("autosave_".length());
+    }
+    if (safe.isBlank()) {
+      return "slot";
+    }
+    return safe;
   }
 
   // ── Music-aware navigation primitives ────────────────────────────────────

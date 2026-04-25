@@ -175,6 +175,58 @@
     -fx-padding: 0;
 }
 
+.game-body-split {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.game-body-split > .split-pane-divider {
+    -fx-padding: 0;
+    -fx-pref-width: 10px;
+    -fx-min-width: 10px;
+    -fx-max-width: 10px;
+    -fx-background-color: rgba(10, 20, 50, 0.22);
+}
+
+.game-body-split > .split-pane-divider > .vertical-grabber {
+    -fx-background-color: rgba(88, 223, 226, 0.85);
+    -fx-background-radius: 999;
+    -fx-min-width: 4px;
+    -fx-pref-width: 4px;
+    -fx-max-width: 4px;
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
+}
+
+.game-right-split {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.game-right-split > .split-pane-divider {
+    -fx-background-color: rgba(10, 20, 50, 0.22);
+    -fx-padding: 0;
+    -fx-pref-height: 10px;
+    -fx-min-height: 10px;
+    -fx-max-height: 10px;
+}
+
+.game-right-split > .split-pane-divider > .horizontal-grabber {
+    -fx-background-color: rgba(88, 223, 226, 0.85);
+    -fx-background-radius: 999;
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 4px;
+    -fx-pref-height: 4px;
+    -fx-max-height: 4px;
+}
+
+.game-portfolio-pane {
+    -fx-background-color: transparent;
+}
+
 .game-panel-title {
     -fx-font-size: 13px;
     -fx-font-weight: bold;
@@ -266,6 +318,18 @@
     -fx-background-color: rgba(30, 158, 74, 0.18);
     -fx-background-radius: 4;
     -fx-border-color: rgba(46, 184, 92, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 1 6 1 6;
+}
+
+.stock-cap-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7a9fc8;
+    -fx-background-color: rgba(30, 64, 128, 0.18);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(30, 64, 128, 0.35);
     -fx-border-width: 1;
     -fx-border-radius: 4;
     -fx-padding: 1 6 1 6;

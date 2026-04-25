@@ -125,7 +125,6 @@ public final class ProfileView {
     } catch (Exception ignored) {
     }
     final int chickPhaseUnlockedValue = chickPhaseUnlocked;
-    final int weeksUsingChickValue = weeksUsingChick;
     Label avatarDisplay = new Label();
     if (isChick) {
       avatarDisplay.setGraphic(AvatarUtil.createImageView(displayedAvatar, 57.6));
