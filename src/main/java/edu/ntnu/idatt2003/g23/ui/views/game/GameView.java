@@ -111,6 +111,8 @@ public final class GameView implements GameViewInterface {
 
   private StackPane overlayRef = null;
   private Node rootRef = null;
+  private SplitPane hSplitRef = null;
+  private SplitPane vSplitRef = null;
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
@@ -299,9 +301,8 @@ public final class GameView implements GameViewInterface {
 
     VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockScroll);
     leftPanel.getStyleClass().add("game-left-panel");
-    leftPanel.setPrefWidth(300);
-    leftPanel.setMinWidth(Region.USE_PREF_SIZE);
-    leftPanel.setMaxWidth(Region.USE_PREF_SIZE);
+    leftPanel.setMinWidth(160);
+    leftPanel.setMaxWidth(600);
 
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
@@ -328,17 +329,33 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setPrefHeight(180);
-    portfolioTable.setMaxHeight(220);
+    portfolioTable.setMinHeight(80);
+    VBox.setVgrow(portfolioTable, Priority.ALWAYS);
 
-    VBox rightPanel = new VBox(0, detailArea, portTitle, portfolioTable);
-    rightPanel.getStyleClass().add("game-right-panel");
-    HBox.setHgrow(rightPanel, Priority.ALWAYS);
+    VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
+    portfolioSection.getStyleClass().add("game-portfolio-pane");
+    VBox.setVgrow(portfolioSection, Priority.ALWAYS);
 
-    // ── Body ─────────────────────────────────────────────────────────────
-    HBox body = new HBox(0, leftPanel, rightPanel);
-    HBox.setHgrow(rightPanel, Priority.ALWAYS);
-    VBox.setVgrow(body, Priority.ALWAYS);
+    // ── Right panel: vertical split (detail | portfolio) ──────────────────
+    SplitPane vSplit = new SplitPane(detailArea, portfolioSection);
+    vSplit.setOrientation(Orientation.VERTICAL);
+    vSplit.getStyleClass().add("game-right-split");
+    HBox.setHgrow(vSplit, Priority.ALWAYS);
+    VBox.setVgrow(vSplit, Priority.ALWAYS);
+    double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
+      ? initialState.portfolioDivider() : 0.85;
+    vSplit.setDividerPositions(initPortDivider);
+    this.vSplitRef = vSplit;
+
+    // ── Body: horizontal split (sidebar | right panel) ────────────────────
+    SplitPane hSplit = new SplitPane(leftPanel, vSplit);
+    hSplit.setOrientation(Orientation.HORIZONTAL);
+    hSplit.getStyleClass().add("game-body-split");
+    VBox.setVgrow(hSplit, Priority.ALWAYS);
+    double initSidebarDivider = (initialState != null && initialState.sidebarDivider() > 0)
+      ? initialState.sidebarDivider() : 0.125;
+    hSplit.setDividerPositions(initSidebarDivider);
+    this.hSplitRef = hSplit;
 
     // ── Sub-bar: week + next-week ─────────────────────────────────────────
     VBox weekCard = new VBox(2,
@@ -470,7 +487,7 @@ public final class GameView implements GameViewInterface {
 
     VBox topSection = new VBox(0, topBar, subBar);
     root.setTop(topSection);
-    root.setCenter(body);
+    root.setCenter(hSplit);
 
     // ── Dev panel ─────────────────────────────────────────────────────────
     VBox devPanel = buildDevPanel();
@@ -555,12 +572,18 @@ public final class GameView implements GameViewInterface {
 
   public GameUiState getUiState() {
     String selSym = selectedStock.get() != null ? selectedStock.get().getSymbol() : null;
+    double sidebarDiv = (hSplitRef != null && hSplitRef.getDividerPositions().length > 0)
+      ? hSplitRef.getDividerPositions()[0] : 0.125;
+    double portDiv = (vSplitRef != null && vSplitRef.getDividerPositions().length > 0)
+      ? vSplitRef.getDividerPositions()[0] : 0.85;
     return new GameUiState(
         List.copyOf(favorites),
         List.copyOf(activeFilters),
         List.copyOf(filterChipOrder),
         stockSort,
-        selSym);
+        selSym,
+        sidebarDiv,
+        portDiv);
   }
 
   public void updateData() {

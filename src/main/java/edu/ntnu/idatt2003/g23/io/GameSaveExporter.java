@@ -64,7 +64,8 @@ public final class GameSaveExporter {
 
   private record UiStateJson(List<String> favorites, List<String> activeFilters,
                              List<String> filterChipOrder, String stockSort,
-                             String selectedSymbol) {
+                             String selectedSymbol, double sidebarDivider,
+                             double portfolioDivider) {
   }
 
   private record SaveJson(
@@ -242,7 +243,9 @@ public final class GameSaveExporter {
         List.copyOf(uiState.activeFilters()),
         List.copyOf(uiState.filterChipOrder()),
         uiState.stockSort(),
-        uiState.selectedSymbol());
+        uiState.selectedSymbol(),
+        uiState.sidebarDivider(),
+        uiState.portfolioDivider());
 
     BigDecimal netWorth = player.getNetWorth();
 

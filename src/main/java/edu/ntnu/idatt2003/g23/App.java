@@ -412,39 +412,36 @@ public class App extends Application {
           java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
     }
     GameController gameController = new GameController(player, exchange);
+    Runnable onGameProfile = () -> {
+      navigateKeepMusic(buildProfileView(
+        () -> {
+          sfxController.play(SfxController.BACK,
+            Math.min(sfxController.getVolume() * 1.5, 1.0));
+          if (currentGameView != null) {
+            currentGameView.updateData();
+          }
+          navigateKeepMusic(currentGamePage);
+        },
+        this::performSave));
+    };
+    Runnable onGameSettings = () -> navigateKeepMusic(buildSettingsView(
+      () -> navigateKeepMusic(currentGamePage),
+      this::performSave));
+
     GameView gameview = (uiState == null)
       ? new GameView(
         gameController,
         withBack(this::goHome),
-        () -> {
-          navigateKeepMusic(buildProfileView(
-            () -> {
-              sfxController.play(SfxController.BACK,
-                Math.min(sfxController.getVolume() * 1.5, 1.0));
-              if (currentGameView != null) {
-                currentGameView.updateData();
-              }
-              navigateKeepMusic(currentGamePage);
-            },
-            this::performSave));
-        },
-        sfxController::getVolume
+        onGameProfile,
+        onGameSettings,
+        sfxController::getVolume,
+        null
       )
       : new GameView(
         gameController,
         withBack(this::goHome),
-        () -> {
-          navigateKeepMusic(buildProfileView(
-            () -> {
-              sfxController.play(SfxController.BACK,
-                Math.min(sfxController.getVolume() * 1.5, 1.0));
-              if (currentGameView != null) {
-                currentGameView.updateData();
-              }
-              navigateKeepMusic(currentGamePage);
-            },
-            this::performSave));
-        },
+        onGameProfile,
+        onGameSettings,
         sfxController::getVolume,
         uiState
       );

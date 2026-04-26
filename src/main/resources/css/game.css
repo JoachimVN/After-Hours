@@ -186,6 +186,7 @@
     -fx-min-width: 10px;
     -fx-max-width: 10px;
     -fx-background-color: rgba(10, 20, 50, 0.22);
+    -fx-cursor: h-resize;
 }
 
 .game-body-split > .split-pane-divider > .vertical-grabber {
@@ -210,6 +211,7 @@
     -fx-pref-height: 10px;
     -fx-min-height: 10px;
     -fx-max-height: 10px;
+    -fx-cursor: v-resize;
 }
 
 .game-right-split > .split-pane-divider > .horizontal-grabber {

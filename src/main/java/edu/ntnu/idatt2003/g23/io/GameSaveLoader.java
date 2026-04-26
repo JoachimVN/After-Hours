@@ -321,7 +321,9 @@ public final class GameSaveLoader {
       String sort = us.has("stockSort") ? us.get("stockSort").getAsString() : "NAME";
       String sel = us.has("selectedSymbol") && !us.get("selectedSymbol").isJsonNull()
           ? us.get("selectedSymbol").getAsString() : null;
-      uiState = new GameUiState(favs, filters, chips, sort, sel);
+      double sidebarDivider = us.has("sidebarDivider") ? us.get("sidebarDivider").getAsDouble() : 0.125;
+      double portfolioDivider = us.has("portfolioDivider") ? us.get("portfolioDivider").getAsDouble() : 0.85;
+      uiState = new GameUiState(favs, filters, chips, sort, sel, sidebarDivider, portfolioDivider);
     }
 
     return new Object[] {player, exchange, uiState};
