@@ -139,7 +139,10 @@ public class App extends Application {
     AppConfig.DEV_MODE.set(gs.devMode());
     primaryStage = stage;
     homePage = LandingPageView.build(
-        this::goToSaveSelect,
+        () -> {
+          sfxController.play(SfxController.PLAY, Math.min(sfxController.getVolume() * 1.5, 1.0));
+          goToSaveSelect();
+        },
         () -> {
           sfxController.play(SfxController.SETTINGS);
           Parent s = buildSettingsView(this::goHomeKeepMusic, null);
@@ -220,7 +223,10 @@ public class App extends Application {
 
   private void goToSaveSelect() {
     SaveSelectController ctrl = new SaveSelectController(
-        this::goToSetup,
+        () -> {
+          sfxController.play(SfxController.PLAY2, Math.min(sfxController.getVolume() * 1.5, 1.0));
+          goToSetup();
+        },
         withBack(this::goHomeKeepMusic),
         this::loadFromSave,
         currentPlayer,
@@ -251,7 +257,10 @@ public class App extends Application {
     currentSetupPage = new SetupView(
         withBack(this::goHomeKeepMusic),
         (name, cash, csvResource) -> startGame(name, cash, csvResource),
-        (name, cash) -> goToCustomStocks(name, cash),
+        (name, cash) -> {
+          sfxController.play(SfxController.PLAY3, Math.min(sfxController.getVolume() * 1.5, 1.0));
+          goToCustomStocks(name, cash);
+        },
         currentProfileAvatar
     ).getRoot();
     navigateKeepMusic(currentSetupPage);
@@ -910,12 +919,13 @@ public class App extends Application {
   }
 
   private void playGameEntryAudio() {
-    if (musicMuted) {
+    if (musicMuted && sfxMuted) {
       homePageMusicController.stop();
       return;
     }
+
     double startSfxVolume = sfxMuted ? 0.0 : sfxController.getVolume();
-    homePageMusicController.playGameStartThenAmbience(startSfxVolume);
+    homePageMusicController.playGameStartThenAmbience(startSfxVolume, !musicMuted);
   }
 
   private void resumeMusicForContext() {
