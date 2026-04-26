@@ -264,7 +264,6 @@ public class App extends Application {
         currentProfileAvatar
     ).getRoot();
     navigateKeepMusic(currentSetupPage);
-    fadeInPage(currentSetupPage);
   }
 
   private void goToCustomStocks(String name, double cash) {

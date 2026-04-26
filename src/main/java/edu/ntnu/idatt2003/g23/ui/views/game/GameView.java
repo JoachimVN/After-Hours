@@ -112,7 +112,7 @@ public final class GameView implements GameViewInterface {
   private StackPane overlayRef = null;
   private Node rootRef = null;
   private SplitPane hSplitRef = null;
-  private SplitPane vSplitRef = null;
+  private double portfolioDividerRatio = 0.85;
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
@@ -334,21 +334,26 @@ public final class GameView implements GameViewInterface {
 
     VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
     portfolioSection.getStyleClass().add("game-portfolio-pane");
-    VBox.setVgrow(portfolioSection, Priority.ALWAYS);
+    portfolioSection.setMinHeight(96);
+    portfolioSection.setMaxHeight(Region.USE_PREF_SIZE);
 
-    // ── Right panel: vertical split (detail | portfolio) ──────────────────
-    SplitPane vSplit = new SplitPane(detailArea, portfolioSection);
-    vSplit.setOrientation(Orientation.VERTICAL);
-    vSplit.getStyleClass().add("game-right-split");
-    HBox.setHgrow(vSplit, Priority.ALWAYS);
-    VBox.setVgrow(vSplit, Priority.ALWAYS);
+    // ── Right panel: explicit vertical layout with dedicated drag handle ──
+    Region portfolioResizeHandle = new Region();
+    portfolioResizeHandle.getStyleClass().add("game-portfolio-resize-handle");
+    portfolioResizeHandle.setMinHeight(4);
+    portfolioResizeHandle.setPrefHeight(4);
+    portfolioResizeHandle.setMaxHeight(4);
+
+    VBox rightPanel = new VBox(detailArea, portfolioResizeHandle, portfolioSection);
+    rightPanel.getStyleClass().add("game-right-panel");
+    HBox.setHgrow(rightPanel, Priority.ALWAYS);
+    VBox.setVgrow(rightPanel, Priority.ALWAYS);
     double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
       ? initialState.portfolioDivider() : 0.85;
-    vSplit.setDividerPositions(initPortDivider);
-    this.vSplitRef = vSplit;
+    installPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle, initPortDivider);
 
     // ── Body: horizontal split (sidebar | right panel) ────────────────────
-    SplitPane hSplit = new SplitPane(leftPanel, vSplit);
+    SplitPane hSplit = new SplitPane(leftPanel, rightPanel);
     hSplit.setOrientation(Orientation.HORIZONTAL);
     hSplit.getStyleClass().add("game-body-split");
     VBox.setVgrow(hSplit, Priority.ALWAYS);
@@ -574,8 +579,7 @@ public final class GameView implements GameViewInterface {
     String selSym = selectedStock.get() != null ? selectedStock.get().getSymbol() : null;
     double sidebarDiv = (hSplitRef != null && hSplitRef.getDividerPositions().length > 0)
       ? hSplitRef.getDividerPositions()[0] : 0.125;
-    double portDiv = (vSplitRef != null && vSplitRef.getDividerPositions().length > 0)
-      ? vSplitRef.getDividerPositions()[0] : 0.85;
+    double portDiv = portfolioDividerRatio;
     return new GameUiState(
         List.copyOf(favorites),
         List.copyOf(activeFilters),
@@ -584,6 +588,61 @@ public final class GameView implements GameViewInterface {
         selSym,
         sidebarDiv,
         portDiv);
+  }
+
+  private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
+                                      Region portfolioResizeHandle, double initialRatio) {
+    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.85;
+
+    final double[] dragStartY = {0};
+    final double[] dragStartRatio = {portfolioDividerRatio};
+
+    portfolioResizeHandle.setOnMousePressed(event -> {
+      dragStartY[0] = event.getSceneY();
+      dragStartRatio[0] = portfolioDividerRatio;
+      event.consume();
+    });
+
+    portfolioResizeHandle.setOnMouseDragged(event -> {
+      double usableHeight = rightPanel.getHeight() - portfolioResizeHandle.getHeight();
+      if (usableHeight <= 0) {
+        return;
+      }
+      double deltaY = event.getSceneY() - dragStartY[0];
+      portfolioDividerRatio = dragStartRatio[0] + (deltaY / usableHeight);
+      applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle);
+      event.consume();
+    });
+
+    rightPanel.heightProperty().addListener((obs, oldHeight, newHeight) ->
+        applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle));
+    Platform.runLater(() -> applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle));
+  }
+
+  private void applyPortfolioResize(VBox rightPanel, VBox portfolioSection,
+                                    Region portfolioResizeHandle) {
+    double usableHeight = rightPanel.getHeight() - portfolioResizeHandle.getHeight();
+    if (usableHeight <= 0) {
+      return;
+    }
+
+    double minDetailHeight = Math.min(180, usableHeight * 0.7);
+    double minPortfolioHeight = Math.min(96, usableHeight * 0.7);
+    double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
+    double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
+
+    if (maxRatio < minRatio) {
+      minRatio = 0.5;
+      maxRatio = 0.5;
+    }
+
+    portfolioDividerRatio = clamp(portfolioDividerRatio, minRatio, maxRatio);
+    double portfolioHeight = Math.max(0, usableHeight * (1.0 - portfolioDividerRatio));
+
+    detailArea.setMinHeight(minDetailHeight);
+    portfolioSection.setMinHeight(portfolioHeight);
+    portfolioSection.setPrefHeight(portfolioHeight);
+    portfolioSection.setMaxHeight(portfolioHeight);
   }
 
   public void updateData() {
@@ -2074,6 +2133,10 @@ public final class GameView implements GameViewInterface {
       return BigDecimal.ONE;
     }
     return value;
+  }
+
+  private static double clamp(double value, double min, double max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   private static String formatStatus(PlayerStatus status) {
