@@ -128,8 +128,10 @@ class GameControllerTest {
   @Test
   void maxBuyQuantity_isFloorOfCashDividedByCostPlusFee() {
     BigDecimal cost = stock.getSalesPrice().multiply(new BigDecimal("1.005"));
-    int expected = player.getMoney()
+    int byCash = player.getMoney()
         .divide(cost, 0, java.math.RoundingMode.DOWN).intValue();
+    int cap = controller.getStockOwnershipCap(stock).intValue();
+    int expected = Math.min(byCash, cap);
     assertEquals(expected, controller.maxBuyQuantity(stock));
   }
 
@@ -252,6 +254,30 @@ class GameControllerTest {
   @Test
   void getTradePointsForStock_withNoTransactions_isEmpty() {
     assertTrue(controller.getTradePointsForStock("AAPL").isEmpty());
+  }
+
+  @Test
+  void getPortfolioShares_groupsLotsBySymbol() {
+    player.getPortfolio().addShare(new Share(stock, BigDecimal.ONE, new BigDecimal("100")));
+    player.getPortfolio().addShare(new Share(stock, BigDecimal.ONE, new BigDecimal("120")));
+
+    List<Share> grouped = controller.getPortfolioShares();
+    assertEquals(1, grouped.size());
+    Share merged = grouped.getFirst();
+    assertEquals("AAPL", merged.getStock().getSymbol());
+    assertEquals(0, new BigDecimal("2").compareTo(merged.getQuantity()));
+    assertEquals(0, new BigDecimal("110.00000000").compareTo(merged.getPurchasePrice()));
+  }
+
+  @Test
+  void statusOverride_canSetAndClear() {
+    assertEquals(PlayerStatus.NOVICE, controller.getPlayerStatus());
+
+    controller.setPlayerStatusOverride(PlayerStatus.SPECULATOR);
+    assertEquals(PlayerStatus.SPECULATOR, controller.getPlayerStatus());
+
+    controller.clearPlayerStatusOverride();
+    assertEquals(PlayerStatus.NOVICE, controller.getPlayerStatus());
   }
 
   // ── View-dependent methods ────────────────────────────────────────────────

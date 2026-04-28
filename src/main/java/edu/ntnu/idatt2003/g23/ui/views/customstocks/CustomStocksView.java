@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.ui.views.importcsv;
+package edu.ntnu.idatt2003.g23.ui.views.customstocks;
 
 import java.io.File;
 import java.util.function.Consumer;
@@ -14,7 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 
-public final class ImportCsvView {
+public final class CustomStocksView {
 
   public static BorderPane build(Runnable onBack, Runnable onMakeOwn,
                                  Consumer<File> onEditCsv, Consumer<File> onContinue,
@@ -174,7 +174,7 @@ public final class ImportCsvView {
     reqPanel.setPadding(new Insets(20));
 
     // ── Page layout ───────────────────────────────────────────────────────
-    Label pageTitle = new Label("Import CSV");
+    Label pageTitle = new Label("Custom Stock Data");
     pageTitle.getStyleClass().add("page-title");
 
     // Open CSV editor with empty data

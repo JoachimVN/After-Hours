@@ -11,5 +11,7 @@ public record GameUiState(
     List<String> activeFilters,
     List<String> filterChipOrder,
     String stockSort,
-    String selectedSymbol) {
+    String selectedSymbol,
+    double sidebarDivider,
+    double portfolioDivider) {
 }

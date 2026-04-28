@@ -21,9 +21,15 @@ import javafx.scene.layout.StackPane;
 
 public final class GameController {
 
+  private static final BigDecimal CAP_PRICE_FACTOR = new BigDecimal("2000");
+  private static final int MIN_BASE_CAP = 5;
+  private static final int MAX_BASE_CAP = 500;
+  private static final BigDecimal GLOBAL_CAP_MULTIPLIER = new BigDecimal("2.5");
+
   private final Player player;
   private final Exchange exchange;
   private GameViewInterface view;
+  private PlayerStatus statusOverride;
 
   public GameController(Player player, Exchange exchange) {
     this.player = player;
@@ -170,6 +176,22 @@ public final class GameController {
   }
 
   public void handleBuy(Stock stock, BigDecimal quantity) {
+    if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+      view.showError("Quantity must be positive.");
+      return;
+    }
+    BigDecimal owned = getOwnedQuantity(stock.getSymbol());
+    BigDecimal remainingCap = getStockOwnershipCap(stock).subtract(owned);
+    if (remainingCap.compareTo(BigDecimal.ZERO) <= 0) {
+      view.showError("Share cap reached for " + stock.getSymbol() + ".");
+      return;
+    }
+    if (quantity.compareTo(remainingCap) > 0) {
+      view.showError("Share cap exceeded. You can buy up to "
+          + remainingCap.stripTrailingZeros().toPlainString() + " more shares.");
+      return;
+    }
+
     BigDecimal gross = stock.getSalesPrice().multiply(quantity);
     BigDecimal fee = gross.multiply(new BigDecimal("0.005"));
     BigDecimal total = gross.add(fee);
@@ -178,6 +200,12 @@ public final class GameController {
 
   public void executeBuy(Stock stock, BigDecimal quantity, BigDecimal total, BigDecimal fee) {
     try {
+      BigDecimal owned = getOwnedQuantity(stock.getSymbol());
+      BigDecimal remainingCap = getStockOwnershipCap(stock).subtract(owned);
+      if (quantity.compareTo(remainingCap) > 0) {
+        throw new IllegalStateException("Share cap exceeded for this stock.");
+      }
+
       Transaction tx = exchange.buy(stock.getSymbol(), quantity, player);
       tx.commit(player);
       view.showReceipt("BUY", stock, quantity, total, fee, BigDecimal.ZERO, player.getMoney());
@@ -235,6 +263,9 @@ public final class GameController {
   }
 
   public PlayerStatus getPlayerStatus() {
+    if (statusOverride != null) {
+      return statusOverride;
+    }
     player.calculateStatus();
     return player.getStatus();
   }
@@ -268,7 +299,42 @@ public final class GameController {
   }
 
   public List<Share> getPortfolioShares() {
-    return player.getPortfolio().getShares();
+    Map<String, BigDecimal> quantityBySymbol = new LinkedHashMap<>();
+    Map<String, BigDecimal> costBySymbol = new LinkedHashMap<>();
+    Map<String, Stock> stockBySymbol = new LinkedHashMap<>();
+
+    for (Share share : player.getPortfolio().getShares()) {
+      String symbol = share.getStock().getSymbol();
+      BigDecimal quantity = share.getQuantity();
+      BigDecimal lotCost = share.getPurchasePrice().multiply(quantity);
+
+      quantityBySymbol.merge(symbol, quantity, BigDecimal::add);
+      costBySymbol.merge(symbol, lotCost, BigDecimal::add);
+      stockBySymbol.putIfAbsent(symbol, share.getStock());
+    }
+
+    List<Share> grouped = new ArrayList<>();
+    for (Map.Entry<String, BigDecimal> entry : quantityBySymbol.entrySet()) {
+      String symbol = entry.getKey();
+      BigDecimal totalQuantity = entry.getValue();
+      if (totalQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+        continue;
+      }
+      BigDecimal totalCost = costBySymbol.getOrDefault(symbol, BigDecimal.ZERO);
+      BigDecimal avgPrice = totalCost.divide(totalQuantity, 8, RoundingMode.HALF_UP);
+      grouped.add(new Share(stockBySymbol.get(symbol), totalQuantity, avgPrice));
+    }
+    return grouped;
+  }
+
+  public void setPlayerStatusOverride(PlayerStatus status) {
+    statusOverride = status;
+    player.setStatus(status);
+  }
+
+  public void clearPlayerStatusOverride() {
+    statusOverride = null;
+    player.calculateStatus();
   }
 
   public boolean isOwned(String symbol) {
@@ -277,7 +343,39 @@ public final class GameController {
 
   public int maxBuyQuantity(Stock stock) {
     BigDecimal cost = unitCostWithFee(stock);
-    return player.getMoney().divide(cost, 0, RoundingMode.DOWN).max(BigDecimal.ZERO).intValue();
+    BigDecimal byCash = player.getMoney().divide(cost, 0, RoundingMode.DOWN).max(BigDecimal.ZERO);
+    BigDecimal remainingCap = getStockOwnershipCap(stock).subtract(getOwnedQuantity(stock.getSymbol()));
+    BigDecimal cappedRemaining = remainingCap.max(BigDecimal.ZERO);
+    return byCash.min(cappedRemaining).intValue();
+  }
+
+  public BigDecimal getStockOwnershipCap(Stock stock) {
+    return calculateStockOwnershipCap(stock);
+  }
+
+  private BigDecimal calculateStockOwnershipCap(Stock stock) {
+    BigDecimal initialPrice = stock.getHistoricalPrices().isEmpty()
+        ? stock.getSalesPrice()
+        : stock.getHistoricalPrices().get(0);
+    if (initialPrice.compareTo(BigDecimal.ZERO) <= 0) {
+      return BigDecimal.valueOf(MAX_BASE_CAP)
+          .multiply(GLOBAL_CAP_MULTIPLIER)
+          .setScale(0, RoundingMode.HALF_UP);
+    }
+
+    int baseCap = CAP_PRICE_FACTOR.divide(initialPrice, 0, RoundingMode.HALF_UP).intValue();
+    baseCap = Math.max(MIN_BASE_CAP, Math.min(MAX_BASE_CAP, baseCap));
+
+    BigDecimal multiplier = switch (getPlayerStatus()) {
+      case NOVICE -> BigDecimal.ONE;
+      case INVESTOR -> new BigDecimal("1.5");
+      case SPECULATOR -> new BigDecimal("2.0");
+    };
+
+    return BigDecimal.valueOf(baseCap)
+      .multiply(multiplier)
+      .multiply(GLOBAL_CAP_MULTIPLIER)
+      .setScale(0, RoundingMode.HALF_UP);
   }
 
   // ── Dev-panel helpers ─────────────────────────────────────────────────────

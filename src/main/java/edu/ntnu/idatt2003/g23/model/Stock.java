@@ -7,6 +7,8 @@ import java.util.List;
 // Represents a stock with its symbol, company name, and a list of historical prices. Provides methods to retrieve stock information and add new sales prices.
 public class Stock {
 
+  private static final BigDecimal MIN_PERCENT_BASE = new BigDecimal("0.10");
+
   public enum Volatility {
 
     // Behavior for each value is implemented in Exchange.java#advance() (see src/main/java/edu/ntnu/idatt2003/g23/model/Exchange.java)
@@ -144,7 +146,8 @@ public class Stock {
     if (prev.compareTo(BigDecimal.ZERO) == 0) {
       return BigDecimal.ZERO;
     }
-    return current.subtract(prev).divide(prev, 6, RoundingMode.HALF_UP)
+    BigDecimal effectiveBase = prev.abs().max(MIN_PERCENT_BASE);
+    return current.subtract(prev).divide(effectiveBase, 6, RoundingMode.HALF_UP)
         .multiply(BigDecimal.valueOf(100));
   }
 
@@ -183,7 +186,8 @@ public class Stock {
     if (from.compareTo(BigDecimal.ZERO) == 0) {
       return BigDecimal.ZERO;
     }
-    return to.subtract(from).divide(from, 6, RoundingMode.HALF_UP)
+    BigDecimal effectiveBase = from.abs().max(MIN_PERCENT_BASE);
+    return to.subtract(from).divide(effectiveBase, 6, RoundingMode.HALF_UP)
         .multiply(BigDecimal.valueOf(100));
   }
 }

@@ -99,9 +99,18 @@ public class HomePageMusicController {
 
   /**
    * Instantly cuts the main theme, plays the game-start sting at {@code sfxVolume},
-   * then fades the ambience in from silence over {@value} seconds once the sting ends.
+   * then fades ambience in once the sting ends.
    */
   public void playGameStartThenAmbience(double sfxVolume) {
+    playGameStartThenAmbience(sfxVolume, true);
+  }
+
+  /**
+   * Instantly cuts the main theme and plays the game-start sting at {@code sfxVolume}.
+   *
+   * @param continueWithAmbience whether ambience should start after the sting
+   */
+  public void playGameStartThenAmbience(double sfxVolume, boolean continueWithAmbience) {
     stop(); // cut main theme immediately
     try {
       List<String> candidates = new ArrayList<>(GAME_START_TRACKS);
@@ -120,11 +129,15 @@ public class HomePageMusicController {
         if (mediaPlayer == sfxPlayer) {
           mediaPlayer = null;
         }
-        fadeInAmbience();
+        if (continueWithAmbience) {
+          fadeInAmbience();
+        }
       });
       sfxPlayer.play();
     } catch (Exception ignored) {
-      fadeInAmbience();
+      if (continueWithAmbience) {
+        fadeInAmbience();
+      }
     }
   }
 

@@ -132,7 +132,7 @@ public final class SetupView {
 
     ToggleGroup dataGroup = new ToggleGroup();
 
-    ToggleButton csvBtn = new ToggleButton("\uD83D\uDCC2   Import CSV");
+    ToggleButton csvBtn = new ToggleButton("\uD83D\uDCC2   Custom Stocks");
     csvBtn.getStyleClass().add("data-toggle-button");
     csvBtn.setToggleGroup(dataGroup);
     csvBtn.setMaxWidth(Double.MAX_VALUE);

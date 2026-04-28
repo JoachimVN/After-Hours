@@ -469,7 +469,7 @@ public final class SettingsView {
         keybindGroup("New Game Setup", new String[][] {
             {"Enter", "Confirm / advance step"},
         }),
-        keybindGroup("Import CSV / Save Select", new String[][] {
+        keybindGroup("Custom Stocks / Save Select", new String[][] {
             {"Enter / Space", "Confirm selection"},
             {"Esc", "Go back"},
         }),

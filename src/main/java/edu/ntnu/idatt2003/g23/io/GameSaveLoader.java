@@ -20,7 +20,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 
@@ -86,6 +88,9 @@ public final class GameSaveLoader {
     // Autosaves (listed separately — dedicated folder)
     Path autoDir = GameSaveExporter.AUTOSAVE_DIR;
     if (Files.exists(autoDir)) {
+      Map<String, SaveMeta> newestBySlot = new HashMap<>();
+      Map<String, Long> newestTimeBySlot = new HashMap<>();
+      List<Path> staleAutosaveDirs = new ArrayList<>();
       try (var stream = Files.list(autoDir)) {
         stream.filter(Files::isDirectory).forEach(saveDir -> {
           Path json = saveDir.resolve("save.json");
@@ -93,10 +98,29 @@ public final class GameSaveLoader {
             return;
           }
           try {
-            result.add(readMeta(saveDir, json));
+            SaveMeta meta = readMeta(saveDir, json);
+            String slot = normalizeAutosaveSlot(saveDir.getFileName().toString());
+            long modified = Files.getLastModifiedTime(json).toMillis();
+
+            if (!newestBySlot.containsKey(slot) || modified > newestTimeBySlot.get(slot)) {
+              SaveMeta previous = newestBySlot.put(slot, meta);
+              newestTimeBySlot.put(slot, modified);
+              if (previous != null) {
+                staleAutosaveDirs.add(previous.saveDir());
+              }
+            } else {
+              staleAutosaveDirs.add(saveDir);
+            }
           } catch (IOException ignored) {
           }
         });
+      }
+      result.addAll(newestBySlot.values());
+      for (Path staleDir : staleAutosaveDirs) {
+        try {
+          deleteSave(staleDir);
+        } catch (IOException ignored) {
+        }
       }
     }
 
@@ -297,7 +321,9 @@ public final class GameSaveLoader {
       String sort = us.has("stockSort") ? us.get("stockSort").getAsString() : "NAME";
       String sel = us.has("selectedSymbol") && !us.get("selectedSymbol").isJsonNull()
           ? us.get("selectedSymbol").getAsString() : null;
-      uiState = new GameUiState(favs, filters, chips, sort, sel);
+      double sidebarDivider = us.has("sidebarDivider") ? us.get("sidebarDivider").getAsDouble() : 0.125;
+      double portfolioDivider = us.has("portfolioDivider") ? us.get("portfolioDivider").getAsDouble() : 0.85;
+      uiState = new GameUiState(favs, filters, chips, sort, sel, sidebarDivider, portfolioDivider);
     }
 
     return new Object[] {player, exchange, uiState};
@@ -351,6 +377,14 @@ public final class GameSaveLoader {
 
     return new SaveMeta(saveDir, displayName, profileAvatar, exchangeName, savedAt,
         week, money, netWorth, portfolioSize, totalShares, status, isAutosave);
+  }
+
+  private static String normalizeAutosaveSlot(String folderName) {
+    String normalized = folderName;
+    while (normalized.startsWith("autosave_")) {
+      normalized = normalized.substring("autosave_".length());
+    }
+    return normalized;
   }
 
   private static int deriveLegacyChickPhase(String avatar) {

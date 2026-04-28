@@ -34,6 +34,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
@@ -41,6 +42,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
@@ -70,6 +72,7 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
 
@@ -84,6 +87,7 @@ public final class GameView implements GameViewInterface {
   private final Label weekNumLbl;
   private final Arc statusProgressArc;
   private final Tooltip statusTooltip;
+  private final Button settingsBtn;
   private final Button profileBtn;
 
   private final ObservableList<Stock> allStocks;
@@ -107,14 +111,23 @@ public final class GameView implements GameViewInterface {
 
   private StackPane overlayRef = null;
   private Node rootRef = null;
+  private SplitPane hSplitRef = null;
+  private double portfolioDividerRatio = 0.85;
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
-                  DoubleSupplier sfxVolumeSupplier) {
-    this(gameController, onBack, onProfile, sfxVolumeSupplier, null);
+                    DoubleSupplier sfxVolumeSupplier) {
+            this(gameController, onBack, onProfile, null, sfxVolumeSupplier, null);
   }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
-                  DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
+                    DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
+            this(gameController, onBack, onProfile, null, sfxVolumeSupplier, initialState);
+  }
+
+  public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
+                  Runnable onSettings,
+                  DoubleSupplier sfxVolumeSupplier,
+                  GameUiState initialState) {
     this.gameController = gameController;
     this.gameController.setView(this);
 
@@ -125,6 +138,7 @@ public final class GameView implements GameViewInterface {
     this.weekNumLbl = new Label();
     this.statusProgressArc = new Arc(0, 0, 11, 11, 90, 0);
     this.statusTooltip = new Tooltip();
+    this.settingsBtn = new Button();
     this.profileBtn = new Button();
 
     this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
@@ -287,9 +301,8 @@ public final class GameView implements GameViewInterface {
 
     VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockScroll);
     leftPanel.getStyleClass().add("game-left-panel");
-    leftPanel.setPrefWidth(300);
-    leftPanel.setMinWidth(Region.USE_PREF_SIZE);
-    leftPanel.setMaxWidth(Region.USE_PREF_SIZE);
+    leftPanel.setMinWidth(160);
+    leftPanel.setMaxWidth(600);
 
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
@@ -316,17 +329,38 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setPrefHeight(180);
-    portfolioTable.setMaxHeight(220);
+    portfolioTable.setMinHeight(80);
+    VBox.setVgrow(portfolioTable, Priority.ALWAYS);
 
-    VBox rightPanel = new VBox(0, detailArea, portTitle, portfolioTable);
+    VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
+    portfolioSection.getStyleClass().add("game-portfolio-pane");
+    portfolioSection.setMinHeight(96);
+    portfolioSection.setMaxHeight(Region.USE_PREF_SIZE);
+
+    // ── Right panel: explicit vertical layout with dedicated drag handle ──
+    Region portfolioResizeHandle = new Region();
+    portfolioResizeHandle.getStyleClass().add("game-portfolio-resize-handle");
+    portfolioResizeHandle.setMinHeight(4);
+    portfolioResizeHandle.setPrefHeight(4);
+    portfolioResizeHandle.setMaxHeight(4);
+
+    VBox rightPanel = new VBox(detailArea, portfolioResizeHandle, portfolioSection);
     rightPanel.getStyleClass().add("game-right-panel");
     HBox.setHgrow(rightPanel, Priority.ALWAYS);
+    VBox.setVgrow(rightPanel, Priority.ALWAYS);
+    double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
+      ? initialState.portfolioDivider() : 0.85;
+    installPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle, initPortDivider);
 
-    // ── Body ─────────────────────────────────────────────────────────────
-    HBox body = new HBox(0, leftPanel, rightPanel);
-    HBox.setHgrow(rightPanel, Priority.ALWAYS);
-    VBox.setVgrow(body, Priority.ALWAYS);
+    // ── Body: horizontal split (sidebar | right panel) ────────────────────
+    SplitPane hSplit = new SplitPane(leftPanel, rightPanel);
+    hSplit.setOrientation(Orientation.HORIZONTAL);
+    hSplit.getStyleClass().add("game-body-split");
+    VBox.setVgrow(hSplit, Priority.ALWAYS);
+    double initSidebarDivider = (initialState != null && initialState.sidebarDivider() > 0)
+      ? initialState.sidebarDivider() : 0.125;
+    hSplit.setDividerPositions(initSidebarDivider);
+    this.hSplitRef = hSplit;
 
     // ── Sub-bar: week + next-week ─────────────────────────────────────────
     VBox weekCard = new VBox(2,
@@ -434,10 +468,20 @@ public final class GameView implements GameViewInterface {
     profileBtn.getStyleClass().add("game-icon-button");
     profileBtn.setOnAction(e -> onProfile.run());
 
+    settingsBtn.setText("⚙");
+    settingsBtn.getStyleClass().add("game-icon-button");
+    settingsBtn.setDisable(onSettings == null);
+    settingsBtn.setOnAction(e -> {
+      if (onSettings != null) {
+        onSettings.run();
+      }
+    });
+
     Region tl = new Region();
     HBox.setHgrow(tl, Priority.ALWAYS);
     HBox topBar =
-        new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill, profileBtn);
+        new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill,
+            settingsBtn, profileBtn);
     topBar.getStyleClass().add("game-top-bar");
     topBar.setAlignment(Pos.CENTER_LEFT);
 
@@ -448,7 +492,7 @@ public final class GameView implements GameViewInterface {
 
     VBox topSection = new VBox(0, topBar, subBar);
     root.setTop(topSection);
-    root.setCenter(body);
+    root.setCenter(hSplit);
 
     // ── Dev panel ─────────────────────────────────────────────────────────
     VBox devPanel = buildDevPanel();
@@ -533,12 +577,72 @@ public final class GameView implements GameViewInterface {
 
   public GameUiState getUiState() {
     String selSym = selectedStock.get() != null ? selectedStock.get().getSymbol() : null;
+    double sidebarDiv = (hSplitRef != null && hSplitRef.getDividerPositions().length > 0)
+      ? hSplitRef.getDividerPositions()[0] : 0.125;
+    double portDiv = portfolioDividerRatio;
     return new GameUiState(
         List.copyOf(favorites),
         List.copyOf(activeFilters),
         List.copyOf(filterChipOrder),
         stockSort,
-        selSym);
+        selSym,
+        sidebarDiv,
+        portDiv);
+  }
+
+  private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
+                                      Region portfolioResizeHandle, double initialRatio) {
+    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.85;
+
+    final double[] dragStartY = {0};
+    final double[] dragStartRatio = {portfolioDividerRatio};
+
+    portfolioResizeHandle.setOnMousePressed(event -> {
+      dragStartY[0] = event.getSceneY();
+      dragStartRatio[0] = portfolioDividerRatio;
+      event.consume();
+    });
+
+    portfolioResizeHandle.setOnMouseDragged(event -> {
+      double usableHeight = rightPanel.getHeight() - portfolioResizeHandle.getHeight();
+      if (usableHeight <= 0) {
+        return;
+      }
+      double deltaY = event.getSceneY() - dragStartY[0];
+      portfolioDividerRatio = dragStartRatio[0] + (deltaY / usableHeight);
+      applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle);
+      event.consume();
+    });
+
+    rightPanel.heightProperty().addListener((obs, oldHeight, newHeight) ->
+        applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle));
+    Platform.runLater(() -> applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle));
+  }
+
+  private void applyPortfolioResize(VBox rightPanel, VBox portfolioSection,
+                                    Region portfolioResizeHandle) {
+    double usableHeight = rightPanel.getHeight() - portfolioResizeHandle.getHeight();
+    if (usableHeight <= 0) {
+      return;
+    }
+
+    double minDetailHeight = Math.min(180, usableHeight * 0.7);
+    double minPortfolioHeight = Math.min(96, usableHeight * 0.7);
+    double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
+    double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
+
+    if (maxRatio < minRatio) {
+      minRatio = 0.5;
+      maxRatio = 0.5;
+    }
+
+    portfolioDividerRatio = clamp(portfolioDividerRatio, minRatio, maxRatio);
+    double portfolioHeight = Math.max(0, usableHeight * (1.0 - portfolioDividerRatio));
+
+    detailArea.setMinHeight(minDetailHeight);
+    portfolioSection.setMinHeight(portfolioHeight);
+    portfolioSection.setPrefHeight(portfolioHeight);
+    portfolioSection.setMaxHeight(portfolioHeight);
   }
 
   public void updateData() {
@@ -553,8 +657,9 @@ public final class GameView implements GameViewInterface {
 
     statusVal.setText(formatStatus(status));
     statusProgressArc.setLength(-360 * clamp01(overallProgress).doubleValue());
-    statusTooltip.setText(buildStatusTooltip(status, overallProgress, weeksTraded, targetWeeks,
-        weeksProgress, growthRatio, growthTarget, growthProgress));
+    statusTooltip.setText(null);
+    statusTooltip.setGraphic(buildStatusTooltipContent(status, overallProgress, weeksTraded,
+      targetWeeks, weeksProgress, growthRatio, growthTarget, growthProgress));
 
     weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
     cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
@@ -783,6 +888,7 @@ public final class GameView implements GameViewInterface {
 
     // ── Owned badge (right of price row) ─────────────────────────────────
     BigDecimal ownedQtyDetail = gameController.getOwnedQuantity(stock.getSymbol());
+    BigDecimal capQtyDetail = gameController.getStockOwnershipCap(stock);
     HBox priceRow = new HBox(12, price, pctBadge);
     priceRow.setAlignment(Pos.BASELINE_LEFT);
 
@@ -798,12 +904,14 @@ public final class GameView implements GameViewInterface {
     }});
 
     // Always include ownedBox so hlRow height stays constant regardless of ownership
-    Label ownedBadge = new Label(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0
-        ? ownedQtyDetail.stripTrailingZeros().toPlainString() + " owned" : "");
+    Label ownedBadge = new Label("Owned: "
+      + ownedQtyDetail.stripTrailingZeros().toPlainString()
+      + " / "
+      + capQtyDetail.stripTrailingZeros().toPlainString()
+      + " max");
     ownedBadge.getStyleClass().add("detail-owned-badge");
     VBox ownedBox = new VBox(2, labelSmall("HOLDING"), ownedBadge);
     ownedBox.setAlignment(Pos.BOTTOM_RIGHT);
-    ownedBox.setVisible(ownedQtyDetail.compareTo(BigDecimal.ZERO) > 0);
     Region hlSpacer = new Region();
     HBox.setHgrow(hlSpacer, Priority.ALWAYS);
     HBox hlRow = new HBox(24, hiBox, loBox, hlSpacer, ownedBox);
@@ -1468,9 +1576,11 @@ public final class GameView implements GameViewInterface {
       };
       List<Stock> all = gameController.getStocks();
       List<Stock> gainers = all.stream()
+          .filter(s -> s.percentageChangeOverWeeks(weeks).compareTo(BigDecimal.ZERO) > 0)
           .sorted((a, b) -> b.percentageChangeOverWeeks(weeks)
               .compareTo(a.percentageChangeOverWeeks(weeks))).limit(10).toList();
       List<Stock> losers = all.stream()
+          .filter(s -> s.percentageChangeOverWeeks(weeks).compareTo(BigDecimal.ZERO) < 0)
           .sorted((a, b) -> a.percentageChangeOverWeeks(weeks)
               .compareTo(b.percentageChangeOverWeeks(weeks))).limit(10).toList();
       VBox gainersCol = buildMoversColumn("\u25B2  TOP GAINERS", gainers, true, weeks, dismissRef);
@@ -1570,6 +1680,11 @@ public final class GameView implements GameViewInterface {
         .add(isGainers ? "market-movers-col-title-gainers" : "market-movers-col-title-losers");
 
     VBox rows = new VBox(0);
+    if (stocks.isEmpty()) {
+      Label none = new Label(isGainers ? "No gainers in this period." : "No losers in this period.");
+      none.getStyleClass().add("movers-company");
+      rows.getChildren().add(none);
+    }
     for (int i = 0; i < stocks.size(); i++) {
       Stock s = stocks.get(i);
       BigDecimal pct = s.percentageChangeOverWeeks(weeks);
@@ -1808,6 +1923,9 @@ public final class GameView implements GameViewInterface {
     table.getColumns().add(feeCol);
     table.getColumns().add(taxCol);
     table.getColumns().add(totalCol);
+    weekCol.setSortType(TableColumn.SortType.DESCENDING);
+    table.getSortOrder().add(weekCol);
+    table.sort();
     // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
     double rowH = 28;
     double headerH = 30;
@@ -1879,7 +1997,10 @@ public final class GameView implements GameViewInterface {
     titleRow.getStyleClass().add("market-movers-header");
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
-    HBox controlsRow = new HBox(10, txSearch, txFilterRow);
+    Label txSortLabel = new Label("Sort");
+    txSortLabel.getStyleClass().add("stock-row-section-label");
+
+    HBox controlsRow = new HBox(10, txSearch, txSortLabel, txFilterRow);
     controlsRow.getStyleClass().add("history-controls-row");
     controlsRow.setAlignment(Pos.CENTER_LEFT);
     HBox.setHgrow(txSearch, Priority.ALWAYS);
@@ -2014,6 +2135,10 @@ public final class GameView implements GameViewInterface {
     return value;
   }
 
+  private static double clamp(double value, double min, double max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
   private static String formatStatus(PlayerStatus status) {
     String lower = status.name().toLowerCase();
     return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
@@ -2030,7 +2155,7 @@ public final class GameView implements GameViewInterface {
     return growthRatio.setScale(2, RoundingMode.HALF_UP).toPlainString() + "x";
   }
 
-  private static String buildStatusTooltip(
+  private static VBox buildStatusTooltipContent(
       PlayerStatus status,
       BigDecimal overallProgress,
       int weeksTraded,
@@ -2039,22 +2164,53 @@ public final class GameView implements GameViewInterface {
       BigDecimal growthRatio,
       BigDecimal growthTarget,
       BigDecimal growthProgress) {
-    if (status == PlayerStatus.SPECULATOR) {
-      return "Status: Speculator\n"
-          + "Overall progress: 100.0%\n"
-          + "Weeks traded: " + weeksTraded + " / " + targetWeeks + " (" +
-          formatPercent(weeksProgress) + ")\n"
-          + "Net worth growth: " + formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget)
-          + " (" + formatPercent(growthProgress) + ")\n"
-          + "Max status reached.";
-    }
+    Label title = new Label("Player Status: " + formatStatus(status));
+    title.getStyleClass().add("chart-tooltip-week");
 
-    return "Status: " + formatStatus(status) + "\n"
-        + "Overall progress: " + formatPercent(overallProgress) + "\n"
-        + "Weeks traded: " + weeksTraded + " / " + targetWeeks + " (" +
-        formatPercent(weeksProgress) + ")\n"
-        + "Net worth growth: " + formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget)
-        + " (" + formatPercent(growthProgress) + ")";
+    String subtitle = status == PlayerStatus.SPECULATOR
+        ? "Top tier reached. Keep compounding."
+        : "Level up by filling both tracks.";
+    Label subtitleLbl = new Label(subtitle);
+    subtitleLbl.getStyleClass().add("chart-tooltip-row");
+
+    VBox overall = tooltipProgressRow("Overall", formatPercent(overallProgress), overallProgress);
+    VBox weeks = tooltipProgressRow("Weeks", weeksTraded + " / " + targetWeeks, weeksProgress);
+    VBox growth = tooltipProgressRow(
+        "Growth",
+        formatGrowth(growthRatio) + " / " + formatGrowth(growthTarget),
+        growthProgress);
+
+    VBox root = new VBox(6, title, subtitleLbl, overall, weeks, growth);
+    root.setFillWidth(true);
+    return root;
+  }
+
+  private static VBox tooltipProgressRow(String label, String value, BigDecimal progress) {
+    Label rowLabel = new Label(label + "  " + value);
+    rowLabel.getStyleClass().add("chart-tooltip-row");
+
+    double width = 108;
+    double pct = clamp01(progress).doubleValue();
+
+    Rectangle track = new Rectangle(width, 6);
+    track.setArcWidth(6);
+    track.setArcHeight(6);
+    track.setFill(Color.rgb(30, 64, 128, 0.50));
+
+    Rectangle fill = new Rectangle(width * pct, 6);
+    fill.setArcWidth(6);
+    fill.setArcHeight(6);
+    fill.setFill(Color.web("#f5a201"));
+
+    StackPane bar = new StackPane(track, fill);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.setMinWidth(width);
+    bar.setPrefWidth(width);
+    bar.setMaxWidth(width);
+
+    VBox row = new VBox(3, rowLabel, bar);
+    row.setFillWidth(true);
+    return row;
   }
 
   private VBox buildDevPanel() {
@@ -2159,6 +2315,41 @@ public final class GameView implements GameViewInterface {
       }
     });
 
+    // Status override controls
+    Label statusDisplay = new Label("Status: " + formatStatus(gameController.getPlayerStatus()));
+    statusDisplay.getStyleClass().add("dev-panel-stat");
+
+    Button statusNoviceBtn = devBtn("NOVICE");
+    Button statusInvestorBtn = devBtn("INVESTOR");
+    Button statusSpeculatorBtn = devBtn("SPECULATOR");
+    Button statusAutoBtn = devBtn("Auto Status");
+
+    Runnable refreshStatusDisplay = () ->
+        statusDisplay.setText("Status: " + formatStatus(gameController.getPlayerStatus()));
+
+    statusNoviceBtn.setOnAction(e -> {
+      gameController.setPlayerStatusOverride(PlayerStatus.NOVICE);
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    statusInvestorBtn.setOnAction(e -> {
+      gameController.setPlayerStatusOverride(PlayerStatus.INVESTOR);
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    statusSpeculatorBtn.setOnAction(e -> {
+      gameController.setPlayerStatusOverride(PlayerStatus.SPECULATOR);
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    statusAutoBtn.setOnAction(e -> {
+      gameController.clearPlayerStatusOverride();
+      refreshStatusDisplay.run();
+      updateData();
+    });
+    HBox statusRow = new HBox(4, statusNoviceBtn, statusInvestorBtn, statusSpeculatorBtn);
+    statusRow.setAlignment(Pos.CENTER_LEFT);
+
 
     VBox panel = new VBox(6,
         title,
@@ -2173,6 +2364,12 @@ public final class GameView implements GameViewInterface {
         }},
         cashRow,
         setCashRow,
+        new Label("Status:") {{
+          getStyleClass().add("dev-panel-section");
+        }},
+        statusDisplay,
+        statusRow,
+        statusAutoBtn,
         freezeBtn
     );
     panel.getStyleClass().add("dev-panel");
@@ -2211,11 +2408,14 @@ public final class GameView implements GameViewInterface {
         .add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
+    BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
     Label ownedLbl = null;
     if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
       ownedLbl = new Label("Owned: " + ownedQuantity.stripTrailingZeros().toPlainString());
       ownedLbl.getStyleClass().add("stock-owned-label");
     }
+    Label capLbl = new Label("Max: " + capQuantity.stripTrailingZeros().toPlainString());
+    capLbl.getStyleClass().add("stock-cap-label");
 
     // ── Favorite star button ─────────────────────────────────────────────
     boolean isFav = favorites.contains(stock.getSymbol());
@@ -2236,9 +2436,9 @@ public final class GameView implements GameViewInterface {
 
     VBox left;
     if (ownedLbl != null) {
-      left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl);
+      left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl, capLbl);
     } else {
-      left = new VBox(2, symLbl, compLbl, pctLbl);
+      left = new VBox(2, symLbl, compLbl, pctLbl, capLbl);
     }
     VBox right = new VBox(4);
     right.setAlignment(Pos.TOP_RIGHT);

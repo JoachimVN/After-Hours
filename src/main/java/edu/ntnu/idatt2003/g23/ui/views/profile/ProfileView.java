@@ -125,7 +125,6 @@ public final class ProfileView {
     } catch (Exception ignored) {
     }
     final int chickPhaseUnlockedValue = chickPhaseUnlocked;
-    final int weeksUsingChickValue = weeksUsingChick;
     Label avatarDisplay = new Label();
     if (isChick) {
       avatarDisplay.setGraphic(AvatarUtil.createImageView(displayedAvatar, 57.6));
@@ -303,9 +302,25 @@ public final class ProfileView {
                          .intValue()) + "%");
     statusProgressText.getStyleClass().add("profile-status-progress-text");
 
+    int weeksRemaining = Math.max(0, weeksTargetForNextStatus - controller.getPlayerWeeksTraded());
+    BigDecimal growthRemaining = growthTargetForNextStatus.subtract(growthRatio)
+      .max(BigDecimal.ZERO)
+      .setScale(2, RoundingMode.HALF_UP);
+
+    Label levelingGuide = new Label(nextStatus == null
+      ? "You are at the maximum level. Keep improving your replay stats."
+      : "To reach " + formatStatusName(nextStatus) + ": "
+        + (weeksRemaining == 0 ? "Weeks done" : (weeksRemaining + " more week(s) traded"))
+        + " and "
+        + (growthRemaining.compareTo(BigDecimal.ZERO) == 0
+        ? "growth done"
+        : ("+" + growthRemaining.toPlainString() + "x growth"))
+        + ".");
+    levelingGuide.getStyleClass().add("profile-leveling-guide");
+
     HBox statusMetrics = new HBox(10,
         statusMetricChip(
-            "Weeks " + controller.getPlayerWeeksTraded() + "/" + weeksTargetForNextStatus,
+        "Weeks Traded " + controller.getPlayerWeeksTraded() + "/" + weeksTargetForNextStatus,
             weeksProgress >= 1.0),
         statusMetricChip(
             "Growth " + growthRatio.setScale(2, RoundingMode.HALF_UP).toPlainString()
@@ -315,8 +330,8 @@ public final class ProfileView {
     statusMetrics.getStyleClass().add("profile-status-metrics");
 
     VBox statusBody =
-        new VBox(10, statusSteps, statusTargetLine, statusProgressBar, statusProgressText,
-            statusMetrics);
+      new VBox(10, statusSteps, statusTargetLine, statusProgressBar, statusProgressText,
+        statusMetrics, levelingGuide);
     statusBody.getStyleClass().add("profile-status-body");
     VBox statusCard = statCard("Status Progression", statusBody);
     statusCard.getStyleClass().add("profile-status-card");
