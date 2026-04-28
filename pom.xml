@@ -76,6 +76,9 @@
                 <mainClass>edu.ntnu.idatt2003.g23.App</mainClass>
                 <options>
                   <option>--enable-native-access=javafx.graphics,javafx.media</option>
+                  <option>-Dglass.win.uiScale=1.25</option>
+                  <option>-Dglass.gtk.uiScale=1.25</option>
+                  <option>-Dglass.mac.uiScale=1.25</option>
                 </options>
               </configuration>
             </plugin>
