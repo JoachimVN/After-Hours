@@ -1,5 +1,12 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
@@ -25,15 +32,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import java.nio.file.Path;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
 
 public final class SettingsView {
 
@@ -254,7 +254,20 @@ public final class SettingsView {
     // The view only notifies the controller; the controller applies the change to the stage.
     VBox fullscreenRow =
         toggleRow("Fullscreen", initialFullscreen, false, false, onFullscreenChange);
-    VBox resBlock = buildResolutionBlock(onResolutionChange, onMaximize);
+    // Extract the toggle button so resolution/maximize can sync it to OFF.
+    ToggleButton fullscreenToggle =
+        (ToggleButton) ((HBox) fullscreenRow.getChildren().get(0)).getChildren().get(1);
+
+    Consumer<int[]> wrappedResolutionChange = onResolutionChange == null ? null : dims -> {
+      onResolutionChange.accept(dims);
+      fullscreenToggle.setSelected(false);
+    };
+    Runnable wrappedMaximize = onMaximize == null ? null : () -> {
+      onMaximize.run();
+      fullscreenToggle.setSelected(false);
+    };
+
+    VBox resBlock = buildResolutionBlock(wrappedResolutionChange, wrappedMaximize);
     return sectionCard("\uD83D\uDDA5  Display", animRow, fullscreenRow, resBlock);
   }
 
