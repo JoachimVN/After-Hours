@@ -15,7 +15,12 @@ import java.util.Set;
 public class SfxController {
 
   public static final String SETTINGS = "/audio/sfx/Settings.mp3";
+  public static final String SETTINGS_ON = "/audio/sfx/Settings_On.mp3";
+  public static final String SETTINGS_OFF = "/audio/sfx/Settings_Off.mp3";
   public static final String BACK = "/audio/sfx/Back.mp3";
+  public static final String PROFILE = "/audio/sfx/Profile.mp3";
+  public static final String Select = "/audio/sfx/Select.mp3";
+  public static final String SELECT = "/audio/sfx/Select.mp3";
   public static final String PLAY = "/audio/sfx/play/Play.mp3";
   public static final String PLAY2 = "/audio/sfx/play/Play2.mp3";
   public static final String PLAY3 = "/audio/sfx/play/Play3.mp3";

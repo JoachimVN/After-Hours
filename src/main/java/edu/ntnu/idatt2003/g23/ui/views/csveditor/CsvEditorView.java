@@ -124,6 +124,13 @@ public final class CsvEditorView {
     // Line # (read-only)
     TableColumn<CsvRow, Number> lineCol = new TableColumn<>("#");
     lineCol.setCellValueFactory(c -> c.getValue().lineNumberProperty());
+    lineCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(Number item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty ? null : String.valueOf(getIndex() + 1));
+      }
+    });
     lineCol.setPrefWidth(52);
     lineCol.setMinWidth(52);
     lineCol.setMaxWidth(80);
@@ -330,7 +337,7 @@ public final class CsvEditorView {
     addRowBtn.getStyleClass().add("secondary-button");
     addRowBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
     addRowBtn.setOnAction(e -> {
-      int nextLine = rows.size() > 0 ? rows.get(rows.size() - 1).getLineNumber() + 1 : 1;
+      int nextLine = rows.size() + 1;
       CsvRow newRow = new CsvRow(nextLine, "", "", "", "");
       rows.add(newRow);
       table.getSelectionModel().select(newRow);
@@ -615,7 +622,7 @@ public final class CsvEditorView {
   }
 
   /**
-   * Jumps to the row whose {@code lineNumber} matches the given string.
+   * Jumps to a displayed row number (1-based).
    * Silently does nothing if the text is not a valid integer or not found.
    */
   private static void handleJumpToLine(TableView<CsvRow> table,
@@ -623,7 +630,7 @@ public final class CsvEditorView {
     try {
       int target = Integer.parseInt(text);
       for (int i = 0; i < rows.size(); i++) {
-        if (rows.get(i).getLineNumber() == target) {
+        if (i + 1 == target) {
           table.scrollTo(i);
           table.getSelectionModel().select(i);
           return;

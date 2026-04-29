@@ -62,11 +62,11 @@ import javafx.util.Duration;
  * <p>
  * Music rules:
  * - Home music plays on: Home, Setup, Custom Stock, Settings
- * - Ambience plays on:   GameView only
- * - navigateKeepMusic()  never touches music
- * - navigateToGame()     fades current → ambience
- * - goHome()             fades ambience → home music  (from game context)
- * - goHomeKeepMusic()    no music change              (from non-game contexts)
+ * - Ambience plays on: GameView only
+ * - navigateKeepMusic() never touches music
+ * - navigateToGame() fades current → ambience
+ * - goHome() fades ambience → home music (from game context)
+ * - goHomeKeepMusic() no music change (from non-game contexts)
  */
 public class App extends Application {
 
@@ -98,7 +98,7 @@ public class App extends Application {
   private boolean devModeEnabled = false;
   private boolean autosaveEnabled = false;
   private boolean autosaveToast = true;
-  private String currentAutosaveId = null;   // unique per game instance
+  private String currentAutosaveId = null; // unique per game instance
   private boolean fullscreenEnabled = false;
   private double musicVolume = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
   private double sfxVolume = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
@@ -149,8 +149,7 @@ public class App extends Application {
           navigateKeepMusic(s);
           fadeInPage(s);
         },
-        Platform::exit
-    );
+        Platform::exit);
 
     backgroundCanvas = new BackgroundCanvas();
     backgroundCanvas.setAnimationsEnabled(animationsEnabled);
@@ -179,8 +178,7 @@ public class App extends Application {
         getClass().getResource("/css/csv-editor.css").toExternalForm(),
         getClass().getResource("/css/no-stocks.css").toExternalForm(),
         getClass().getResource("/css/profile.css").toExternalForm(),
-        getClass().getResource("/css/scrollbar.css").toExternalForm()
-    );
+        getClass().getResource("/css/scrollbar.css").toExternalForm());
 
     configureStage(stage, scene);
     // Respect fullscreen setting; otherwise keep forced maximized startup.
@@ -232,8 +230,7 @@ public class App extends Application {
         currentPlayer,
         currentExchange,
         currentSavePath,
-        currentUiState
-    );
+        currentUiState);
     Parent saveSelectPage = new SaveSelectView(ctrl).getRoot();
     navigateKeepMusic(saveSelectPage);
     fadeInPage(saveSelectPage);
@@ -255,14 +252,13 @@ public class App extends Application {
     currentGameController = null;
     currentUiState = null;
     currentSetupPage = new SetupView(
-        withBack(this::goHomeKeepMusic),
+        withBack(this::goToSaveSelect),
         (name, cash, csvResource) -> startGame(name, cash, csvResource),
         (name, cash) -> {
           sfxController.play(SfxController.PLAY3, Math.min(sfxController.getVolume() * 1.5, 1.0));
           goToCustomStocks(name, cash);
         },
-        currentProfileAvatar
-    ).getRoot();
+        currentProfileAvatar).getRoot();
     navigateKeepMusic(currentSetupPage);
   }
 
@@ -276,8 +272,7 @@ public class App extends Application {
         () -> openCsvEditorFromImport(new CsvParseResult(List.of()), name, cash, selectedFile),
         file -> openCsvEditorFromImport(file, name, cash),
         file -> startGameWithCsv(name, cash, file),
-        selectedFile
-    );
+        selectedFile);
     navigateKeepMusic(importPage);
     fadeInPage(importPage);
   }
@@ -305,7 +300,6 @@ public class App extends Application {
         .map(m -> m.name())
         .findFirst().orElse("Market");
   }
-
 
   private void startGameWithCsv(String name, double cash, File csvFile) {
     new Thread(() -> {
@@ -336,8 +330,7 @@ public class App extends Application {
         result,
         withBack(this::goHomeKeepMusic),
         rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
-        (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file)
-    );
+        (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
     navigateKeepMusic(editorPage);
     fadeInPage(editorPage);
   }
@@ -356,13 +349,12 @@ public class App extends Application {
   }
 
   private void openCsvEditorFromImport(CsvParseResult result, String name, double cash,
-                                       File selectedFile) {
+      File selectedFile) {
     Parent editorPage = CsvEditorView.build(
         result,
         withBack(() -> goToCustomStocks(name, cash, selectedFile)),
         rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
-        (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file)
-    );
+        (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
     navigateKeepMusic(editorPage);
     fadeInPage(editorPage);
   }
@@ -374,7 +366,7 @@ public class App extends Application {
   }
 
   private void saveCsvRowsAndStartGame(String name, double cash,
-                                       List<edu.ntnu.idatt2003.g23.io.CsvRow> rows, File file) {
+      List<edu.ntnu.idatt2003.g23.io.CsvRow> rows, File file) {
     try {
       edu.ntnu.idatt2003.g23.io.StockCsvExporter.writeCsvRows(file.toPath(), rows);
     } catch (IOException e) {
@@ -385,7 +377,7 @@ public class App extends Application {
   }
 
   private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor,
-                                 String exchangeName) {
+      String exchangeName) {
     if (stocks.isEmpty()) {
       showNoStocksPage(fromEditor);
       return;
@@ -399,7 +391,7 @@ public class App extends Application {
   }
 
   private void buildAndStartGameFromSave(Player player, Exchange exchange,
-                                         java.nio.file.Path savePath, GameUiState uiState) {
+      java.nio.file.Path savePath, GameUiState uiState) {
     if (exchange.getStocks().isEmpty()) {
       showNoStocksPage(false);
       return;
@@ -409,50 +401,53 @@ public class App extends Application {
     currentSavePath = savePath;
     currentProfileAvatar = player.getProfileAvatar();
     // Each game instance gets a distinct autosave slot:
-    //  • loaded saves  → use the existing save folder name
-    //  • new games     → use playerName + start timestamp
+    // • loaded saves → use the existing save folder name
+    // • new games → use playerName + start timestamp
     if (savePath != null) {
       currentAutosaveId = normalizeAutosaveSlotId(savePath.getFileName().toString());
     } else {
       String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
       currentAutosaveId = safeName + "_"
           + java.time.LocalDateTime.now().format(
-          java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+              java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
     }
     GameController gameController = new GameController(player, exchange);
     Runnable onGameProfile = () -> {
+      sfxController.play(SfxController.PROFILE);
       navigateKeepMusic(buildProfileView(
-        () -> {
-          sfxController.play(SfxController.BACK,
-            Math.min(sfxController.getVolume() * 1.5, 1.0));
-          if (currentGameView != null) {
-            currentGameView.updateData();
-          }
-          navigateKeepMusic(currentGamePage);
-        },
-        this::performSave));
+          () -> {
+            sfxController.play(SfxController.BACK,
+                Math.min(sfxController.getVolume() * 1.5, 1.0));
+            if (currentGameView != null) {
+              currentGameView.updateData();
+            }
+            navigateKeepMusic(currentGamePage);
+          },
+          this::performSave));
     };
     Runnable onGameSettings = () -> navigateKeepMusic(buildSettingsView(
-      () -> navigateKeepMusic(currentGamePage),
-      this::performSave));
+        () -> navigateKeepMusic(currentGamePage),
+        this::performSave));
 
     GameView gameview = (uiState == null)
-      ? new GameView(
-        gameController,
-        withBack(this::goHome),
-        onGameProfile,
-        onGameSettings,
-        sfxController::getVolume,
-        null
-      )
-      : new GameView(
-        gameController,
-        withBack(this::goHome),
-        onGameProfile,
-        onGameSettings,
-        sfxController::getVolume,
-        uiState
-      );
+        ? new GameView(
+            gameController,
+            withBack(this::goHome),
+            onGameProfile,
+            onGameSettings,
+            () -> sfxController.play(SfxController.SELECT),
+            () -> sfxController.play(SfxController.SELECT),
+            sfxController::getVolume,
+            null)
+        : new GameView(
+            gameController,
+            withBack(this::goHome),
+            onGameProfile,
+            onGameSettings,
+            () -> sfxController.play(SfxController.SELECT),
+            () -> sfxController.play(SfxController.SELECT),
+            sfxController::getVolume,
+            uiState);
     currentGameController = gameController;
     currentGameView = gameview;
     currentGamePage = gameview.getRoot();
@@ -510,8 +505,7 @@ public class App extends Application {
   }
 
   private void showNoStocksPage(boolean fromEditor) {
-    Parent page =
-        NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, withBack(this::goHome));
+    Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, withBack(this::goHome));
     navigateToGame(page);
     Platform.runLater(() -> {
       if (musicMuted) {
@@ -559,7 +553,8 @@ public class App extends Application {
       navigateKeepMusic(buildSettingsView(onBack, onSave));
     };
 
-    // Use simpler overload for home/setup (onSave == null), full overload for in-game (onSave != null)
+    // Use simpler overload for home/setup (onSave == null), full overload for
+    // in-game (onSave != null)
     if (onSave == null) {
       return SettingsView.build(
           onBackWithSfx,
@@ -572,6 +567,7 @@ public class App extends Application {
           musicVolume,
           musicMuted,
           muted -> {
+            playSettingsToggleSfx(!muted);
             musicMuted = muted;
             if (muted) {
               homePageMusicController.stop();
@@ -588,11 +584,13 @@ public class App extends Application {
           sfxVolume,
           sfxMuted,
           muted -> {
+            playSettingsToggleSfx(!muted);
             sfxMuted = muted;
             sfxController.setVolume(muted ? 0.0 : sfxVolume);
             saveSettings();
           },
           enabled -> {
+            playSettingsToggleSfx(enabled);
             animationsEnabled = enabled;
             backgroundCanvas.setAnimationsEnabled(enabled);
             saveSettings();
@@ -600,16 +598,19 @@ public class App extends Application {
           animationsEnabled,
           fullscreenEnabled,
           enabled -> {
+            playSettingsToggleSfx(enabled);
             fullscreenEnabled = enabled;
             primaryStage.setFullScreen(enabled);
             saveSettings();
           },
           enabled -> {
+            playSettingsToggleSfx(enabled);
             devModeEnabled = enabled;
             saveSettings();
           },
           devModeEnabled,
           enabled -> {
+            playSettingsToggleSfx(enabled);
             autosaveEnabled = enabled;
             if (enabled) {
               startAutosaveTimer();
@@ -620,11 +621,11 @@ public class App extends Application {
           },
           autosaveEnabled,
           enabled -> {
+            playSettingsToggleSfx(enabled);
             autosaveToast = enabled;
             saveSettings();
           },
-          autosaveToast
-      );
+          autosaveToast);
     } else {
       return SettingsView.build(
           onBackWithSfx,
@@ -637,6 +638,7 @@ public class App extends Application {
           musicVolume,
           musicMuted,
           muted -> {
+            playSettingsToggleSfx(!muted);
             musicMuted = muted;
             if (muted) {
               homePageMusicController.stop();
@@ -653,11 +655,13 @@ public class App extends Application {
           sfxVolume,
           sfxMuted,
           muted -> {
+            playSettingsToggleSfx(!muted);
             sfxMuted = muted;
             sfxController.setVolume(muted ? 0.0 : sfxVolume);
             saveSettings();
           },
           enabled -> {
+            playSettingsToggleSfx(enabled);
             animationsEnabled = enabled;
             backgroundCanvas.setAnimationsEnabled(enabled);
             saveSettings();
@@ -665,6 +669,7 @@ public class App extends Application {
           animationsEnabled,
           fullscreenEnabled,
           enabled -> {
+            playSettingsToggleSfx(enabled);
             fullscreenEnabled = enabled;
             primaryStage.setFullScreen(enabled);
             saveSettings();
@@ -679,13 +684,16 @@ public class App extends Application {
             primaryStage.setFullScreen(false);
             primaryStage.setMaximized(true);
           },
-          file -> { /* export already completed in view; reserved for future controller logic */ },
+          file -> {
+            /* export already completed in view; reserved for future controller logic */ },
           enabled -> {
+            playSettingsToggleSfx(enabled);
             devModeEnabled = enabled;
             saveSettings();
           },
           devModeEnabled,
           enabled -> {
+            playSettingsToggleSfx(enabled);
             autosaveEnabled = enabled;
             if (enabled) {
               startAutosaveTimer();
@@ -696,6 +704,7 @@ public class App extends Application {
           },
           autosaveEnabled,
           enabled -> {
+            playSettingsToggleSfx(enabled);
             autosaveToast = enabled;
             saveSettings();
           },
@@ -707,8 +716,7 @@ public class App extends Application {
           currentGameController != null ? name -> {
             currentGameController.setPlayerName(name);
             onSave.run();
-          } : null
-      );
+          } : null);
     }
   }
 
@@ -716,7 +724,16 @@ public class App extends Application {
     if (currentGameController == null) {
       return buildSettingsView(onBackToGame, onSave);
     }
-    ProfileController profileController = new ProfileController(currentGameController);
+    ProfileController profileController = new ProfileController(
+        currentGameController,
+        () -> currentGameView == null ? List.of() : currentGameView.getFavoriteSymbolsSnapshot(),
+        symbol -> {
+          if (currentGameView != null) {
+            currentGameView.toggleFavoriteSymbol(symbol);
+            onSave.run();
+          }
+        },
+        symbol -> currentGameView != null && currentGameView.isFavoriteSymbol(symbol));
     Runnable openSettingsFromProfile = () -> {
       sfxController.play(SfxController.SETTINGS);
       navigateKeepMusic(buildSettingsView(
@@ -738,16 +755,22 @@ public class App extends Application {
         name -> {
           currentGameController.setPlayerName(name);
           onSave.run();
-        }
-    );
+        },
+        symbol -> {
+          navigateKeepMusic(currentGamePage);
+          if (currentGameView != null) {
+            currentGameView.selectStockBySymbol(symbol);
+          }
+        });
   }
 
   private void saveSettings() {
-    // Only persist a custom size when we actually have one (non-fullscreen, non-maximised)
-    int savedW = (primaryStage.isFullScreen() || primaryStage.isMaximized()) ? windowWidth :
-        (int) primaryStage.getWidth();
-    int savedH = (primaryStage.isFullScreen() || primaryStage.isMaximized()) ? windowHeight :
-        (int) primaryStage.getHeight();
+    // Only persist a custom size when we actually have one (non-fullscreen,
+    // non-maximised)
+    int savedW = (primaryStage.isFullScreen() || primaryStage.isMaximized()) ? windowWidth
+        : (int) primaryStage.getWidth();
+    int savedH = (primaryStage.isFullScreen() || primaryStage.isMaximized()) ? windowHeight
+        : (int) primaryStage.getHeight();
     GlobalSettingsManager.save(new GlobalSettingsManager.Settings(
         musicVolume,
         sfxVolume,
@@ -760,6 +783,14 @@ public class App extends Application {
         devModeEnabled,
         savedW,
         savedH));
+  }
+
+  private void playSettingsToggleSfx(boolean nowOn) {
+    if (nowOn) {
+      sfxController.play(SfxController.SETTINGS_ON, sfxController.getVolume() * 0.75);
+    } else {
+      sfxController.play(SfxController.SETTINGS_OFF);
+    }
   }
 
   private String normalizeAutosaveSlotId(String slotId) {
@@ -970,4 +1001,3 @@ public class App extends Application {
     launch(args);
   }
 }
-

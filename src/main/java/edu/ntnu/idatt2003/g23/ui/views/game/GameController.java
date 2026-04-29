@@ -271,7 +271,13 @@ public final class GameController {
   }
 
   public BigDecimal getPlayerStatusProgress() {
+    getPlayerStatus();
     return player.calculateStatusProgress();
+  }
+
+  public BigDecimal getPlayerStatusProgress(PlayerStatus targetStatus) {
+    getPlayerStatus();
+    return player.calculateStatusProgress(targetStatus);
   }
 
   public int getPlayerWeeksTraded() {
@@ -279,11 +285,26 @@ public final class GameController {
   }
 
   public int getPlayerWeeksTargetForNextStatus() {
+    getPlayerStatus();
     return player.getWeeksTargetForNextStatus();
   }
 
+  public int getPlayerWeeksTargetForStatus(PlayerStatus targetStatus) {
+    return switch (targetStatus) {
+      case NOVICE -> 1;
+      case INVESTOR -> PlayerStatus.NOVICE.getWeeksTargetForNextStatus();
+      case SPECULATOR -> PlayerStatus.INVESTOR.getWeeksTargetForNextStatus();
+    };
+  }
+
   public BigDecimal getPlayerWeeksProgress() {
+    getPlayerStatus();
     return player.calculateWeeksProgress();
+  }
+
+  public BigDecimal getPlayerWeeksProgress(PlayerStatus targetStatus) {
+    getPlayerStatus();
+    return player.calculateWeeksProgress(targetStatus);
   }
 
   public BigDecimal getPlayerGrowthRatio() {
@@ -291,11 +312,26 @@ public final class GameController {
   }
 
   public BigDecimal getPlayerGrowthTargetForNextStatus() {
+    getPlayerStatus();
     return player.getGrowthTargetForNextStatus();
   }
 
+  public BigDecimal getPlayerGrowthTargetForStatus(PlayerStatus targetStatus) {
+    return switch (targetStatus) {
+      case NOVICE -> BigDecimal.ONE;
+      case INVESTOR -> PlayerStatus.NOVICE.getGrowthTargetForNextStatus();
+      case SPECULATOR -> PlayerStatus.INVESTOR.getGrowthTargetForNextStatus();
+    };
+  }
+
   public BigDecimal getPlayerNetWorthProgress() {
+    getPlayerStatus();
     return player.calculateNetWorthProgress();
+  }
+
+  public BigDecimal getPlayerNetWorthProgress(PlayerStatus targetStatus) {
+    getPlayerStatus();
+    return player.calculateNetWorthProgress(targetStatus);
   }
 
   public List<Share> getPortfolioShares() {

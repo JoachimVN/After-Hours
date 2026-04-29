@@ -250,9 +250,9 @@
 .settings-keybind-key {
     -fx-font-size: 12;
     -fx-font-weight: bold;
-    -fx-text-fill: #f5a201;
-    -fx-background-color: rgba(245, 162, 1, 0.10);
-    -fx-border-color: rgba(245, 162, 1, 0.30);
+    -fx-text-fill: #a9d8ff;
+    -fx-background-color: rgba(73, 149, 214, 0.14);
+    -fx-border-color: rgba(116, 181, 235, 0.42);
     -fx-border-radius: 5;
     -fx-background-radius: 5;
     -fx-padding: 3 10 3 10;
@@ -266,7 +266,7 @@
 /* ── Keybind popup overlay ───────────────────────────────────────────────── */
 
 .keybind-popup-dim {
-    -fx-background-color: rgba(0, 0, 0, 0.70);
+    -fx-background-color: rgba(0, 0, 0, 0.60);
 }
 
 .keybind-popup-card {
@@ -280,13 +280,13 @@
 .keybind-popup-title {
     -fx-font-size: 17;
     -fx-font-weight: bold;
-    -fx-text-fill: #f5a201;
+    -fx-text-fill: #a9d8ff;
 }
 
 .keybind-popup-group {
     -fx-font-size: 10;
     -fx-font-weight: bold;
-    -fx-text-fill: rgba(245, 162, 1, 0.60);
+    -fx-text-fill: rgba(160, 205, 242, 0.70);
     -fx-padding: 2 0 1 0;
 }
 

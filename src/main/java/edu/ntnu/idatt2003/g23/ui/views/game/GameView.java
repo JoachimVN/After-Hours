@@ -89,6 +89,8 @@ public final class GameView implements GameViewInterface {
   private final Tooltip statusTooltip;
   private final Button settingsBtn;
   private final Button profileBtn;
+  private final Runnable onPanelOpen;
+  private final Runnable onStockSelectionChanged;
 
   private final ObservableList<Stock> allStocks;
   private final FilteredList<Stock> filteredStocks;
@@ -116,16 +118,19 @@ public final class GameView implements GameViewInterface {
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
-            this(gameController, onBack, onProfile, null, sfxVolumeSupplier, null);
+        this(gameController, onBack, onProfile, null, null, null, sfxVolumeSupplier, null);
   }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
-            this(gameController, onBack, onProfile, null, sfxVolumeSupplier, initialState);
+        this(gameController, onBack, onProfile, null, null, null,
+      sfxVolumeSupplier, initialState);
   }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                   Runnable onSettings,
+        Runnable onPanelOpen,
+        Runnable onStockSelectionChanged,
                   DoubleSupplier sfxVolumeSupplier,
                   GameUiState initialState) {
     this.gameController = gameController;
@@ -140,6 +145,8 @@ public final class GameView implements GameViewInterface {
     this.statusTooltip = new Tooltip();
     this.settingsBtn = new Button();
     this.profileBtn = new Button();
+    this.onPanelOpen = onPanelOpen;
+    this.onStockSelectionChanged = onStockSelectionChanged;
 
     this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
     this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
@@ -216,6 +223,10 @@ public final class GameView implements GameViewInterface {
 
     // ── Search field listener ──────────────────────────────────────────────
     searchField.textProperty().addListener((obs, old, val) -> applyFilter());
+    searchField.setOnAction(ev -> {
+      notifyPanelOpen();
+      applyFilter();
+    });
 
     // ── Stock filter chips (multi-select, drag-reorderable) ───────────────
     rebuildFilterChips();
@@ -247,6 +258,7 @@ public final class GameView implements GameViewInterface {
     sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
 
     sortName.setOnAction(ev -> {
+      notifyPanelOpen();
       if (sortName.getStyleClass().contains("stock-sort-chip-active")) {
         stockSort = stockSort.equals("NAME_DESC") ? "NAME" : "NAME_DESC";
       } else {
@@ -259,6 +271,7 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
     sortPrice.setOnAction(ev -> {
+      notifyPanelOpen();
       if (sortPrice.getStyleClass().contains("stock-sort-chip-active")) {
         // toggle direction
         stockSort = stockSort.equals("PRICE_DESC") ? "PRICE_ASC" : "PRICE_DESC";
@@ -272,6 +285,7 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
     sortChg.setOnAction(ev -> {
+      notifyPanelOpen();
       if (sortChg.getStyleClass().contains("stock-sort-chip-active")) {
         stockSort = stockSort.equals("CHG_DESC") ? "CHG_ASC" : "CHG_DESC";
       } else {
@@ -326,6 +340,9 @@ public final class GameView implements GameViewInterface {
               .findFirst()
               .orElse(selectedShareStock);
 
+          if (selectedStock.get() == null || !symbol.equals(selectedStock.get().getSymbol())) {
+            notifyStockSelectionChanged();
+          }
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
@@ -426,6 +443,7 @@ public final class GameView implements GameViewInterface {
     Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
     marketMoversBtn.getStyleClass().add("market-movers-button");
     marketMoversBtn.setOnAction(e -> {
+      notifyPanelOpen();
       showMarketMovers();
     });
     VBox nextWeekStack = new VBox(2, calmDownLbl, nextWeekBtn);
@@ -435,7 +453,10 @@ public final class GameView implements GameViewInterface {
 
     Button historyBtn = new Button("\uD83D\uDCCB  History");
     historyBtn.getStyleClass().add("market-movers-button");
-    historyBtn.setOnAction(e -> showTransactionHistory());
+    historyBtn.setOnAction(e -> {
+      notifyPanelOpen();
+      showTransactionHistory();
+    });
 
     HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllHoldingsBtn, subSpacer, historyBtn,
         marketMoversBtn);
@@ -590,6 +611,27 @@ public final class GameView implements GameViewInterface {
         portDiv);
   }
 
+  public List<String> getFavoriteSymbolsSnapshot() {
+    return List.copyOf(favorites);
+  }
+
+  public boolean isFavoriteSymbol(String symbol) {
+    return symbol != null && favorites.contains(symbol);
+  }
+
+  public void toggleFavoriteSymbol(String symbol) {
+    if (symbol == null || symbol.isBlank()) {
+      return;
+    }
+    if (favorites.contains(symbol)) {
+      favorites.remove(symbol);
+    } else {
+      favorites.add(symbol);
+    }
+    applyFilter();
+    rebuildDetail();
+  }
+
   private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
                                       Region portfolioResizeHandle, double initialRatio) {
     this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.85;
@@ -681,6 +723,7 @@ public final class GameView implements GameViewInterface {
       allChip.getStyleClass().add("stock-filter-chip-active");
     }
     allChip.setOnAction(ev -> {
+      notifyPanelOpen();
       activeFilters.clear();
       rebuildFilterChips();
       applyFilter();
@@ -703,6 +746,7 @@ public final class GameView implements GameViewInterface {
       }
 
       chip.setOnAction(ev -> {
+        notifyPanelOpen();
         if (activeFilters.contains(key)) {
           activeFilters.remove(key);
         } else {
@@ -732,6 +776,7 @@ public final class GameView implements GameViewInterface {
         int fromIdx = filterChipOrder.indexOf(dragged);
         int toIdx = filterChipOrder.indexOf(key);
         if (fromIdx >= 0 && toIdx >= 0 && fromIdx != toIdx) {
+          notifyPanelOpen();
           filterChipOrder.remove(fromIdx);
           filterChipOrder.add(toIdx, dragged);
           rebuildFilterChips();
@@ -830,6 +875,40 @@ public final class GameView implements GameViewInterface {
         }
       }
     });
+  }
+
+  private void notifyStockSelectionChanged() {
+    if (onStockSelectionChanged != null) {
+      onStockSelectionChanged.run();
+    }
+  }
+
+  private void notifyPanelOpen() {
+    if (onPanelOpen != null) {
+      onPanelOpen.run();
+    }
+  }
+
+  public void selectStockBySymbol(String symbol) {
+    if (symbol == null || symbol.isBlank()) {
+      return;
+    }
+
+    boolean existsInFiltered = filteredStocks.stream().anyMatch(s -> s.getSymbol().equals(symbol));
+    if (!existsInFiltered) {
+      searchField.setText("");
+    }
+
+    allStocks.stream()
+        .filter(s -> s.getSymbol().equals(symbol))
+        .findFirst()
+        .ifPresent(target -> {
+          if (selectedStock.get() == null || !symbol.equals(selectedStock.get().getSymbol())) {
+            notifyStockSelectionChanged();
+          }
+          selectedStock.set(target);
+          focusStockCardInList(symbol);
+        });
   }
 
   private void rebuildDetail() {
@@ -1592,6 +1671,7 @@ public final class GameView implements GameViewInterface {
     rebuildRef[0].run();
 
     tab1w.setOnAction(ev -> {
+      notifyPanelOpen();
       tabRef[0] = "1W";
       tab1w.getStyleClass().add("movers-tab-active");
       tab4w.getStyleClass().remove("movers-tab-active");
@@ -1599,6 +1679,7 @@ public final class GameView implements GameViewInterface {
       rebuildRef[0].run();
     });
     tab4w.setOnAction(ev -> {
+      notifyPanelOpen();
       tabRef[0] = "4W";
       tab4w.getStyleClass().add("movers-tab-active");
       tab1w.getStyleClass().remove("movers-tab-active");
@@ -1606,6 +1687,7 @@ public final class GameView implements GameViewInterface {
       rebuildRef[0].run();
     });
     tabAll.setOnAction(ev -> {
+      notifyPanelOpen();
       tabRef[0] = "All";
       tabAll.getStyleClass().add("movers-tab-active");
       tab1w.getStyleClass().remove("movers-tab-active");
@@ -1752,6 +1834,9 @@ public final class GameView implements GameViewInterface {
         Stock target = allStocks.stream()
             .filter(st -> st.getSymbol().equals(sym))
             .findFirst().orElse(s);
+        if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
+          notifyStockSelectionChanged();
+        }
         selectedStock.set(target);
         focusStockCardInList(sym, stockScroll);
       });
@@ -1820,6 +1905,10 @@ public final class GameView implements GameViewInterface {
       });
     };
     txSearch.textProperty().addListener((obs, old, val) -> applyTxFilter[0].run());
+    txSearch.setOnAction(ev -> {
+      notifyPanelOpen();
+      applyTxFilter[0].run();
+    });
 
     for (int i = 0; i < txChipLabels.length; i++) {
       final int idx = i;
@@ -1829,6 +1918,7 @@ public final class GameView implements GameViewInterface {
         chip.getStyleClass().add("stock-filter-chip-active");
       }
       chip.setOnAction(ev -> {
+        notifyPanelOpen();
         txFilterRef[0] = txChipKeys[idx];
         for (Node n : txFilterRow.getChildren()) {
           n.getStyleClass().remove("stock-filter-chip-active");
@@ -1977,6 +2067,7 @@ public final class GameView implements GameViewInterface {
                   // Same stock already selected — listener won't fire, force chart rebuild
                   rebuildDetail();
                 } else {
+                  notifyStockSelectionChanged();
                   selectedStock.set(target);
                 }
                 focusStockCardInList(sym, stockScroll);
@@ -2461,6 +2552,10 @@ public final class GameView implements GameViewInterface {
     }
 
     card.setOnMouseClicked(e -> {
+      if (selectedStock.get() == null
+          || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
+        notifyStockSelectionChanged();
+      }
       if (selectedCardRef[0] != null) {
         selectedCardRef[0].getStyleClass().remove("stock-card-selected");
       }
