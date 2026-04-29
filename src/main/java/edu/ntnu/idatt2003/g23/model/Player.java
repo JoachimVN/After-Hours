@@ -260,7 +260,40 @@ public class Player {
   }
 
   public BigDecimal calculateNetWorthProgress() {
-    return calculateNetWorthProgress(getNextStatusTarget());
+    if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
+      return BigDecimal.ZERO;
+    }
+    BigDecimal progress = BigDecimal.ZERO;
+    switch (status) {
+      case NOVICE -> {
+        progress = getNetWorth().subtract(startingMoney)
+            .divide(startingMoney.multiply(PlayerStatus.NOVICE.getGrowthTargetForNextStatus())
+                    .subtract(startingMoney),
+                4,
+                RoundingMode.HALF_UP);
+      }
+      case INVESTOR -> {
+        BigDecimal investorGrowthTarget = PlayerStatus.NOVICE.getGrowthTargetForNextStatus();
+        BigDecimal speculatorGrowthTarget = PlayerStatus.INVESTOR.getGrowthTargetForNextStatus();
+        progress = getNetWorth().subtract(startingMoney.multiply(investorGrowthTarget))
+            .divide(
+                startingMoney.multiply(speculatorGrowthTarget)
+                    .subtract(startingMoney.multiply(investorGrowthTarget)),
+                4,
+                RoundingMode.HALF_UP);
+      }
+      case SPECULATOR -> {
+        progress = BigDecimal.ONE;
+      }
+      default -> throw new IllegalStateException("Unexpected value: " + status);
+    }
+    if (progress.compareTo(BigDecimal.ZERO) < 0) {
+      return BigDecimal.ZERO;
+    } else if (progress.compareTo(BigDecimal.ONE) > 0) {
+      return BigDecimal.ONE;
+    } else {
+      return progress;
+    }
   }
 
   public BigDecimal calculateNetWorthProgress(PlayerStatus targetStatus) {
@@ -270,8 +303,7 @@ public class Player {
     if (targetStatus == null) {
       throw new IllegalArgumentException("targetStatus cannot be null");
     }
-    calculateStatus();
-    if (targetStatus == PlayerStatus.NOVICE || status.ordinal() >= targetStatus.ordinal()) {
+    if (targetStatus == PlayerStatus.NOVICE) {
       return BigDecimal.ONE;
     }
 
@@ -310,15 +342,39 @@ public class Player {
   }
 
   public BigDecimal calculateWeeksProgress() {
-    return calculateWeeksProgress(getNextStatusTarget());
+    BigDecimal progress = BigDecimal.ZERO;
+    switch (status) {
+      case NOVICE -> {
+        progress = BigDecimal.valueOf(getWeeksTraded())
+            .divide(BigDecimal.valueOf(PlayerStatus.NOVICE.getWeeksTargetForNextStatus()), 4,
+                RoundingMode.HALF_UP);
+      }
+      case INVESTOR -> {
+        int noviceWeeksTarget = PlayerStatus.NOVICE.getWeeksTargetForNextStatus();
+        int investorWeeksTarget = PlayerStatus.INVESTOR.getWeeksTargetForNextStatus();
+        progress = BigDecimal.valueOf(getWeeksTraded() - noviceWeeksTarget)
+            .divide(BigDecimal.valueOf(investorWeeksTarget - noviceWeeksTarget), 4,
+                RoundingMode.HALF_UP);
+      }
+      case SPECULATOR -> {
+        progress = BigDecimal.ONE;
+      }
+      default -> throw new IllegalStateException("Unexpected value: " + status);
+    }
+    if (progress.compareTo(BigDecimal.ZERO) < 0) {
+      return BigDecimal.ZERO;
+    } else if (progress.compareTo(BigDecimal.ONE) > 0) {
+      return BigDecimal.ONE;
+    } else {
+      return progress;
+    }
   }
 
   public BigDecimal calculateWeeksProgress(PlayerStatus targetStatus) {
     if (targetStatus == null) {
       throw new IllegalArgumentException("targetStatus cannot be null");
     }
-    calculateStatus();
-    if (targetStatus == PlayerStatus.NOVICE || status.ordinal() >= targetStatus.ordinal()) {
+    if (targetStatus == PlayerStatus.NOVICE) {
       return BigDecimal.ONE;
     }
 
