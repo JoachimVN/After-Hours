@@ -24,7 +24,8 @@ public class HomePageMusicController {
   private static final List<String> AMBIENCE_TRACKS = List.of(
       "/audio/music/ambience/After_Hours_Ambience1_demo.mp3",
       "/audio/music/ambience/After_Hours_Ambience2_demo.mp3",
-      "/audio/music/ambience/After_Hours_Ambience3_demo.mp3"
+      "/audio/music/ambience/After_Hours_Ambience3_demo.mp3",
+      "/audio/music/ambience/After_Hours_Ambience4_demo.mp3"
   );
   private static final Duration FADE_DURATION = Duration.seconds(1.0);
   private static final Duration AMBIENCE_FADE_IN_DURATION = Duration.seconds(0.1);
@@ -33,6 +34,7 @@ public class HomePageMusicController {
   private static final double AMBIENCE1_VOLUME_MULTIPLIER = 0.50;
   private static final double AMBIENCE2_VOLUME_MULTIPLIER = 1.0;
   private static final double AMBIENCE3_VOLUME_MULTIPLIER = 0.75;
+  private static final double AMBIENCE4_VOLUME_MULTIPLIER = 0.75;
 
   private final Class<?> resourceOwner;
   private MediaPlayer mediaPlayer;
@@ -224,6 +226,9 @@ public class HomePageMusicController {
     }
     if (track.contains("Ambience3")) {
       return AMBIENCE3_VOLUME_MULTIPLIER;
+    }
+    if (track.contains("Ambience4")) {
+      return AMBIENCE4_VOLUME_MULTIPLIER;
     }
     return 1.0;
   }

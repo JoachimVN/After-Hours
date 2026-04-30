@@ -58,17 +58,18 @@ public final class ProfileView {
       Runnable onOpenSettings,
       String currentAvatar,
       Consumer<String> onAvatarChanged,
-      Consumer<String> onNameChanged) {
+      Consumer<String> onNameChanged,
+      Consumer<String> onOpenStockFromPortfolio) {
 
     List<String> avatarNames = AvatarUtil.loadSelectableAvatarNames();
     String initialAvatar = (currentAvatar == null || currentAvatar.isBlank())
         ? "bust-in-silhouette"
         : AvatarUtil.normalizeAvatarStem(currentAvatar);
-    final String[] selectedAvatar = {initialAvatar};
+    final String[] selectedAvatar = { initialAvatar };
 
     // Track name changes for auto-save
-    final String[] originalName = {controller.getPlayerName()};
-    final boolean[] nameChanged = {false};
+    final String[] originalName = { controller.getPlayerName() };
+    final boolean[] nameChanged = { false };
 
     TextField profileNameField = new TextField(controller.getPlayerName());
     profileNameField.getStyleClass().addAll("profile-title", "profile-name-field");
@@ -113,7 +114,6 @@ public final class ProfileView {
     topBar.getStyleClass().add("profile-top-bar");
     topBar.setAlignment(Pos.CENTER_LEFT);
 
-
     // Chick avatar logic
     boolean isChick = controller.isChickAvatarEquipped();
     int chickPhaseUnlocked = 0;
@@ -135,8 +135,7 @@ public final class ProfileView {
     avatarDisplay.getStyleClass().add("profile-avatar-display");
 
     PlayerStatus status = controller.getPlayerStatus();
-    Label profileSubtitle =
-        new Label("Status: " + status.name() + "  •  Week " + controller.getCurrentWeek());
+    Label profileSubtitle = new Label("Status: " + status.name() + "  •  Week " + controller.getCurrentWeek());
     profileSubtitle.getStyleClass().add("profile-subtitle");
 
     profileNameField.focusedProperty().addListener((obs, oldV, focused) -> {
@@ -231,8 +230,7 @@ public final class ProfileView {
         statLine("Starting Cash", CurrencyFormatter.format(controller.getPlayerStartingMoney())),
         statLine("Available Cash", CurrencyFormatter.format(controller.getPlayerCash())),
         statLine("Portfolio Value", CurrencyFormatter.format(controller.getPortfolioNetWorth())),
-        statLine("Net Worth", CurrencyFormatter.format(controller.getPlayerNetWorth()))
-    );
+        statLine("Net Worth", CurrencyFormatter.format(controller.getPlayerNetWorth())));
 
     BigDecimal growthRatio = controller.getPlayerGrowthRatio();
     BigDecimal startingCash = controller.getPlayerStartingMoney();
@@ -250,31 +248,84 @@ public final class ProfileView {
         statLine("Transactions", String.valueOf(controller.getTransactionCount())),
         statLine("Weeks Traded", String.valueOf(controller.getPlayerWeeksTraded())),
         statLine("Growth Ratio", growthRatioValue),
-        statLine("Performance", performanceValue)
-    );
+        statLine("Performance", performanceValue));
 
     PlayerStatus[] statusPath = PlayerStatus.values();
     int currentStatusIndex = status.ordinal();
-    PlayerStatus nextStatus = currentStatusIndex < statusPath.length - 1
-        ? statusPath[currentStatusIndex + 1]
-        : null;
-
-    BigDecimal weeksProgressValue = controller.getPlayerWeeksProgress();
-    BigDecimal netWorthProgressValue = controller.getPlayerNetWorthProgress();
-    BigDecimal statusProgressValue = controller.getPlayerStatusProgress();
-    int weeksTargetForNextStatus = controller.getPlayerWeeksTargetForNextStatus();
-    BigDecimal growthTargetForNextStatus = controller.getPlayerGrowthTargetForNextStatus();
-
-    double weeksProgress = weeksProgressValue.doubleValue();
-    double netWorthProgress = netWorthProgressValue.doubleValue();
-    double statusProgress = statusProgressValue.doubleValue();
+    PlayerStatus defaultSelectedStatus = statusPath[Math.min(currentStatusIndex + 1, statusPath.length - 1)];
 
     HBox statusSteps = new HBox(8);
     statusSteps.getStyleClass().add("profile-status-steps");
+    List<Label> stepLabels = new ArrayList<>();
+    final PlayerStatus[] selectedStatusStep = { defaultSelectedStatus };
+
+    ProgressBar statusProgressBar = new ProgressBar(0);
+    statusProgressBar.getStyleClass().add("profile-status-progress");
+    statusProgressBar.setMaxWidth(Double.MAX_VALUE);
+
+    Label statusProgressText = new Label();
+    statusProgressText.getStyleClass().add("profile-status-progress-text");
+
+    final Label[] weeksMetricLabelRef = { null };
+    final Label[] growthMetricLabelRef = { null };
+
+    HBox statusMetrics = new HBox(10);
+    statusMetrics.getStyleClass().add("profile-status-metrics");
+
+    final Label[] weeksMetricChipRef = { null };
+    final Label[] growthMetricChipRef = { null };
+
+    Label levelingGuide = new Label();
+    levelingGuide.getStyleClass().add("profile-leveling-guide");
+
+    Runnable refreshStatusRequirement = () -> {
+      ProfileController.StatusRequirementInfo requirement = controller.getStatusRequirement(selectedStatusStep[0]);
+      statusProgressBar.setProgress(requirement.totalProgressRatio().doubleValue());
+
+      statusProgressText.setText(
+          "Total progress: "
+              + String.valueOf(requirement.totalProgressRatio()
+                  .multiply(BigDecimal.valueOf(100))
+                  .setScale(0, RoundingMode.HALF_UP)
+                  .intValue())
+              + "%");
+
+      if (weeksMetricLabelRef[0] != null && growthMetricLabelRef[0] != null) {
+        weeksMetricLabelRef[0].setText(
+            "Total weeks " + requirement.weeksCurrent() + "/" + requirement.weeksRequired());
+        growthMetricLabelRef[0].setText(
+            "Growth " + requirement.growthCurrent().stripTrailingZeros().toPlainString()
+                + "x/" + requirement.growthRequired().stripTrailingZeros().toPlainString() + "x");
+      }
+
+      boolean weeksMet = requirement.weeksCurrent() >= requirement.weeksRequired();
+      boolean growthMet = requirement.growthCurrent().compareTo(requirement.growthRequired()) >= 0;
+      if (weeksMetricChipRef[0] != null && growthMetricChipRef[0] != null) {
+        updateMetricChipState(weeksMetricChipRef[0], weeksMet);
+        updateMetricChipState(growthMetricChipRef[0], growthMet);
+      }
+
+      int weeksRemaining = Math.max(0, requirement.weeksRequired() - requirement.weeksCurrent());
+      BigDecimal growthRemaining = requirement.growthRequired()
+          .subtract(requirement.growthCurrent())
+          .max(BigDecimal.ZERO)
+          .setScale(2, RoundingMode.HALF_UP);
+
+        levelingGuide.setText(requirement.statusName() + ": "
+          + requirement.weeksCurrent() + "/" + requirement.weeksRequired() + " weeks, "
+          + requirement.growthCurrent().stripTrailingZeros().toPlainString()
+          + "x/" + requirement.growthRequired().stripTrailingZeros().toPlainString() + "x. "
+          + (weeksRemaining == 0 && growthRemaining.compareTo(BigDecimal.ZERO) == 0
+              ? "Target met."
+              : "Remaining " + weeksRemaining + " week(s) and "
+                  + growthRemaining.stripTrailingZeros().toPlainString() + "x growth."));
+    };
+
     for (int i = 0; i < statusPath.length; i++) {
       PlayerStatus stepStatus = statusPath[i];
       Label stepLabel = new Label(formatStatusName(stepStatus));
       stepLabel.getStyleClass().add("profile-status-step");
+      stepLabel.getStyleClass().add("profile-status-step-clickable");
       if (i < currentStatusIndex) {
         stepLabel.getStyleClass().add("profile-status-step-complete");
       } else if (i == currentStatusIndex) {
@@ -282,59 +333,88 @@ public final class ProfileView {
       } else {
         stepLabel.getStyleClass().add("profile-status-step-upcoming");
       }
+      if (stepStatus == selectedStatusStep[0]) {
+        stepLabel.getStyleClass().add("profile-status-step-selected");
+      }
+      stepLabel.setOnMouseClicked(e -> {
+        selectedStatusStep[0] = stepStatus;
+        for (Label other : stepLabels) {
+          other.getStyleClass().remove("profile-status-step-selected");
+        }
+        stepLabel.getStyleClass().add("profile-status-step-selected");
+        refreshStatusRequirement.run();
+      });
+      stepLabels.add(stepLabel);
       statusSteps.getChildren().add(stepLabel);
     }
 
-    Label statusTargetLine = new Label(nextStatus == null
-        ? "Maximum rank reached. Every avatar tier is unlocked."
-        : "Progress toward " + formatStatusName(nextStatus));
-    statusTargetLine.getStyleClass().add("profile-status-target");
+    Label weeksMetricLabel = new Label();
+    weeksMetricLabelRef[0] = weeksMetricLabel;
+    Label growthMetricLabel = new Label();
+    growthMetricLabelRef[0] = growthMetricLabel;
+    Label weeksMetricChip = statusMetricChip(weeksMetricLabel.getText(), false);
+    Label growthMetricChip = statusMetricChip(growthMetricLabel.getText(), false);
+    weeksMetricChipRef[0] = weeksMetricChip;
+    growthMetricChipRef[0] = growthMetricChip;
+    weeksMetricChip.textProperty().bind(weeksMetricLabel.textProperty());
+    growthMetricChip.textProperty().bind(growthMetricLabel.textProperty());
+    statusMetrics.getChildren().addAll(weeksMetricChip, growthMetricChip);
 
-    ProgressBar statusProgressBar = new ProgressBar(statusProgress);
-    statusProgressBar.getStyleClass().add("profile-status-progress");
-    statusProgressBar.setMaxWidth(Double.MAX_VALUE);
+    refreshStatusRequirement.run();
 
-    Label statusProgressText = new Label(nextStatus == null
-        ? "100%"
-        : String.valueOf(statusProgressValue
-                         .multiply(BigDecimal.valueOf(100))
-                         .setScale(0, RoundingMode.HALF_UP)
-                         .intValue()) + "%");
-    statusProgressText.getStyleClass().add("profile-status-progress-text");
-
-    int weeksRemaining = Math.max(0, weeksTargetForNextStatus - controller.getPlayerWeeksTraded());
-    BigDecimal growthRemaining = growthTargetForNextStatus.subtract(growthRatio)
-      .max(BigDecimal.ZERO)
-      .setScale(2, RoundingMode.HALF_UP);
-
-    Label levelingGuide = new Label(nextStatus == null
-      ? "You are at the maximum level. Keep improving your replay stats."
-      : "To reach " + formatStatusName(nextStatus) + ": "
-        + (weeksRemaining == 0 ? "Weeks done" : (weeksRemaining + " more week(s) traded"))
-        + " and "
-        + (growthRemaining.compareTo(BigDecimal.ZERO) == 0
-        ? "growth done"
-        : ("+" + growthRemaining.toPlainString() + "x growth"))
-        + ".");
-    levelingGuide.getStyleClass().add("profile-leveling-guide");
-
-    HBox statusMetrics = new HBox(10,
-        statusMetricChip(
-        "Weeks Traded " + controller.getPlayerWeeksTraded() + "/" + weeksTargetForNextStatus,
-            weeksProgress >= 1.0),
-        statusMetricChip(
-            "Growth " + growthRatio.setScale(2, RoundingMode.HALF_UP).toPlainString()
-                + "x/" + growthTargetForNextStatus.toPlainString() + "x",
-            netWorthProgress >= 1.0)
-    );
-    statusMetrics.getStyleClass().add("profile-status-metrics");
-
-    VBox statusBody =
-      new VBox(10, statusSteps, statusTargetLine, statusProgressBar, statusProgressText,
+  VBox statusBody = new VBox(10, statusSteps, statusProgressBar, statusProgressText,
         statusMetrics, levelingGuide);
     statusBody.getStyleClass().add("profile-status-body");
     VBox statusCard = statCard("Status Progression", statusBody);
     statusCard.getStyleClass().add("profile-status-card");
+
+    VBox favorites = new VBox(8);
+    favorites.getStyleClass().add("profile-list");
+
+    Runnable[] refreshFavoriteRows = { null };
+    refreshFavoriteRows[0] = () -> {
+      favorites.getChildren().clear();
+      List<ProfileController.FavoriteStockView> favoriteStocks = controller.getFavoriteStocks();
+      if (favoriteStocks.isEmpty()) {
+        Label none = new Label("No favorite stocks yet. Star stocks in Market to pin them here.");
+        none.getStyleClass().add("profile-empty");
+        favorites.getChildren().add(none);
+        return;
+      }
+      for (ProfileController.FavoriteStockView favoriteStock : favoriteStocks) {
+        Label symbol = badge(favoriteStock.symbol());
+        Label company = new Label(favoriteStock.company());
+        company.getStyleClass().add("profile-position-sub");
+        Label owned = new Label(favoriteStock.owned() ? "Owned" : "Watchlist");
+        owned.getStyleClass().add("profile-favorite-owned-chip");
+        if (favoriteStock.owned()) {
+          owned.getStyleClass().add("profile-favorite-owned-chip-owned");
+        }
+        VBox left = new VBox(3, company, owned);
+
+        Label price = new Label(CurrencyFormatter.format(favoriteStock.currentPrice()));
+        price.getStyleClass().add("profile-position-value");
+        BigDecimal pct = favoriteStock.changePct();
+        String pctText = (pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
+            + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%";
+        Label pctLabel = new Label(pctText);
+        pctLabel.getStyleClass().add("profile-position-pnl");
+        pctLabel.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0
+            ? "profile-value-up"
+            : "profile-value-down");
+        VBox right = new VBox(3, price, pctLabel);
+        right.setAlignment(Pos.CENTER_RIGHT);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox row = new HBox(10, symbol, left, spacer, right);
+        row.getStyleClass().add("profile-favorite-row");
+        row.setOnMouseClicked(e -> onOpenStockFromPortfolio.accept(favoriteStock.symbol()));
+        favorites.getChildren().add(row);
+      }
+    };
+    refreshFavoriteRows[0].run();
+    VBox favoritesCard = statCard("Favorite Stocks", favorites);
 
     VBox holdings = new VBox(8);
     holdings.getStyleClass().add("profile-list");
@@ -355,7 +435,8 @@ public final class ProfileView {
             ? BigDecimal.ZERO
             : pnl.divide(costBasis, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
-        Label symbol = badge(share.getStock().getSymbol());
+        String symbolText = share.getStock().getSymbol();
+        Label symbol = badge(symbolText);
         Label line1 = valueText("Quantity " + quantity.toPlainString() + "  •  Average "
             + CurrencyFormatter.format(avgPrice));
         Label line2 = new Label("Now " + CurrencyFormatter.format(currentPrice));
@@ -380,6 +461,8 @@ public final class ProfileView {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox row = new HBox(10, symbol, left, spacer, right);
         row.getStyleClass().add("profile-position-row");
+        row.getStyleClass().add("profile-stock-nav-row");
+        row.setOnMouseClicked(e -> onOpenStockFromPortfolio.accept(symbolText));
         holdings.getChildren().add(row);
       }
     }
@@ -421,18 +504,14 @@ public final class ProfileView {
         .mapToDouble(BigDecimal::doubleValue)
         .max()
         .orElse(startingCash.doubleValue());
-    double center = startingCash.doubleValue();
-    double deviation = Math.max(Math.abs(maxNetWorth - center), Math.abs(center - minNetWorth));
-    if (deviation < 1.0) {
-      deviation = Math.max(10.0, Math.abs(center) * 0.05 + 1.0);
-    }
+    double yLowerBound = Math.max(0.0, minNetWorth);
+    double yUpperBound = Math.max(yLowerBound, maxNetWorth);
 
-    double yLowerBound = center - deviation;
-    double yUpperBound = center + deviation;
-    if (yLowerBound < 0.0) {
-      yLowerBound = 0.0;
-      yUpperBound = Math.max(yUpperBound, maxNetWorth);
-    }
+    double range = yUpperBound - yLowerBound;
+    double pad = range > 0.0 ? range * 0.08 : Math.max(10.0, Math.abs(yUpperBound) * 0.05 + 1.0);
+
+    yLowerBound = Math.max(0.0, yLowerBound - pad);
+    yUpperBound = yUpperBound + pad;
     if (yUpperBound <= yLowerBound) {
       yUpperBound = yLowerBound + 1.0;
     }
@@ -441,8 +520,7 @@ public final class ProfileView {
     yAxis.setLowerBound(yLowerBound);
     yAxis.setUpperBound(yUpperBound);
     yAxis.setTickUnit(Math.max(1.0, (yUpperBound - yLowerBound) / 4.0));
-    DecimalFormat integerFormatter =
-        new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
+    DecimalFormat integerFormatter = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
     yAxis.setTickLabelFormatter(new StringConverter<>() {
       @Override
       public String toString(Number object) {
@@ -501,8 +579,7 @@ public final class ProfileView {
             (maxNetWorth - yAxis.getLowerBound()) / valueRange));
 
         Bounds plotBoundsScene = plotBackground.localToScene(plotBackground.getBoundsInLocal());
-        Point2D bottomInPath =
-            path.sceneToLocal(plotBoundsScene.getMinX(), plotBoundsScene.getMaxY());
+        Point2D bottomInPath = path.sceneToLocal(plotBoundsScene.getMinX(), plotBoundsScene.getMaxY());
         Point2D topInPath = path.sceneToLocal(plotBoundsScene.getMinX(), plotBoundsScene.getMinY());
 
         path.setStroke(new LinearGradient(
@@ -514,8 +591,7 @@ public final class ProfileView {
                 new Stop(0.0, javafx.scene.paint.Color.web("#e05a5a")),
                 new Stop(minOffset, javafx.scene.paint.Color.web("#e05a5a")),
                 new Stop(maxOffset, javafx.scene.paint.Color.web("#4ecb71")),
-                new Stop(1.0, javafx.scene.paint.Color.web("#4ecb71"))
-            )));
+                new Stop(1.0, javafx.scene.paint.Color.web("#4ecb71")))));
         path.setStrokeWidth(3);
       }
     });
@@ -551,8 +627,7 @@ public final class ProfileView {
       Bounds plotBoundsScene = plotBackground.localToScene(plotBackground.getBoundsInLocal());
       Bounds plotBounds = replayChartLayer.sceneToLocal(plotBoundsScene);
       double leftPad = Math.max(0, plotBounds.getMinX() - extraSideWidth);
-      double rightPad =
-          Math.max(0, replayChartLayer.getWidth() - plotBounds.getMaxX() - extraSideWidth);
+      double rightPad = Math.max(0, replayChartLayer.getWidth() - plotBounds.getMaxX() - extraSideWidth);
 
       replaySliderLeftPad.setMinWidth(leftPad);
       replaySliderLeftPad.setPrefWidth(leftPad);
@@ -560,7 +635,7 @@ public final class ProfileView {
       replaySliderRightPad.setPrefWidth(rightPad);
     });
 
-    final int[] hoverWeekRef = {-1};
+    final int[] hoverWeekRef = { -1 };
 
     final Runnable refreshReplay = () -> {
       if (replayPoints.isEmpty()) {
@@ -593,8 +668,7 @@ public final class ProfileView {
       }
       verticalMarkerSeries.getData().add(new XYChart.Data<>(markerWeek, yAxis.getLowerBound()));
       verticalMarkerSeries.getData().add(new XYChart.Data<>(markerWeek, yAxis.getUpperBound()));
-      GameController.ReplayPoint point =
-          replayPoints.get(Math.min(markerWeek - 1, replayPoints.size() - 1));
+      GameController.ReplayPoint point = replayPoints.get(Math.min(markerWeek - 1, replayPoints.size() - 1));
       replayStatus.setText(
           "Week " + point.week() + " • Net Worth " + CurrencyFormatter.format(point.netWorth()));
 
@@ -615,8 +689,7 @@ public final class ProfileView {
             hoverValueChip.setVisible(false);
             return;
           }
-          GameController.ReplayPoint hoverPoint =
-              replayPoints.get(Math.min(markerWeek - 1, replayPoints.size() - 1));
+          GameController.ReplayPoint hoverPoint = replayPoints.get(Math.min(markerWeek - 1, replayPoints.size() - 1));
           hoverValueChip.setText(
               "Week " + markerWeek + "  " + CurrencyFormatter.format(hoverPoint.netWorth()));
 
@@ -627,8 +700,7 @@ public final class ProfileView {
           double lineX = plotBounds.getMinX() + xFrac * plotBounds.getWidth();
 
           double yRange = yAxis.getUpperBound() - yAxis.getLowerBound();
-          double yFrac = yRange <= 0 ? 0.5 :
-              (hoverPoint.netWorth().doubleValue() - yAxis.getLowerBound()) / yRange;
+          double yFrac = yRange <= 0 ? 0.5 : (hoverPoint.netWorth().doubleValue() - yAxis.getLowerBound()) / yRange;
           yFrac = Math.max(0.0, Math.min(1.0, yFrac));
           double lineY = plotBounds.getMaxY() - yFrac * plotBounds.getHeight();
 
@@ -703,9 +775,9 @@ public final class ProfileView {
       replaySpeedOptions.add(64.0);
     }
 
-    final int[] speedIndex = {Math.max(0, replaySpeedOptions.indexOf(1.0))};
-    final double[] speedStep = {replaySpeedOptions.get(speedIndex[0]) / 4.0};
-    final boolean[] playing = {false};
+    final int[] speedIndex = { Math.max(0, replaySpeedOptions.indexOf(1.0)) };
+    final double[] speedStep = { replaySpeedOptions.get(speedIndex[0]) / 4.0 };
+    final boolean[] playing = { false };
     final Timeline[] replayTimelineRef = new Timeline[1];
     final Timeline replayTimeline = new Timeline(new KeyFrame(Duration.millis(75), e -> {
       double next = replaySlider.getValue() + speedStep[0];
@@ -764,7 +836,8 @@ public final class ProfileView {
       speedBtn.setDisable(true);
     }
 
-    // JavaFX can re-apply chart CSS on focus/style passes; keep line gradient stable.
+    // JavaFX can re-apply chart CSS on focus/style passes; keep line gradient
+    // stable.
     replayChart.focusedProperty()
         .addListener((obs, oldV, focused) -> applyReplayLineGradient.run());
 
@@ -778,8 +851,7 @@ public final class ProfileView {
         new Label("Playback view from saved weekly snapshots."),
         replayChartLayer,
         replaySliderRow,
-        replayControls
-    );
+        replayControls);
     replayCard.getStyleClass().add("profile-replay-card");
 
     HBox cardsRow = new HBox(16, infoCard, statsCard);
@@ -787,7 +859,7 @@ public final class ProfileView {
     HBox.setHgrow(infoCard, Priority.ALWAYS);
     HBox.setHgrow(statsCard, Priority.ALWAYS);
 
-    VBox content = new VBox(18, hero, statusCard, cardsRow, portfolioCard, replayCard);
+    VBox content = new VBox(18, hero, statusCard, cardsRow, favoritesCard, portfolioCard, replayCard);
     content.getStyleClass().add("profile-content");
 
     ScrollPane scroll = new ScrollPane(content);
@@ -857,6 +929,14 @@ public final class ProfileView {
         ? "profile-status-metric-chip-complete"
         : "profile-status-metric-chip-pending");
     return chip;
+  }
+
+  private static void updateMetricChipState(Label chip, boolean completed) {
+    chip.getStyleClass().removeAll("profile-status-metric-chip-complete",
+        "profile-status-metric-chip-pending");
+    chip.getStyleClass().add(completed
+        ? "profile-status-metric-chip-complete"
+        : "profile-status-metric-chip-pending");
   }
 
   private static PlayerStatus requiredStatusForAvatar(String avatar) {

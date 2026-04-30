@@ -192,6 +192,19 @@
   -fx-border-width: 1;
 }
 
+.profile-status-step-clickable {
+  -fx-cursor: hand;
+}
+
+.profile-status-step-clickable:hover {
+  -fx-effect: dropshadow(gaussian, rgba(173, 223, 255, 0.28), 9, 0.35, 0, 0);
+}
+
+.profile-status-step-selected {
+  -fx-border-color: rgba(245, 162, 1, 0.9);
+  -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.28), 10, 0.35, 0, 0);
+}
+
 .profile-status-step-complete {
   -fx-background-color: rgba(78, 203, 113, 0.22);
   -fx-border-color: rgba(78, 203, 113, 0.52);
@@ -243,6 +256,28 @@
   -fx-font-size: 12px;
   -fx-text-fill: #d6e8f7;
   -fx-wrap-text: true;
+}
+
+.profile-status-requirement-box {
+  -fx-background-color: rgba(10, 24, 46, 0.56);
+  -fx-border-color: rgba(129, 187, 238, 0.30);
+  -fx-border-width: 1;
+  -fx-border-radius: 12;
+  -fx-background-radius: 12;
+  -fx-padding: 10;
+}
+
+.profile-status-requirement-title {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 12px;
+  -fx-font-weight: 800;
+  -fx-text-fill: #f5c26a;
+}
+
+.profile-status-requirement-body {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 12px;
+  -fx-text-fill: #d6e8f7;
 }
 
 .profile-status-metrics {
@@ -302,6 +337,45 @@
   -fx-border-radius: 10;
 }
 
+.profile-stock-nav-row,
+.profile-favorite-row {
+  -fx-cursor: hand;
+}
+
+.profile-stock-nav-row:hover,
+.profile-favorite-row:hover {
+  -fx-background-color: rgba(245, 162, 1, 0.12);
+  -fx-border-color: rgba(245, 162, 1, 0.44);
+  -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.2), 12, 0.35, 0, 0);
+}
+
+.profile-favorite-row {
+  -fx-padding: 10 12;
+  -fx-background-color: rgba(255,255,255,0.04);
+  -fx-background-radius: 10;
+  -fx-border-color: rgba(125, 182, 230, 0.12);
+  -fx-border-radius: 10;
+}
+
+.profile-favorite-owned-chip {
+  -fx-font-family: "Sans Serif";
+  -fx-font-size: 11px;
+  -fx-font-weight: 700;
+  -fx-text-fill: #a6c1d8;
+  -fx-background-color: rgba(120, 154, 186, 0.18);
+  -fx-border-color: rgba(120, 154, 186, 0.32);
+  -fx-border-width: 1;
+  -fx-border-radius: 10;
+  -fx-background-radius: 10;
+  -fx-padding: 2 7;
+}
+
+.profile-favorite-owned-chip-owned {
+  -fx-text-fill: #85dba3;
+  -fx-background-color: rgba(78, 203, 113, 0.16);
+  -fx-border-color: rgba(78, 203, 113, 0.36);
+}
+
 .profile-position-sub {
   -fx-text-fill: #87aecd;
   -fx-font-size: 12px;
@@ -327,9 +401,12 @@
 }
 
 .profile-badge {
-  -fx-background-color: rgba(76, 145, 193, 0.55);
-  -fx-text-fill: #e8f6ff;
+  -fx-background-color: linear-gradient(to bottom right, rgba(28, 56, 92, 0.92), rgba(20, 46, 80, 0.92));
+  -fx-text-fill: #d9ecff;
+  -fx-border-color: rgba(117, 170, 222, 0.48);
+  -fx-border-width: 1;
   -fx-background-radius: 8;
+  -fx-border-radius: 8;
   -fx-padding: 3 7;
   -fx-font-family: "Sans Serif";
   -fx-font-size: 12px;
