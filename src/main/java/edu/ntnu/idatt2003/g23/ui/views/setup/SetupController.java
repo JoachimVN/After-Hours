@@ -74,7 +74,7 @@ public final class SetupController {
 
   // ── Internal ──────────────────────────────────────────────────────────────
 
-  static final double MAX_CASH = 1_000_000_000_000.0; // 1 trillion
+  static final double MAX_CASH = 1_000_000_000.0; // 1 billion
 
   /**
    * Returns a human-readable error message for an invalid custom-cash string,
@@ -96,7 +96,7 @@ public final class SetupController {
       return "Amount must be positive";
     }
     if (val >= MAX_CASH) {
-      return "Amount too large (max: 1 trillion)";
+      return "Amount too large (max: 1 billion)";
     }
     return null;
   }
