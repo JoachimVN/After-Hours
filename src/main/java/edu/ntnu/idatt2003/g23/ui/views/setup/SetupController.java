@@ -55,6 +55,9 @@ public final class SetupController {
   public void handleStart(String nameText, String cashText) {
     String name = (nameText == null || nameText.isBlank()) ? "Player" : nameText.trim();
     double cash = parseCash(cashText);
+    if (cash <= 0) {
+      return;
+    }
     if (useDefaultStocks) {
       MarketOption market = AppConfig.BUILT_IN_MARKETS.get(selectedMarketIndex);
       onStartDefault.start(name, cash, market.csvResource());
@@ -64,19 +67,52 @@ public final class SetupController {
   }
 
   public boolean isCashReady(boolean presetSelected, String cashText) {
-    return presetSelected || (!cashText.isBlank() && parseCash(cashText) > 0);
+    return presetSelected || parseCash(cashText) > 0;
   }
 
   // ── Accessors ─────────────────────────────────────────────────────────────
 
   // ── Internal ──────────────────────────────────────────────────────────────
 
+  static final double MAX_CASH = 1_000_000_000_000.0; // 1 trillion
+
+  /**
+   * Returns a human-readable error message for an invalid custom-cash string,
+   * or {@code null} when the input is valid.
+   * Returns {@code null} for blank/null input (treated as "not yet entered").
+   */
+  static String cashValidationMessage(String text) {
+    if (text == null || text.isBlank()) {
+      return null;
+    }
+    String trimmed = text.trim();
+    double val;
+    try {
+      val = NumberParser.parse(trimmed).doubleValue();
+    } catch (RuntimeException e) {
+      return "Not a valid number. Try: 2000, 8k, 1.5m";
+    }
+    if (val < 0) {
+      return "Amount must be positive";
+    }
+    if (val == 0) {
+      return "Amount must be greater than zero";
+    }
+    if (val >= MAX_CASH) {
+      return "Amount too large (max: 1 trillion)";
+    }
+    return null;
+  }
+
   static double parseCash(String text) {
     try {
       double val = NumberParser.parse(text).doubleValue();
-      return val > 0 ? val : 10_000;
-    } catch (NumberFormatException e) {
-      return 10_000;
+      if (val <= 0 || val >= MAX_CASH) {
+        return -1;
+      }
+      return val;
+    } catch (RuntimeException e) {
+      return -1;
     }
   }
 }

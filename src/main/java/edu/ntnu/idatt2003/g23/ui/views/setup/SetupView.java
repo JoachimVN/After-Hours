@@ -106,6 +106,12 @@ public final class SetupView {
     cashField.getStyleClass().add("setup-text-field");
     cashField.setPrefWidth(150);
 
+    Label cashValidation = new Label();
+    cashValidation.getStyleClass().add("setup-sublabel");
+    cashValidation.setVisible(false);
+    cashValidation.setManaged(false);
+    cashValidation.setTextFill(javafx.scene.paint.Color.web("#e05a5a"));
+
     // Preset -> cashField sync (guard against feedback loop)
     boolean[] fromPreset = {false};
     presetGroup.selectedToggleProperty().addListener((obs, old, sel) -> {
@@ -124,7 +130,7 @@ public final class SetupView {
     HBox cashInput = new HBox(10, presetRow, cashField);
     cashInput.setAlignment(Pos.CENTER_LEFT);
 
-    VBox cashSection = new VBox(8, cashLabel, cashInput);
+    VBox cashSection = new VBox(8, cashLabel, cashInput, cashValidation);
 
     // ── Stock Data Source ─────────────────────────────────────────────────
     Label dataLabel = new Label("STOCK DATA");
@@ -237,6 +243,14 @@ public final class SetupView {
       boolean ready = controller.isCashReady(
           presetGroup.getSelectedToggle() != null, cashField.getText());
       startButton.setDisable(!ready);
+
+      boolean usingCustomCash = presetGroup.getSelectedToggle() == null;
+      String enteredCash = cashField.getText() == null ? "" : cashField.getText().trim();
+      String validationMsg = usingCustomCash && !enteredCash.isEmpty()
+          ? SetupController.cashValidationMessage(enteredCash) : null;
+      cashValidation.setVisible(validationMsg != null);
+      cashValidation.setManaged(validationMsg != null);
+      cashValidation.setText(validationMsg != null ? validationMsg : "");
     };
     presetGroup.selectedToggleProperty().addListener((obs, old, sel) -> updateStartEnabled.run());
     cashField.textProperty().addListener((obs, old, text) -> updateStartEnabled.run());

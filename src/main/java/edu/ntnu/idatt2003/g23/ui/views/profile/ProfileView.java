@@ -33,6 +33,8 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.ColorAdjust;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -56,6 +58,7 @@ public final class ProfileView {
       ProfileController controller,
       Runnable onBackToGame,
       Runnable onOpenSettings,
+      Runnable onReplayControlSelect,
       String currentAvatar,
       Consumer<String> onAvatarChanged,
       Consumer<String> onNameChanged,
@@ -778,6 +781,7 @@ public final class ProfileView {
     final int[] speedIndex = { Math.max(0, replaySpeedOptions.indexOf(1.0)) };
     final double[] speedStep = { replaySpeedOptions.get(speedIndex[0]) / 4.0 };
     final boolean[] playing = { false };
+    final Button[] playBtnRef = new Button[1];
     final Timeline[] replayTimelineRef = new Timeline[1];
     final Timeline replayTimeline = new Timeline(new KeyFrame(Duration.millis(75), e -> {
       double next = replaySlider.getValue() + speedStep[0];
@@ -785,6 +789,9 @@ public final class ProfileView {
         replaySlider.setValue(replaySlider.getMax());
         replayTimelineRef[0].stop();
         playing[0] = false;
+        if (playBtnRef[0] != null) {
+          playBtnRef[0].setText("Play");
+        }
       } else {
         replaySlider.setValue(next);
       }
@@ -793,15 +800,22 @@ public final class ProfileView {
     replayTimeline.setCycleCount(Timeline.INDEFINITE);
 
     Button playBtn = new Button("Play");
+    playBtnRef[0] = playBtn;
     playBtn.getStyleClass().add("profile-action-btn");
     playBtn.setOnAction(e -> {
       if (replayPoints.isEmpty()) {
         return;
       }
+      if (onReplayControlSelect != null) {
+        onReplayControlSelect.run();
+      }
       if (playing[0]) {
         replayTimeline.stop();
         playBtn.setText("Play");
       } else {
+        if (replaySlider.getValue() >= replaySlider.getMax()) {
+          replaySlider.setValue(replaySlider.getMin());
+        }
         replayTimeline.play();
         playBtn.setText("Pause");
       }
@@ -811,6 +825,9 @@ public final class ProfileView {
     Button restartBtn = new Button("Restart");
     restartBtn.getStyleClass().add("profile-secondary-btn");
     restartBtn.setOnAction(e -> {
+      if (onReplayControlSelect != null) {
+        onReplayControlSelect.run();
+      }
       replayTimeline.stop();
       playing[0] = false;
       playBtn.setText("Play");
@@ -820,6 +837,9 @@ public final class ProfileView {
     Button speedBtn = new Button("Speed: 1x");
     speedBtn.getStyleClass().add("profile-secondary-btn");
     speedBtn.setOnAction(e -> {
+      if (onReplayControlSelect != null) {
+        onReplayControlSelect.run();
+      }
       speedIndex[0] = (speedIndex[0] + 1) % replaySpeedOptions.size();
       double speedX = replaySpeedOptions.get(speedIndex[0]);
       speedStep[0] = speedX / 4.0;
@@ -835,6 +855,11 @@ public final class ProfileView {
       restartBtn.setDisable(true);
       speedBtn.setDisable(true);
     }
+
+    replayTimeline.setOnFinished(e -> {
+      playing[0] = false;
+      playBtn.setText("Play");
+    });
 
     // JavaFX can re-apply chart CSS on focus/style passes; keep line gradient
     // stable.
@@ -874,6 +899,15 @@ public final class ProfileView {
 
     StackPane wrapper = new StackPane(root);
     wrapper.getStyleClass().add("profile-page-wrapper");
+    wrapper.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+      if (e.getCode() == KeyCode.ESCAPE) {
+        if (nameChanged[0]) {
+          commitPendingName.run();
+        }
+        onBackToGame.run();
+        e.consume();
+      }
+    });
     return wrapper;
   }
 

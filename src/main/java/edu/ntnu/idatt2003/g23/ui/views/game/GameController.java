@@ -291,7 +291,7 @@ public final class GameController {
 
   public int getPlayerWeeksTargetForStatus(PlayerStatus targetStatus) {
     return switch (targetStatus) {
-      case NOVICE -> 1;
+      case NOVICE -> 0;
       case INVESTOR -> PlayerStatus.NOVICE.getWeeksTargetForNextStatus();
       case SPECULATOR -> PlayerStatus.INVESTOR.getWeeksTargetForNextStatus();
     };
@@ -318,7 +318,7 @@ public final class GameController {
 
   public BigDecimal getPlayerGrowthTargetForStatus(PlayerStatus targetStatus) {
     return switch (targetStatus) {
-      case NOVICE -> BigDecimal.ONE;
+      case NOVICE -> BigDecimal.ZERO;
       case INVESTOR -> PlayerStatus.NOVICE.getGrowthTargetForNextStatus();
       case SPECULATOR -> PlayerStatus.INVESTOR.getGrowthTargetForNextStatus();
     };

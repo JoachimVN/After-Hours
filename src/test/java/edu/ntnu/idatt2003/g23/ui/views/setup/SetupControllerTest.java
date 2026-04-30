@@ -17,28 +17,92 @@ class SetupControllerTest {
   }
 
   @Test
-  void parseCash_blank_returnsDefault() {
-    assertEquals(10_000.0, SetupController.parseCash(""), 1e-9);
+  void parseCash_blank_returnsInvalid() {
+    assertTrue(SetupController.parseCash("") < 0);
   }
 
   @Test
-  void parseCash_negative_returnsDefault() {
-    assertEquals(10_000.0, SetupController.parseCash("-100"), 1e-9);
+  void parseCash_negative_returnsInvalid() {
+    assertTrue(SetupController.parseCash("-100") < 0);
   }
 
   @Test
-  void parseCash_notANumber_returnsDefault() {
-    assertEquals(10_000.0, SetupController.parseCash("abc"), 1e-9);
+  void parseCash_notANumber_returnsInvalid() {
+    assertTrue(SetupController.parseCash("abc") < 0);
   }
 
   @Test
-  void parseCash_zero_returnsDefault() {
-    assertEquals(10_000.0, SetupController.parseCash("0"), 1e-9);
+  void parseCash_zero_returnsInvalid() {
+    assertTrue(SetupController.parseCash("0") < 0);
+  }
+
+  @Test
+  void parseCash_invalidSuffixInput_returnsInvalid() {
+    assertTrue(SetupController.parseCash("1T") < 0);
+  }
+
+  @Test
+  void parseCash_kSuffixInput_returnsValue() {
+    assertEquals(1500.0, SetupController.parseCash("1.5k"), 1e-9);
   }
 
   @Test
   void parseCash_decimalInput_returnsValue() {
     assertEquals(1234.56, SetupController.parseCash("1234.56"), 1e-6);
+  }
+
+  @Test
+  void parseCash_atTrillion_returnsInvalid() {
+    assertTrue(SetupController.parseCash("1000000000000") < 0);
+  }
+
+  @Test
+  void parseCash_aboveTrillionViaSuffix_returnsInvalid() {
+    assertTrue(SetupController.parseCash("1001B") < 0);
+  }
+
+  // ── cashValidationMessage ─────────────────────────────────────────────────
+
+  @Test
+  void cashValidationMessage_blank_returnsNull() {
+    assertNull(SetupController.cashValidationMessage(""));
+    assertNull(SetupController.cashValidationMessage("   "));
+    assertNull(SetupController.cashValidationMessage(null));
+  }
+
+  @Test
+  void cashValidationMessage_notANumber_returnsMessage() {
+    String msg = SetupController.cashValidationMessage("abc");
+    assertNotNull(msg);
+    assertTrue(msg.toLowerCase().contains("valid"));
+  }
+
+  @Test
+  void cashValidationMessage_negative_returnsMessage() {
+    String msg = SetupController.cashValidationMessage("-500");
+    assertNotNull(msg);
+    assertTrue(msg.toLowerCase().contains("positive"));
+  }
+
+  @Test
+  void cashValidationMessage_zero_returnsMessage() {
+    String msg = SetupController.cashValidationMessage("0");
+    assertNotNull(msg);
+    assertTrue(msg.toLowerCase().contains("greater"));
+  }
+
+  @Test
+  void cashValidationMessage_tooLarge_returnsMessage() {
+    String msg = SetupController.cashValidationMessage("1001B");
+    assertNotNull(msg);
+    assertTrue(msg.toLowerCase().contains("large") || msg.toLowerCase().contains("trillion"));
+  }
+
+  @Test
+  void cashValidationMessage_valid_returnsNull() {
+    assertNull(SetupController.cashValidationMessage("5000"));
+    assertNull(SetupController.cashValidationMessage("1.5k"));
+    assertNull(SetupController.cashValidationMessage("2m"));
   }
 
   // ── isCashReady ───────────────────────────────────────────────────────────
@@ -63,11 +127,11 @@ class SetupControllerTest {
   }
 
   @Test
-  void isCashReady_noPreset_zeroCash_parsesToDefault_isTrue() {
-    // "0" is invalid cash, parseCash returns the default 10_000 which is > 0,
-    // so the controller treats the field as ready.
+  void isCashReady_noPreset_invalidCash_isFalse() {
     SetupController ctrl = makeController();
-    assertTrue(ctrl.isCashReady(false, "0"));
+    assertFalse(ctrl.isCashReady(false, "0"));
+    assertFalse(ctrl.isCashReady(false, "abc"));
+    assertFalse(ctrl.isCashReady(false, "1T"));
   }
 
   // ── handleBack ────────────────────────────────────────────────────────────

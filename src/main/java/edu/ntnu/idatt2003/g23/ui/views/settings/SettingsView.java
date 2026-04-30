@@ -493,11 +493,16 @@ public final class SettingsView {
         }),
         keybindGroup("In-Game", new String[][] {
             {"N / Space", "Advance to next week"},
+          {"S", "Open Settings"},
+          {"P", "Open Profile"},
             {"/", "Focus stock search"},
             {"Ctrl + F", "Focus stock search"},
             {"M", "Open Market Movers"},
             {"H", "Open Transaction History"},
             {"Esc", "Clear search / go back"},
+        }),
+        keybindGroup("Profile", new String[][] {
+          {"Esc", "Back to market"},
         })
     );
     content.setPadding(new Insets(4, 0, 4, 0));

@@ -251,6 +251,7 @@ public class App extends Application {
     currentSavePath = null;
     currentGameController = null;
     currentUiState = null;
+    currentProfileAvatar = "bust-in-silhouette";
     currentSetupPage = new SetupView(
         withBack(this::goToSaveSelect),
         (name, cash, csvResource) -> startGame(name, cash, csvResource),
@@ -744,6 +745,7 @@ public class App extends Application {
         profileController,
         onBackToGame,
         openSettingsFromProfile,
+        () -> sfxController.play(SfxController.SELECT),
         currentProfileAvatar,
         avatar -> {
           currentProfileAvatar = avatar;
