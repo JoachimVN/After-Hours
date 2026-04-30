@@ -179,6 +179,10 @@ public final class GameView implements GameViewInterface {
     this.detailArea = new VBox();
     detailArea.getStyleClass().add("game-detail-area");
     VBox.setVgrow(detailArea, Priority.ALWAYS);
+    Rectangle detailClip = new Rectangle();
+    detailClip.widthProperty().bind(detailArea.widthProperty());
+    detailClip.heightProperty().bind(detailArea.heightProperty());
+    detailArea.setClip(detailClip);
 
     // ── Stock list (left panel) ──────────────────────────────────────────
     this.stockListBox = new VBox(4);
@@ -535,6 +539,7 @@ public final class GameView implements GameViewInterface {
 
     // ── Global keybindings ──────────────────────────────────────────────────
     // N / Space → Next Week  |  / → Focus search  |  M → Market Movers  |  H → History
+    // S → Settings | P → Profile
     // Escape → clear search, then go back to landing page
     overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
       boolean inTextField = e.getTarget() instanceof TextField;
@@ -571,6 +576,18 @@ public final class GameView implements GameViewInterface {
         case H -> {
           if (!inTextField) {
             historyBtn.fire();
+            e.consume();
+          }
+        }
+        case S -> {
+          if (!inTextField && onSettings != null) {
+            settingsBtn.fire();
+            e.consume();
+          }
+        }
+        case P -> {
+          if (!inTextField) {
+            profileBtn.fire();
             e.consume();
           }
         }
@@ -668,8 +685,8 @@ public final class GameView implements GameViewInterface {
       return;
     }
 
-    double minDetailHeight = Math.min(180, usableHeight * 0.7);
-    double minPortfolioHeight = Math.min(96, usableHeight * 0.7);
+    double minDetailHeight = Math.max(180, detailArea.minHeight(-1));
+    double minPortfolioHeight = 96;
     double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
     double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
 
@@ -679,9 +696,12 @@ public final class GameView implements GameViewInterface {
     }
 
     portfolioDividerRatio = clamp(portfolioDividerRatio, minRatio, maxRatio);
+    double detailHeight = Math.max(minDetailHeight, usableHeight * portfolioDividerRatio);
     double portfolioHeight = Math.max(0, usableHeight * (1.0 - portfolioDividerRatio));
 
     detailArea.setMinHeight(minDetailHeight);
+    detailArea.setPrefHeight(detailHeight);
+    detailArea.setMaxHeight(detailHeight);
     portfolioSection.setMinHeight(portfolioHeight);
     portfolioSection.setPrefHeight(portfolioHeight);
     portfolioSection.setMaxHeight(portfolioHeight);

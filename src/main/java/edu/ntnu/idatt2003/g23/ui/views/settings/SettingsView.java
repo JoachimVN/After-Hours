@@ -478,6 +478,7 @@ public final class SettingsView {
         }),
         keybindGroup("Navigation (All Pages)", new String[][] {
             {"Esc", "Go back / close popup"},
+            {"F11", "Toggle fullscreen"},
         }),
         keybindGroup("New Game Setup", new String[][] {
             {"Enter", "Confirm / advance step"},
@@ -493,11 +494,16 @@ public final class SettingsView {
         }),
         keybindGroup("In-Game", new String[][] {
             {"N / Space", "Advance to next week"},
+          {"S", "Open Settings"},
+          {"P", "Open Profile"},
             {"/", "Focus stock search"},
             {"Ctrl + F", "Focus stock search"},
             {"M", "Open Market Movers"},
             {"H", "Open Transaction History"},
             {"Esc", "Clear search / go back"},
+        }),
+        keybindGroup("Profile", new String[][] {
+          {"Esc", "Back to market"},
         })
     );
     content.setPadding(new Insets(4, 0, 4, 0));

@@ -250,9 +250,10 @@
 .settings-keybind-key {
     -fx-font-size: 12;
     -fx-font-weight: bold;
-    -fx-text-fill: #a9d8ff;
-    -fx-background-color: rgba(73, 149, 214, 0.14);
-    -fx-border-color: rgba(116, 181, 235, 0.42);
+    -fx-text-fill: #f5a201;
+    -fx-label-padding: 0;
+    -fx-background-color: rgba(245, 162, 1, 0.16);
+    -fx-border-color: rgba(245, 162, 1, 0.45);
     -fx-border-radius: 5;
     -fx-background-radius: 5;
     -fx-padding: 3 10 3 10;
@@ -280,7 +281,7 @@
 .keybind-popup-title {
     -fx-font-size: 17;
     -fx-font-weight: bold;
-    -fx-text-fill: #a9d8ff;
+    -fx-text-fill: #f5a201;
 }
 
 .keybind-popup-group {

@@ -22,7 +22,7 @@ import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
 import edu.ntnu.idatt2003.g23.ui.views.csveditor.CsvEditorView;
 import edu.ntnu.idatt2003.g23.ui.views.customstocks.CustomStocksView;
-import edu.ntnu.idatt2003.g23.ui.views.nostocks.NoStocksView;
+import edu.ntnu.idatt2003.g23.ui.views.nogame.NoGameView;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
@@ -186,6 +186,12 @@ public class App extends Application {
       stage.setFullScreen(true);
     }
     stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+    scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.F11) {
+        toggleFullscreen();
+        event.consume();
+      }
+    });
 
     // Track window size changes so we can persist them
     stage.widthProperty().addListener((obs, o, w) -> {
@@ -251,6 +257,7 @@ public class App extends Application {
     currentSavePath = null;
     currentGameController = null;
     currentUiState = null;
+    currentProfileAvatar = "bust-in-silhouette";
     currentSetupPage = new SetupView(
         withBack(this::goToSaveSelect),
         (name, cash, csvResource) -> startGame(name, cash, csvResource),
@@ -378,8 +385,12 @@ public class App extends Application {
 
   private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor,
       String exchangeName) {
+    if (cash == 0) {
+      showNoGamePage();
+      return;
+    }
     if (stocks.isEmpty()) {
-      showNoStocksPage(fromEditor);
+      showNoGamePage(fromEditor);
       return;
     }
     Player player = new Player(
@@ -393,7 +404,7 @@ public class App extends Application {
   private void buildAndStartGameFromSave(Player player, Exchange exchange,
       java.nio.file.Path savePath, GameUiState uiState) {
     if (exchange.getStocks().isEmpty()) {
-      showNoStocksPage(false);
+      showNoGamePage(false);
       return;
     }
     currentPlayer = player;
@@ -504,8 +515,23 @@ public class App extends Application {
     }
   }
 
-  private void showNoStocksPage(boolean fromEditor) {
-    Parent page = NoStocksView.build(NoStocksView.DEFAULT_MONOLOGUE, fromEditor, withBack(this::goHome));
+  private void showNoGamePage() {
+    Parent page = NoGameView.build(NoGameView.NO_CASH_MONOLOGUE, NoGameView.MSG_NO_CASH, true,
+        withBack(this::goHome));
+    navigateToGame(page);
+    Platform.runLater(() -> {
+      if (musicMuted) {
+        homePageMusicController.stop();
+      } else {
+        homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
+            "/audio/music/ambience/After_Hours_Ambience3_demo.mp3");
+      }
+    });
+  }
+
+  private void showNoGamePage(boolean fromEditor) {
+    String ctx = fromEditor ? NoGameView.MSG_SKIPPED : NoGameView.MSG_EMPTY;
+    Parent page = NoGameView.build(NoGameView.NO_STOCKS_MONOLOGUE, ctx, true, withBack(this::goHome));
     navigateToGame(page);
     Platform.runLater(() -> {
       if (musicMuted) {
@@ -744,6 +770,7 @@ public class App extends Application {
         profileController,
         onBackToGame,
         openSettingsFromProfile,
+        () -> sfxController.play(SfxController.SELECT),
         currentProfileAvatar,
         avatar -> {
           currentProfileAvatar = avatar;
@@ -762,6 +789,12 @@ public class App extends Application {
             currentGameView.selectStockBySymbol(symbol);
           }
         });
+  }
+
+  private void toggleFullscreen() {
+    fullscreenEnabled = !primaryStage.isFullScreen();
+    primaryStage.setFullScreen(fullscreenEnabled);
+    saveSettings();
   }
 
   private void saveSettings() {

@@ -1,4 +1,4 @@
-package edu.ntnu.idatt2003.g23.ui.views.nostocks;
+package edu.ntnu.idatt2003.g23.ui.views.nogame;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,13 +26,14 @@ import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
 /**
- * Displayed when the player starts the game with no stocks loaded.
+ * Displayed when the player cannot start the game — either because no stocks were loaded,
+ * or because they chose to start with no cash.
  *
  * <p>Shows a sequence of messages as a monologue. Each entry defines the text
  * and how long to display it before fading out. After the last message fades,
  * only the animated background and the back button remain.</p>
  */
-public final class NoStocksView {
+public final class NoGameView {
 
   /**
    * A single message in the monologue sequence.
@@ -85,36 +86,42 @@ public final class NoStocksView {
     }
   }
 
-  private static final String MSG_SKIPPED = "I know you skipped all the stocks in the editor.";
-  private static final String MSG_EMPTY =
-      "I know that file had nothing in it.\nDid you think I wouldn't notice?";
+  public static final String MSG_SKIPPED = "I know you tried to continue with an empty editor.";
+  public static final String MSG_EMPTY = "I know you tried to play with an empty CSV file.";
+  public static final String MSG_NO_CASH = "I know you tried to play without cash.";
 
   private static final String APPLAUSE_SOUND = "/audio/sfx/Applause.mp3";
 
-  /**
-   * The monologue played when the player has no stocks.
-   */
-  public static final List<Message> DEFAULT_MONOLOGUE = List.of(
-      new Message("You didn't import any stocks, silly.", 6, 3, false, false),
-      new Message("It's okay.", 2, 0, false, true, true),
-      new Message("I put a back button in the top left corner!", 4.25, 1.2),
-      new Message("You can go now.", 3.25, 4.8, false, false),
-      new Message("I mean it, the button is right there.", 4, 2.75),
-      new Message("Here let me bring it closer"), //
-      new Message("Okay, bye now!", 4, 10, false, false),
-      new Message("Still here?", 3, 1),
-      new Message("I respect that.", 3, 1),
-      new Message("Most people would have gone back by now.", 5, 3),
-      new Message("Not you though.", 3, 0),
-      new Message("You're different.", 3, 10, true, false),
-      new Message("Let me bring the button back", 4, 3, false, false), //?
-      new Message("", 5, 3.0, false, false), // swapped at runtime based on fromEditor
-      new Message("That's fine.\nIt's not your fault.", 4, 1.5),
-      new Message("Let's just wait here for a little bit.", 3, 1, false, true),
-      new Message("Let time pass.", 5, 8, false, false)
-  );
+  // Both monologues share every line — only the opening differs.
+  private static List<Message> buildMonologue(String openingLine) {
+    return List.of(
+        new Message(openingLine, 6, 3, false, false),
+        new Message("It's okay.", 2, 0, false, true, true),
+        new Message("I put a back button in the top left corner!", 4.25, 1.2),
+        new Message("You can go now.", 3.25, 4.8, false, false),
+        new Message("I mean it, the button is right there.", 4, 2.75),
+        new Message("Here let me bring it closer"),
+        new Message("Okay, bye now!", 4, 10, false, false),
+        new Message("Still here?", 3, 1),
+        new Message("I respect that.", 3, 1),
+        new Message("Most people would have gone back by now.", 5, 3),
+        new Message("Not you though.", 3, 0),
+        new Message("You're different.", 3, 10, true, false),
+        new Message("Let me bring the button back", 4, 3, false, false),
+        new Message("", 5, 3.0, false, false), // context message placeholder — swapped at runtime
+        new Message("That's fine.\nIt's not your fault.", 4, 1.5),
+        new Message("Let's just wait here for a little bit.", 3, 1, false, true),
+        new Message("Let time pass.", 5, 8, false, false)
+    );
+  }
 
-  private NoStocksView() {
+  public static final List<Message> NO_STOCKS_MONOLOGUE =
+      buildMonologue("You didn't import any stocks, silly.");
+
+  public static final List<Message> NO_CASH_MONOLOGUE =
+      buildMonologue("You can't play without cash, silly.");
+
+  private NoGameView() {
   }
 
   // -------------------------------------------------------------------------
@@ -122,16 +129,16 @@ public final class NoStocksView {
   // -------------------------------------------------------------------------
 
   /**
-   * Builds the no-stocks page.
+   * Builds the no-game page.
    *
-   * @param monologue  the sequence of messages to cycle through
-   * @param fromEditor {@code true} if the player arrived via the CSV editor (skipped all rows),
-   *                   {@code false} if the file was already empty before the editor was shown
-   * @param onBack     called when the user presses Back
+   * @param monologue       the sequence of messages to cycle through
+   * @param contextMessage  text injected at the {@code ""} placeholder; {@code null} leaves it blank
+   * @param interactive     when {@code true} the context message triggers a yes/no interaction
+   * @param onBack          called when the user presses Back
    * @return the page root
    */
-  public static Parent build(List<Message> monologue, boolean fromEditor, Runnable onBack) {
-    String contextMsg = fromEditor ? MSG_SKIPPED : MSG_EMPTY;
+  public static Parent build(List<Message> monologue, String contextMessage,
+                             boolean interactive, Runnable onBack) {
 
     // Remember the placeholder index BEFORE mapping so we can split on it
     int ctxIdx = -1;
@@ -144,7 +151,8 @@ public final class NoStocksView {
     final int contextIdx = ctxIdx;
 
     final List<Message> msgs = monologue.stream()
-        .map(m -> m.text().isEmpty() ? new Message(contextMsg, m.displaySecs(), m.gapSecs()) : m)
+        .map(m -> m.text().isEmpty() && contextMessage != null
+            ? new Message(contextMessage, m.displaySecs(), m.gapSecs()) : m)
         .toList();
 
     // ── Page skeleton ──────────────────────────────────────────────────
@@ -205,8 +213,8 @@ public final class NoStocksView {
     // Button bar — hidden by default, shown only during the interactive step
     Button yesBtn = new Button("Yes");
     Button noBtn = new Button("No");
-    yesBtn.getStyleClass().add("nostocks-btn");
-    noBtn.getStyleClass().add("nostocks-btn");
+    yesBtn.getStyleClass().add("nogame-btn");
+    noBtn.getStyleClass().add("nogame-btn");
     HBox buttonBar = new HBox(24, yesBtn, noBtn);
     buttonBar.setAlignment(Pos.CENTER);
     buttonBar.setVisible(false);
@@ -230,8 +238,8 @@ public final class NoStocksView {
       });
     }
 
-    // ── Simple path (no editor / no placeholder found) ──────────────────
-    if (!fromEditor || contextIdx < 0) {
+    // ── Simple path (no interactive flag or no placeholder found) ─────────
+    if (!interactive || contextIdx < 0) {
       page.sceneProperty().addListener((obs, oldScene, newScene) -> {
         if (newScene != null) {
           playSequenceWithButtonHooks(msgs, labelsBox, overlay,
@@ -242,13 +250,16 @@ public final class NoStocksView {
     }
 
     // ── Interactive path ────────────────────────────────────────────────
-    Message contextMessage = msgs.get(contextIdx);
+    String noQuestion = MSG_NO_CASH.equals(contextMessage) ? "Was your cash really zero?"
+        : MSG_SKIPPED.equals(contextMessage) ? "Was your editor empty?"
+        : "Was your file empty?";
+    Message contextMsg = msgs.get(contextIdx);
     List<Message> phase1Msgs = msgs.subList(0, contextIdx);
     List<Message> phase2Msgs = msgs.subList(contextIdx + 1, msgs.size());
 
     SequentialTransition phase2 = buildPhaseSequence(phase2Msgs, labelsBox, overlay, null, true);
     SequentialTransition knewItSeq = buildPhaseSequence(
-        List.of(new Message("I knew it, it's okay.", 4, 0)), labelsBox, overlay, null, true);
+        List.of(new Message("Yeah, it's okay.", 4, 0)), labelsBox, overlay, null, true);
     knewItSeq.setOnFinished(e -> phase2.play());
 
     // Yes → hide buttons, play "I knew it" then phase 2
@@ -271,13 +282,13 @@ public final class NoStocksView {
         dontLieDelay.setOnFinished(ev -> {
           buttonBar.setVisible(false);
           labelsBox.getChildren().clear();
-          labelsBox.getChildren().add(makeLabel("Did you skip them all?"));
+          labelsBox.getChildren().add(makeLabel(noQuestion));
           PauseTransition btnDelay = new PauseTransition(Duration.seconds(2));
           btnDelay.setOnFinished(ev3 -> {
             Button yes1 = new Button("Yes");
             Button yes2 = new Button("Yes");
-            yes1.getStyleClass().add("nostocks-btn");
-            yes2.getStyleClass().add("nostocks-btn");
+            yes1.getStyleClass().add("nogame-btn");
+            yes2.getStyleClass().add("nogame-btn");
             yes1.setOnAction(ev4 -> onYes.run());
             yes2.setOnAction(ev4 -> onYes.run());
             buttonBar.getChildren().setAll(yes1, yes2);
@@ -295,7 +306,7 @@ public final class NoStocksView {
     // Phase 1 ends → fade in context message, wait 3 s, then show buttons
     Runnable interactiveSetup = () -> {
       labelsBox.getChildren().clear();
-      labelsBox.getChildren().add(makeLabel(contextMessage.text()));
+      labelsBox.getChildren().add(makeLabel(contextMsg.text()));
       FadeTransition fadeIn = new FadeTransition(Duration.millis(800), overlay);
       fadeIn.setFromValue(0.0);
       fadeIn.setToValue(1.0);
@@ -560,8 +571,8 @@ public final class NoStocksView {
     }
 
     seqA.setOnFinished(e -> {
-      if (applausePlayer != null &&
-          applausePlayer.getStatus() == MediaPlayer.Status.PLAYING) {
+      if (applausePlayer != null
+          && applausePlayer.getStatus() == MediaPlayer.Status.PLAYING) {
         applausePlayer.setOnEndOfMedia(() -> Platform.runLater(seqB::play));
       } else {
         seqB.play();
@@ -572,7 +583,7 @@ public final class NoStocksView {
 
   private static MediaPlayer loadMediaPlayer(String resourcePath) {
     try {
-      java.net.URL url = NoStocksView.class.getResource(resourcePath);
+      java.net.URL url = NoGameView.class.getResource(resourcePath);
       if (url == null) {
         return null;
       }

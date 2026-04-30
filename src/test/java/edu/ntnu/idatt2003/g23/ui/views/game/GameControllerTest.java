@@ -215,6 +215,11 @@ class GameControllerTest {
   }
 
   @Test
+  void getPlayerWeeksTargetForStatus_forNovice_isZero() {
+    assertEquals(0, controller.getPlayerWeeksTargetForStatus(PlayerStatus.NOVICE));
+  }
+
+  @Test
   void getPlayerWeeksProgress_withNoTrades_isZero() {
     assertEquals(0, new BigDecimal("0.0000").compareTo(controller.getPlayerWeeksProgress()));
   }
@@ -228,6 +233,12 @@ class GameControllerTest {
   void getPlayerGrowthTargetForNextStatus_forNovice_isOnePointTwo() {
     assertEquals(0,
         new BigDecimal("1.2").compareTo(controller.getPlayerGrowthTargetForNextStatus()));
+  }
+
+  @Test
+  void getPlayerGrowthTargetForStatus_forNovice_isZero() {
+    assertEquals(0, BigDecimal.ZERO.compareTo(controller.getPlayerGrowthTargetForStatus(
+        PlayerStatus.NOVICE)));
   }
 
   @Test
