@@ -55,7 +55,7 @@ public final class SetupController {
   public void handleStart(String nameText, String cashText) {
     String name = (nameText == null || nameText.isBlank()) ? "Player" : nameText.trim();
     double cash = parseCash(cashText);
-    if (cash <= 0) {
+    if (cash < 0) {
       return;
     }
     if (useDefaultStocks) {
@@ -67,7 +67,7 @@ public final class SetupController {
   }
 
   public boolean isCashReady(boolean presetSelected, String cashText) {
-    return presetSelected || parseCash(cashText) > 0;
+    return presetSelected || parseCash(cashText) >= 0;
   }
 
   // ── Accessors ─────────────────────────────────────────────────────────────
@@ -90,13 +90,10 @@ public final class SetupController {
     try {
       val = NumberParser.parse(trimmed).doubleValue();
     } catch (RuntimeException e) {
-      return "Not a valid number. Try: 2000, 8k, 1.5m";
+      return "Not a valid number. Try: 2000, 8k, 12.5K";
     }
     if (val < 0) {
       return "Amount must be positive";
-    }
-    if (val == 0) {
-      return "Amount must be greater than zero";
     }
     if (val >= MAX_CASH) {
       return "Amount too large (max: 1 trillion)";
@@ -107,7 +104,7 @@ public final class SetupController {
   static double parseCash(String text) {
     try {
       double val = NumberParser.parse(text).doubleValue();
-      if (val <= 0 || val >= MAX_CASH) {
+      if (val < 0 || val >= MAX_CASH) {
         return -1;
       }
       return val;

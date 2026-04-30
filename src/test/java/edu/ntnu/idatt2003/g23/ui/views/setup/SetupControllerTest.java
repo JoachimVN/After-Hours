@@ -32,8 +32,8 @@ class SetupControllerTest {
   }
 
   @Test
-  void parseCash_zero_returnsInvalid() {
-    assertTrue(SetupController.parseCash("0") < 0);
+  void parseCash_zero_returnsZero() {
+    assertEquals(0.0, SetupController.parseCash("0"), 1e-9);
   }
 
   @Test
@@ -85,10 +85,8 @@ class SetupControllerTest {
   }
 
   @Test
-  void cashValidationMessage_zero_returnsMessage() {
-    String msg = SetupController.cashValidationMessage("0");
-    assertNotNull(msg);
-    assertTrue(msg.toLowerCase().contains("greater"));
+  void cashValidationMessage_zero_returnsNull() {
+    assertNull(SetupController.cashValidationMessage("0"));
   }
 
   @Test
@@ -103,6 +101,7 @@ class SetupControllerTest {
     assertNull(SetupController.cashValidationMessage("5000"));
     assertNull(SetupController.cashValidationMessage("1.5k"));
     assertNull(SetupController.cashValidationMessage("2m"));
+    assertNull(SetupController.cashValidationMessage("0"));
   }
 
   // ── isCashReady ───────────────────────────────────────────────────────────
@@ -127,9 +126,14 @@ class SetupControllerTest {
   }
 
   @Test
+  void isCashReady_noPreset_zeroCash_isTrue() {
+    SetupController ctrl = makeController();
+    assertTrue(ctrl.isCashReady(false, "0"));
+  }
+
+  @Test
   void isCashReady_noPreset_invalidCash_isFalse() {
     SetupController ctrl = makeController();
-    assertFalse(ctrl.isCashReady(false, "0"));
     assertFalse(ctrl.isCashReady(false, "abc"));
     assertFalse(ctrl.isCashReady(false, "1T"));
   }

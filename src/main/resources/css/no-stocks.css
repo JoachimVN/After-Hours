@@ -1,4 +1,4 @@
-.nostocks-btn {
+.nogame-btn {
     -fx-background-color: #0d1f3c;
     -fx-text-fill: #b8cce8;
     -fx-border-color: #b8cce8;
@@ -9,7 +9,7 @@
     -fx-cursor: hand;
 }
 
-.nostocks-btn:hover {
+.nogame-btn:hover {
     -fx-background-color: #1a3a6e;
     -fx-text-fill: #ffffff;
     -fx-border-color: #ffffff;
