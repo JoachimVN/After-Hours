@@ -186,6 +186,12 @@ public class App extends Application {
       stage.setFullScreen(true);
     }
     stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+    scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.F11) {
+        toggleFullscreen();
+        event.consume();
+      }
+    });
 
     // Track window size changes so we can persist them
     stage.widthProperty().addListener((obs, o, w) -> {
@@ -783,6 +789,12 @@ public class App extends Application {
             currentGameView.selectStockBySymbol(symbol);
           }
         });
+  }
+
+  private void toggleFullscreen() {
+    fullscreenEnabled = !primaryStage.isFullScreen();
+    primaryStage.setFullScreen(fullscreenEnabled);
+    saveSettings();
   }
 
   private void saveSettings() {

@@ -478,6 +478,7 @@ public final class SettingsView {
         }),
         keybindGroup("Navigation (All Pages)", new String[][] {
             {"Esc", "Go back / close popup"},
+            {"F11", "Toggle fullscreen"},
         }),
         keybindGroup("New Game Setup", new String[][] {
             {"Enter", "Confirm / advance step"},
