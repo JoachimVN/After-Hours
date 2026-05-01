@@ -1,5 +1,6 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -68,11 +69,13 @@ public class Player {
     for (int i = 0; i < weeklySnapshots.size(); i++) {
       if (weeklySnapshots.get(i).week() == week) {
         weeklySnapshots.set(i, snapshot);
+        compactAndCapSnapshots();
         return;
       }
     }
     weeklySnapshots.add(snapshot);
     weeklySnapshots.sort(Comparator.comparingInt(WeeklySnapshot::week));
+    compactAndCapSnapshots();
   }
 
   public List<WeeklySnapshot> getWeeklySnapshots() {
@@ -94,6 +97,45 @@ public class Player {
       weeklySnapshots.add(snapshot);
     }
     weeklySnapshots.sort(Comparator.comparingInt(WeeklySnapshot::week));
+    compactAndCapSnapshots();
+  }
+
+  private void compactAndCapSnapshots() {
+    if (weeklySnapshots.isEmpty()) {
+      return;
+    }
+
+    List<WeeklySnapshot> compacted = new ArrayList<>();
+    for (int i = 0; i < weeklySnapshots.size(); i++) {
+      WeeklySnapshot current = weeklySnapshots.get(i);
+      if (compacted.isEmpty()) {
+        compacted.add(current);
+        continue;
+      }
+
+      WeeklySnapshot previous = compacted.get(compacted.size() - 1);
+      boolean changed = current.cash().compareTo(previous.cash()) != 0
+          || current.portfolioValue().compareTo(previous.portfolioValue()) != 0
+          || current.netWorth().compareTo(previous.netWorth()) != 0;
+      boolean isLast = i == weeklySnapshots.size() - 1;
+
+      if (changed || isLast) {
+        compacted.add(current);
+      }
+    }
+
+    weeklySnapshots.clear();
+    weeklySnapshots.addAll(compacted);
+
+    if (AppConfig.PERFORMANCE_MODE.get()) {
+      int maxWeeks = Math.max(50, AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.get());
+      if (weeklySnapshots.size() > maxWeeks) {
+        int start = weeklySnapshots.size() - maxWeeks;
+        List<WeeklySnapshot> tail = new ArrayList<>(weeklySnapshots.subList(start, weeklySnapshots.size()));
+        weeklySnapshots.clear();
+        weeklySnapshots.addAll(tail);
+      }
+    }
   }
 
   /**

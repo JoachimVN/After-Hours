@@ -301,6 +301,30 @@
     -fx-padding: 2 2 2 2;
 }
 
+.game-stock-list-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 2 2 2 2;
+}
+
+.game-stock-list-view .viewport,
+.game-stock-list-view .virtual-flow,
+.game-stock-list-view .clipped-container,
+.game-stock-list-view .sheet {
+    -fx-background-color: transparent;
+}
+
+.game-stock-list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 2 2 2 2;
+}
+
+.game-stock-list-view .list-cell:filled:selected,
+.game-stock-list-view .list-cell:filled:selected:focused,
+.game-stock-list-view .list-cell:focused {
+    -fx-background-color: transparent;
+}
+
 /* Stock cards */
 .stock-card {
     -fx-background-color: rgba(12, 24, 52, 0.80);

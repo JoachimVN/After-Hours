@@ -24,6 +24,7 @@ import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -41,6 +42,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableCell;
@@ -98,14 +101,16 @@ public final class GameView implements GameViewInterface {
   private final ObjectProperty<Stock> selectedStock;
 
   private final TextField searchField;
+  private final boolean performanceMode;
   private final VBox stockListBox;
+  private final ScrollPane stockScroll;
+  private final SortedList<Stock> sortedStocks;
+  private final ListView<Stock> stockListView;
   private final Set<String> favorites;
-  private final Node[] selectedCardRef;
   private final Set<String> activeFilters;
   private final List<String> filterChipOrder;
   private FlowPane filterChipsPane;
   private String stockSort;
-  private ScrollPane stockScroll;
   private TxRow highlightedTx = null;
   private AnimationTimer highlightFadeTimer = null;
 
@@ -150,15 +155,16 @@ public final class GameView implements GameViewInterface {
 
     this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
     this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
+    this.sortedStocks = new SortedList<>(this.filteredStocks, java.util.Comparator.comparing(Stock::getSymbol));
     this.portfolioItems = FXCollections.observableArrayList(gameController.getPortfolioShares());
     this.selectedStock = new SimpleObjectProperty<>(null);
+    this.performanceMode = AppConfig.PERFORMANCE_MODE.get();
 
     this.favorites = new HashSet<>();
     this.activeFilters = new HashSet<>();
     this.filterChipOrder = new ArrayList<>(List.of("FAVORITES", "OWNED", "UP", "DOWN"));
     this.filterChipsPane = new FlowPane(4, 4);
     this.stockSort = "NAME";
-    this.selectedCardRef = new Node[] {null};
 
     // ── Stat pill labels ─────────────────────────────────────────────────
     statusVal.getStyleClass().addAll("stat-pill-value", "status-pill-value");
@@ -184,9 +190,44 @@ public final class GameView implements GameViewInterface {
     detailClip.heightProperty().bind(detailArea.heightProperty());
     detailArea.setClip(detailClip);
 
-    // ── Stock list (left panel) ──────────────────────────────────────────
+    // ── Stock list (left panel) — standard or virtualized (performance mode)
     this.stockListBox = new VBox(4);
     this.stockListBox.getStyleClass().add("game-stock-list");
+    this.stockScroll = new ScrollPane(stockListBox);
+    stockScroll.setFitToWidth(true);
+    stockScroll.getStyleClass().add("game-scroll");
+    stockScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    stockScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+    this.stockListView = new ListView<>(sortedStocks);
+    this.stockListView.getStyleClass().addAll("game-stock-list-view", "game-scroll");
+    this.stockListView.setFocusTraversable(false);
+    this.stockListView.setCellFactory(lv -> {
+      ListCell<Stock> cell = new ListCell<>() {
+        @Override
+        protected void updateItem(Stock stock, boolean empty) {
+          super.updateItem(stock, empty);
+          if (empty || stock == null) {
+            setGraphic(null);
+            setText(null);
+          } else {
+            setGraphic(buildStockCard(stock));
+          }
+        }
+      };
+      cell.setOnMouseClicked(e -> {
+        Stock stock = cell.getItem();
+        if (stock == null || cell.isEmpty()) {
+          return;
+        }
+        if (selectedStock.get() == null
+            || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
+          notifyStockSelectionChanged();
+        }
+        selectedStock.set(stock);
+      });
+      return cell;
+    });
 
     // ── Search field (declared early for closure access) ─────────────────
     this.searchField = new TextField();
@@ -220,13 +261,20 @@ public final class GameView implements GameViewInterface {
         }
       }
       rebuildDetail();
+      if (performanceMode) {
+        stockListView.refresh();
+      } else {
+        refreshSelectedStockCardStyles();
+      }
     });
 
     // Show detail immediately for first stock
     rebuildDetail();
 
-    // ── Search field listener ──────────────────────────────────────────────
-    searchField.textProperty().addListener((obs, old, val) -> applyFilter());
+    // ── Search field listener (debounced 150ms) ───────────────────────────
+    PauseTransition searchDebounce = new PauseTransition(javafx.util.Duration.millis(150));
+    searchDebounce.setOnFinished(ev -> applyFilter());
+    searchField.textProperty().addListener((obs, old, val) -> searchDebounce.playFromStart());
     searchField.setOnAction(ev -> {
       notifyPanelOpen();
       applyFilter();
@@ -310,14 +358,10 @@ public final class GameView implements GameViewInterface {
     Label marketTitle = new Label(gameController.getExchangeName());
     marketTitle.getStyleClass().add("game-panel-title");
 
-    this.stockScroll = new ScrollPane(stockListBox);
-    stockScroll.setFitToWidth(true);
-    stockScroll.getStyleClass().add("game-scroll");
-    stockScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-    stockScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-    VBox.setVgrow(stockScroll, Priority.ALWAYS);
+    Node stockListNode = performanceMode ? stockListView : stockScroll;
+    VBox.setVgrow(stockListNode, Priority.ALWAYS);
 
-    VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockScroll);
+    VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockListNode);
     leftPanel.getStyleClass().add("game-left-panel");
     leftPanel.setMinWidth(160);
     leftPanel.setMaxWidth(600);
@@ -878,18 +922,21 @@ public final class GameView implements GameViewInterface {
 
   private void focusStockCardInList(String symbol) {
     Platform.runLater(() -> {
+      if (performanceMode) {
+        for (int i = 0; i < sortedStocks.size(); i++) {
+          if (sortedStocks.get(i).getSymbol().equals(symbol)) {
+            stockListView.scrollTo(i);
+            break;
+          }
+        }
+        return;
+      }
+
       int total = stockListBox.getChildren().size();
       for (int i = 0; i < total; i++) {
         Node n = stockListBox.getChildren().get(i);
         Object data = n.getUserData();
         if (data instanceof String cardSymbol && cardSymbol.equals(symbol)) {
-          if (selectedCardRef[0] != null) {
-            selectedCardRef[0].getStyleClass().remove("stock-card-selected");
-          }
-          if (!n.getStyleClass().contains("stock-card-selected")) {
-            n.getStyleClass().add("stock-card-selected");
-          }
-          selectedCardRef[0] = n;
           stockScroll.setVvalue(total <= 1 ? 0 : (double) i / (double) (total - 1));
           break;
         }
@@ -1858,7 +1905,7 @@ public final class GameView implements GameViewInterface {
           notifyStockSelectionChanged();
         }
         selectedStock.set(target);
-        focusStockCardInList(sym, stockScroll);
+        focusStockCardInList(sym);
       });
 
       rows.getChildren().add(row);
@@ -1868,27 +1915,6 @@ public final class GameView implements GameViewInterface {
     col.getStyleClass().add("market-movers-col");
     col.getStyleClass().add(isGainers ? "market-movers-col-gainers" : "market-movers-col-losers");
     return col;
-  }
-
-  private void focusStockCardInList(String symbol, ScrollPane stockScroll) {
-    Platform.runLater(() -> {
-      int total = stockListBox.getChildren().size();
-      for (int i = 0; i < total; i++) {
-        Node n = stockListBox.getChildren().get(i);
-        Object data = n.getUserData();
-        if (data instanceof String cardSymbol && cardSymbol.equals(symbol)) {
-          if (selectedCardRef[0] != null) {
-            selectedCardRef[0].getStyleClass().remove("stock-card-selected");
-          }
-          if (!n.getStyleClass().contains("stock-card-selected")) {
-            n.getStyleClass().add("stock-card-selected");
-          }
-          selectedCardRef[0] = n;
-          stockScroll.setVvalue(total <= 1 ? 0 : (double) i / (double) (total - 1));
-          break;
-        }
-      }
-    });
   }
 
   private void showTransactionHistory() {
@@ -2090,7 +2116,7 @@ public final class GameView implements GameViewInterface {
                   notifyStockSelectionChanged();
                   selectedStock.set(target);
                 }
-                focusStockCardInList(sym, stockScroll);
+                focusStockCardInList(sym);
               });
         }
       });
@@ -2496,10 +2522,28 @@ public final class GameView implements GameViewInterface {
   }
 
   private void rebuildStockList(java.util.Comparator<Stock> sortCmp) {
+    if (performanceMode) {
+      sortedStocks.setComparator(sortCmp);
+      return;
+    }
+
     stockListBox.getChildren().clear();
-    selectedCardRef[0] = null;
     filteredStocks.stream().sorted(sortCmp).forEach(stock ->
         stockListBox.getChildren().add(buildStockCard(stock)));
+  }
+
+  private void refreshSelectedStockCardStyles() {
+    String selectedSymbol = selectedStock.get() == null ? null : selectedStock.get().getSymbol();
+    for (Node node : stockListBox.getChildren()) {
+      if (!(node instanceof HBox card)) {
+        continue;
+      }
+      card.getStyleClass().remove("stock-card-selected");
+      Object data = card.getUserData();
+      if (selectedSymbol != null && data instanceof String symbol && selectedSymbol.equals(symbol)) {
+        card.getStyleClass().add("stock-card-selected");
+      }
+    }
   }
 
   private Node buildStockCard(Stock stock) {
@@ -2568,23 +2612,17 @@ public final class GameView implements GameViewInterface {
 
     if (stock.equals(selectedStock.get())) {
       card.getStyleClass().add("stock-card-selected");
-      selectedCardRef[0] = card;
     }
 
-    card.setOnMouseClicked(e -> {
-      if (selectedStock.get() == null
-          || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
-        notifyStockSelectionChanged();
-      }
-      if (selectedCardRef[0] != null) {
-        selectedCardRef[0].getStyleClass().remove("stock-card-selected");
-      }
-      if (!card.getStyleClass().contains("stock-card-selected")) {
-        card.getStyleClass().add("stock-card-selected");
-      }
-      selectedCardRef[0] = card;
-      selectedStock.set(stock);
-    });
+    if (!performanceMode) {
+      card.setOnMouseClicked(e -> {
+        if (selectedStock.get() == null
+            || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
+          notifyStockSelectionChanged();
+        }
+        selectedStock.set(stock);
+      });
+    }
     return card;
   }
 
@@ -2717,6 +2755,7 @@ public final class GameView implements GameViewInterface {
       }
 
       int n = prices.size();
+      int firstHistoryWeek = Math.max(1, gameController.getCurrentWeek() - n + 1);
       double[] xs = new double[n];
       double[] ys = new double[n];
       double innerH = cH * 0.82;
@@ -2773,7 +2812,8 @@ public final class GameView implements GameViewInterface {
         gc.setLineWidth(1.5);
         gc.strokeOval(cx - 3.5, cy - 3.5, 7, 7);
         // Price chip near top of chart
-        String chipTxt = "Week " + (hi + 1) + "  " + CurrencyFormatter.format(prices.get(hi));
+        String chipTxt = "Week " + (firstHistoryWeek + hi) + "  "
+          + CurrencyFormatter.format(prices.get(hi));
         gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
         double tw = chipTxt.length() * 6.0;
         double chipX = Math.min(cx + 8, w - tw - 12);
@@ -2806,7 +2846,7 @@ public final class GameView implements GameViewInterface {
       for (int pass = 0; pass < 3; pass++) {
         for (TradeDot dot : tradeDots) {
           int week = dot.week();
-          int idx = week - 1;
+          int idx = week - firstHistoryWeek;
           if (idx < 0 || idx >= n) {
             continue;
           }

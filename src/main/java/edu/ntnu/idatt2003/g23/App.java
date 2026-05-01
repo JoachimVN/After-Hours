@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
@@ -37,6 +39,7 @@ import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -98,6 +101,8 @@ public class App extends Application {
   private boolean devModeEnabled = false;
   private boolean autosaveEnabled = false;
   private boolean autosaveToast = true;
+  private boolean performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
+  private int maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
   private String currentAutosaveId = null; // unique per game instance
   private boolean fullscreenEnabled = false;
   private double musicVolume = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
@@ -132,11 +137,15 @@ public class App extends Application {
     devModeEnabled = gs.devMode();
     autosaveEnabled = gs.autosave();
     autosaveToast = gs.autosaveToast();
+    performanceModeEnabled = gs.performanceMode();
+    maxHistoryWeeks = gs.maxHistoryWeeks();
     fullscreenEnabled = gs.fullscreen();
     windowWidth = gs.windowWidth();
     windowHeight = gs.windowHeight();
 
     AppConfig.DEV_MODE.set(gs.devMode());
+    AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
+    AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
     primaryStage = stage;
     homePage = LandingPageView.build(
         () -> {
@@ -285,20 +294,22 @@ public class App extends Application {
   }
 
   private void startGame(String name, double cash, String csvResource) {
-    new Thread(() -> {
-      CsvParseResult result = StockCsvLoader.loadFromResourceWithErrors(csvResource);
-      Platform.runLater(() -> {
-        if (result.hasErrors()) {
-          openCsvEditor(result, name, cash);
-        } else {
-          List<Stock> stocks = result.getRows().stream()
-              .map(StockCsvLoader::rowToStock)
-              .toList();
-          String exchangeName = marketName(csvResource);
-          buildAndStartGame(name, cash, stocks, false, exchangeName);
-        }
-      });
-    }, "stock-loader").start();
+    runWithLoadingOverlay(
+        "Loading Market",
+        "Parsing stock data...",
+        () -> StockCsvLoader.loadFromResourceWithErrors(csvResource),
+        result -> {
+          if (result.hasErrors()) {
+            openCsvEditor(result, name, cash);
+          } else {
+            List<Stock> stocks = result.getRows().stream()
+                .map(StockCsvLoader::rowToStock)
+                .toList();
+            String exchangeName = marketName(csvResource);
+            buildAndStartGame(name, cash, stocks, false, exchangeName);
+          }
+        },
+        error -> showAppNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
   }
 
   private static String marketName(String csvResource) {
@@ -309,27 +320,27 @@ public class App extends Application {
   }
 
   private void startGameWithCsv(String name, double cash, File csvFile) {
-    new Thread(() -> {
-      CsvParseResult result;
-      try {
-        result = StockCsvLoader.parseWithErrors(
-            new FileReader(csvFile, StandardCharsets.UTF_8));
-      } catch (IOException e) {
-        Platform.runLater(() -> showAppNotification(
-            "CSV Error", "Could not read file:\n" + e.getMessage(), false));
-        return;
-      }
-      Platform.runLater(() -> {
-        if (result.hasErrors()) {
-          openCsvEditorFromImport(result, name, cash, csvFile);
-        } else {
-          List<Stock> stocks = result.getRows().stream()
-              .map(StockCsvLoader::rowToStock)
-              .toList();
-          buildAndStartGame(name, cash, stocks, false, "Custom Market");
-        }
-      });
-    }, "stock-loader").start();
+    runWithLoadingOverlay(
+        "Importing CSV",
+        "Reading and validating file...",
+        () -> {
+          try {
+            return StockCsvLoader.parseWithErrors(new FileReader(csvFile, StandardCharsets.UTF_8));
+          } catch (IOException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+          }
+        },
+        result -> {
+          if (result.hasErrors()) {
+            openCsvEditorFromImport(result, name, cash, csvFile);
+          } else {
+            List<Stock> stocks = result.getRows().stream()
+                .map(StockCsvLoader::rowToStock)
+                .toList();
+            buildAndStartGame(name, cash, stocks, false, "Custom Market");
+          }
+        },
+        error -> showAppNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
   private void openCsvEditor(CsvParseResult result, String name, double cash) {
@@ -343,16 +354,18 @@ public class App extends Application {
   }
 
   private void openCsvEditorFromImport(File csvFile, String name, double cash) {
-    CsvParseResult result;
-    try {
-      result = StockCsvLoader.parseWithErrors(
-          new FileReader(csvFile, StandardCharsets.UTF_8));
-    } catch (IOException e) {
-      showAppNotification("CSV Error", "Could not read file:\n" + e.getMessage(), false);
-      return;
-    }
-
-    openCsvEditorFromImport(result, name, cash, csvFile);
+    runWithLoadingOverlay(
+        "Opening CSV Editor",
+        "Parsing CSV data...",
+        () -> {
+          try {
+            return StockCsvLoader.parseWithErrors(new FileReader(csvFile, StandardCharsets.UTF_8));
+          } catch (IOException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+          }
+        },
+        result -> openCsvEditorFromImport(result, name, cash, csvFile),
+        error -> showAppNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
   private void openCsvEditorFromImport(CsvParseResult result, String name, double cash,
@@ -423,7 +436,10 @@ public class App extends Application {
               java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
     }
     GameController gameController = new GameController(player, exchange);
-    Runnable onGameProfile = () -> {
+    final Runnable[] onGameProfileRef = new Runnable[1];
+    final Runnable[] onGameSettingsRef = new Runnable[1];
+
+    onGameProfileRef[0] = () -> {
       sfxController.play(SfxController.PROFILE);
       navigateKeepMusic(buildProfileView(
           () -> {
@@ -436,16 +452,39 @@ public class App extends Application {
           },
           this::performSave));
     };
-    Runnable onGameSettings = () -> navigateKeepMusic(buildSettingsView(
-        () -> navigateKeepMusic(currentGamePage),
-        this::performSave));
+    onGameSettingsRef[0] = () -> {
+      boolean perfModeAtOpen = performanceModeEnabled;
+      int maxHistoryAtOpen = maxHistoryWeeks;
+      navigateKeepMusic(buildSettingsView(
+          () -> {
+            boolean perfChanged = perfModeAtOpen != performanceModeEnabled
+                || maxHistoryAtOpen != maxHistoryWeeks;
+            if (perfChanged && currentGameController != null) {
+              GameUiState preservedUiState =
+                currentGameView != null ? currentGameView.getUiState() : null;
+              GameView refreshed = new GameView(
+                  currentGameController,
+                  withBack(this::goHome),
+                  onGameProfileRef[0],
+                  onGameSettingsRef[0],
+                  () -> sfxController.play(SfxController.SELECT),
+                  () -> sfxController.play(SfxController.SELECT),
+                  sfxController::getVolume,
+                preservedUiState);
+              currentGameView = refreshed;
+              currentGamePage = refreshed.getRoot();
+            }
+            navigateKeepMusic(currentGamePage);
+          },
+          this::performSave));
+    };
 
     GameView gameview = (uiState == null)
         ? new GameView(
             gameController,
             withBack(this::goHome),
-            onGameProfile,
-            onGameSettings,
+            onGameProfileRef[0],
+            onGameSettingsRef[0],
             () -> sfxController.play(SfxController.SELECT),
             () -> sfxController.play(SfxController.SELECT),
             sfxController::getVolume,
@@ -453,8 +492,8 @@ public class App extends Application {
         : new GameView(
             gameController,
             withBack(this::goHome),
-            onGameProfile,
-            onGameSettings,
+            onGameProfileRef[0],
+            onGameSettingsRef[0],
             () -> sfxController.play(SfxController.SELECT),
             () -> sfxController.play(SfxController.SELECT),
             sfxController::getVolume,
@@ -557,6 +596,10 @@ public class App extends Application {
       devModeEnabled = GlobalSettingsManager.DEFAULT_DEV_MODE;
       autosaveEnabled = GlobalSettingsManager.DEFAULT_AUTOSAVE;
       autosaveToast = GlobalSettingsManager.DEFAULT_AUTOSAVE_TOAST;
+      performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
+      maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
+      AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
+      AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
       fullscreenEnabled = GlobalSettingsManager.DEFAULT_FULLSCREEN;
       windowWidth = GlobalSettingsManager.DEFAULT_WINDOW_WIDTH;
       windowHeight = GlobalSettingsManager.DEFAULT_WINDOW_HEIGHT;
@@ -651,8 +694,25 @@ public class App extends Application {
             autosaveToast = enabled;
             saveSettings();
           },
-          autosaveToast);
+          autosaveToast,
+          enabled -> {
+            playSettingsToggleSfx(enabled);
+            performanceModeEnabled = enabled;
+            AppConfig.PERFORMANCE_MODE.set(enabled);
+            saveSettings();
+          },
+          performanceModeEnabled,
+          weeks -> {
+            maxHistoryWeeks = Math.max(50, weeks);
+            AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
+            saveSettings();
+          },
+          maxHistoryWeeks);
     } else {
+      Runnable onSaveAndRefresh = () -> {
+        onSave.run();
+        navigateKeepMusic(buildSettingsView(onBack, onSave));
+      };
       return SettingsView.build(
           onBackWithSfx,
           primaryStage,
@@ -735,9 +795,22 @@ public class App extends Application {
             saveSettings();
           },
           autosaveToast,
+          enabled -> {
+            playSettingsToggleSfx(enabled);
+            performanceModeEnabled = enabled;
+            AppConfig.PERFORMANCE_MODE.set(enabled);
+            saveSettings();
+          },
+          performanceModeEnabled,
+          weeks -> {
+            maxHistoryWeeks = Math.max(50, weeks);
+            AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
+            saveSettings();
+          },
+          maxHistoryWeeks,
           currentSavePath,
           onResetAll,
-          onSave,
+          onSaveAndRefresh,
           currentGameController != null ? currentGameController.getPlayerName() : null,
           currentGameController != null ? name -> {
             currentGameController.setPlayerName(name);
@@ -814,6 +887,8 @@ public class App extends Application {
         autosaveToast,
         fullscreenEnabled,
         devModeEnabled,
+          performanceModeEnabled,
+          maxHistoryWeeks,
         savedW,
         savedH));
   }
@@ -838,6 +913,31 @@ public class App extends Application {
   }
 
   // ── Music-aware navigation primitives ────────────────────────────────────
+
+  private <T> void runWithLoadingOverlay(
+      String title,
+      String message,
+      Supplier<T> work,
+      Consumer<T> onSuccess,
+      Consumer<Throwable> onError) {
+    Task<T> task = new Task<>() {
+      @Override
+      protected T call() {
+        return work.get();
+      }
+    };
+
+    task.setOnSucceeded(e -> {
+      onSuccess.accept(task.getValue());
+    });
+    task.setOnFailed(e -> {
+      onError.accept(task.getException());
+    });
+
+    Thread t = new Thread(task, "ui-background-loader");
+    t.setDaemon(true);
+    t.start();
+  }
 
   /**
    * Styled in-app notification overlay — replaces all OS Alert dialogs.

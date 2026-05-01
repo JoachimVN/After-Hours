@@ -66,7 +66,8 @@ class StockTest {
     @Test
     @DisplayName("Constructor throws on null prices")
     void testConstructorThrowsOnNullPrices() {
-      assertThrows(IllegalArgumentException.class, () -> new Stock("AAPL", "Apple Inc.", null));
+      assertThrows(IllegalArgumentException.class,
+          () -> new Stock("AAPL", "Apple Inc.", (List<BigDecimal>) null));
     }
 
     @Test

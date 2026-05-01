@@ -1,8 +1,11 @@
 package edu.ntnu.idatt2003.g23.model;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 // Represents a stock with its symbol, company name, and a list of historical prices. Provides methods to retrieve stock information and add new sales prices.
 public class Stock {
@@ -24,6 +27,8 @@ public class Stock {
   private final String symbol;
   private final String company;
   private final List<BigDecimal> prices;
+  private final Supplier<List<BigDecimal>> lazyPriceLoader;
+  private boolean pricesLoaded;
   private Volatility volatility = Volatility.STABLE;
 
   // Constructor for creating a new Stock instance with the specified symbol, company name, and list of prices.
@@ -39,7 +44,57 @@ public class Stock {
     }
     this.symbol = symbol;
     this.company = company;
-    this.prices = prices;
+    this.prices = new ArrayList<>(prices);
+    this.lazyPriceLoader = null;
+    this.pricesLoaded = true;
+  }
+
+  public Stock(String symbol, String company, Supplier<List<BigDecimal>> lazyPriceLoader) {
+    if (symbol == null || symbol.isEmpty() || !symbol.matches("[A-Z]+(\\.[A-Z]+)*")) {
+      throw new IllegalArgumentException("Stock symbol is null, empty, or invalid");
+    }
+    if (company == null || company.isEmpty()) {
+      throw new IllegalArgumentException("Company name is null or empty");
+    }
+    if (lazyPriceLoader == null) {
+      throw new IllegalArgumentException("Lazy loader cannot be null");
+    }
+    this.symbol = symbol;
+    this.company = company;
+    this.prices = new ArrayList<>();
+    this.lazyPriceLoader = lazyPriceLoader;
+    this.pricesLoaded = false;
+  }
+
+  private List<BigDecimal> priceData() {
+    if (pricesLoaded) {
+      return prices;
+    }
+    synchronized (prices) {
+      if (!pricesLoaded) {
+        List<BigDecimal> loaded = lazyPriceLoader.get();
+        if (loaded == null || loaded.isEmpty()) {
+          throw new IllegalStateException("Lazy price loader returned no prices for " + symbol);
+        }
+        prices.clear();
+        prices.addAll(loaded);
+        pricesLoaded = true;
+      }
+    }
+    enforceHistoryCap(prices);
+    return prices;
+  }
+
+  private static void enforceHistoryCap(List<BigDecimal> data) {
+    if (!AppConfig.PERFORMANCE_MODE.get()) {
+      return;
+    }
+    int maxWeeks = Math.max(50, AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.get());
+    if (data.size() <= maxWeeks) {
+      return;
+    }
+    int trimCount = data.size() - maxWeeks;
+    data.subList(0, trimCount).clear();
   }
 
   /**
@@ -66,7 +121,8 @@ public class Stock {
    * @return the latest stock price
    */
   public BigDecimal getSalesPrice() {
-    return prices.get(prices.size() - 1);
+    List<BigDecimal> data = priceData();
+    return data.get(data.size() - 1);
   }
 
   /**
@@ -79,7 +135,9 @@ public class Stock {
     if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
       throw new IllegalArgumentException("New price must be a positive value");
     }
-    prices.add(price);
+    List<BigDecimal> data = priceData();
+    data.add(price);
+    enforceHistoryCap(data);
   }
 
   public Volatility getVolatility() {
@@ -99,7 +157,7 @@ public class Stock {
    * @return a list of historical prices for the stock
    */
   public List<BigDecimal> getHistoricalPrices() {
-    return prices;
+    return priceData();
   }
 
   /**
@@ -108,7 +166,7 @@ public class Stock {
    * @return the highest price of the stock
    */
   public BigDecimal getHighestPrice() {
-    return prices.stream().max(BigDecimal::compareTo).orElseThrow();
+    return priceData().stream().max(BigDecimal::compareTo).orElseThrow();
   }
 
   /**
@@ -117,7 +175,7 @@ public class Stock {
    * @return the lowest price of the stock
    */
   public BigDecimal getLowestPrice() {
-    return prices.stream().min(BigDecimal::compareTo).orElseThrow();
+    return priceData().stream().min(BigDecimal::compareTo).orElseThrow();
   }
 
   /**
@@ -126,10 +184,11 @@ public class Stock {
    * @return the difference between the latest price and the previous price, or 0 if only one price available
    */
   public BigDecimal getLatestPriceChange() {
-    if (prices.size() == 1) {
+    List<BigDecimal> data = priceData();
+    if (data.size() == 1) {
       return BigDecimal.ZERO;
     }
-    return getSalesPrice().subtract(prices.get(prices.size() - 2));
+    return getSalesPrice().subtract(data.get(data.size() - 2));
   }
 
   /**
@@ -138,11 +197,12 @@ public class Stock {
    * @return the percentage change, or 0 if only one price available or previous price is zero
    */
   public BigDecimal percentageChange() {
-    if (prices.size() < 2) {
+    List<BigDecimal> data = priceData();
+    if (data.size() < 2) {
       return BigDecimal.ZERO;
     }
-    BigDecimal prev = prices.get(prices.size() - 2);
-    BigDecimal current = prices.get(prices.size() - 1);
+    BigDecimal prev = data.get(data.size() - 2);
+    BigDecimal current = data.get(data.size() - 1);
     if (prev.compareTo(BigDecimal.ZERO) == 0) {
       return BigDecimal.ZERO;
     }
@@ -177,12 +237,13 @@ public class Stock {
    * @return percentage return, or 0 if insufficient price history
    */
   public BigDecimal percentageChangeOverWeeks(int weeks) {
-    if (prices.size() < 2) {
+    List<BigDecimal> data = priceData();
+    if (data.size() < 2) {
       return BigDecimal.ZERO;
     }
-    int fromIdx = (weeks < 0) ? 0 : Math.max(0, prices.size() - 1 - weeks);
-    BigDecimal from = prices.get(fromIdx);
-    BigDecimal to = prices.get(prices.size() - 1);
+    int fromIdx = (weeks < 0) ? 0 : Math.max(0, data.size() - 1 - weeks);
+    BigDecimal from = data.get(fromIdx);
+    BigDecimal to = data.get(data.size() - 1);
     if (from.compareTo(BigDecimal.ZERO) == 0) {
       return BigDecimal.ZERO;
     }

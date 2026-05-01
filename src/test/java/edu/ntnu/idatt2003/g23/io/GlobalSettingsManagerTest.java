@@ -68,7 +68,7 @@ class GlobalSettingsManagerTest {
   @Test
   void saveAndLoad_roundtrip_allFields() {
     GlobalSettingsManager.Settings original = new GlobalSettingsManager.Settings(
-        0.75, 0.3, false, true, false, true, false, true, true, 1280, 720
+        0.75, 0.3, false, true, false, true, false, true, true, true, 640, 1280, 720
     );
     GlobalSettingsManager.save(original);
     GlobalSettingsManager.Settings loaded = GlobalSettingsManager.load();
@@ -82,6 +82,8 @@ class GlobalSettingsManagerTest {
     assertFalse(loaded.autosaveToast());
     assertTrue(loaded.fullscreen());
     assertTrue(loaded.devMode());
+    assertTrue(loaded.performanceMode());
+    assertEquals(640, loaded.maxHistoryWeeks());
     assertEquals(1280, loaded.windowWidth());
     assertEquals(720, loaded.windowHeight());
   }
