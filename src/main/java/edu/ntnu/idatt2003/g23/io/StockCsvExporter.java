@@ -6,6 +6,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,8 +16,22 @@ import java.util.List;
 
 public final class StockCsvExporter {
 
+  private static final BigDecimal SMALL_THRESHOLD = new BigDecimal("0.01");
+
   private StockCsvExporter() {
     // utility
+  }
+
+  /**
+   * Formats a price for CSV output.
+   * Values >= 0.01 are rounded to 2 decimal places; smaller values keep
+   * 4 significant figures to preserve precision for penny-stock prices.
+   */
+  static String formatPrice(BigDecimal price) {
+    if (price.compareTo(SMALL_THRESHOLD) >= 0) {
+      return price.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+    return price.round(new MathContext(4, RoundingMode.HALF_UP)).stripTrailingZeros().toPlainString();
   }
 
   /**
@@ -56,7 +72,7 @@ public final class StockCsvExporter {
         writer.write(',');
         writer.write(company);
         writer.write(',');
-        writer.write(price.toPlainString());
+        writer.write(formatPrice(price));
         writer.newLine();
       }
     }
@@ -96,7 +112,7 @@ public final class StockCsvExporter {
           if (i > 0) {
             priceStr.append(';');
           }
-          priceStr.append(prices.get(i).toPlainString());
+          priceStr.append(formatPrice(prices.get(i)));
         }
         writer.write(priceStr.toString());
         writer.newLine();

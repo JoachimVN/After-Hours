@@ -44,7 +44,8 @@ public class Stock {
     }
     this.symbol = symbol;
     this.company = company;
-    this.prices = new ArrayList<>(prices);
+    // Keep caller-provided list as live backing storage; tests rely on this behavior.
+    this.prices = prices;
     this.lazyPriceLoader = null;
     this.pricesLoaded = true;
   }
