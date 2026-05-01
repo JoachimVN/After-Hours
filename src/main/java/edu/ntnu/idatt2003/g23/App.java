@@ -124,6 +124,7 @@ public class App extends Application {
   @Override
   public void start(Stage stage) {
     homePageMusicController = new HomePageMusicController(getClass());
+    homePageMusicController.preloadStartupAudio();
     sfxController = new SfxController(getClass());
 
     GlobalSettingsManager.Settings gs = GlobalSettingsManager.load();
@@ -459,20 +460,8 @@ public class App extends Application {
           () -> {
             boolean perfChanged = perfModeAtOpen != performanceModeEnabled
                 || maxHistoryAtOpen != maxHistoryWeeks;
-            if (perfChanged && currentGameController != null) {
-              GameUiState preservedUiState =
-                currentGameView != null ? currentGameView.getUiState() : null;
-              GameView refreshed = new GameView(
-                  currentGameController,
-                  withBack(this::goHome),
-                  onGameProfileRef[0],
-                  onGameSettingsRef[0],
-                  () -> sfxController.play(SfxController.SELECT),
-                  () -> sfxController.play(SfxController.SELECT),
-                  sfxController::getVolume,
-                preservedUiState);
-              currentGameView = refreshed;
-              currentGamePage = refreshed.getRoot();
+            if (perfChanged) {
+              rebuildCurrentGameViewForPerformance();
             }
             navigateKeepMusic(currentGamePage);
           },
@@ -501,11 +490,49 @@ public class App extends Application {
     currentGameController = gameController;
     currentGameView = gameview;
     currentGamePage = gameview.getRoot();
+    playGameEntryAudio();
     navigateToGame(currentGamePage);
-    Platform.runLater(this::playGameEntryAudio);
     if (autosaveEnabled) {
       startAutosaveTimer();
     }
+  }
+
+  private void rebuildCurrentGameViewForPerformance() {
+    if (currentGameController == null) {
+      return;
+    }
+
+    currentGameController.refreshReplaySeriesForSettingsChange();
+
+    GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : null;
+    Runnable onGameProfile = () -> {
+      sfxController.play(SfxController.PROFILE);
+      navigateKeepMusic(buildProfileView(
+          () -> {
+            sfxController.play(SfxController.BACK,
+                Math.min(sfxController.getVolume() * 1.5, 1.0));
+            if (currentGameView != null) {
+              currentGameView.updateData();
+            }
+            navigateKeepMusic(currentGamePage);
+          },
+          this::performSave));
+    };
+    Runnable onGameSettings = () -> navigateKeepMusic(buildSettingsView(
+        () -> navigateKeepMusic(currentGamePage),
+        this::performSave));
+
+    GameView refreshed = new GameView(
+        currentGameController,
+        withBack(this::goHome),
+        onGameProfile,
+        onGameSettings,
+        () -> sfxController.play(SfxController.SELECT),
+        () -> sfxController.play(SfxController.SELECT),
+        sfxController::getVolume,
+        preservedUiState);
+    currentGameView = refreshed;
+    currentGamePage = refreshed.getRoot();
   }
 
   private void performSave() {
@@ -699,12 +726,14 @@ public class App extends Application {
             playSettingsToggleSfx(enabled);
             performanceModeEnabled = enabled;
             AppConfig.PERFORMANCE_MODE.set(enabled);
+            rebuildCurrentGameViewForPerformance();
             saveSettings();
           },
           performanceModeEnabled,
           weeks -> {
             maxHistoryWeeks = Math.max(50, weeks);
             AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
+            rebuildCurrentGameViewForPerformance();
             saveSettings();
           },
           maxHistoryWeeks);
@@ -799,12 +828,14 @@ public class App extends Application {
             playSettingsToggleSfx(enabled);
             performanceModeEnabled = enabled;
             AppConfig.PERFORMANCE_MODE.set(enabled);
+            rebuildCurrentGameViewForPerformance();
             saveSettings();
           },
           performanceModeEnabled,
           weeks -> {
             maxHistoryWeeks = Math.max(50, weeks);
             AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
+            rebuildCurrentGameViewForPerformance();
             saveSettings();
           },
           maxHistoryWeeks,
@@ -836,7 +867,10 @@ public class App extends Application {
     Runnable openSettingsFromProfile = () -> {
       sfxController.play(SfxController.SETTINGS);
       navigateKeepMusic(buildSettingsView(
-          () -> navigateKeepMusic(buildProfileView(onBackToGame, onSave)),
+          () -> {
+            currentGameController.refreshReplaySeriesForSettingsChange();
+            navigateKeepMusic(buildProfileView(onBackToGame, onSave));
+          },
           onSave));
     };
     return ProfileView.build(

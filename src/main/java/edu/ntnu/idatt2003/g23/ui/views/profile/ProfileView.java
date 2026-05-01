@@ -842,7 +842,7 @@ public final class ProfileView {
         replaySeries.getData().add(trailingPointRef.get());
       }
 
-      applyReplayLineGradient.run();
+      Platform.runLater(applyReplayLineGradient);
       refreshMarkerAndHover.run();
     };
 
@@ -1017,8 +1017,6 @@ public final class ProfileView {
     // stable.
     replayChart.focusedProperty()
       .addListener((obs, oldV, focused) -> applyReplayLineGradient.run());
-    replayChart.layoutBoundsProperty()
-      .addListener((obs, oldV, newV) -> applyReplayLineGradient.run());
     replaySeries.nodeProperty().addListener((obs, oldV, newV) -> applyReplayLineGradient.run());
     replayChart.sceneProperty().addListener((obs, oldScene, newScene) -> {
       if (newScene == null) {

@@ -466,7 +466,7 @@
 }
 
 .profile-replay-chart .default-color0.chart-series-line {
-  -fx-stroke: transparent;
+  -fx-stroke: #4ecb71;
   -fx-stroke-width: 2.8px;
 }
 

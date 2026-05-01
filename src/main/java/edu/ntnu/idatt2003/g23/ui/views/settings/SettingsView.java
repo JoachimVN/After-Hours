@@ -22,7 +22,6 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -431,13 +430,38 @@ public final class SettingsView {
 
     Label helpLabel = new Label("?");
     helpLabel.getStyleClass().addAll("settings-default-tag", "settings-performance-help");
-    Tooltip.install(helpLabel, new Tooltip(
-      "Improves performance for large saves by using a virtualized stock list and\n"
-        + "lazy/capped history rendering. This can reduce historical detail when\n"
-        + "the max history limit is reached."));
+
+    Label performanceHelpText = new Label(
+        "Performance mode keeps large saves smooth by virtualizing the stock list and capping "
+            + "history data. Increase Max History Weeks for more detail, or lower it for better speed.");
+    performanceHelpText.getStyleClass().addAll("settings-sublabel", "settings-performance-help-text");
+    performanceHelpText.setWrapText(true);
+    performanceHelpText.setMaxWidth(520);
+    performanceHelpText.setVisible(false);
+    performanceHelpText.setManaged(false);
+
+    Runnable toggleHelpBox = () -> {
+      boolean show = !performanceHelpText.isVisible();
+      performanceHelpText.setVisible(show);
+      performanceHelpText.setManaged(show);
+    };
+    helpLabel.setOnMouseClicked(e -> toggleHelpBox.run());
+    helpLabel.setFocusTraversable(true);
+    helpLabel.setOnKeyPressed(e -> {
+      if (e.getCode() == KeyCode.ENTER || e.getCode() == KeyCode.SPACE) {
+        toggleHelpBox.run();
+        e.consume();
+      }
+    });
 
     HBox modeTopRow = (HBox) modeRow.getChildren().get(0);
-    modeTopRow.getChildren().add(helpLabel);
+    VBox labelCol = (VBox) modeTopRow.getChildren().get(0);
+    Label modeLabel = (Label) labelCol.getChildren().get(0);
+    HBox modeLabelRow = new HBox(8, modeLabel, helpLabel);
+    modeLabelRow.setAlignment(Pos.CENTER_LEFT);
+    Label modeDefaultTag = new Label("Default: OFF");
+    modeDefaultTag.getStyleClass().add("settings-default-tag");
+    labelCol.getChildren().setAll(modeLabelRow, modeDefaultTag);
 
     Label capLabel = new Label("Max History Weeks (performance mode)");
     capLabel.getStyleClass().add("settings-label");
@@ -479,12 +503,7 @@ public final class SettingsView {
       capBlock.setDisable(!isOn);
     });
 
-    Label note = new Label(
-        "Uses virtualized stock list and lazy/capped price history for large datasets.");
-    note.getStyleClass().add("settings-sublabel");
-    note.setWrapText(true);
-
-    return sectionCard("⚡  Performance", modeRow, capBlock, note);
+    return sectionCard("⚡  Performance", modeRow, performanceHelpText, capBlock);
   }
 
   private static VBox buildDataSection(Stage stage, Path currentSavePath, Consumer<File> onExport) {

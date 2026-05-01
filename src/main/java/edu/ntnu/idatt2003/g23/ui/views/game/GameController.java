@@ -621,6 +621,14 @@ public final class GameController {
     return replaySeriesCache;
   }
 
+  /**
+   * Re-applies performance-mode snapshot capping and forces replay reconstruction.
+   */
+  public void refreshReplaySeriesForSettingsChange() {
+    player.setWeeklySnapshots(player.getWeeklySnapshots());
+    invalidateReplaySeries();
+  }
+
   private void invalidateReplaySeries() {
     replaySeriesDirty = true;
     replaySeriesCache = null;
