@@ -161,7 +161,7 @@ class StockCsvExporterTest {
 
     List<String> lines = Files.readAllLines(out);
     assertEquals(1, lines.size());
-    assertEquals("AAPL,Apple Inc.,100;110;120", lines.get(0));
+    assertEquals("AAPL,Apple Inc.,100.00;110.00;120.00", lines.get(0));
   }
 
   @Test
@@ -189,8 +189,8 @@ class StockCsvExporterTest {
 
     List<String> lines = Files.readAllLines(out);
     assertEquals(2, lines.size());
-    assertEquals("AAPL,Apple Inc.,100", lines.get(0));
-    assertEquals("GOOGL,Google LLC,200;210", lines.get(1));
+    assertEquals("AAPL,Apple Inc.,100.00", lines.get(0));
+    assertEquals("GOOGL,Google LLC,200.00;210.00", lines.get(1));
   }
 
   // ─── writeCsvRows tests ───────────────────────────────────────────────────
