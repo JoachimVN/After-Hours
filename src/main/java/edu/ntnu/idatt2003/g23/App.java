@@ -590,7 +590,7 @@ public class App extends Application {
         homePageMusicController.stop();
       } else {
         homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
-            "/audio/music/ambience/After_Hours_Ambience3_demo.mp3");
+            "/audio/music/ambience/Ambience3.mp3");
       }
     });
   }
@@ -604,7 +604,7 @@ public class App extends Application {
         homePageMusicController.stop();
       } else {
         homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
-            "/audio/music/ambience/After_Hours_Ambience3_demo.mp3");
+            "/audio/music/ambience/Ambience3.mp3");
       }
     });
   }
