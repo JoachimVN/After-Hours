@@ -41,6 +41,7 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -81,12 +82,18 @@ import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
+  private static final String ERROR_PAUSE_KEY = "errorPause";
+  private static final String ERROR_FADE_KEY = "errorFade";
+  private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(2.2);
+  private static final Duration INLINE_ERROR_FADE = Duration.millis(420);
+  private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
+  private static final Duration POPUP_ERROR_FADE = Duration.millis(320);
 
   private final GameController gameController;
   private final Label statusVal;
   private final Label cashVal;
-  private final Label portVal;
-  private final Label nwVal;
+  private final Label portfolioVal;
+  private final Label netWorthVal;
   private final Label weekNumLbl;
   private final Arc statusProgressArc;
   private final Tooltip statusTooltip;
@@ -145,8 +152,8 @@ public final class GameView implements GameViewInterface {
 
     this.statusVal = new Label();
     this.cashVal = new Label();
-    this.portVal = new Label();
-    this.nwVal = new Label();
+    this.portfolioVal = new Label();
+    this.netWorthVal = new Label();
     this.weekNumLbl = new Label();
     this.statusProgressArc = new Arc(0, 0, 11, 11, 90, 0);
     this.statusTooltip = new Tooltip();
@@ -170,9 +177,9 @@ public final class GameView implements GameViewInterface {
 
     // ── Stat pill labels ─────────────────────────────────────────────────
     statusVal.getStyleClass().addAll("stat-pill-value", "status-pill-value");
-    cashVal.getStyleClass().add("stat-pill-value");
-    portVal.getStyleClass().add("stat-pill-value");
-    nwVal.getStyleClass().add("stat-pill-value");
+    cashVal.getStyleClass().add("money-segment-value");
+    portfolioVal.getStyleClass().add("money-segment-value");
+    netWorthVal.getStyleClass().add("money-segment-value");
     weekNumLbl.getStyleClass().add("week-number");
 
     statusProgressArc.setType(ArcType.OPEN);
@@ -542,13 +549,13 @@ public final class GameView implements GameViewInterface {
     }
 
     Node statusPill = statusPill("Player Status", statusVal, statusProgressArc, statusTooltip);
-    Node cashPill = statPill("Available Cash", cashVal);
-    Node portPill = statPill("Portfolio Value", portVal);
-    Node nwPill = statPill("Total Net Worth", nwVal);
+    Node financePill = moneyPill(cashVal, portfolioVal, netWorthVal, "money-pill-overview");
 
     profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
-    profileBtn.setText("");
-    profileBtn.getStyleClass().add("game-icon-button");
+    profileBtn.setText(gameController.getPlayerName());
+    profileBtn.setContentDisplay(ContentDisplay.LEFT);
+    profileBtn.setGraphicTextGap(8);
+    profileBtn.getStyleClass().add("profile-identity-button");
     profileBtn.setOnAction(e -> onProfile.run());
 
     settingsBtn.setText("⚙");
@@ -560,13 +567,23 @@ public final class GameView implements GameViewInterface {
       }
     });
 
-    Region tl = new Region();
-    HBox.setHgrow(tl, Priority.ALWAYS);
-    HBox topBar =
-        new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill,
-            settingsBtn, profileBtn);
+    HBox leftGroup = new HBox(10, backBtn, appTitle);
+    leftGroup.setAlignment(Pos.CENTER_LEFT);
+    HBox rightGroup = new HBox(10, statusPill, settingsBtn, profileBtn);
+    rightGroup.setAlignment(Pos.CENTER_RIGHT);
+
+    Region edgeSpacer = new Region();
+    HBox.setHgrow(edgeSpacer, Priority.ALWAYS);
+    HBox edgesBar = new HBox(10, leftGroup, edgeSpacer, rightGroup);
+    edgesBar.setAlignment(Pos.CENTER_LEFT);
+
+    HBox pillCenter = new HBox(financePill);
+    pillCenter.setAlignment(Pos.CENTER);
+    pillCenter.setPickOnBounds(false);
+    pillCenter.setMouseTransparent(true);
+
+    StackPane topBar = new StackPane(edgesBar, pillCenter);
     topBar.getStyleClass().add("game-top-bar");
-    topBar.setAlignment(Pos.CENTER_LEFT);
 
     // ── Root ─────────────────────────────────────────────────────────────
     BorderPane root = new BorderPane();
@@ -783,9 +800,10 @@ public final class GameView implements GameViewInterface {
 
     weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
     cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
-    portVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
-    nwVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
+    portfolioVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
+    netWorthVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
     profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
+    profileBtn.setText(gameController.getPlayerName());
     portfolioItems.setAll(gameController.getPortfolioShares());
     applyFilter();
     rebuildDetail();
@@ -1458,6 +1476,10 @@ public final class GameView implements GameViewInterface {
   }
 
   public void showError(String message) {
+    if (overlayRef == null) {
+      return;
+    }
+
     Label iconLbl = new Label("\u26A0");
     iconLbl.getStyleClass().add("error-dialog-icon");
     Label titleLbl = new Label("ERROR");
@@ -1490,7 +1512,10 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> overlayRef.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      stopErrorTransitions(popup);
+      overlayRef.getChildren().remove(popup);
+    };
     okBtn.setOnAction(ev -> dismiss.run());
     backdrop.setOnMouseClicked(ev -> dismiss.run());
     popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
@@ -1501,6 +1526,9 @@ public final class GameView implements GameViewInterface {
     });
 
     overlayRef.getChildren().add(popup);
+    popup.setOpacity(1.0);
+    scheduleFadeOutAndRemove(popup, POPUP_ERROR_VISIBLE, POPUP_ERROR_FADE,
+        () -> overlayRef.getChildren().remove(popup));
     popup.requestFocus();
   }
 
@@ -1508,18 +1536,72 @@ public final class GameView implements GameViewInterface {
     if (currentTradeErrorLabel == null) {
       return;
     }
-    currentTradeErrorLabel.setText(message != null ? message : "An error occurred.");
-    currentTradeErrorLabel.setVisible(true);
-    currentTradeErrorLabel.setManaged(true);
+    showFadingInlineError(currentTradeErrorLabel, message);
   }
 
   public void showSellAllError(String message) {
     if (currentSellAllErrorLabel == null) {
       return;
     }
-    currentSellAllErrorLabel.setText(message != null ? message : "An error occurred.");
-    currentSellAllErrorLabel.setVisible(true);
-    currentSellAllErrorLabel.setManaged(true);
+    showFadingInlineError(currentSellAllErrorLabel, message);
+  }
+
+  private void showFadingInlineError(Label label, String message) {
+    label.setText(message != null ? message : "An error occurred.");
+    label.setVisible(true);
+    label.setManaged(true);
+    label.setOpacity(1.0);
+
+    stopErrorTransitions(label);
+
+    PauseTransition pause = new PauseTransition(INLINE_ERROR_VISIBLE);
+    FadeTransition fade = new FadeTransition(INLINE_ERROR_FADE, label);
+    fade.setFromValue(1.0);
+    fade.setToValue(0.0);
+    fade.setOnFinished(ev -> {
+      label.setVisible(false);
+      label.setManaged(false);
+      label.setOpacity(1.0);
+      label.getProperties().remove(ERROR_PAUSE_KEY);
+      label.getProperties().remove(ERROR_FADE_KEY);
+    });
+    pause.setOnFinished(ev -> fade.playFromStart());
+
+    label.getProperties().put(ERROR_PAUSE_KEY, pause);
+    label.getProperties().put(ERROR_FADE_KEY, fade);
+    pause.playFromStart();
+  }
+
+  private void scheduleFadeOutAndRemove(Node node, Duration visibleDuration,
+                                        Duration fadeDuration, Runnable onRemove) {
+    stopErrorTransitions(node);
+
+    PauseTransition pause = new PauseTransition(visibleDuration);
+    FadeTransition fade = new FadeTransition(fadeDuration, node);
+    fade.setFromValue(1.0);
+    fade.setToValue(0.0);
+    fade.setOnFinished(ev -> {
+      onRemove.run();
+      node.setOpacity(1.0);
+      node.getProperties().remove(ERROR_PAUSE_KEY);
+      node.getProperties().remove(ERROR_FADE_KEY);
+    });
+    pause.setOnFinished(ev -> fade.playFromStart());
+
+    node.getProperties().put(ERROR_PAUSE_KEY, pause);
+    node.getProperties().put(ERROR_FADE_KEY, fade);
+    pause.playFromStart();
+  }
+
+  private void stopErrorTransitions(Node node) {
+    Object pause = node.getProperties().remove(ERROR_PAUSE_KEY);
+    if (pause instanceof PauseTransition p) {
+      p.stop();
+    }
+    Object fade = node.getProperties().remove(ERROR_FADE_KEY);
+    if (fade instanceof FadeTransition f) {
+      f.stop();
+    }
   }
 
   public void showBulkTradeConfirm(String action, BigDecimal quantity, BigDecimal gross,
@@ -2282,6 +2364,38 @@ public final class GameView implements GameViewInterface {
     return box;
   }
 
+  private static Node moneyPill(Label cashLabel, Label portfolioLabel,
+                                Label netWorthLabel, String toneClass) {
+    Node cashSegment = moneySegment("Cash", cashLabel, "money-segment-cash");
+    Node portfolioSegment = moneySegment("Portfolio", portfolioLabel, "money-segment-portfolio");
+    Node netWorthSegment = moneySegment("Net Worth", netWorthLabel, "money-segment-networth");
+
+    HBox box = new HBox(6, cashSegment, portfolioSegment, netWorthSegment);
+    box.getStyleClass().addAll("stat-pill", "money-pill", toneClass);
+    box.setFillHeight(false);
+    box.setAlignment(Pos.CENTER_LEFT);
+    return box;
+  }
+
+  private static Node moneySegment(String key, Label valueLabel, String styleClass) {
+    Label keyLabel = new Label(key);
+    keyLabel.getStyleClass().add("money-segment-key");
+
+    VBox textBox = new VBox(0, keyLabel, valueLabel);
+    textBox.setAlignment(Pos.CENTER_LEFT);
+
+    Region line = new Region();
+    line.getStyleClass().add("money-segment-line");
+    line.prefHeightProperty().bind(textBox.heightProperty());
+    line.minHeightProperty().bind(textBox.heightProperty());
+    line.maxHeightProperty().bind(textBox.heightProperty());
+
+    HBox segment = new HBox(8, line, textBox);
+    segment.getStyleClass().addAll("money-segment", styleClass);
+    segment.setAlignment(Pos.CENTER_LEFT);
+    return segment;
+  }
+
   private static Node statusPill(String key, Label valueLabel, Arc progressArc, Tooltip tooltip) {
     Label keyLbl = new Label(key);
     keyLbl.getStyleClass().add("stat-pill-key");
@@ -2616,10 +2730,11 @@ public final class GameView implements GameViewInterface {
     BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
     Label ownedMaxLbl = null;
     if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-      ownedMaxLbl = new Label("Owned: "
-          + ownedQuantity.stripTrailingZeros().toPlainString()
-          + "/"
-          + capQuantity.stripTrailingZeros().toPlainString());
+      String ownedText = ownedQuantity.compareTo(capQuantity) >= 0
+          ? "Owned: MAX"
+          : "Owned: " + ownedQuantity.stripTrailingZeros().toPlainString()
+            + "/" + capQuantity.stripTrailingZeros().toPlainString();
+      ownedMaxLbl = new Label(ownedText);
       ownedMaxLbl.getStyleClass().add("stock-owned-label");
     }
 

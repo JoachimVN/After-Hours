@@ -111,7 +111,7 @@ public final class NoGameView {
         new Message("", 5, 3.0, false, false), // context message placeholder — swapped at runtime
         new Message("That's fine.\nIt's not your fault.", 4, 1.5),
         new Message("Let's just wait here for a little bit.", 3, 1, false, true),
-        new Message("Let time pass.", 5, 8, false, false)
+        new Message("Let time pass...", 5, 8, false, false)
     );
   }
 
