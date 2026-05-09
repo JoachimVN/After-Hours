@@ -1,5 +1,6 @@
 package edu.ntnu.idatt2003.g23.io;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,21 +92,11 @@ public final class StockCsvLoader {
 
     String symbol = parts[0].trim();
     String company = parts[1].trim();
-    String[] rawPrices = parts[2].trim().split(";");
-
-    List<BigDecimal> prices = new ArrayList<>();
-    for (String rawPrice : rawPrices) {
-      String price = rawPrice.trim();
-      if (!price.isEmpty()) {
-        prices.add(new BigDecimal(price));
-      }
+    String rawPrices = parts[2].trim();
+    if (AppConfig.PERFORMANCE_MODE.get()) {
+      return new Stock(symbol, company, () -> parsePriceList(rawPrices, true));
     }
-
-    if (prices.isEmpty()) {
-      throw new IllegalArgumentException("Stock must have at least one price: " + line);
-    }
-
-    return new Stock(symbol, company, prices);
+    return new Stock(symbol, company, parsePriceList(rawPrices, false));
   }
 
   // ── Lenient parsing (for the in-game CSV editor) ─────────────────────────
@@ -175,15 +166,37 @@ public final class StockCsvLoader {
    * @return the corresponding Stock
    */
   public static Stock rowToStock(CsvRow row) {
-    String[] rawPrices = row.getPrices().split(";");
+    String prices = row.getPrices();
+    if (AppConfig.PERFORMANCE_MODE.get()) {
+      return new Stock(
+          row.getSymbol().trim(),
+          row.getCompany().trim(),
+          () -> parsePriceList(prices, true));
+    }
+    return new Stock(row.getSymbol().trim(), row.getCompany().trim(), parsePriceList(prices, false));
+  }
+
+  private static List<BigDecimal> parsePriceList(String rawPrices, boolean applyCap) {
+    String[] raw = rawPrices.trim().split(";");
     List<BigDecimal> prices = new ArrayList<>();
-    for (String p : rawPrices) {
-      String trimmed = p.trim();
+    for (String token : raw) {
+      String trimmed = token.trim();
       if (!trimmed.isEmpty()) {
         prices.add(new BigDecimal(trimmed));
       }
     }
-    return new Stock(row.getSymbol().trim(), row.getCompany().trim(), prices);
+
+    if (prices.isEmpty()) {
+      throw new IllegalArgumentException("Stock must have at least one price");
+    }
+
+    if (applyCap) {
+      int maxWeeks = Math.max(50, AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.get());
+      if (prices.size() > maxWeeks) {
+        return new ArrayList<>(prices.subList(prices.size() - maxWeeks, prices.size()));
+      }
+    }
+    return prices;
   }
 
   /**

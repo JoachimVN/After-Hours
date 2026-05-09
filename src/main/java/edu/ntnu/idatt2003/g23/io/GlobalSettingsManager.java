@@ -41,6 +41,8 @@ public final class GlobalSettingsManager {
   public static final boolean DEFAULT_AUTOSAVE = false;
   public static final boolean DEFAULT_AUTOSAVE_TOAST = true;
   public static final boolean DEFAULT_FULLSCREEN = false;
+  public static final boolean DEFAULT_PERFORMANCE_MODE = false;
+  public static final int DEFAULT_MAX_HISTORY_WEEKS = 500;
   /**
    * 0 = no saved size (start maximized).
    */
@@ -60,6 +62,8 @@ public final class GlobalSettingsManager {
       boolean autosaveToast,
       boolean fullscreen,
       boolean devMode,
+        boolean performanceMode,
+        int maxHistoryWeeks,
       int windowWidth,
       int windowHeight
   ) {
@@ -90,6 +94,11 @@ public final class GlobalSettingsManager {
       boolean autosaveToast = !obj.has("autosaveToast") || obj.get("autosaveToast").getAsBoolean();
       boolean fullscreen = obj.has("fullscreen") && obj.get("fullscreen").getAsBoolean();
       boolean devMode = obj.has("devMode") && obj.get("devMode").getAsBoolean();
+        boolean performanceMode =
+          obj.has("performanceMode") && obj.get("performanceMode").getAsBoolean();
+        int maxHistoryWeeks = obj.has("maxHistoryWeeks")
+          ? Math.max(50, obj.get("maxHistoryWeeks").getAsInt())
+          : DEFAULT_MAX_HISTORY_WEEKS;
 
       return new Settings(
           clamp(music),
@@ -101,6 +110,8 @@ public final class GlobalSettingsManager {
           autosaveToast,
           fullscreen,
           devMode,
+            performanceMode,
+            maxHistoryWeeks,
           windowWidth(obj),
           windowHeight(obj)
       );
@@ -127,6 +138,8 @@ public final class GlobalSettingsManager {
       obj.addProperty("autosaveToast", s.autosaveToast());
       obj.addProperty("fullscreen", s.fullscreen());
       obj.addProperty("devMode", s.devMode());
+      obj.addProperty("performanceMode", s.performanceMode());
+      obj.addProperty("maxHistoryWeeks", Math.max(50, s.maxHistoryWeeks()));
       obj.addProperty("windowWidth", s.windowWidth());
       obj.addProperty("windowHeight", s.windowHeight());
 
@@ -149,6 +162,8 @@ public final class GlobalSettingsManager {
         DEFAULT_AUTOSAVE_TOAST,
         DEFAULT_FULLSCREEN,
         DEFAULT_DEV_MODE,
+        DEFAULT_PERFORMANCE_MODE,
+        DEFAULT_MAX_HISTORY_WEEKS,
         DEFAULT_WINDOW_WIDTH,
         DEFAULT_WINDOW_HEIGHT
     );

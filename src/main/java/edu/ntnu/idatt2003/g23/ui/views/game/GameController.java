@@ -28,6 +28,8 @@ public final class GameController {
 
   private final Player player;
   private final Exchange exchange;
+  private List<ReplayPoint> replaySeriesCache;
+  private boolean replaySeriesDirty = true;
   private GameViewInterface view;
   private PlayerStatus statusOverride;
 
@@ -103,6 +105,7 @@ public final class GameController {
     exchange.advance();
     player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
     player.updateChickAvatarProgression();
+    invalidateReplaySeries();
   }
 
   public void executeSellAll() {
@@ -171,6 +174,7 @@ public final class GameController {
     view.showReceipt("SELL", stock, sellQuantity, tGross.subtract(tFee).subtract(tTax), tFee, tTax,
         player.getMoney());
     player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
+    invalidateReplaySeries();
     view.updateData();
     return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax));
   }
@@ -210,6 +214,7 @@ public final class GameController {
       tx.commit(player);
       view.showReceipt("BUY", stock, quantity, total, fee, BigDecimal.ZERO, player.getMoney());
       player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
+      invalidateReplaySeries();
       view.updateData();
     } catch (Exception ex) {
       view.showError(ex.getMessage());
@@ -435,6 +440,7 @@ public final class GameController {
       player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
       player.updateChickAvatarProgression();
     }
+    invalidateReplaySeries();
   }
 
   public void setFrozen(boolean frozen) {
@@ -532,6 +538,10 @@ public final class GameController {
    * Reconstructs a weekly net-worth timeline from transaction flows and historical prices.
    */
   public List<ReplayPoint> getReplaySeries() {
+    if (!replaySeriesDirty && replaySeriesCache != null) {
+      return replaySeriesCache;
+    }
+
     List<Player.WeeklySnapshot> snapshots = player.getWeeklySnapshots();
     if (!snapshots.isEmpty()) {
       Map<Integer, BigDecimal> netWorthByWeek = new LinkedHashMap<>();
@@ -541,13 +551,19 @@ public final class GameController {
       int lastWeek = Math.max(1, exchange.getWeek());
       BigDecimal carry = player.getStartingMoney();
       List<ReplayPoint> points = new ArrayList<>();
-      for (int week = 1; week <= lastWeek; week++) {
-        if (netWorthByWeek.containsKey(week)) {
-          carry = netWorthByWeek.get(week);
+        BigDecimal prevCarry = null;
+        for (int week = 1; week <= lastWeek; week++) {
+          if (netWorthByWeek.containsKey(week)) {
+            carry = netWorthByWeek.get(week);
+          }
+          if (prevCarry == null || carry.compareTo(prevCarry) != 0 || week == lastWeek) {
+            points.add(new ReplayPoint(week, carry));
+            prevCarry = carry;
+          }
         }
-        points.add(new ReplayPoint(week, carry));
-      }
-      return points;
+        replaySeriesCache = points;
+        replaySeriesDirty = false;
+        return replaySeriesCache;
     }
 
     List<Transaction> tx = new ArrayList<>(player.getTransactionArchive().getAll());
@@ -558,6 +574,7 @@ public final class GameController {
     int txIndex = 0;
     int lastWeek = Math.max(1, exchange.getWeek());
     List<ReplayPoint> points = new ArrayList<>();
+      BigDecimal prevNetWorth = null;
 
     for (int week = 1; week <= lastWeek; week++) {
       while (txIndex < tx.size() && tx.get(txIndex).getWeek() == week) {
@@ -593,9 +610,28 @@ public final class GameController {
         BigDecimal weekPrice = prices.get(index);
         portfolioValue = portfolioValue.add(weekPrice.multiply(entry.getValue()));
       }
-      points.add(new ReplayPoint(week, cash.add(portfolioValue)));
+      BigDecimal netWorth = cash.add(portfolioValue);
+      if (prevNetWorth == null || netWorth.compareTo(prevNetWorth) != 0 || week == lastWeek) {
+        points.add(new ReplayPoint(week, netWorth));
+        prevNetWorth = netWorth;
+      }
     }
-    return points;
+    replaySeriesCache = points;
+    replaySeriesDirty = false;
+    return replaySeriesCache;
+  }
+
+  /**
+   * Re-applies performance-mode snapshot capping and forces replay reconstruction.
+   */
+  public void refreshReplaySeriesForSettingsChange() {
+    player.setWeeklySnapshots(player.getWeeklySnapshots());
+    invalidateReplaySeries();
+  }
+
+  private void invalidateReplaySeries() {
+    replaySeriesDirty = true;
+    replaySeriesCache = null;
   }
 
   public int getChickPhaseUnlocked() {

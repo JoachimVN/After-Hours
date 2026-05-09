@@ -53,7 +53,9 @@ public final class SettingsView {
       boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
-      Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled) {
+      Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
+      Consumer<Boolean> onPerformanceModeChange, boolean performanceModeEnabled,
+      Consumer<Integer> onMaxHistoryWeeksChange, int maxHistoryWeeks) {
     return build(onBack, stage,
         onMusicVolumeChange, initialMusicVolume, initialMusicMuted, onMusicMutedChange,
         onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange,
@@ -63,6 +65,8 @@ public final class SettingsView {
         onDevModeChange, devModeEnabled,
         onAutosaveChange, autosaveEnabled,
         onAutosaveToastChange, autosaveToastEnabled,
+          onPerformanceModeChange, performanceModeEnabled,
+          onMaxHistoryWeeksChange, maxHistoryWeeks,
         null, null, null, null, null);
   }
 
@@ -86,6 +90,8 @@ public final class SettingsView {
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
+      Consumer<Boolean> onPerformanceModeChange, boolean performanceModeEnabled,
+      Consumer<Integer> onMaxHistoryWeeksChange, int maxHistoryWeeks,
       Path currentSavePath,
       Runnable onResetAll,
       Runnable onSave,
@@ -133,6 +139,7 @@ public final class SettingsView {
     audioSection.getStyleClass().add("settings-section-card-top");
 
     VBox displaySection = buildDisplaySection(
+      stage,
         animationsEnabled, onAnimationsChange,
         initialFullscreen, onFullscreenChange,
         onResolutionChange, onMaximize);
@@ -141,6 +148,11 @@ public final class SettingsView {
         autosaveEnabled, onAutosaveChange,
         autosaveToastEnabled, onAutosaveToastChange,
         onSave);
+    VBox performanceSection = buildPerformanceSection(
+      performanceModeEnabled,
+      onPerformanceModeChange,
+      maxHistoryWeeks,
+      onMaxHistoryWeeksChange);
 
     VBox dataSection = buildDataSection(stage, currentSavePath, onExport);
     VBox keybindsSection = buildKeybindsSection(overlay);
@@ -154,11 +166,11 @@ public final class SettingsView {
     VBox allSections;
     if (profileSection != null) {
       allSections = new VBox(22,
-          title, profileSection, audioSection, displaySection, gameSection,
+          title, profileSection, audioSection, displaySection, gameSection, performanceSection,
           dataSection, keybindsSection, devSection);
     } else {
       allSections = new VBox(22,
-          title, audioSection, displaySection, gameSection,
+          title, audioSection, displaySection, gameSection, performanceSection,
           dataSection, keybindsSection, devSection);
     }
     allSections.setAlignment(Pos.TOP_LEFT);
@@ -245,18 +257,40 @@ public final class SettingsView {
   }
 
   private static VBox buildDisplaySection(
+      Stage stage,
       boolean animationsEnabled, Consumer<Boolean> onAnimationsChange,
       boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
       Consumer<int[]> onResolutionChange, Runnable onMaximize) {
 
     VBox animRow =
         toggleRow("Background Animations", animationsEnabled, false, true, onAnimationsChange);
+    final boolean[] syncingFullscreenToggle = {false};
+    Consumer<Boolean> wrappedFullscreenChange = onFullscreenChange == null ? null : enabled -> {
+      if (!syncingFullscreenToggle[0]) {
+        onFullscreenChange.accept(enabled);
+      }
+    };
     // The view only notifies the controller; the controller applies the change to the stage.
     VBox fullscreenRow =
-        toggleRow("Fullscreen", initialFullscreen, false, false, onFullscreenChange);
+        toggleRow("Fullscreen", initialFullscreen, false, false, wrappedFullscreenChange);
     // Extract the toggle button so resolution/maximize can sync it to OFF.
     ToggleButton fullscreenToggle =
         (ToggleButton) ((HBox) fullscreenRow.getChildren().get(0)).getChildren().get(1);
+
+    syncingFullscreenToggle[0] = true;
+    fullscreenToggle.setSelected(stage != null ? stage.isFullScreen() : initialFullscreen);
+    syncingFullscreenToggle[0] = false;
+
+    if (stage != null) {
+      stage.fullScreenProperty().addListener((obs, wasFullscreen, isFullscreen) -> {
+        if (fullscreenToggle.isSelected() == isFullscreen) {
+          return;
+        }
+        syncingFullscreenToggle[0] = true;
+        fullscreenToggle.setSelected(isFullscreen);
+        syncingFullscreenToggle[0] = false;
+      });
+    }
 
     Consumer<int[]> wrappedResolutionChange = onResolutionChange == null ? null : dims -> {
       onResolutionChange.accept(dims);
@@ -267,12 +301,13 @@ public final class SettingsView {
       fullscreenToggle.setSelected(false);
     };
 
-    VBox resBlock = buildResolutionBlock(wrappedResolutionChange, wrappedMaximize);
+    VBox resBlock = buildResolutionBlock(wrappedResolutionChange, wrappedMaximize, fullscreenToggle);
     return sectionCard("\uD83D\uDDA5  Display", animRow, fullscreenRow, resBlock);
   }
 
   private static VBox buildResolutionBlock(Consumer<int[]> onResolutionChange,
-                                           Runnable onMaximize) {
+                                           Runnable onMaximize,
+                                           ToggleButton fullscreenToggle) {
     Label label = new Label("Window Size");
     label.getStyleClass().add("settings-label");
 
@@ -345,6 +380,16 @@ public final class SettingsView {
       }
     });
 
+    if (fullscreenToggle != null) {
+      fullscreenToggle.selectedProperty().addListener((obs, wasOn, isOn) -> {
+        if (isOn) {
+          presetBox.getSelectionModel().clearSelection();
+          customRow.setVisible(false);
+          customRow.setManaged(false);
+        }
+      });
+    }
+
     HBox topRow = new HBox(10, presetBox, maximizeBtn);
     topRow.setAlignment(Pos.CENTER_LEFT);
     return new VBox(8, label, topRow, customRow);
@@ -368,6 +413,97 @@ public final class SettingsView {
       return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow, new VBox(12, saveBtn));
     }
     return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow);
+  }
+
+  private static VBox buildPerformanceSection(
+      boolean performanceModeEnabled,
+      Consumer<Boolean> onPerformanceModeChange,
+      int maxHistoryWeeks,
+      Consumer<Integer> onMaxHistoryWeeksChange) {
+
+    VBox modeRow = toggleRow(
+        "Performance Mode",
+        performanceModeEnabled,
+        false,
+        false,
+        onPerformanceModeChange);
+
+    Label helpLabel = new Label("?");
+    helpLabel.getStyleClass().addAll("settings-default-tag", "settings-performance-help");
+
+    Label performanceHelpText = new Label(
+        "Performance mode keeps large saves smooth by virtualizing the stock list and capping "
+            + "history data. Increase Max History Weeks for more detail, or lower it for better speed.");
+    performanceHelpText.getStyleClass().addAll("settings-sublabel", "settings-performance-help-text");
+    performanceHelpText.setWrapText(true);
+    performanceHelpText.setMaxWidth(520);
+    performanceHelpText.setVisible(false);
+    performanceHelpText.setManaged(false);
+
+    Runnable toggleHelpBox = () -> {
+      boolean show = !performanceHelpText.isVisible();
+      performanceHelpText.setVisible(show);
+      performanceHelpText.setManaged(show);
+    };
+    helpLabel.setOnMouseClicked(e -> toggleHelpBox.run());
+    helpLabel.setFocusTraversable(true);
+    helpLabel.setOnKeyPressed(e -> {
+      if (e.getCode() == KeyCode.ENTER || e.getCode() == KeyCode.SPACE) {
+        toggleHelpBox.run();
+        e.consume();
+      }
+    });
+
+    HBox modeTopRow = (HBox) modeRow.getChildren().get(0);
+    VBox labelCol = (VBox) modeTopRow.getChildren().get(0);
+    Label modeLabel = (Label) labelCol.getChildren().get(0);
+    HBox modeLabelRow = new HBox(8, modeLabel, helpLabel);
+    modeLabelRow.setAlignment(Pos.CENTER_LEFT);
+    Label modeDefaultTag = new Label("Default: OFF");
+    modeDefaultTag.getStyleClass().add("settings-default-tag");
+    labelCol.getChildren().setAll(modeLabelRow, modeDefaultTag);
+
+    Label capLabel = new Label("Max History Weeks (performance mode)");
+    capLabel.getStyleClass().add("settings-label");
+
+    Label capDefault = new Label("Default: 500");
+    capDefault.getStyleClass().add("settings-default-tag");
+
+    TextField capField = new TextField(String.valueOf(Math.max(50, maxHistoryWeeks)));
+    capField.getStyleClass().add("settings-resolution-field");
+    capField.setPrefWidth(120);
+
+    Button applyCapBtn = new Button("Apply");
+    applyCapBtn.getStyleClass().add("settings-apply-btn");
+    Runnable applyCap = () -> {
+      try {
+        int parsed = Integer.parseInt(capField.getText().trim());
+        int safe = Math.max(50, parsed);
+        capField.setText(String.valueOf(safe));
+        onMaxHistoryWeeksChange.accept(safe);
+      } catch (NumberFormatException ignored) {
+        capField.setText(String.valueOf(Math.max(50, maxHistoryWeeks)));
+      }
+    };
+    applyCapBtn.setOnAction(e -> applyCap.run());
+    capField.setOnAction(e -> applyCap.run());
+
+    HBox capRow = new HBox(10, capField, applyCapBtn);
+    capRow.setAlignment(Pos.CENTER_LEFT);
+
+    VBox capBlock = new VBox(4, capLabel, capDefault, capRow);
+    capBlock.setVisible(performanceModeEnabled);
+    capBlock.setManaged(performanceModeEnabled);
+    capBlock.setDisable(!performanceModeEnabled);
+
+    ToggleButton modeToggle = (ToggleButton) ((HBox) modeRow.getChildren().get(0)).getChildren().get(1);
+    modeToggle.selectedProperty().addListener((obs, wasOn, isOn) -> {
+      capBlock.setVisible(isOn);
+      capBlock.setManaged(isOn);
+      capBlock.setDisable(!isOn);
+    });
+
+    return sectionCard("⚡  Performance", modeRow, performanceHelpText, capBlock);
   }
 
   private static VBox buildDataSection(Stage stage, Path currentSavePath, Consumer<File> onExport) {

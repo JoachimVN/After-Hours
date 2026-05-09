@@ -4,7 +4,9 @@ import java.util.List;
 
 import edu.ntnu.idatt2003.g23.model.MarketOption;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.util.Duration;
 
 public final class AppConfig {
@@ -24,6 +26,17 @@ public final class AppConfig {
    * Global dev-mode flag — toggled from Settings.
    */
   public static final BooleanProperty DEV_MODE = new SimpleBooleanProperty(false);
+
+    /**
+     * Global performance-mode flag — toggled from Settings.
+     */
+    public static final BooleanProperty PERFORMANCE_MODE = new SimpleBooleanProperty(false);
+
+    /**
+     * Max retained historical weeks per stock when performance mode is enabled.
+     */
+    public static final IntegerProperty PERFORMANCE_MAX_HISTORY_WEEKS =
+            new SimpleIntegerProperty(500);
 
   /**
    * Built-in markets available on the setup screen.

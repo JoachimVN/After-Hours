@@ -124,6 +124,11 @@
   -fx-border-color: #94d9ff;
 }
 
+.profile-avatar-placeholder {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+}
+
 .profile-name-field {
   -fx-padding: 0 4 0 4;
   -fx-min-height: 72;
@@ -461,7 +466,7 @@
 }
 
 .profile-replay-chart .default-color0.chart-series-line {
-  -fx-stroke: #6fd99b;
+  -fx-stroke: #4ecb71;
   -fx-stroke-width: 2.8px;
 }
 

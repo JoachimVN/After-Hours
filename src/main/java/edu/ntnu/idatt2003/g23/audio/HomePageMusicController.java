@@ -2,7 +2,9 @@ package edu.ntnu.idatt2003.g23.audio;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -37,6 +39,7 @@ public class HomePageMusicController {
   private static final double AMBIENCE4_VOLUME_MULTIPLIER = 0.75;
 
   private final Class<?> resourceOwner;
+  private final Map<String, Media> mediaCache = new HashMap<>();
   private MediaPlayer mediaPlayer;
   private double volume = DEFAULT_VOLUME;
   private double currentTrackMultiplier = 1.0;
@@ -49,11 +52,39 @@ public class HomePageMusicController {
     this.resourceOwner = resourceOwner;
   }
 
+  /**
+   * Preloads audio assets that should start instantly on slower machines.
+   */
+  public void preloadStartupAudio() {
+    cacheMedia(HOME_PAGE_MUSIC);
+    for (String track : GAME_START_TRACKS) {
+      cacheMedia(track);
+    }
+  }
+
+  private Media cacheMedia(String resourcePath) {
+    Media cached = mediaCache.get(resourcePath);
+    if (cached != null) {
+      return cached;
+    }
+    try {
+      String path = resourceOwner.getResource(resourcePath).toExternalForm();
+      Media media = new Media(path);
+      mediaCache.put(resourcePath, media);
+      return media;
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
   public void play(Runnable onPlaying, Runnable onFailure) {
     stop();
     try {
-      String musicPath = resourceOwner.getResource(HOME_PAGE_MUSIC).toExternalForm();
-      mediaPlayer = new MediaPlayer(new Media(musicPath));
+      Media media = cacheMedia(HOME_PAGE_MUSIC);
+      if (media == null) {
+        throw new IllegalStateException("Unable to load home music");
+      }
+      mediaPlayer = new MediaPlayer(media);
       currentTrackMultiplier = MAIN_THEME_VOLUME_MULTIPLIER;
       mediaPlayer.setVolume(volume * currentTrackMultiplier);
       mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
@@ -121,8 +152,11 @@ public class HomePageMusicController {
       }
       String randomTrack = candidates.get((int) (Math.random() * candidates.size()));
       lastGameStartTrack = randomTrack;
-      String path = resourceOwner.getResource(randomTrack).toExternalForm();
-      final MediaPlayer sfxPlayer = new MediaPlayer(new Media(path));
+      Media media = cacheMedia(randomTrack);
+      if (media == null) {
+        throw new IllegalStateException("Unable to load game start track");
+      }
+      final MediaPlayer sfxPlayer = new MediaPlayer(media);
       mediaPlayer = sfxPlayer;
       sfxPlayer.setVolume(sfxVolume);
       sfxPlayer.setOnEndOfMedia(() -> {
@@ -150,9 +184,12 @@ public class HomePageMusicController {
     }
     String track = ambienceQueue.remove(0);
     try {
-      String path = resourceOwner.getResource(track).toExternalForm();
+      Media media = cacheMedia(track);
+      if (media == null) {
+        throw new IllegalStateException("Unable to load ambience track");
+      }
       currentTrackMultiplier = multiplierFor(track);
-      mediaPlayer = new MediaPlayer(new Media(path));
+      mediaPlayer = new MediaPlayer(media);
       mediaPlayer.setVolume(0.0);
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();
@@ -206,9 +243,12 @@ public class HomePageMusicController {
     }
     String track = ambienceQueue.remove(0);
     try {
-      String path = resourceOwner.getResource(track).toExternalForm();
+      Media media = cacheMedia(track);
+      if (media == null) {
+        throw new IllegalStateException("Unable to load ambience track");
+      }
       currentTrackMultiplier = multiplierFor(track);
-      mediaPlayer = new MediaPlayer(new Media(path));
+      mediaPlayer = new MediaPlayer(media);
       mediaPlayer.setVolume(volume * currentTrackMultiplier);
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();

@@ -106,12 +106,16 @@ public final class AvatarUtil {
    * Used for the profile avatar picker.
    */
   public static List<String> loadSelectableAvatarNames() {
-    return loadAvatarNames().stream()
+    List<String> names = loadAvatarNames().stream()
         .map(AvatarUtil::normalizeAvatarStem)
         .filter(s -> !DEFAULT_AVATAR.equals(s))
         .filter(s -> !HIDDEN_SELECTABLE_AVATARS.contains(s))
         .distinct()
         .collect(Collectors.toList());
+    if (names.isEmpty()) {
+      return List.of(DEFAULT_AVATAR);
+    }
+    return names;
   }
 
   public static boolean isChickAvatar(String avatar) {
@@ -138,6 +142,9 @@ public final class AvatarUtil {
    */
   public static ImageView createImageView(String stem, double size) {
     URL url = resolveAvatarUrl(stem);
+    if (url == null) {
+      url = resolveAvatarUrl(DEFAULT_AVATAR);
+    }
     if (url == null) {
       return new ImageView();
     }

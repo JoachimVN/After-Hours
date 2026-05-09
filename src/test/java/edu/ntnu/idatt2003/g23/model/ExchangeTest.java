@@ -405,8 +405,8 @@ class ExchangeTest {
     assertEquals("symbol,company,price", lines.get(0));
 
     // Order isn't guaranteed -> assert by containment
-    assertTrue(lines.contains("AAPL,Apple Inc.,150"));
-    assertTrue(lines.contains("MSFT,Microsoft,250"));
+    assertTrue(lines.contains("AAPL,Apple Inc.,150.00"));
+    assertTrue(lines.contains("MSFT,Microsoft,250.00"));
   }
 
   @Test
