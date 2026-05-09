@@ -38,7 +38,7 @@ public class HomePageMusicController {
   private static final double AMBIENCE2_VOLUME_MULTIPLIER = 1.0;
   private static final double AMBIENCE3_VOLUME_MULTIPLIER = 0.75;
   private static final double AMBIENCE4_VOLUME_MULTIPLIER = 0.75;
-  private static final double AMBIENCE5_VOLUME_MULTIPLIER = 0.5;
+  private static final double AMBIENCE5_VOLUME_MULTIPLIER = 0.75;
 
   private final Class<?> resourceOwner;
   private final Map<String, Media> mediaCache = new HashMap<>();

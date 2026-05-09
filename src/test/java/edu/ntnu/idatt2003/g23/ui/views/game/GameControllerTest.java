@@ -46,6 +46,16 @@ class GameControllerTest {
     }
 
     @Override
+    public void showTradeError(String message) {
+      lastError = message;
+    }
+
+    @Override
+    public void showSellAllError(String message) {
+      lastError = message;
+    }
+
+    @Override
     public void showTradeConfirm(String action, Stock stock, BigDecimal quantity,
                                  BigDecimal gross, BigDecimal fee, BigDecimal tax,
                                  BigDecimal total) {

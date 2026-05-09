@@ -115,6 +115,8 @@ public final class GameView implements GameViewInterface {
   private AnimationTimer highlightFadeTimer = null;
 
   private final VBox detailArea;
+  private Label currentTradeErrorLabel;
+  private Label currentSellAllErrorLabel;
 
   private StackPane overlayRef = null;
   private Node rootRef = null;
@@ -485,8 +487,20 @@ public final class GameView implements GameViewInterface {
     Button sellAllHoldingsBtn = new Button("\u2198  Sell All Holdings");
     sellAllHoldingsBtn.getStyleClass().addAll("next-week-button", "sell-all-holdings-button");
     sellAllHoldingsBtn.setOnAction(e -> {
+      if (currentSellAllErrorLabel != null) {
+        currentSellAllErrorLabel.setVisible(false);
+        currentSellAllErrorLabel.setManaged(false);
+        currentSellAllErrorLabel.setText("");
+      }
       gameController.handleSellAll(overlayRef);
     });
+    Label sellAllErrorLbl = new Label();
+    sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
+    sellAllErrorLbl.setVisible(false);
+    sellAllErrorLbl.setManaged(false);
+    currentSellAllErrorLabel = sellAllErrorLbl;
+    VBox sellAllStack = new VBox(2, sellAllErrorLbl, sellAllHoldingsBtn);
+    sellAllStack.setAlignment(Pos.BOTTOM_CENTER);
 
     Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
     marketMoversBtn.getStyleClass().add("market-movers-button");
@@ -506,7 +520,7 @@ public final class GameView implements GameViewInterface {
       showTransactionHistory();
     });
 
-    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllHoldingsBtn, subSpacer, historyBtn,
+    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, historyBtn,
         marketMoversBtn);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
@@ -1195,12 +1209,27 @@ public final class GameView implements GameViewInterface {
     maxBuyBtn.setOnAction(e -> applyMaxForBuy.run());
     maxSellBtn.setOnAction(e -> applyMaxForSell.run());
 
+    Label tradeErrorLbl = new Label();
+    tradeErrorLbl.getStyleClass().add("trade-error-label");
+    tradeErrorLbl.setVisible(false);
+    tradeErrorLbl.setManaged(false);
+    tradeErrorLbl.setMaxWidth(Double.MAX_VALUE);
+    tradeErrorLbl.setAlignment(Pos.CENTER);
+    currentTradeErrorLabel = tradeErrorLbl;
+
+    final Runnable clearTradeError = () -> {
+      tradeErrorLbl.setVisible(false);
+      tradeErrorLbl.setManaged(false);
+      tradeErrorLbl.setText("");
+    };
+
     updateBuyAmount.run();
     updateSellAmount.run();
     quantityField.textProperty().addListener((obs, old, val) -> {
       if (syncingFields[0]) {
         return;
       }
+      clearTradeError.run();
       // Allow the field to be empty while the user is typing
       if (val == null || val.isBlank()) {
         updateBuyAmount.run();
@@ -1273,21 +1302,22 @@ public final class GameView implements GameViewInterface {
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to buy.");
         return;
       }
       try {
         parsedquantity = NumberParser.parse(qText).intValue();
       } catch (NumberFormatException ex) {
-        showError("Enter a valid quantity.");
+        showTradeError("That doesn't look like a valid number.");
         return;
       }
 
       if (parsedquantity < 1) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to buy.");
         return;
       }
 
+      clearTradeError.run();
       BigDecimal quantity = BigDecimal.valueOf(parsedquantity);
       gameController.handleBuy(stock, quantity);
     });
@@ -1305,38 +1335,39 @@ public final class GameView implements GameViewInterface {
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to sell.");
         return;
       }
       try {
         parsedquantity = NumberParser.parse(qText).intValue();
       } catch (NumberFormatException ex) {
-        showError("Enter a valid quantity.");
+        showTradeError("That doesn't look like a valid number.");
         return;
       }
 
       if (parsedquantity < 1) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to sell.");
         return;
       }
 
       BigDecimal sellquantity = BigDecimal.valueOf(parsedquantity);
       BigDecimal totalOwned = gameController.getOwnedQuantity(stock.getSymbol());
       if (totalOwned.compareTo(BigDecimal.ZERO) == 0) {
-        showError("You don't own any shares of " + stock.getSymbol());
+        showTradeError("You don't own any " + stock.getSymbol() + " shares to sell.");
         return;
       }
       if (sellquantity.compareTo(totalOwned) > 0) {
-        showError("You only own " + totalOwned.stripTrailingZeros().toPlainString()
-            + " shares of " + stock.getSymbol());
+        showTradeError("Too many - you only own "
+          + totalOwned.stripTrailingZeros().toPlainString() + " " + stock.getSymbol() + " shares.");
         return;
       }
+      clearTradeError.run();
       List<BigDecimal> preview = gameController.previewSell(stock, sellquantity);
       showTradeConfirm("SELL", stock, sellquantity, preview.get(0), preview.get(1), preview.get(2),
           preview.get(3));
     });
 
-    VBox selectorColumn = new VBox(6, stepper, amountField);
+    VBox selectorColumn = new VBox(4, stepper, amountField, tradeErrorLbl);
     selectorColumn.getStyleClass().add("trade-selector-column");
     selectorColumn.setAlignment(Pos.CENTER);
 
@@ -1355,6 +1386,7 @@ public final class GameView implements GameViewInterface {
 
     VBox tradePanel = new VBox(0, tradeRow);
     tradePanel.getStyleClass().add("trade-panel");
+    tradePanel.setAlignment(Pos.CENTER);
 
     // ── Graph + header ────────────────────────────────────────────────────
     Pane graphPlaceholder = buildPriceChart(stock);
@@ -1470,6 +1502,24 @@ public final class GameView implements GameViewInterface {
 
     overlayRef.getChildren().add(popup);
     popup.requestFocus();
+  }
+
+  public void showTradeError(String message) {
+    if (currentTradeErrorLabel == null) {
+      return;
+    }
+    currentTradeErrorLabel.setText(message != null ? message : "An error occurred.");
+    currentTradeErrorLabel.setVisible(true);
+    currentTradeErrorLabel.setManaged(true);
+  }
+
+  public void showSellAllError(String message) {
+    if (currentSellAllErrorLabel == null) {
+      return;
+    }
+    currentSellAllErrorLabel.setText(message != null ? message : "An error occurred.");
+    currentSellAllErrorLabel.setVisible(true);
+    currentSellAllErrorLabel.setManaged(true);
   }
 
   public void showBulkTradeConfirm(String action, BigDecimal quantity, BigDecimal gross,
@@ -2564,13 +2614,14 @@ public final class GameView implements GameViewInterface {
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
     BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
-    Label ownedLbl = null;
+    Label ownedMaxLbl = null;
     if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-      ownedLbl = new Label("Owned: " + ownedQuantity.stripTrailingZeros().toPlainString());
-      ownedLbl.getStyleClass().add("stock-owned-label");
+      ownedMaxLbl = new Label("Owned: "
+          + ownedQuantity.stripTrailingZeros().toPlainString()
+          + "/"
+          + capQuantity.stripTrailingZeros().toPlainString());
+      ownedMaxLbl.getStyleClass().add("stock-owned-label");
     }
-    Label capLbl = new Label("Max: " + capQuantity.stripTrailingZeros().toPlainString());
-    capLbl.getStyleClass().add("stock-cap-label");
 
     // ── Favorite star button ─────────────────────────────────────────────
     boolean isFav = favorites.contains(stock.getSymbol());
@@ -2590,10 +2641,10 @@ public final class GameView implements GameViewInterface {
     favBtn.setOnMouseClicked(e -> e.consume());
 
     VBox left;
-    if (ownedLbl != null) {
-      left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl, capLbl);
+    if (ownedMaxLbl != null) {
+      left = new VBox(2, symLbl, compLbl, pctLbl, ownedMaxLbl);
     } else {
-      left = new VBox(2, symLbl, compLbl, pctLbl, capLbl);
+      left = new VBox(2, symLbl, compLbl, pctLbl);
     }
     VBox right = new VBox(4);
     right.setAlignment(Pos.TOP_RIGHT);

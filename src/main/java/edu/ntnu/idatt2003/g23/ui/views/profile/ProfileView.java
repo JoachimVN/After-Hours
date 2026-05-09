@@ -330,9 +330,6 @@ public final class ProfileView {
           .setScale(2, RoundingMode.HALF_UP);
 
         levelingGuide.setText(requirement.statusName() + ": "
-          + requirement.weeksCurrent() + "/" + requirement.weeksRequired() + " weeks, "
-          + requirement.growthCurrent().stripTrailingZeros().toPlainString()
-          + "x/" + requirement.growthRequired().stripTrailingZeros().toPlainString() + "x. "
           + (weeksRemaining == 0 && growthRemaining.compareTo(BigDecimal.ZERO) == 0
               ? "Target met."
               : "Remaining " + weeksRemaining + " week(s) and "

@@ -23,6 +23,17 @@ public interface GameViewInterface {
   void showError(String message);
 
   /**
+   * Displays an inline validation error in the trade panel (below the quantity controls).
+   * Prefer this over {@link #showError} for input/cap validation errors.
+   */
+  void showTradeError(String message);
+
+  /**
+   * Displays an inline error above the Sell All Holdings button.
+   */
+  void showSellAllError(String message);
+
+  /**
    * Shows an order-confirmation overlay for a single-stock trade.
    *
    * @param action   "BUY" or "SELL"
