@@ -54,6 +54,12 @@
     -fx-padding: 2 12 4 12;
 }
 
+.version-label {
+    -fx-font-size: 11;
+    -fx-text-fill: #2a4060;
+    -fx-font-family: "Monospace";
+}
+
 /* Page headings (non-home pages) */
 .page-title {
     -fx-font-size: 48;

@@ -6,7 +6,7 @@
 
   <groupId>edu.ntnu.idatt2003.g23</groupId>
   <artifactId>app</artifactId>
-  <version>1.0</version>
+  <version>1.0.0-beta.1</version>
 
   <name>app</name>
   <!-- FIXME change it to the project's website -->
@@ -44,6 +44,22 @@
   </dependencies>
 
   <build>
+    <resources>
+      <!-- All resources unfiltered (avoids corrupting binary files like images) -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+      </resource>
+      <!-- version.properties filtered so ${project.version} is substituted at build time -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>version.properties</include>
+        </includes>
+      </resource>
+    </resources>
+
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <plugin>
