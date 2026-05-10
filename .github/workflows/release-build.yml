@@ -65,6 +65,16 @@ jobs:
         run: |
           mvn --batch-mode package -DskipTests
 
+      - name: Set versioned JAR name
+        shell: pwsh
+        run: |
+          "JAR_NAME=AfterHours-${{ env.APP_VERSION }}.jar" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Rename JAR
+        shell: pwsh
+        run: |
+          Move-Item -Path target/dist/AfterHours.jar -Destination "target/dist/${{ env.JAR_NAME }}"
+
       - name: Build Windows Installer
         shell: pwsh
         run: |
@@ -83,6 +93,7 @@ jobs:
           prerelease: ${{ env.PRE_RELEASE == 'true' }}
           files: |
             target/dist/After*-${{ env.APP_VERSION }}.exe
+            target/dist/${{ env.JAR_NAME }}
             target/dist/AfterHours-portable.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
