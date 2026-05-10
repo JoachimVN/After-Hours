@@ -78,16 +78,23 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
+  private static final String ERROR_SIZE_KEY = "errorSize";
+  private static final String ERROR_CONTAINER_KEY = "errorContainer";
+  private static final String ERROR_CONTAINER_CLIP_KEY = "errorContainerClip";
+  private static final Duration INLINE_ERROR_SIZE_ANIM = Duration.millis(220);
   private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(2.2);
   private static final Duration INLINE_ERROR_FADE = Duration.millis(420);
   private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
   private static final Duration POPUP_ERROR_FADE = Duration.millis(320);
+  private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
   private final Label statusVal;
@@ -99,6 +106,9 @@ public final class GameView implements GameViewInterface {
   private final Tooltip statusTooltip;
   private final Button settingsBtn;
   private final Button profileBtn;
+  private final HBox profileIdentityContent;
+  private final StackPane profileNameBox;
+  private final Text profileNameText;
   private final Runnable onPanelOpen;
   private final Runnable onStockSelectionChanged;
 
@@ -159,8 +169,23 @@ public final class GameView implements GameViewInterface {
     this.statusTooltip = new Tooltip();
     this.settingsBtn = new Button();
     this.profileBtn = new Button();
+    this.profileNameText = new Text();
+    this.profileNameText.getStyleClass().add("profile-identity-name");
+    this.profileNameText.setBoundsType(TextBoundsType.VISUAL);
+    this.profileNameBox = new StackPane(this.profileNameText);
+    this.profileNameBox.getStyleClass().add("profile-identity-name-box");
+    this.profileNameBox.setAlignment(Pos.CENTER);
+    this.profileIdentityContent = new HBox(12, this.profileNameBox);
+    this.profileIdentityContent.setAlignment(Pos.CENTER_LEFT);
     this.onPanelOpen = onPanelOpen;
     this.onStockSelectionChanged = onStockSelectionChanged;
+
+    this.profileNameBox.minHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
+    this.profileNameBox.prefHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
+    this.profileNameBox.maxHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
+    this.profileBtn.heightProperty().addListener((obs, oldV, newV) -> fitProfileNameGlyph());
+    this.profileNameBox.heightProperty().addListener((obs, oldV, newV) -> fitProfileNameGlyph());
+    this.profileNameText.textProperty().addListener((obs, oldV, newV) -> fitProfileNameGlyph());
 
     this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
     this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
@@ -495,18 +520,16 @@ public final class GameView implements GameViewInterface {
     sellAllHoldingsBtn.getStyleClass().addAll("next-week-button", "sell-all-holdings-button");
     sellAllHoldingsBtn.setOnAction(e -> {
       if (currentSellAllErrorLabel != null) {
-        currentSellAllErrorLabel.setVisible(false);
-        currentSellAllErrorLabel.setManaged(false);
-        currentSellAllErrorLabel.setText("");
+        hideInlineError(currentSellAllErrorLabel, true);
       }
       gameController.handleSellAll(overlayRef);
     });
     Label sellAllErrorLbl = new Label();
     sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
-    sellAllErrorLbl.setVisible(false);
-    sellAllErrorLbl.setManaged(false);
+    sellAllErrorLbl.setWrapText(true);
+    VBox sellAllErrorBox = createInlineErrorBox(sellAllErrorLbl);
     currentSellAllErrorLabel = sellAllErrorLbl;
-    VBox sellAllStack = new VBox(2, sellAllErrorLbl, sellAllHoldingsBtn);
+    VBox sellAllStack = new VBox(2, sellAllErrorBox, sellAllHoldingsBtn);
     sellAllStack.setAlignment(Pos.BOTTOM_CENTER);
 
     Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
@@ -551,10 +574,8 @@ public final class GameView implements GameViewInterface {
     Node statusPill = statusPill("Player Status", statusVal, statusProgressArc, statusTooltip);
     Node financePill = moneyPill(cashVal, portfolioVal, netWorthVal, "money-pill-overview");
 
-    profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
-    profileBtn.setText(gameController.getPlayerName());
-    profileBtn.setContentDisplay(ContentDisplay.LEFT);
-    profileBtn.setGraphicTextGap(8);
+    updateProfileIdentityButton();
+    profileBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
     profileBtn.getStyleClass().add("profile-identity-button");
     profileBtn.setOnAction(e -> onProfile.run());
 
@@ -569,7 +590,7 @@ public final class GameView implements GameViewInterface {
 
     HBox leftGroup = new HBox(10, backBtn, appTitle);
     leftGroup.setAlignment(Pos.CENTER_LEFT);
-    HBox rightGroup = new HBox(10, statusPill, settingsBtn, profileBtn);
+    HBox rightGroup = new HBox(10, statusPill, profileBtn, settingsBtn);
     rightGroup.setAlignment(Pos.CENTER_RIGHT);
 
     Region edgeSpacer = new Region();
@@ -802,11 +823,51 @@ public final class GameView implements GameViewInterface {
     cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
     portfolioVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
     netWorthVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
-    profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
-    profileBtn.setText(gameController.getPlayerName());
+    updateProfileIdentityButton();
     portfolioItems.setAll(gameController.getPortfolioShares());
     applyFilter();
     rebuildDetail();
+  }
+
+  private void updateProfileIdentityButton() {
+    Node avatar = AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4);
+    profileNameText.setText(truncateProfileName(gameController.getPlayerName()));
+    profileIdentityContent.getChildren().setAll(avatar, profileNameBox);
+    profileBtn.setGraphic(profileIdentityContent);
+    profileBtn.setText(null);
+    Platform.runLater(this::fitProfileNameGlyph);
+  }
+
+  private static String truncateProfileName(String name) {
+    if (name == null || name.isBlank()) {
+      return "";
+    }
+    String trimmed = name.trim();
+    if (trimmed.length() <= PROFILE_NAME_MAX_CHARS) {
+      return trimmed;
+    }
+    return trimmed.substring(0, PROFILE_NAME_MAX_CHARS - 3) + "...";
+  }
+
+  private void fitProfileNameGlyph() {
+    if (profileNameText.getText() == null || profileNameText.getText().isBlank()) {
+      return;
+    }
+
+    double availableHeight = profileNameBox.getHeight();
+    if (availableHeight <= 0) {
+      availableHeight = Math.max(10.0, profileBtn.getHeight() - 12.0);
+    }
+    availableHeight = Math.max(10.0, availableHeight - 3.0);
+    double glyphHeight = profileNameText.getLayoutBounds().getHeight();
+    if (glyphHeight <= 0) {
+      return;
+    }
+
+    double scale = availableHeight / glyphHeight;
+    scale = Math.max(0.86, Math.min(1.15, scale));
+    profileNameText.setScaleX(scale);
+    profileNameText.setScaleY(scale);
   }
 
   private void rebuildFilterChips() {
@@ -1229,16 +1290,14 @@ public final class GameView implements GameViewInterface {
 
     Label tradeErrorLbl = new Label();
     tradeErrorLbl.getStyleClass().add("trade-error-label");
-    tradeErrorLbl.setVisible(false);
-    tradeErrorLbl.setManaged(false);
     tradeErrorLbl.setMaxWidth(Double.MAX_VALUE);
     tradeErrorLbl.setAlignment(Pos.CENTER);
+    tradeErrorLbl.setWrapText(true);
+    VBox tradeErrorBox = createInlineErrorBox(tradeErrorLbl);
     currentTradeErrorLabel = tradeErrorLbl;
 
     final Runnable clearTradeError = () -> {
-      tradeErrorLbl.setVisible(false);
-      tradeErrorLbl.setManaged(false);
-      tradeErrorLbl.setText("");
+      hideInlineError(tradeErrorLbl, true);
     };
 
     updateBuyAmount.run();
@@ -1385,7 +1444,7 @@ public final class GameView implements GameViewInterface {
           preview.get(3));
     });
 
-    VBox selectorColumn = new VBox(4, stepper, amountField, tradeErrorLbl);
+    VBox selectorColumn = new VBox(4, stepper, amountField, tradeErrorBox);
     selectorColumn.getStyleClass().add("trade-selector-column");
     selectorColumn.setAlignment(Pos.CENTER);
 
@@ -1548,20 +1607,16 @@ public final class GameView implements GameViewInterface {
 
   private void showFadingInlineError(Label label, String message) {
     label.setText(message != null ? message : "An error occurred.");
-    label.setVisible(true);
-    label.setManaged(true);
-    label.setOpacity(1.0);
+    animateInlineErrorVisibility(label, true, null);
 
     stopErrorTransitions(label);
 
     PauseTransition pause = new PauseTransition(INLINE_ERROR_VISIBLE);
-    FadeTransition fade = new FadeTransition(INLINE_ERROR_FADE, label);
+    FadeTransition fade = new FadeTransition(INLINE_ERROR_FADE, resolveInlineErrorContainer(label));
     fade.setFromValue(1.0);
     fade.setToValue(0.0);
     fade.setOnFinished(ev -> {
-      label.setVisible(false);
-      label.setManaged(false);
-      label.setOpacity(1.0);
+      animateInlineErrorVisibility(label, false, () -> label.setText(""));
       label.getProperties().remove(ERROR_PAUSE_KEY);
       label.getProperties().remove(ERROR_FADE_KEY);
     });
@@ -1570,6 +1625,92 @@ public final class GameView implements GameViewInterface {
     label.getProperties().put(ERROR_PAUSE_KEY, pause);
     label.getProperties().put(ERROR_FADE_KEY, fade);
     pause.playFromStart();
+  }
+
+  private VBox createInlineErrorBox(Label label) {
+    VBox box = new VBox(label);
+    box.setAlignment(Pos.CENTER);
+    box.setMinHeight(0);
+    box.setMaxHeight(0);
+    box.setOpacity(0.0);
+
+    Rectangle clip = new Rectangle();
+    clip.widthProperty().bind(box.widthProperty());
+    clip.setHeight(0);
+    box.setClip(clip);
+    box.managedProperty().bind(box.maxHeightProperty().greaterThan(0));
+
+    label.getProperties().put(ERROR_CONTAINER_KEY, box);
+    label.getProperties().put(ERROR_CONTAINER_CLIP_KEY, clip);
+    return box;
+  }
+
+  private void hideInlineError(Label label, boolean clearText) {
+    if (label == null) {
+      return;
+    }
+    stopErrorTransitions(label);
+    animateInlineErrorVisibility(label, false, clearText ? () -> label.setText("") : null);
+  }
+
+  private void animateInlineErrorVisibility(Label label, boolean visible, Runnable onFinished) {
+    VBox box = resolveInlineErrorContainer(label);
+    Rectangle clip = resolveInlineErrorClip(label);
+
+    Object existing = label.getProperties().remove(ERROR_SIZE_KEY);
+    if (existing instanceof Timeline oldTimeline) {
+      oldTimeline.stop();
+    }
+
+    double from = Math.max(box.getHeight(), box.getMaxHeight());
+    double to = visible ? Math.max(18.0, label.prefHeight(Math.max(0, label.getWidth())) + 4.0) : 0.0;
+
+    if (visible) {
+      box.setOpacity(1.0);
+    }
+
+    Timeline timeline = new Timeline(
+        new KeyFrame(Duration.ZERO,
+            new KeyValue(box.maxHeightProperty(), from, Interpolator.EASE_BOTH),
+            new KeyValue(clip.heightProperty(), from, Interpolator.EASE_BOTH),
+            new KeyValue(box.opacityProperty(), box.getOpacity(), Interpolator.EASE_BOTH)),
+        new KeyFrame(INLINE_ERROR_SIZE_ANIM,
+            new KeyValue(box.maxHeightProperty(), to, Interpolator.EASE_BOTH),
+            new KeyValue(clip.heightProperty(), to, Interpolator.EASE_BOTH),
+            new KeyValue(box.opacityProperty(), visible ? 1.0 : 0.0, Interpolator.EASE_BOTH))
+    );
+    timeline.setOnFinished(ev -> {
+      if (!visible) {
+        box.setMaxHeight(0);
+        clip.setHeight(0);
+        box.setOpacity(0.0);
+      }
+      label.getProperties().remove(ERROR_SIZE_KEY);
+      if (onFinished != null) {
+        onFinished.run();
+      }
+    });
+
+    label.getProperties().put(ERROR_SIZE_KEY, timeline);
+    timeline.playFromStart();
+  }
+
+  private VBox resolveInlineErrorContainer(Label label) {
+    Object container = label.getProperties().get(ERROR_CONTAINER_KEY);
+    if (container instanceof VBox box) {
+      return box;
+    }
+    return new VBox(label);
+  }
+
+  private Rectangle resolveInlineErrorClip(Label label) {
+    Object clip = label.getProperties().get(ERROR_CONTAINER_CLIP_KEY);
+    if (clip instanceof Rectangle rectangle) {
+      return rectangle;
+    }
+    Rectangle fallback = new Rectangle();
+    fallback.setHeight(0);
+    return fallback;
   }
 
   private void scheduleFadeOutAndRemove(Node node, Duration visibleDuration,
@@ -1595,11 +1736,11 @@ public final class GameView implements GameViewInterface {
 
   private void stopErrorTransitions(Node node) {
     Object pause = node.getProperties().remove(ERROR_PAUSE_KEY);
-    if (pause instanceof PauseTransition p) {
+    if (pause instanceof javafx.animation.Animation p) {
       p.stop();
     }
     Object fade = node.getProperties().remove(ERROR_FADE_KEY);
-    if (fade instanceof FadeTransition f) {
+    if (fade instanceof javafx.animation.Animation f) {
       f.stop();
     }
   }

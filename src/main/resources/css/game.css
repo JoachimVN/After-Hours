@@ -39,11 +39,9 @@
 }
 
 .game-icon-button:hover {
-    -fx-background-color: linear-gradient(to bottom,
-        rgba(26, 54, 108, 0.95),
-        rgba(18, 39, 83, 0.95));
-    -fx-border-color: rgba(245, 162, 1, 0.58);
-    -fx-text-fill: #ffba42;
+    -fx-background-color: rgba(245, 162, 1, 0.20);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: rgba(245, 162, 1, 0.35);
 }
 
 .profile-identity-button {
@@ -54,22 +52,34 @@
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-padding: 6 12 6 8;
+    -fx-padding: 4 12 4 6;
     -fx-text-fill: #d9e7fb;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
     -fx-min-height: 42px;
     -fx-pref-height: 42px;
     -fx-max-height: 42px;
     -fx-cursor: hand;
 }
 
+.profile-identity-name-box {
+    -fx-alignment: center;
+    -fx-padding: 1 0 1 1;
+}
+
+.profile-identity-name {
+    -fx-fill: #d9e7fb;
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+
 .profile-identity-button:hover {
-    -fx-background-color: linear-gradient(to bottom,
-        rgba(24, 48, 95, 0.94),
-        rgba(16, 34, 73, 0.94));
-    -fx-border-color: rgba(245, 162, 1, 0.54);
-    -fx-text-fill: #ffba42;
+    -fx-background-color: rgba(245, 162, 1, 0.20);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: rgba(245, 162, 1, 0.35);
+}
+
+.profile-identity-button:hover .profile-identity-name {
+    -fx-fill: #f5a201;
 }
 
 /* Stat pills */
