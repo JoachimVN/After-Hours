@@ -32,18 +32,17 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: Install Chocolatey if missing
-        shell: pwsh
-        run: |
-          if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-            Set-ExecutionPolicy Bypass -Scope Process -Force
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          }
-
       - name: Install WiX Toolset
         shell: pwsh
-        run: choco install wixtoolset --no-progress -y
+        run: |
+          $chocoPath = Join-Path $env:ChocolateyInstall 'bin\choco.exe'
+          if (-not (Test-Path $chocoPath)) {
+            $chocoPath = 'C:\ProgramData\chocolatey\bin\choco.exe'
+          }
+          if (-not (Test-Path $chocoPath)) {
+            throw 'Chocolatey is not available on this runner. Install WiX Toolset manually or install Chocolatey on the self-hosted runner.'
+          }
+          & $chocoPath install wixtoolset --no-progress -y
 
       - name: Resolve Version From Tag
         shell: pwsh
@@ -77,12 +76,13 @@ jobs:
       - name: Set versioned JAR name
         shell: pwsh
         run: |
-          "JAR_NAME=AfterHours-${{ env.APP_VERSION }}.jar" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $jarName = "AfterHours-$env:APP_VERSION.jar"
+          "JAR_NAME=$jarName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Rename JAR
+      - name: Copy versioned JAR
         shell: pwsh
         run: |
-          Move-Item -Path target/dist/AfterHours.jar -Destination "target/dist/${{ env.JAR_NAME }}"
+          Copy-Item -Path target/dist/AfterHours.jar -Destination "target/dist/$env:JAR_NAME"
 
       - name: Build Windows Installer
         shell: pwsh
