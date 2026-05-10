@@ -345,9 +345,9 @@ public class App extends Application {
         error -> showAppNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
-  private static final int CSV_EDITOR_ROW_WARN_THRESHOLD = 5000;
-  private static final long CSV_EDITOR_PRICE_POINTS_WARN_THRESHOLD = 250_000;
-  private static final long CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD = 2_000_000;
+  private static final int CSV_EDITOR_ROW_WARN_THRESHOLD = 1000;
+  private static final long CSV_EDITOR_PRICE_POINTS_WARN_THRESHOLD = 500_000;
+  private static final long CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD = 5_000_000;
 
   private record CsvEditorLoadStats(int rowCount, long pricePointCount, long priceCharCount) {
   }
@@ -405,10 +405,16 @@ public class App extends Application {
   }
 
   private static CsvEditorLoadStats analyzeCsvEditorLoad(CsvParseResult result) {
+    int displayRowCount = 0;
     long pricePointCount = 0;
     long priceCharCount = 0;
 
     for (var row : result.getRows()) {
+      if (!isCsvEditorDisplayRow(row)) {
+        continue;
+      }
+
+      displayRowCount++;
       String prices = row.getPrices();
       if (prices == null || prices.isBlank()) {
         continue;
@@ -428,7 +434,15 @@ public class App extends Application {
       }
     }
 
-    return new CsvEditorLoadStats(result.getRows().size(), pricePointCount, priceCharCount);
+    return new CsvEditorLoadStats(displayRowCount, pricePointCount, priceCharCount);
+  }
+
+  private static boolean isCsvEditorDisplayRow(edu.ntnu.idatt2003.g23.io.CsvRow row) {
+    return row != null
+        && (!row.getSymbol().isBlank()
+        || !row.getCompany().isBlank()
+        || !row.getPrices().isBlank()
+        || !row.getErrorMessage().isBlank());
   }
 
   private static boolean shouldWarnForCsvEditorLoad(CsvEditorLoadStats stats) {
