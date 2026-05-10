@@ -10,52 +10,47 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.audio.SfxController;
+import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer;
+import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer.LoadStats;
+import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.io.GlobalSettingsManager;
-import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectController;
-import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectView;
-import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
+import edu.ntnu.idatt2003.g23.ui.overlay.AppOverlayService;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
 import edu.ntnu.idatt2003.g23.ui.views.csveditor.CsvEditorView;
 import edu.ntnu.idatt2003.g23.ui.views.customstocks.CustomStocksView;
-import edu.ntnu.idatt2003.g23.ui.views.nogame.NoGameView;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameView;
 import edu.ntnu.idatt2003.g23.ui.views.landingpage.LandingPageView;
-import edu.ntnu.idatt2003.g23.ui.views.profile.ProfileView;
+import edu.ntnu.idatt2003.g23.ui.views.nogame.NoGameView;
 import edu.ntnu.idatt2003.g23.ui.views.profile.ProfileController;
+import edu.ntnu.idatt2003.g23.ui.views.profile.ProfileView;
+import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectController;
+import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectView;
+import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsController;
 import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
 import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
-import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.scene.text.Font;
@@ -78,6 +73,7 @@ public class App extends Application {
   private Parent homePage;
   private HomePageMusicController homePageMusicController;
   private BackgroundCanvas backgroundCanvas;
+  private AppOverlayService overlayService;
 
   /**
    * Retained so back-navigation can return without recreating the form.
@@ -165,6 +161,7 @@ public class App extends Application {
     backgroundCanvas = new BackgroundCanvas();
     backgroundCanvas.setAnimationsEnabled(animationsEnabled);
     root = new StackPane(backgroundCanvas, homePage);
+    overlayService = new AppOverlayService(root);
     ColorAdjust globalFilter = new ColorAdjust();
     globalFilter.setBrightness(0.05);
     globalFilter.setContrast(0.025);
@@ -304,21 +301,12 @@ public class App extends Application {
           if (result.hasErrors()) {
             openCsvEditor(result, name, cash);
           } else {
-            List<Stock> stocks = result.getRows().stream()
-                .map(StockCsvLoader::rowToStock)
-                .toList();
-            String exchangeName = marketName(csvResource);
+            List<Stock> stocks = StockCsvLoader.toStocks(result.getRows());
+            String exchangeName = AppConfig.marketNameFor(csvResource);
             buildAndStartGame(name, cash, stocks, false, exchangeName);
           }
         },
-        error -> showAppNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
-  }
-
-  private static String marketName(String csvResource) {
-    return AppConfig.BUILT_IN_MARKETS.stream()
-        .filter(m -> m.csvResource().equals(csvResource))
-        .map(m -> m.name())
-        .findFirst().orElse("Market");
+        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
   }
 
   private void startGameWithCsv(String name, double cash, File csvFile) {
@@ -336,35 +324,25 @@ public class App extends Application {
           if (result.hasErrors()) {
             openCsvEditorFromImport(result, name, cash, csvFile);
           } else {
-            List<Stock> stocks = result.getRows().stream()
-                .map(StockCsvLoader::rowToStock)
-                .toList();
-            buildAndStartGame(name, cash, stocks, false, "Custom Market");
+            buildAndStartGame(name, cash, StockCsvLoader.toStocks(result.getRows()), false, "Custom Market");
           }
         },
-        error -> showAppNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
-  }
-
-  private static final int CSV_EDITOR_ROW_WARN_THRESHOLD = 1000;
-  private static final long CSV_EDITOR_PRICE_POINTS_WARN_THRESHOLD = 500_000;
-  private static final long CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD = 5_000_000;
-
-  private record CsvEditorLoadStats(int rowCount, long pricePointCount, long priceCharCount) {
+        error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
   private void openCsvEditor(CsvParseResult result, String name, double cash) {
-    CsvEditorLoadStats stats = analyzeCsvEditorLoad(result);
+    LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
     Runnable doOpen = () -> {
       Parent editorPage = CsvEditorView.build(
           result,
           withBack(this::goHomeKeepMusic),
-          rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
+          rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
           (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
     };
-    if (shouldWarnForCsvEditorLoad(stats)) {
-      showLargeFileWarning(stats, doOpen);
+    if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+      overlayService.showLargeFileWarning(stats, doOpen);
     } else {
       doOpen.run();
     }
@@ -382,79 +360,26 @@ public class App extends Application {
           }
         },
         result -> openCsvEditorFromImport(result, name, cash, csvFile),
-        error -> showAppNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
   private void openCsvEditorFromImport(CsvParseResult result, String name, double cash,
       File selectedFile) {
-    CsvEditorLoadStats stats = analyzeCsvEditorLoad(result);
+    LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
     Runnable doOpen = () -> {
       Parent editorPage = CsvEditorView.build(
           result,
           withBack(() -> goToCustomStocks(name, cash, selectedFile)),
-          rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
+          rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
           (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
     };
-    if (shouldWarnForCsvEditorLoad(stats)) {
-      showLargeFileWarning(stats, doOpen);
+    if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+      overlayService.showLargeFileWarning(stats, doOpen);
     } else {
       doOpen.run();
     }
-  }
-
-  private static CsvEditorLoadStats analyzeCsvEditorLoad(CsvParseResult result) {
-    int displayRowCount = 0;
-    long pricePointCount = 0;
-    long priceCharCount = 0;
-
-    for (var row : result.getRows()) {
-      if (!isCsvEditorDisplayRow(row)) {
-        continue;
-      }
-
-      displayRowCount++;
-      String prices = row.getPrices();
-      if (prices == null || prices.isBlank()) {
-        continue;
-      }
-
-      priceCharCount += prices.length();
-
-      boolean inToken = false;
-      for (int i = 0; i < prices.length(); i++) {
-        char ch = prices.charAt(i);
-        if (ch == ';') {
-          inToken = false;
-        } else if (!Character.isWhitespace(ch) && !inToken) {
-          pricePointCount++;
-          inToken = true;
-        }
-      }
-    }
-
-    return new CsvEditorLoadStats(displayRowCount, pricePointCount, priceCharCount);
-  }
-
-  private static boolean isCsvEditorDisplayRow(edu.ntnu.idatt2003.g23.io.CsvRow row) {
-    return row != null
-        && (!row.getSymbol().isBlank()
-        || !row.getCompany().isBlank()
-        || !row.getPrices().isBlank()
-        || !row.getErrorMessage().isBlank());
-  }
-
-  private static boolean shouldWarnForCsvEditorLoad(CsvEditorLoadStats stats) {
-    return stats.rowCount() > CSV_EDITOR_ROW_WARN_THRESHOLD
-        || stats.pricePointCount() > CSV_EDITOR_PRICE_POINTS_WARN_THRESHOLD
-        || stats.priceCharCount() > CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD;
-  }
-
-  private List<Stock> rowsToStocks(List<edu.ntnu.idatt2003.g23.io.CsvRow> rows) {
-    return rows.stream()
-        .map(edu.ntnu.idatt2003.g23.io.StockCsvLoader::rowToStock)
-        .collect(java.util.stream.Collectors.toList());
   }
 
   private void saveCsvRowsAndStartGame(String name, double cash,
@@ -462,10 +387,10 @@ public class App extends Application {
     try {
       edu.ntnu.idatt2003.g23.io.StockCsvExporter.writeCsvRows(file.toPath(), rows);
     } catch (IOException e) {
-      showAppNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+      overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
       return;
     }
-    buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market");
+    buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market");
   }
 
   private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor,
@@ -617,9 +542,9 @@ public class App extends Application {
       } else {
         currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState);
       }
-      showAppNotification("Game Saved", "Your progress has been saved.", true);
+      overlayService.showNotification("Game Saved", "Your progress has been saved.", true);
     } catch (IOException e) {
-      showAppNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
+      overlayService.showNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
     }
   }
 
@@ -631,10 +556,10 @@ public class App extends Application {
     try {
       GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId);
       if (autosaveToast) {
-        showTimedNotification("Autosaved", "Progress autosaved.", true);
+        overlayService.showTimedNotification("Autosaved", "Progress autosaved.", true);
       }
     } catch (IOException e) {
-      showAppNotification("Autosave Failed", "Could not autosave:\n" + e.getMessage(), false);
+      overlayService.showNotification("Autosave Failed", "Could not autosave:\n" + e.getMessage(), false);
     }
   }
 
@@ -681,11 +606,98 @@ public class App extends Application {
   }
 
   private Parent buildSettingsView(Runnable onBack, Runnable onSave) {
-    Runnable onBackWithSfx = () -> {
-      sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0));
-      onBack.run();
+    SettingsController ctrl = new SettingsController(
+        () -> {
+          sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0));
+          onBack.run();
+        },
+        primaryStage);
+
+    // ── Audio ────────────────────────────────────────────────────────────
+    ctrl.musicVolume = musicVolume;
+    ctrl.musicMuted = musicMuted;
+    ctrl.onMusicVolumeChange = vol -> {
+      musicVolume = vol;
+      homePageMusicController.setVolume(musicMuted ? 0.0 : vol);
+      saveSettings();
     };
-    Runnable onResetAll = () -> {
+    ctrl.onMusicMutedChange = muted -> {
+      playSettingsToggleSfx(!muted);
+      musicMuted = muted;
+      if (muted) homePageMusicController.stop();
+      else resumeMusicForContext();
+      saveSettings();
+    };
+    ctrl.sfxVolume = sfxVolume;
+    ctrl.sfxMuted = sfxMuted;
+    ctrl.onSfxVolumeChange = vol -> {
+      sfxVolume = vol;
+      sfxController.setVolume(sfxMuted ? 0.0 : vol);
+      saveSettings();
+    };
+    ctrl.onSfxMutedChange = muted -> {
+      playSettingsToggleSfx(!muted);
+      sfxMuted = muted;
+      sfxController.setVolume(muted ? 0.0 : sfxVolume);
+      saveSettings();
+    };
+
+    // ── Visual ───────────────────────────────────────────────────────────
+    ctrl.animationsEnabled = animationsEnabled;
+    ctrl.onAnimationsChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      animationsEnabled = enabled;
+      backgroundCanvas.setAnimationsEnabled(enabled);
+      saveSettings();
+    };
+    ctrl.fullscreenEnabled = fullscreenEnabled;
+    ctrl.onFullscreenChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      fullscreenEnabled = enabled;
+      primaryStage.setFullScreen(enabled);
+      saveSettings();
+    };
+
+    // ── Gameplay / performance ────────────────────────────────────────────
+    ctrl.devModeEnabled = devModeEnabled;
+    ctrl.onDevModeChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      devModeEnabled = enabled;
+      AppConfig.DEV_MODE.set(enabled);
+      saveSettings();
+    };
+    ctrl.autosaveEnabled = autosaveEnabled;
+    ctrl.onAutosaveChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      autosaveEnabled = enabled;
+      if (enabled) startAutosaveTimer();
+      else stopAutosaveTimer();
+      saveSettings();
+    };
+    ctrl.autosaveToast = autosaveToast;
+    ctrl.onAutosaveToastChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      autosaveToast = enabled;
+      saveSettings();
+    };
+    ctrl.performanceModeEnabled = performanceModeEnabled;
+    ctrl.onPerformanceModeChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      performanceModeEnabled = enabled;
+      AppConfig.PERFORMANCE_MODE.set(enabled);
+      rebuildCurrentGameViewForPerformance();
+      saveSettings();
+    };
+    ctrl.maxHistoryWeeks = maxHistoryWeeks;
+    ctrl.onMaxHistoryWeeksChange = weeks -> {
+      maxHistoryWeeks = Math.max(50, weeks);
+      AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
+      rebuildCurrentGameViewForPerformance();
+      saveSettings();
+    };
+
+    // ── Reset all ────────────────────────────────────────────────────────
+    ctrl.onResetAll = () -> {
       musicVolume = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
       sfxVolume = GlobalSettingsManager.DEFAULT_SFX_VOLUME;
       animationsEnabled = GlobalSettingsManager.DEFAULT_ANIMATIONS;
@@ -696,228 +708,49 @@ public class App extends Application {
       autosaveToast = GlobalSettingsManager.DEFAULT_AUTOSAVE_TOAST;
       performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
       maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
-      AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
-      AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
       fullscreenEnabled = GlobalSettingsManager.DEFAULT_FULLSCREEN;
       windowWidth = GlobalSettingsManager.DEFAULT_WINDOW_WIDTH;
       windowHeight = GlobalSettingsManager.DEFAULT_WINDOW_HEIGHT;
-      if (musicMuted) {
-        homePageMusicController.stop();
-      } else {
-        resumeMusicForContext();
-      }
+      AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
+      AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
+      AppConfig.DEV_MODE.set(false);
+      if (musicMuted) homePageMusicController.stop();
+      else resumeMusicForContext();
       sfxController.setVolume(sfxVolume);
       backgroundCanvas.setAnimationsEnabled(animationsEnabled);
       primaryStage.setFullScreen(false);
       primaryStage.setMaximized(true);
-      AppConfig.DEV_MODE.set(false);
-      if (autosaveEnabled) {
-        startAutosaveTimer();
-      } else {
-        stopAutosaveTimer();
-      }
+      if (autosaveEnabled) startAutosaveTimer();
+      else stopAutosaveTimer();
       saveSettings();
       navigateKeepMusic(buildSettingsView(onBack, onSave));
     };
 
-    // Use simpler overload for home/setup (onSave == null), full overload for
-    // in-game (onSave != null)
-    if (onSave == null) {
-      return SettingsView.build(
-          onBackWithSfx,
-          primaryStage,
-          vol -> {
-            musicVolume = vol;
-            homePageMusicController.setVolume(musicMuted ? 0.0 : vol);
-            saveSettings();
-          },
-          musicVolume,
-          musicMuted,
-          muted -> {
-            playSettingsToggleSfx(!muted);
-            musicMuted = muted;
-            if (muted) {
-              homePageMusicController.stop();
-            } else {
-              resumeMusicForContext();
-            }
-            saveSettings();
-          },
-          vol -> {
-            sfxVolume = vol;
-            sfxController.setVolume(sfxMuted ? 0.0 : vol);
-            saveSettings();
-          },
-          sfxVolume,
-          sfxMuted,
-          muted -> {
-            playSettingsToggleSfx(!muted);
-            sfxMuted = muted;
-            sfxController.setVolume(muted ? 0.0 : sfxVolume);
-            saveSettings();
-          },
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            animationsEnabled = enabled;
-            backgroundCanvas.setAnimationsEnabled(enabled);
-            saveSettings();
-          },
-          animationsEnabled,
-          fullscreenEnabled,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            fullscreenEnabled = enabled;
-            primaryStage.setFullScreen(enabled);
-            saveSettings();
-          },
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            devModeEnabled = enabled;
-            saveSettings();
-          },
-          devModeEnabled,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            autosaveEnabled = enabled;
-            if (enabled) {
-              startAutosaveTimer();
-            } else {
-              stopAutosaveTimer();
-            }
-            saveSettings();
-          },
-          autosaveEnabled,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            autosaveToast = enabled;
-            saveSettings();
-          },
-          autosaveToast,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            performanceModeEnabled = enabled;
-            AppConfig.PERFORMANCE_MODE.set(enabled);
-            rebuildCurrentGameViewForPerformance();
-            saveSettings();
-          },
-          performanceModeEnabled,
-          weeks -> {
-            maxHistoryWeeks = Math.max(50, weeks);
-            AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
-            rebuildCurrentGameViewForPerformance();
-            saveSettings();
-          },
-          maxHistoryWeeks);
-    } else {
-      Runnable onSaveAndRefresh = () -> {
+    // ── In-game only ──────────────────────────────────────────────────────
+    if (onSave != null) {
+      ctrl.currentSavePath = currentSavePath;
+      ctrl.onSave = () -> {
         onSave.run();
         navigateKeepMusic(buildSettingsView(onBack, onSave));
       };
-      return SettingsView.build(
-          onBackWithSfx,
-          primaryStage,
-          vol -> {
-            musicVolume = vol;
-            homePageMusicController.setVolume(musicMuted ? 0.0 : vol);
-            saveSettings();
-          },
-          musicVolume,
-          musicMuted,
-          muted -> {
-            playSettingsToggleSfx(!muted);
-            musicMuted = muted;
-            if (muted) {
-              homePageMusicController.stop();
-            } else {
-              resumeMusicForContext();
-            }
-            saveSettings();
-          },
-          vol -> {
-            sfxVolume = vol;
-            sfxController.setVolume(sfxMuted ? 0.0 : vol);
-            saveSettings();
-          },
-          sfxVolume,
-          sfxMuted,
-          muted -> {
-            playSettingsToggleSfx(!muted);
-            sfxMuted = muted;
-            sfxController.setVolume(muted ? 0.0 : sfxVolume);
-            saveSettings();
-          },
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            animationsEnabled = enabled;
-            backgroundCanvas.setAnimationsEnabled(enabled);
-            saveSettings();
-          },
-          animationsEnabled,
-          fullscreenEnabled,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            fullscreenEnabled = enabled;
-            primaryStage.setFullScreen(enabled);
-            saveSettings();
-          },
-          dims -> {
-            primaryStage.setFullScreen(false);
-            primaryStage.setMaximized(false);
-            primaryStage.setWidth(dims[0]);
-            primaryStage.setHeight(dims[1]);
-          },
-          () -> {
-            primaryStage.setFullScreen(false);
-            primaryStage.setMaximized(true);
-          },
-          file -> {
-            /* export already completed in view; reserved for future controller logic */ },
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            devModeEnabled = enabled;
-            saveSettings();
-          },
-          devModeEnabled,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            autosaveEnabled = enabled;
-            if (enabled) {
-              startAutosaveTimer();
-            } else {
-              stopAutosaveTimer();
-            }
-            saveSettings();
-          },
-          autosaveEnabled,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            autosaveToast = enabled;
-            saveSettings();
-          },
-          autosaveToast,
-          enabled -> {
-            playSettingsToggleSfx(enabled);
-            performanceModeEnabled = enabled;
-            AppConfig.PERFORMANCE_MODE.set(enabled);
-            rebuildCurrentGameViewForPerformance();
-            saveSettings();
-          },
-          performanceModeEnabled,
-          weeks -> {
-            maxHistoryWeeks = Math.max(50, weeks);
-            AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
-            rebuildCurrentGameViewForPerformance();
-            saveSettings();
-          },
-          maxHistoryWeeks,
-          currentSavePath,
-          onResetAll,
-          onSaveAndRefresh,
-          currentGameController != null ? currentGameController.getPlayerName() : null,
-          currentGameController != null ? name -> {
-            currentGameController.setPlayerName(name);
-          } : null);
+      ctrl.onResolutionChange = dims -> {
+        primaryStage.setFullScreen(false);
+        primaryStage.setMaximized(false);
+        primaryStage.setWidth(dims[0]);
+        primaryStage.setHeight(dims[1]);
+      };
+      ctrl.onMaximize = () -> {
+        primaryStage.setFullScreen(false);
+        primaryStage.setMaximized(true);
+      };
+      ctrl.onExport = file -> { /* export already completed in view */ };
+      ctrl.currentPlayerName = currentGameController != null
+          ? currentGameController.getPlayerName() : null;
+      ctrl.onNameChanged = currentGameController != null
+          ? name -> currentGameController.setPlayerName(name) : null;
     }
+
+    return SettingsView.build(ctrl);
   }
 
   private Parent buildProfileView(Runnable onBackToGame, Runnable onSave) {
@@ -1043,150 +876,6 @@ public class App extends Application {
     Thread t = new Thread(task, "ui-background-loader");
     t.setDaemon(true);
     t.start();
-  }
-
-  /**
-   * Styled in-app notification overlay — replaces all OS Alert dialogs.
-   */
-  private void showLargeFileWarning(CsvEditorLoadStats stats, Runnable onProceed) {
-    Label iconLbl = new Label("\u26A0");
-    iconLbl.getStyleClass().add("error-dialog-icon");
-    Label titleLbl = new Label("Large File Warning");
-    titleLbl.getStyleClass().add("error-dialog-title");
-
-    HBox header = new HBox(12, iconLbl, titleLbl);
-    header.getStyleClass().add("error-dialog-header");
-    header.setAlignment(Pos.CENTER_LEFT);
-
-    StringBuilder message = new StringBuilder("This CSV is large enough that the editor may become slow or unresponsive.\n\n");
-    message.append("Stocks: ")
-      .append(String.format("%,d", stats.rowCount()))
-      .append("\nPrice points: ")
-      .append(String.format("%,d", stats.pricePointCount()));
-
-    if (stats.priceCharCount() > CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD) {
-      message.append("\nPrice text size: ")
-        .append(String.format("%,d", stats.priceCharCount()))
-        .append(" chars");
-    }
-
-    message.append("\n\nDo you want to proceed?");
-
-    Label msgLbl = new Label(message.toString());
-    msgLbl.getStyleClass().add("error-dialog-message");
-    msgLbl.setWrapText(true);
-    msgLbl.setMaxWidth(340);
-
-    VBox body = new VBox(msgLbl);
-    body.getStyleClass().add("error-dialog-body");
-
-    Button cancelBtn = new Button("Cancel");
-    cancelBtn.getStyleClass().add("dialog-cancel-btn");
-
-    Button proceedBtn = new Button("Proceed Anyway");
-    proceedBtn.getStyleClass().add("dialog-confirm-sell-btn");
-
-    Region spacer = new Region();
-    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-    HBox btnRow = new HBox(8, cancelBtn, spacer, proceedBtn);
-    btnRow.setAlignment(Pos.CENTER_RIGHT);
-    btnRow.getStyleClass().add("dialog-btn-row");
-
-    VBox card = new VBox(0, header, body, btnRow);
-    card.getStyleClass().add("error-dialog-root");
-    card.setMaxWidth(440);
-    card.setMaxHeight(Region.USE_PREF_SIZE);
-
-    Region backdrop = new Region();
-    backdrop.getStyleClass().add("dialog-backdrop");
-
-    StackPane popup = new StackPane(backdrop, card);
-    StackPane.setAlignment(card, Pos.CENTER);
-
-    Runnable dismiss = () -> root.getChildren().remove(popup);
-    cancelBtn.setOnAction(ev -> dismiss.run());
-    backdrop.setOnMouseClicked(ev -> dismiss.run());
-    proceedBtn.setOnAction(ev -> { dismiss.run(); onProceed.run(); });
-    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
-      if (ev.getCode() == KeyCode.ESCAPE) {
-        dismiss.run();
-        ev.consume();
-      }
-    });
-
-    root.getChildren().add(popup);
-    popup.requestFocus();
-  }
-
-  private void showAppNotification(String title, String message, boolean success) {
-    Label iconLbl = new Label(success ? "\u2713" : "\u2715");
-    iconLbl.getStyleClass().add(success ? "receipt-check" : "error-dialog-icon");
-    Label titleLbl = new Label(title);
-    titleLbl.getStyleClass().add(success ? "app-success-title" : "error-dialog-title");
-
-    HBox header = new HBox(12, iconLbl, titleLbl);
-    header.getStyleClass().add(success ? "app-success-header" : "error-dialog-header");
-    header.setAlignment(Pos.CENTER_LEFT);
-
-    Label msgLbl = new Label(message);
-    msgLbl.getStyleClass().add(success ? "app-success-message" : "error-dialog-message");
-    msgLbl.setWrapText(true);
-    msgLbl.setMaxWidth(320);
-
-    VBox body = new VBox(msgLbl);
-    body.getStyleClass().add(success ? "app-success-body" : "error-dialog-body");
-
-    Button okBtn = new Button("OK");
-    okBtn.getStyleClass().add(success ? "dialog-confirm-buy-btn" : "dialog-cancel-btn");
-    HBox btnRow = new HBox(okBtn);
-    btnRow.setAlignment(Pos.CENTER_RIGHT);
-    btnRow.getStyleClass().add("dialog-btn-row");
-
-    VBox card = new VBox(0, header, body, btnRow);
-    card.getStyleClass().add(success ? "app-success-root" : "error-dialog-root");
-    card.setMaxWidth(420);
-    card.setMaxHeight(Region.USE_PREF_SIZE);
-
-    Region backdrop = new Region();
-    backdrop.getStyleClass().add("dialog-backdrop");
-
-    StackPane popup = new StackPane(backdrop, card);
-    StackPane.setAlignment(card, Pos.CENTER);
-
-    Runnable dismiss = () -> root.getChildren().remove(popup);
-    okBtn.setOnAction(ev -> dismiss.run());
-    backdrop.setOnMouseClicked(ev -> dismiss.run());
-    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
-      if (ev.getCode() == KeyCode.ESCAPE || ev.getCode() == KeyCode.ENTER) {
-        dismiss.run();
-        ev.consume();
-      }
-    });
-    root.getChildren().add(popup);
-    popup.requestFocus();
-  }
-
-  /**
-   * Auto-dismissing toast — disappears after 2 seconds without user interaction.
-   */
-  private void showTimedNotification(String title, String message, boolean success) {
-    Label msgLbl = new Label(message);
-    msgLbl.getStyleClass().add("toast-message");
-    msgLbl.setWrapText(false);
-
-    VBox card = new VBox(msgLbl);
-    card.getStyleClass().add("toast-card");
-    card.setMaxWidth(260);
-    card.setMaxHeight(Region.USE_PREF_SIZE);
-
-    StackPane.setAlignment(card, Pos.BOTTOM_RIGHT);
-    StackPane.setMargin(card, new Insets(0, 24, 32, 0));
-
-    root.getChildren().add(card);
-    PauseTransition pause = new PauseTransition(Duration.seconds(2));
-    pause.setOnFinished(e -> root.getChildren().remove(card));
-    pause.play();
   }
 
   private void navigateToGame(Parent page) {

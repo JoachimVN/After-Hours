@@ -40,6 +40,37 @@ public final class SettingsView {
   private SettingsView() {
   }
 
+  // ── Controller overload ───────────────────────────────────────────────────
+
+  /**
+   * Builds the settings view from a {@link SettingsController}.
+   * Prefer this overload over the raw-parameter variants.
+   */
+  public static StackPane build(SettingsController ctrl) {
+    return build(
+        ctrl.onBack,
+        ctrl.stage,
+        ctrl.onMusicVolumeChange, ctrl.musicVolume,
+        ctrl.musicMuted, ctrl.onMusicMutedChange,
+        ctrl.onSfxVolumeChange, ctrl.sfxVolume,
+        ctrl.sfxMuted, ctrl.onSfxMutedChange,
+        ctrl.onAnimationsChange, ctrl.animationsEnabled,
+        ctrl.fullscreenEnabled, ctrl.onFullscreenChange,
+        ctrl.onResolutionChange,
+        ctrl.onMaximize,
+        ctrl.onExport,
+        ctrl.onDevModeChange, ctrl.devModeEnabled,
+        ctrl.onAutosaveChange, ctrl.autosaveEnabled,
+        ctrl.onAutosaveToastChange, ctrl.autosaveToast,
+        ctrl.onPerformanceModeChange, ctrl.performanceModeEnabled,
+        ctrl.onMaxHistoryWeeksChange, ctrl.maxHistoryWeeks,
+        ctrl.currentSavePath,
+        ctrl.onResetAll,
+        ctrl.onSave,
+        ctrl.currentPlayerName,
+        ctrl.onNameChanged);
+  }
+
   // ── No-save overload (home / setup context) ───────────────────────────────
 
   public static StackPane build(
