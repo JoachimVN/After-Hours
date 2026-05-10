@@ -15,6 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import edu.ntnu.idatt2003.g23.AppVersion;
 
 public final class LandingPageView {
 
@@ -130,6 +131,14 @@ public final class LandingPageView {
     VBox.setMargin(buttonBlock, new Insets(32, 0, 0, 0));
 
     root.setCenter(center);
+
+    // ── Version label ─────────────────────────────────────────────────────────
+    Label versionLabel = new Label("v" + AppVersion.VERSION);
+    versionLabel.getStyleClass().add("version-label");
+    HBox bottomBar = new HBox(versionLabel);
+    bottomBar.setAlignment(Pos.CENTER_RIGHT);
+    bottomBar.setPadding(new Insets(0, 12, 8, 0));
+    root.setBottom(bottomBar);
 
     // ── Keybindings ───────────────────────────────────────────────────────────
     // Enter → Start Trading, S → Settings
