@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - v*
+  release:
+    types:
+      - published
   workflow_dispatch:
     inputs:
       tag:
@@ -39,6 +42,9 @@ jobs:
           $tag = "${{ inputs.tag }}"
           if ([string]::IsNullOrWhiteSpace($tag)) {
             $tag = "${{ github.ref_name }}"
+          }
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = "${{ github.event.release.tag_name }}"
           }
           if (-not $tag.StartsWith("v")) {
             throw "Tag must start with v. Got: $tag"
