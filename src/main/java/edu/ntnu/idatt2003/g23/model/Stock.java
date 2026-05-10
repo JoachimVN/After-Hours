@@ -141,6 +141,22 @@ public class Stock {
     enforceHistoryCap(data);
   }
 
+  /**
+   * Replaces the latest sales price without changing history length.
+   *
+   * <p>Used for same-week adjustments (for example spike events) so each week
+   * still contributes exactly one data point per stock.</p>
+   *
+   * @param price the replacement price for the latest week
+   */
+  public void setLatestSalesPrice(BigDecimal price) {
+    if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+      throw new IllegalArgumentException("Latest price must be a positive value");
+    }
+    List<BigDecimal> data = priceData();
+    data.set(data.size() - 1, price);
+  }
+
   public Volatility getVolatility() {
     return volatility;
   }

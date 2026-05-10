@@ -59,9 +59,43 @@ public class Exchange {
 
     this.name = name;
     this.week = 1;
+    normalizeStockHistoryLengths(stocks);
     this.stockMap = stocks.stream().collect(Collectors.toMap(Stock::getSymbol, stock -> stock));
     this.random = new Random();
     assignVolatilities(new ArrayList<>(stocks));
+  }
+
+  /**
+   * Align all stocks to the same history length by backfilling missing early weeks.
+   *
+   * <p>Some CSV datasets provide fewer historical points for certain stocks.
+   * Without normalization, those stocks stay offset forever even if the exchange
+   * advances all stocks together each week.</p>
+   */
+  private static void normalizeStockHistoryLengths(List<Stock> stocks) {
+    if (stocks.isEmpty()) {
+      return;
+    }
+
+    int maxWeeks = 0;
+    for (Stock stock : stocks) {
+      maxWeeks = Math.max(maxWeeks, stock.getHistoricalPrices().size());
+    }
+
+    for (Stock stock : stocks) {
+      List<BigDecimal> history = stock.getHistoricalPrices();
+      int missing = maxWeeks - history.size();
+      if (missing <= 0) {
+        continue;
+      }
+
+      BigDecimal earliestKnown = history.get(0);
+      List<BigDecimal> prefix = new ArrayList<>(missing);
+      for (int i = 0; i < missing; i++) {
+        prefix.add(earliestKnown);
+      }
+      history.addAll(0, prefix);
+    }
   }
 
   private void assignVolatilities(List<Stock> stocks) {
@@ -330,7 +364,7 @@ public class Exchange {
     BigDecimal priceFloor = BigDecimal.valueOf(0.01);
     for (Stock s : allStocks) {
       if (s.getSalesPrice().compareTo(priceFloor) < 0) {
-        s.addNewSalesPrice(priceFloor);
+        s.setLatestSalesPrice(priceFloor);
       }
     }
   }
@@ -359,7 +393,7 @@ public class Exchange {
       } else {
         newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
       }
-      target.addNewSalesPrice(newPrice);
+      target.setLatestSalesPrice(newPrice);
     }
 
   }

@@ -15,6 +15,12 @@
     -fx-background-color: #0a1e38;
 }
 
+.csv-editor-table .filler {
+    -fx-background-color: #0a1e38;
+    -fx-border-color: #1e408060;
+    -fx-border-width: 0 0 1 0;
+}
+
 .csv-editor-table .column-header {
     -fx-background-color: #0a1e38;
     -fx-border-color: #1e408060;
@@ -42,8 +48,22 @@
     -fx-background-color: #091a35;
 }
 
+.csv-editor-table .table-row-cell:hover {
+    -fx-background-color: #0d2244;
+}
+
+.csv-editor-table .table-row-cell:odd:hover {
+    -fx-background-color: #123058;
+}
+
 .csv-editor-table .table-row-cell:selected {
     -fx-background-color: #07152c; /* Keep row background unchanged — individual cell is highlighted instead */
+}
+
+.csv-editor-table .table-cell:hover {
+    -fx-background-color: rgba(42, 82, 150, 0.18);
+    -fx-border-color: rgba(80, 140, 230, 0.45);
+    -fx-border-width: 1;
 }
 
 /* Selected cell: subtle tint + thin border */
@@ -203,3 +223,194 @@
 .csv-skip-button:disabled {
     -fx-opacity: 0.35;
 }
+
+/* ── Prices column summary label ─────────────────────────────────────────── */
+
+.csv-prices-summary {
+    -fx-font-size: 11;
+    -fx-text-fill: #7a9fc8;
+    -fx-font-style: italic;
+}
+
+.csv-inline-icon-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-min-width: 24;
+    -fx-pref-width: 24;
+    -fx-max-width: 24;
+    -fx-min-height: 20;
+    -fx-pref-height: 20;
+    -fx-max-height: 20;
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "System";
+    -fx-text-overrun: clip;
+    -fx-cursor: hand;
+    -fx-opacity: 0;
+}
+
+.table-row-cell:hover .csv-inline-icon-btn,
+.table-row-cell:selected .csv-inline-icon-btn,
+.table-cell:selected .csv-inline-icon-btn {
+    -fx-opacity: 1;
+}
+
+.csv-inline-edit-btn {
+    -fx-text-fill: #78b7ff;
+}
+
+.csv-inline-edit-btn:hover {
+    -fx-text-fill: #b8dcff;
+}
+
+.csv-inline-delete-btn {
+    -fx-text-fill: #e98b9b;
+}
+
+.csv-inline-delete-btn:hover {
+    -fx-text-fill: #ffc2cc;
+}
+
+/* ── Prices sub-editor overlay ───────────────────────────────────────────── */
+
+.prices-dialog-root {
+    -fx-background-color: #060d1e;
+    -fx-border-color: #1e4080;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(30, 64, 128, 0.60), 24, 0.15, 0, 4);
+}
+
+.prices-dialog-header {
+    -fx-background-color: #0a1e38;
+    -fx-padding: 16 22 13 22;
+    -fx-border-color: rgba(30, 64, 128, 0.45);
+    -fx-border-width: 0 0 1 0;
+    -fx-background-radius: 6 6 0 0;
+}
+
+.prices-dialog-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #b8cce8;
+}
+
+.prices-dialog-symbol {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-background-color: rgba(245, 162, 1, 0.12);
+    -fx-background-radius: 4;
+    -fx-padding: 1 7;
+}
+
+.prices-dialog-body {
+    -fx-background-color: #07152c;
+    -fx-padding: 14 18 12 18;
+}
+
+.prices-dialog-list {
+    -fx-background-color: #060f20;
+    -fx-border-color: #1e408050;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-size: 12;
+}
+
+.prices-dialog-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c8d8f0;
+    -fx-font-size: 12;
+    -fx-padding: 4 10;
+    -fx-border-color: transparent transparent rgba(30, 64, 128, 0.10) transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.prices-dialog-list .list-cell:odd {
+    -fx-background-color: rgba(10, 25, 55, 0.40);
+}
+
+.prices-dialog-list .list-cell:selected {
+    -fx-background-color: #132d5e;
+    -fx-text-fill: #e8f2ff;
+}
+
+.prices-dialog-list .list-cell .text-field {
+    -fx-background-color: #0c2348;
+    -fx-text-fill: #e8f0ff;
+    -fx-border-color: #3a6acc;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-size: 12;
+    -fx-padding: 2 6;
+}
+
+.prices-dialog-toolbar {
+    -fx-padding: 6 0 2 0;
+}
+
+.prices-dialog-count {
+    -fx-font-size: 11;
+    -fx-text-fill: #4a6899;
+    -fx-font-style: italic;
+}
+
+.prices-dialog-warning {
+    -fx-font-size: 12;
+    -fx-text-fill: #ff9a4a;
+    -fx-background-color: rgba(120, 60, 10, 0.25);
+    -fx-background-radius: 5;
+    -fx-padding: 5 10;
+    -fx-border-color: rgba(200, 100, 20, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+}
+
+.prices-dialog-hint {
+    -fx-font-size: 11;
+    -fx-text-fill: #3a5a80;
+}
+
+.prices-dialog-quick-row {
+    -fx-padding: 4 0 2 0;
+}
+
+.prices-dialog-tool-btn {
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-text-fill: #a8c0e0;
+    -fx-background-color: #0f2d5e;
+    -fx-background-radius: 6;
+    -fx-border-color: #1e408070;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 4 12;
+    -fx-pref-height: 28;
+    -fx-cursor: hand;
+}
+
+.prices-dialog-tool-btn:hover {
+    -fx-background-color: derive(#0f2d5e, 25%);
+    -fx-text-fill: white;
+}
+
+.prices-dialog-tool-btn:disabled {
+    -fx-opacity: 0.3;
+}
+
+.prices-dialog-delete-btn {
+    -fx-background-color: #2e0c0c;
+    -fx-border-color: #8d304870;
+    -fx-text-fill: #f1c6cf;
+}
+
+.prices-dialog-delete-btn:hover {
+    -fx-background-color: derive(#2e0c0c, 25%);
+    -fx-text-fill: white;
+}
+

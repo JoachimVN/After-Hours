@@ -52,6 +52,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -344,14 +345,29 @@ public class App extends Application {
         error -> showAppNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
+  private static final int CSV_EDITOR_ROW_WARN_THRESHOLD = 5000;
+  private static final long CSV_EDITOR_PRICE_POINTS_WARN_THRESHOLD = 250_000;
+  private static final long CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD = 2_000_000;
+
+  private record CsvEditorLoadStats(int rowCount, long pricePointCount, long priceCharCount) {
+  }
+
   private void openCsvEditor(CsvParseResult result, String name, double cash) {
-    Parent editorPage = CsvEditorView.build(
-        result,
-        withBack(this::goHomeKeepMusic),
-        rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
-        (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
-    navigateKeepMusic(editorPage);
-    fadeInPage(editorPage);
+    CsvEditorLoadStats stats = analyzeCsvEditorLoad(result);
+    Runnable doOpen = () -> {
+      Parent editorPage = CsvEditorView.build(
+          result,
+          withBack(this::goHomeKeepMusic),
+          rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
+          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
+      navigateKeepMusic(editorPage);
+      fadeInPage(editorPage);
+    };
+    if (shouldWarnForCsvEditorLoad(stats)) {
+      showLargeFileWarning(stats, doOpen);
+    } else {
+      doOpen.run();
+    }
   }
 
   private void openCsvEditorFromImport(File csvFile, String name, double cash) {
@@ -371,13 +387,54 @@ public class App extends Application {
 
   private void openCsvEditorFromImport(CsvParseResult result, String name, double cash,
       File selectedFile) {
-    Parent editorPage = CsvEditorView.build(
-        result,
-        withBack(() -> goToCustomStocks(name, cash, selectedFile)),
-        rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
-        (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
-    navigateKeepMusic(editorPage);
-    fadeInPage(editorPage);
+    CsvEditorLoadStats stats = analyzeCsvEditorLoad(result);
+    Runnable doOpen = () -> {
+      Parent editorPage = CsvEditorView.build(
+          result,
+          withBack(() -> goToCustomStocks(name, cash, selectedFile)),
+          rows -> buildAndStartGame(name, cash, rowsToStocks(rows), true, "Custom Market"),
+          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
+      navigateKeepMusic(editorPage);
+      fadeInPage(editorPage);
+    };
+    if (shouldWarnForCsvEditorLoad(stats)) {
+      showLargeFileWarning(stats, doOpen);
+    } else {
+      doOpen.run();
+    }
+  }
+
+  private static CsvEditorLoadStats analyzeCsvEditorLoad(CsvParseResult result) {
+    long pricePointCount = 0;
+    long priceCharCount = 0;
+
+    for (var row : result.getRows()) {
+      String prices = row.getPrices();
+      if (prices == null || prices.isBlank()) {
+        continue;
+      }
+
+      priceCharCount += prices.length();
+
+      boolean inToken = false;
+      for (int i = 0; i < prices.length(); i++) {
+        char ch = prices.charAt(i);
+        if (ch == ';') {
+          inToken = false;
+        } else if (!Character.isWhitespace(ch) && !inToken) {
+          pricePointCount++;
+          inToken = true;
+        }
+      }
+    }
+
+    return new CsvEditorLoadStats(result.getRows().size(), pricePointCount, priceCharCount);
+  }
+
+  private static boolean shouldWarnForCsvEditorLoad(CsvEditorLoadStats stats) {
+    return stats.rowCount() > CSV_EDITOR_ROW_WARN_THRESHOLD
+        || stats.pricePointCount() > CSV_EDITOR_PRICE_POINTS_WARN_THRESHOLD
+        || stats.priceCharCount() > CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD;
   }
 
   private List<Stock> rowsToStocks(List<edu.ntnu.idatt2003.g23.io.CsvRow> rows) {
@@ -977,6 +1034,77 @@ public class App extends Application {
   /**
    * Styled in-app notification overlay — replaces all OS Alert dialogs.
    */
+  private void showLargeFileWarning(CsvEditorLoadStats stats, Runnable onProceed) {
+    Label iconLbl = new Label("\u26A0");
+    iconLbl.getStyleClass().add("error-dialog-icon");
+    Label titleLbl = new Label("Large File Warning");
+    titleLbl.getStyleClass().add("error-dialog-title");
+
+    HBox header = new HBox(12, iconLbl, titleLbl);
+    header.getStyleClass().add("error-dialog-header");
+    header.setAlignment(Pos.CENTER_LEFT);
+
+    StringBuilder message = new StringBuilder("This CSV is large enough that the editor may become slow or unresponsive.\n\n");
+    message.append("Stocks: ")
+      .append(String.format("%,d", stats.rowCount()))
+      .append("\nPrice points: ")
+      .append(String.format("%,d", stats.pricePointCount()));
+
+    if (stats.priceCharCount() > CSV_EDITOR_PRICE_CHARS_WARN_THRESHOLD) {
+      message.append("\nPrice text size: ")
+        .append(String.format("%,d", stats.priceCharCount()))
+        .append(" chars");
+    }
+
+    message.append("\n\nDo you want to proceed?");
+
+    Label msgLbl = new Label(message.toString());
+    msgLbl.getStyleClass().add("error-dialog-message");
+    msgLbl.setWrapText(true);
+    msgLbl.setMaxWidth(340);
+
+    VBox body = new VBox(msgLbl);
+    body.getStyleClass().add("error-dialog-body");
+
+    Button cancelBtn = new Button("Cancel");
+    cancelBtn.getStyleClass().add("dialog-cancel-btn");
+
+    Button proceedBtn = new Button("Proceed Anyway");
+    proceedBtn.getStyleClass().add("dialog-confirm-sell-btn");
+
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    HBox btnRow = new HBox(8, cancelBtn, spacer, proceedBtn);
+    btnRow.setAlignment(Pos.CENTER_RIGHT);
+    btnRow.getStyleClass().add("dialog-btn-row");
+
+    VBox card = new VBox(0, header, body, btnRow);
+    card.getStyleClass().add("error-dialog-root");
+    card.setMaxWidth(440);
+    card.setMaxHeight(Region.USE_PREF_SIZE);
+
+    Region backdrop = new Region();
+    backdrop.getStyleClass().add("dialog-backdrop");
+
+    StackPane popup = new StackPane(backdrop, card);
+    StackPane.setAlignment(card, Pos.CENTER);
+
+    Runnable dismiss = () -> root.getChildren().remove(popup);
+    cancelBtn.setOnAction(ev -> dismiss.run());
+    backdrop.setOnMouseClicked(ev -> dismiss.run());
+    proceedBtn.setOnAction(ev -> { dismiss.run(); onProceed.run(); });
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == KeyCode.ESCAPE) {
+        dismiss.run();
+        ev.consume();
+      }
+    });
+
+    root.getChildren().add(popup);
+    popup.requestFocus();
+  }
+
   private void showAppNotification(String title, String message, boolean success) {
     Label iconLbl = new Label(success ? "\u2713" : "\u2715");
     iconLbl.getStyleClass().add(success ? "receipt-check" : "error-dialog-icon");
