@@ -95,27 +95,52 @@
                   <groupId>org.openjfx</groupId>
                   <artifactId>javafx-base</artifactId>
                   <version>25.0.1</version>
-                  <classifier>win</classifier>
+                  <classifier>${javafx.platform.classifier}</classifier>
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.openjfx</groupId>
                   <artifactId>javafx-graphics</artifactId>
                   <version>25.0.1</version>
-                  <classifier>win</classifier>
+                  <classifier>${javafx.platform.classifier}</classifier>
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.openjfx</groupId>
                   <artifactId>javafx-controls</artifactId>
                   <version>25.0.1</version>
-                  <classifier>win</classifier>
+                  <classifier>${javafx.platform.classifier}</classifier>
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.openjfx</groupId>
                   <artifactId>javafx-media</artifactId>
                   <version>25.0.1</version>
-                  <classifier>win</classifier>
+                  <classifier>${javafx.platform.classifier}</classifier>
                 </artifactItem>
               </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>copy-dist-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir />
+                <copy />
+                <copy />
+                <copy />
+                <chmod />
+                <copy>
+                  <fileset />
+                </copy>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -136,9 +161,15 @@
                 <argument>--type</argument>
                 <argument>exe</argument>
                 <argument>--name</argument>
-                <argument>StockGame</argument>
+                <argument>After Hours</argument>
                 <argument>--app-version</argument>
                 <argument>${project.version}</argument>
+                <argument>--vendor</argument>
+                <argument>NTNU</argument>
+                <argument>--description</argument>
+                <argument>After Hours stock trading game</argument>
+                <argument>--icon</argument>
+                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.ico</argument>
                 <argument>--input</argument>
                 <argument>${project.build.directory}</argument>
                 <argument>--main-jar</argument>
@@ -157,7 +188,88 @@
                 <argument>${project.build.directory}/dist</argument>
                 <argument>--win-dir-chooser</argument>
                 <argument>--win-shortcut</argument>
+                <argument>--win-shortcut-prompt</argument>
                 <argument>--win-menu</argument>
+                <argument>--win-menu-group</argument>
+                <argument>After Hours</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>jpackage-linux</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>jpackage</executable>
+              <arguments>
+                <argument>--type</argument>
+                <argument>app-image</argument>
+                <argument>--name</argument>
+                <argument>After Hours</argument>
+                <argument>--app-version</argument>
+                <argument>${project.version}</argument>
+                <argument>--vendor</argument>
+                <argument>NTNU</argument>
+                <argument>--description</argument>
+                <argument>After Hours stock trading game</argument>
+                <argument>--icon</argument>
+                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
+                <argument>--input</argument>
+                <argument>${project.build.directory}</argument>
+                <argument>--main-jar</argument>
+                <argument>app-fat.jar</argument>
+                <argument>--main-class</argument>
+                <argument>edu.ntnu.idatt2003.g23.App</argument>
+                <argument>--module-path</argument>
+                <argument>${project.build.directory}/javafx-mods</argument>
+                <argument>--add-modules</argument>
+                <argument>javafx.controls,javafx.media</argument>
+                <argument>--java-options</argument>
+                <argument>--enable-native-access=javafx.graphics,javafx.media</argument>
+                <argument>--java-options</argument>
+                <argument>-Dglass.gtk.uiScale=1.25</argument>
+                <argument>--dest</argument>
+                <argument>${project.build.directory}/dist</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>jpackage-mac</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>jpackage</executable>
+              <arguments>
+                <argument>--type</argument>
+                <argument>app-image</argument>
+                <argument>--name</argument>
+                <argument>After Hours</argument>
+                <argument>--app-version</argument>
+                <argument>${project.version}</argument>
+                <argument>--vendor</argument>
+                <argument>NTNU</argument>
+                <argument>--description</argument>
+                <argument>After Hours stock trading game</argument>
+                <argument>--icon</argument>
+                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
+                <argument>--input</argument>
+                <argument>${project.build.directory}</argument>
+                <argument>--main-jar</argument>
+                <argument>app-fat.jar</argument>
+                <argument>--main-class</argument>
+                <argument>edu.ntnu.idatt2003.g23.App</argument>
+                <argument>--module-path</argument>
+                <argument>${project.build.directory}/javafx-mods</argument>
+                <argument>--add-modules</argument>
+                <argument>javafx.controls,javafx.media</argument>
+                <argument>--java-options</argument>
+                <argument>--enable-native-access=javafx.graphics,javafx.media</argument>
+                <argument>--java-options</argument>
+                <argument>-Dglass.mac.uiScale=1.25</argument>
+                <argument>--dest</argument>
+                <argument>${project.build.directory}/dist</argument>
               </arguments>
             </configuration>
           </execution>
@@ -165,6 +277,26 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>windows</id>
+      <properties>
+        <javafx.platform.classifier>win</javafx.platform.classifier>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux</id>
+      <properties>
+        <javafx.platform.classifier>linux</javafx.platform.classifier>
+      </properties>
+    </profile>
+    <profile>
+      <id>mac</id>
+      <properties>
+        <javafx.platform.classifier>mac</javafx.platform.classifier>
+      </properties>
+    </profile>
+  </profiles>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -191,5 +323,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.target>25</maven.compiler.target>
     <maven.compiler.source>25</maven.compiler.source>
+    <javafx.platform.classifier>win</javafx.platform.classifier>
   </properties>
 </project>
