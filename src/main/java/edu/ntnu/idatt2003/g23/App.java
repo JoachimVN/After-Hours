@@ -590,7 +590,7 @@ public class App extends Application {
         homePageMusicController.stop();
       } else {
         homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
-            "/audio/music/ambience/After_Hours_Ambience3_demo.mp3");
+            "/audio/music/ambience/Ambience3.mp3");
       }
     });
   }
@@ -604,7 +604,7 @@ public class App extends Application {
         homePageMusicController.stop();
       } else {
         homePageMusicController.fadeOutThenPlayAmbienceStartingWith(
-            "/audio/music/ambience/After_Hours_Ambience3_demo.mp3");
+            "/audio/music/ambience/Ambience3.mp3");
       }
     });
   }
@@ -845,7 +845,6 @@ public class App extends Application {
           currentGameController != null ? currentGameController.getPlayerName() : null,
           currentGameController != null ? name -> {
             currentGameController.setPlayerName(name);
-            onSave.run();
           } : null);
     }
   }
@@ -888,7 +887,9 @@ public class App extends Application {
         },
         name -> {
           currentGameController.setPlayerName(name);
-          onSave.run();
+          if (currentGameView != null) {
+            currentGameView.updateData();
+          }
         },
         symbol -> {
           navigateKeepMusic(currentGamePage);

@@ -33,6 +33,9 @@ import javafx.scene.layout.VBox;
  */
 public final class SetupView {
 
+  private static final String VALIDATION_ANIM_KEY = "validationAnim";
+  private static final Duration VALIDATION_ANIM_DURATION = Duration.millis(220);
+
   private final SetupController controller;
   private final BorderPane root;
 
@@ -108,9 +111,16 @@ public final class SetupView {
 
     Label cashValidation = new Label();
     cashValidation.getStyleClass().add("setup-sublabel");
-    cashValidation.setVisible(false);
-    cashValidation.setManaged(false);
     cashValidation.setTextFill(javafx.scene.paint.Color.web("#e05a5a"));
+    VBox cashValidationBox = new VBox(cashValidation);
+    cashValidationBox.setMinHeight(0);
+    cashValidationBox.setMaxHeight(0);
+    cashValidationBox.setOpacity(0.0);
+    javafx.scene.shape.Rectangle cashValidationClip = new javafx.scene.shape.Rectangle();
+    cashValidationClip.widthProperty().bind(cashValidationBox.widthProperty());
+    cashValidationClip.setHeight(0);
+    cashValidationBox.setClip(cashValidationClip);
+    cashValidationBox.managedProperty().bind(cashValidationBox.maxHeightProperty().greaterThan(0));
 
     // Preset -> cashField sync (guard against feedback loop)
     boolean[] fromPreset = {false};
@@ -130,7 +140,7 @@ public final class SetupView {
     HBox cashInput = new HBox(10, presetRow, cashField);
     cashInput.setAlignment(Pos.CENTER_LEFT);
 
-    VBox cashSection = new VBox(8, cashLabel, cashInput, cashValidation);
+    VBox cashSection = new VBox(8, cashLabel, cashInput, cashValidationBox);
 
     // ── Stock Data Source ─────────────────────────────────────────────────
     Label dataLabel = new Label("STOCK DATA");
@@ -248,9 +258,7 @@ public final class SetupView {
       String enteredCash = cashField.getText() == null ? "" : cashField.getText().trim();
       String validationMsg = usingCustomCash && !enteredCash.isEmpty()
           ? SetupController.cashValidationMessage(enteredCash) : null;
-      cashValidation.setVisible(validationMsg != null);
-      cashValidation.setManaged(validationMsg != null);
-      cashValidation.setText(validationMsg != null ? validationMsg : "");
+      animateValidationMessage(cashValidation, cashValidationBox, cashValidationClip, validationMsg);
     };
     presetGroup.selectedToggleProperty().addListener((obs, old, sel) -> updateStartEnabled.run());
     cashField.textProperty().addListener((obs, old, text) -> updateStartEnabled.run());
@@ -320,5 +328,50 @@ public final class SetupView {
         }
       }
     };
+  }
+
+  private static void animateValidationMessage(Label label, VBox container,
+                                               javafx.scene.shape.Rectangle clip,
+                                               String message) {
+    Object existing = container.getProperties().remove(VALIDATION_ANIM_KEY);
+    if (existing instanceof Timeline oldTimeline) {
+      oldTimeline.stop();
+    }
+
+    boolean visible = message != null;
+    if (visible) {
+      label.setText(message);
+    }
+
+    double from = Math.max(container.getHeight(), container.getMaxHeight());
+    double to = visible ? Math.max(16.0, label.prefHeight(Math.max(0, label.getWidth())) + 2.0) : 0.0;
+
+    if (visible) {
+      container.setOpacity(1.0);
+    }
+
+    Timeline timeline = new Timeline(
+        new KeyFrame(Duration.ZERO,
+            new KeyValue(container.maxHeightProperty(), from, javafx.animation.Interpolator.EASE_BOTH),
+            new KeyValue(clip.heightProperty(), from, javafx.animation.Interpolator.EASE_BOTH),
+            new KeyValue(container.opacityProperty(), container.getOpacity(), javafx.animation.Interpolator.EASE_BOTH)),
+        new KeyFrame(VALIDATION_ANIM_DURATION,
+            new KeyValue(container.maxHeightProperty(), to, javafx.animation.Interpolator.EASE_BOTH),
+            new KeyValue(clip.heightProperty(), to, javafx.animation.Interpolator.EASE_BOTH),
+            new KeyValue(container.opacityProperty(), visible ? 1.0 : 0.0, javafx.animation.Interpolator.EASE_BOTH))
+    );
+
+    timeline.setOnFinished(ev -> {
+      if (!visible) {
+        label.setText("");
+        container.setMaxHeight(0);
+        clip.setHeight(0);
+        container.setOpacity(0.0);
+      }
+      container.getProperties().remove(VALIDATION_ANIM_KEY);
+    });
+
+    container.getProperties().put(VALIDATION_ANIM_KEY, timeline);
+    timeline.playFromStart();
   }
 }

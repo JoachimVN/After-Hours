@@ -15,7 +15,7 @@ import javafx.util.Duration;
 
 public class HomePageMusicController {
 
-  private static final String HOME_PAGE_MUSIC = "/audio/music/After_Hours_Theme_demo.mp3";
+  private static final String HOME_PAGE_MUSIC = "/audio/music/Theme.mp3";
   private static final List<String> GAME_START_TRACKS = List.of(
       "/audio/sfx/game_start/Game_Start1.mp3",
       "/audio/sfx/game_start/Game_Start2.mp3",
@@ -24,10 +24,11 @@ public class HomePageMusicController {
       // "/audio/sfx/game_start/Game_Start5.mp3"
   );
   private static final List<String> AMBIENCE_TRACKS = List.of(
-      "/audio/music/ambience/After_Hours_Ambience1_demo.mp3",
-      "/audio/music/ambience/After_Hours_Ambience2_demo.mp3",
-      "/audio/music/ambience/After_Hours_Ambience3_demo.mp3",
-      "/audio/music/ambience/After_Hours_Ambience4_demo.mp3"
+      "/audio/music/ambience/Ambience1.mp3",
+      "/audio/music/ambience/Ambience2.mp3",
+      "/audio/music/ambience/Ambience3.mp3",
+      "/audio/music/ambience/Ambience4.mp3",
+      "/audio/music/ambience/Ambience5.mp3"
   );
   private static final Duration FADE_DURATION = Duration.seconds(1.0);
   private static final Duration AMBIENCE_FADE_IN_DURATION = Duration.seconds(0.1);
@@ -37,6 +38,7 @@ public class HomePageMusicController {
   private static final double AMBIENCE2_VOLUME_MULTIPLIER = 1.0;
   private static final double AMBIENCE3_VOLUME_MULTIPLIER = 0.75;
   private static final double AMBIENCE4_VOLUME_MULTIPLIER = 0.75;
+  private static final double AMBIENCE5_VOLUME_MULTIPLIER = 0.75;
 
   private final Class<?> resourceOwner;
   private final Map<String, Media> mediaCache = new HashMap<>();
@@ -269,6 +271,9 @@ public class HomePageMusicController {
     }
     if (track.contains("Ambience4")) {
       return AMBIENCE4_VOLUME_MULTIPLIER;
+    }
+    if (track.contains("Ambience5")) {
+      return AMBIENCE5_VOLUME_MULTIPLIER;
     }
     return 1.0;
   }

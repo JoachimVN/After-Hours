@@ -41,6 +41,7 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -77,21 +78,37 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
+  private static final String ERROR_PAUSE_KEY = "errorPause";
+  private static final String ERROR_FADE_KEY = "errorFade";
+  private static final String ERROR_SIZE_KEY = "errorSize";
+  private static final String ERROR_CONTAINER_KEY = "errorContainer";
+  private static final String ERROR_CONTAINER_CLIP_KEY = "errorContainerClip";
+  private static final Duration INLINE_ERROR_SIZE_ANIM = Duration.millis(220);
+  private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(2.2);
+  private static final Duration INLINE_ERROR_FADE = Duration.millis(420);
+  private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
+  private static final Duration POPUP_ERROR_FADE = Duration.millis(320);
+  private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
   private final Label statusVal;
   private final Label cashVal;
-  private final Label portVal;
-  private final Label nwVal;
+  private final Label portfolioVal;
+  private final Label netWorthVal;
   private final Label weekNumLbl;
   private final Arc statusProgressArc;
   private final Tooltip statusTooltip;
   private final Button settingsBtn;
   private final Button profileBtn;
+  private final HBox profileIdentityContent;
+  private final StackPane profileNameBox;
+  private final Text profileNameText;
   private final Runnable onPanelOpen;
   private final Runnable onStockSelectionChanged;
 
@@ -115,6 +132,8 @@ public final class GameView implements GameViewInterface {
   private AnimationTimer highlightFadeTimer = null;
 
   private final VBox detailArea;
+  private Label currentTradeErrorLabel;
+  private Label currentSellAllErrorLabel;
 
   private StackPane overlayRef = null;
   private Node rootRef = null;
@@ -143,15 +162,30 @@ public final class GameView implements GameViewInterface {
 
     this.statusVal = new Label();
     this.cashVal = new Label();
-    this.portVal = new Label();
-    this.nwVal = new Label();
+    this.portfolioVal = new Label();
+    this.netWorthVal = new Label();
     this.weekNumLbl = new Label();
     this.statusProgressArc = new Arc(0, 0, 11, 11, 90, 0);
     this.statusTooltip = new Tooltip();
     this.settingsBtn = new Button();
     this.profileBtn = new Button();
+    this.profileNameText = new Text();
+    this.profileNameText.getStyleClass().add("profile-identity-name");
+    this.profileNameText.setBoundsType(TextBoundsType.VISUAL);
+    this.profileNameBox = new StackPane(this.profileNameText);
+    this.profileNameBox.getStyleClass().add("profile-identity-name-box");
+    this.profileNameBox.setAlignment(Pos.CENTER);
+    this.profileIdentityContent = new HBox(12, this.profileNameBox);
+    this.profileIdentityContent.setAlignment(Pos.CENTER_LEFT);
     this.onPanelOpen = onPanelOpen;
     this.onStockSelectionChanged = onStockSelectionChanged;
+
+    this.profileNameBox.minHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
+    this.profileNameBox.prefHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
+    this.profileNameBox.maxHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
+    this.profileBtn.heightProperty().addListener((obs, oldV, newV) -> fitProfileNameGlyph());
+    this.profileNameBox.heightProperty().addListener((obs, oldV, newV) -> fitProfileNameGlyph());
+    this.profileNameText.textProperty().addListener((obs, oldV, newV) -> fitProfileNameGlyph());
 
     this.allStocks = FXCollections.observableArrayList(gameController.getStocks());
     this.filteredStocks = new FilteredList<>(this.allStocks, s -> true);
@@ -168,9 +202,9 @@ public final class GameView implements GameViewInterface {
 
     // ── Stat pill labels ─────────────────────────────────────────────────
     statusVal.getStyleClass().addAll("stat-pill-value", "status-pill-value");
-    cashVal.getStyleClass().add("stat-pill-value");
-    portVal.getStyleClass().add("stat-pill-value");
-    nwVal.getStyleClass().add("stat-pill-value");
+    cashVal.getStyleClass().add("money-segment-value");
+    portfolioVal.getStyleClass().add("money-segment-value");
+    netWorthVal.getStyleClass().add("money-segment-value");
     weekNumLbl.getStyleClass().add("week-number");
 
     statusProgressArc.setType(ArcType.OPEN);
@@ -485,8 +519,18 @@ public final class GameView implements GameViewInterface {
     Button sellAllHoldingsBtn = new Button("\u2198  Sell All Holdings");
     sellAllHoldingsBtn.getStyleClass().addAll("next-week-button", "sell-all-holdings-button");
     sellAllHoldingsBtn.setOnAction(e -> {
+      if (currentSellAllErrorLabel != null) {
+        hideInlineError(currentSellAllErrorLabel, true);
+      }
       gameController.handleSellAll(overlayRef);
     });
+    Label sellAllErrorLbl = new Label();
+    sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
+    sellAllErrorLbl.setWrapText(true);
+    VBox sellAllErrorBox = createInlineErrorBox(sellAllErrorLbl);
+    currentSellAllErrorLabel = sellAllErrorLbl;
+    VBox sellAllStack = new VBox(2, sellAllErrorBox, sellAllHoldingsBtn);
+    sellAllStack.setAlignment(Pos.BOTTOM_CENTER);
 
     Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
     marketMoversBtn.getStyleClass().add("market-movers-button");
@@ -506,7 +550,7 @@ public final class GameView implements GameViewInterface {
       showTransactionHistory();
     });
 
-    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllHoldingsBtn, subSpacer, historyBtn,
+    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, historyBtn,
         marketMoversBtn);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
@@ -528,13 +572,11 @@ public final class GameView implements GameViewInterface {
     }
 
     Node statusPill = statusPill("Player Status", statusVal, statusProgressArc, statusTooltip);
-    Node cashPill = statPill("Available Cash", cashVal);
-    Node portPill = statPill("Portfolio Value", portVal);
-    Node nwPill = statPill("Total Net Worth", nwVal);
+    Node financePill = moneyPill(cashVal, portfolioVal, netWorthVal, "money-pill-overview");
 
-    profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
-    profileBtn.setText("");
-    profileBtn.getStyleClass().add("game-icon-button");
+    updateProfileIdentityButton();
+    profileBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+    profileBtn.getStyleClass().add("profile-identity-button");
     profileBtn.setOnAction(e -> onProfile.run());
 
     settingsBtn.setText("⚙");
@@ -546,13 +588,23 @@ public final class GameView implements GameViewInterface {
       }
     });
 
-    Region tl = new Region();
-    HBox.setHgrow(tl, Priority.ALWAYS);
-    HBox topBar =
-        new HBox(10, backBtn, appTitle, tl, statusPill, cashPill, portPill, nwPill,
-            settingsBtn, profileBtn);
+    HBox leftGroup = new HBox(10, backBtn, appTitle);
+    leftGroup.setAlignment(Pos.CENTER_LEFT);
+    HBox rightGroup = new HBox(10, statusPill, profileBtn, settingsBtn);
+    rightGroup.setAlignment(Pos.CENTER_RIGHT);
+
+    Region edgeSpacer = new Region();
+    HBox.setHgrow(edgeSpacer, Priority.ALWAYS);
+    HBox edgesBar = new HBox(10, leftGroup, edgeSpacer, rightGroup);
+    edgesBar.setAlignment(Pos.CENTER_LEFT);
+
+    HBox pillCenter = new HBox(financePill);
+    pillCenter.setAlignment(Pos.CENTER);
+    pillCenter.setPickOnBounds(false);
+    pillCenter.setMouseTransparent(true);
+
+    StackPane topBar = new StackPane(edgesBar, pillCenter);
     topBar.getStyleClass().add("game-top-bar");
-    topBar.setAlignment(Pos.CENTER_LEFT);
 
     // ── Root ─────────────────────────────────────────────────────────────
     BorderPane root = new BorderPane();
@@ -769,12 +821,53 @@ public final class GameView implements GameViewInterface {
 
     weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
     cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
-    portVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
-    nwVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
-    profileBtn.setGraphic(AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4));
+    portfolioVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
+    netWorthVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
+    updateProfileIdentityButton();
     portfolioItems.setAll(gameController.getPortfolioShares());
     applyFilter();
     rebuildDetail();
+  }
+
+  private void updateProfileIdentityButton() {
+    Node avatar = AvatarUtil.createImageView(gameController.getPlayerAvatar(), 23.4);
+    profileNameText.setText(truncateProfileName(gameController.getPlayerName()));
+    profileIdentityContent.getChildren().setAll(avatar, profileNameBox);
+    profileBtn.setGraphic(profileIdentityContent);
+    profileBtn.setText(null);
+    Platform.runLater(this::fitProfileNameGlyph);
+  }
+
+  private static String truncateProfileName(String name) {
+    if (name == null || name.isBlank()) {
+      return "";
+    }
+    String trimmed = name.trim();
+    if (trimmed.length() <= PROFILE_NAME_MAX_CHARS) {
+      return trimmed;
+    }
+    return trimmed.substring(0, PROFILE_NAME_MAX_CHARS - 3) + "...";
+  }
+
+  private void fitProfileNameGlyph() {
+    if (profileNameText.getText() == null || profileNameText.getText().isBlank()) {
+      return;
+    }
+
+    double availableHeight = profileNameBox.getHeight();
+    if (availableHeight <= 0) {
+      availableHeight = Math.max(10.0, profileBtn.getHeight() - 12.0);
+    }
+    availableHeight = Math.max(10.0, availableHeight - 3.0);
+    double glyphHeight = profileNameText.getLayoutBounds().getHeight();
+    if (glyphHeight <= 0) {
+      return;
+    }
+
+    double scale = availableHeight / glyphHeight;
+    scale = Math.max(0.86, Math.min(1.15, scale));
+    profileNameText.setScaleX(scale);
+    profileNameText.setScaleY(scale);
   }
 
   private void rebuildFilterChips() {
@@ -1195,12 +1288,25 @@ public final class GameView implements GameViewInterface {
     maxBuyBtn.setOnAction(e -> applyMaxForBuy.run());
     maxSellBtn.setOnAction(e -> applyMaxForSell.run());
 
+    Label tradeErrorLbl = new Label();
+    tradeErrorLbl.getStyleClass().add("trade-error-label");
+    tradeErrorLbl.setMaxWidth(Double.MAX_VALUE);
+    tradeErrorLbl.setAlignment(Pos.CENTER);
+    tradeErrorLbl.setWrapText(true);
+    VBox tradeErrorBox = createInlineErrorBox(tradeErrorLbl);
+    currentTradeErrorLabel = tradeErrorLbl;
+
+    final Runnable clearTradeError = () -> {
+      hideInlineError(tradeErrorLbl, true);
+    };
+
     updateBuyAmount.run();
     updateSellAmount.run();
     quantityField.textProperty().addListener((obs, old, val) -> {
       if (syncingFields[0]) {
         return;
       }
+      clearTradeError.run();
       // Allow the field to be empty while the user is typing
       if (val == null || val.isBlank()) {
         updateBuyAmount.run();
@@ -1273,21 +1379,22 @@ public final class GameView implements GameViewInterface {
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to buy.");
         return;
       }
       try {
         parsedquantity = NumberParser.parse(qText).intValue();
       } catch (NumberFormatException ex) {
-        showError("Enter a valid quantity.");
+        showTradeError("That doesn't look like a valid number.");
         return;
       }
 
       if (parsedquantity < 1) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to buy.");
         return;
       }
 
+      clearTradeError.run();
       BigDecimal quantity = BigDecimal.valueOf(parsedquantity);
       gameController.handleBuy(stock, quantity);
     });
@@ -1305,38 +1412,39 @@ public final class GameView implements GameViewInterface {
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to sell.");
         return;
       }
       try {
         parsedquantity = NumberParser.parse(qText).intValue();
       } catch (NumberFormatException ex) {
-        showError("Enter a valid quantity.");
+        showTradeError("That doesn't look like a valid number.");
         return;
       }
 
       if (parsedquantity < 1) {
-        showError("Quantity must be at least 1 whole share.");
+        showTradeError("Enter at least 1 share to sell.");
         return;
       }
 
       BigDecimal sellquantity = BigDecimal.valueOf(parsedquantity);
       BigDecimal totalOwned = gameController.getOwnedQuantity(stock.getSymbol());
       if (totalOwned.compareTo(BigDecimal.ZERO) == 0) {
-        showError("You don't own any shares of " + stock.getSymbol());
+        showTradeError("You don't own any " + stock.getSymbol() + " shares to sell.");
         return;
       }
       if (sellquantity.compareTo(totalOwned) > 0) {
-        showError("You only own " + totalOwned.stripTrailingZeros().toPlainString()
-            + " shares of " + stock.getSymbol());
+        showTradeError("Too many - you only own "
+          + totalOwned.stripTrailingZeros().toPlainString() + " " + stock.getSymbol() + " shares.");
         return;
       }
+      clearTradeError.run();
       List<BigDecimal> preview = gameController.previewSell(stock, sellquantity);
       showTradeConfirm("SELL", stock, sellquantity, preview.get(0), preview.get(1), preview.get(2),
           preview.get(3));
     });
 
-    VBox selectorColumn = new VBox(6, stepper, amountField);
+    VBox selectorColumn = new VBox(4, stepper, amountField, tradeErrorBox);
     selectorColumn.getStyleClass().add("trade-selector-column");
     selectorColumn.setAlignment(Pos.CENTER);
 
@@ -1355,6 +1463,7 @@ public final class GameView implements GameViewInterface {
 
     VBox tradePanel = new VBox(0, tradeRow);
     tradePanel.getStyleClass().add("trade-panel");
+    tradePanel.setAlignment(Pos.CENTER);
 
     // ── Graph + header ────────────────────────────────────────────────────
     Pane graphPlaceholder = buildPriceChart(stock);
@@ -1426,6 +1535,10 @@ public final class GameView implements GameViewInterface {
   }
 
   public void showError(String message) {
+    if (overlayRef == null) {
+      return;
+    }
+
     Label iconLbl = new Label("\u26A0");
     iconLbl.getStyleClass().add("error-dialog-icon");
     Label titleLbl = new Label("ERROR");
@@ -1458,7 +1571,10 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> overlayRef.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      stopErrorTransitions(popup);
+      overlayRef.getChildren().remove(popup);
+    };
     okBtn.setOnAction(ev -> dismiss.run());
     backdrop.setOnMouseClicked(ev -> dismiss.run());
     popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
@@ -1469,7 +1585,164 @@ public final class GameView implements GameViewInterface {
     });
 
     overlayRef.getChildren().add(popup);
+    popup.setOpacity(1.0);
+    scheduleFadeOutAndRemove(popup, POPUP_ERROR_VISIBLE, POPUP_ERROR_FADE,
+        () -> overlayRef.getChildren().remove(popup));
     popup.requestFocus();
+  }
+
+  public void showTradeError(String message) {
+    if (currentTradeErrorLabel == null) {
+      return;
+    }
+    showFadingInlineError(currentTradeErrorLabel, message);
+  }
+
+  public void showSellAllError(String message) {
+    if (currentSellAllErrorLabel == null) {
+      return;
+    }
+    showFadingInlineError(currentSellAllErrorLabel, message);
+  }
+
+  private void showFadingInlineError(Label label, String message) {
+    label.setText(message != null ? message : "An error occurred.");
+    animateInlineErrorVisibility(label, true, null);
+
+    stopErrorTransitions(label);
+
+    PauseTransition pause = new PauseTransition(INLINE_ERROR_VISIBLE);
+    FadeTransition fade = new FadeTransition(INLINE_ERROR_FADE, resolveInlineErrorContainer(label));
+    fade.setFromValue(1.0);
+    fade.setToValue(0.0);
+    fade.setOnFinished(ev -> {
+      animateInlineErrorVisibility(label, false, () -> label.setText(""));
+      label.getProperties().remove(ERROR_PAUSE_KEY);
+      label.getProperties().remove(ERROR_FADE_KEY);
+    });
+    pause.setOnFinished(ev -> fade.playFromStart());
+
+    label.getProperties().put(ERROR_PAUSE_KEY, pause);
+    label.getProperties().put(ERROR_FADE_KEY, fade);
+    pause.playFromStart();
+  }
+
+  private VBox createInlineErrorBox(Label label) {
+    VBox box = new VBox(label);
+    box.setAlignment(Pos.CENTER);
+    box.setMinHeight(0);
+    box.setMaxHeight(0);
+    box.setOpacity(0.0);
+
+    Rectangle clip = new Rectangle();
+    clip.widthProperty().bind(box.widthProperty());
+    clip.setHeight(0);
+    box.setClip(clip);
+    box.managedProperty().bind(box.maxHeightProperty().greaterThan(0));
+
+    label.getProperties().put(ERROR_CONTAINER_KEY, box);
+    label.getProperties().put(ERROR_CONTAINER_CLIP_KEY, clip);
+    return box;
+  }
+
+  private void hideInlineError(Label label, boolean clearText) {
+    if (label == null) {
+      return;
+    }
+    stopErrorTransitions(label);
+    animateInlineErrorVisibility(label, false, clearText ? () -> label.setText("") : null);
+  }
+
+  private void animateInlineErrorVisibility(Label label, boolean visible, Runnable onFinished) {
+    VBox box = resolveInlineErrorContainer(label);
+    Rectangle clip = resolveInlineErrorClip(label);
+
+    Object existing = label.getProperties().remove(ERROR_SIZE_KEY);
+    if (existing instanceof Timeline oldTimeline) {
+      oldTimeline.stop();
+    }
+
+    double from = Math.max(box.getHeight(), box.getMaxHeight());
+    double to = visible ? Math.max(18.0, label.prefHeight(Math.max(0, label.getWidth())) + 4.0) : 0.0;
+
+    if (visible) {
+      box.setOpacity(1.0);
+    }
+
+    Timeline timeline = new Timeline(
+        new KeyFrame(Duration.ZERO,
+            new KeyValue(box.maxHeightProperty(), from, Interpolator.EASE_BOTH),
+            new KeyValue(clip.heightProperty(), from, Interpolator.EASE_BOTH),
+            new KeyValue(box.opacityProperty(), box.getOpacity(), Interpolator.EASE_BOTH)),
+        new KeyFrame(INLINE_ERROR_SIZE_ANIM,
+            new KeyValue(box.maxHeightProperty(), to, Interpolator.EASE_BOTH),
+            new KeyValue(clip.heightProperty(), to, Interpolator.EASE_BOTH),
+            new KeyValue(box.opacityProperty(), visible ? 1.0 : 0.0, Interpolator.EASE_BOTH))
+    );
+    timeline.setOnFinished(ev -> {
+      if (!visible) {
+        box.setMaxHeight(0);
+        clip.setHeight(0);
+        box.setOpacity(0.0);
+      }
+      label.getProperties().remove(ERROR_SIZE_KEY);
+      if (onFinished != null) {
+        onFinished.run();
+      }
+    });
+
+    label.getProperties().put(ERROR_SIZE_KEY, timeline);
+    timeline.playFromStart();
+  }
+
+  private VBox resolveInlineErrorContainer(Label label) {
+    Object container = label.getProperties().get(ERROR_CONTAINER_KEY);
+    if (container instanceof VBox box) {
+      return box;
+    }
+    return new VBox(label);
+  }
+
+  private Rectangle resolveInlineErrorClip(Label label) {
+    Object clip = label.getProperties().get(ERROR_CONTAINER_CLIP_KEY);
+    if (clip instanceof Rectangle rectangle) {
+      return rectangle;
+    }
+    Rectangle fallback = new Rectangle();
+    fallback.setHeight(0);
+    return fallback;
+  }
+
+  private void scheduleFadeOutAndRemove(Node node, Duration visibleDuration,
+                                        Duration fadeDuration, Runnable onRemove) {
+    stopErrorTransitions(node);
+
+    PauseTransition pause = new PauseTransition(visibleDuration);
+    FadeTransition fade = new FadeTransition(fadeDuration, node);
+    fade.setFromValue(1.0);
+    fade.setToValue(0.0);
+    fade.setOnFinished(ev -> {
+      onRemove.run();
+      node.setOpacity(1.0);
+      node.getProperties().remove(ERROR_PAUSE_KEY);
+      node.getProperties().remove(ERROR_FADE_KEY);
+    });
+    pause.setOnFinished(ev -> fade.playFromStart());
+
+    node.getProperties().put(ERROR_PAUSE_KEY, pause);
+    node.getProperties().put(ERROR_FADE_KEY, fade);
+    pause.playFromStart();
+  }
+
+  private void stopErrorTransitions(Node node) {
+    Object pause = node.getProperties().remove(ERROR_PAUSE_KEY);
+    if (pause instanceof javafx.animation.Animation p) {
+      p.stop();
+    }
+    Object fade = node.getProperties().remove(ERROR_FADE_KEY);
+    if (fade instanceof javafx.animation.Animation f) {
+      f.stop();
+    }
   }
 
   public void showBulkTradeConfirm(String action, BigDecimal quantity, BigDecimal gross,
@@ -2223,13 +2496,36 @@ public final class GameView implements GameViewInterface {
     popup.requestFocus();
   }
 
-  private static Node statPill(String key, Label valueLabel) {
-    Label keyLbl = new Label(key);
-    keyLbl.getStyleClass().add("stat-pill-key");
-    VBox box = new VBox(1, keyLbl, valueLabel);
-    box.getStyleClass().add("stat-pill");
+  private static Node moneyPill(Label cashLabel, Label portfolioLabel,
+                                Label netWorthLabel, String toneClass) {
+    Node cashSegment = moneySegment("Cash", cashLabel, "money-segment-cash");
+    Node portfolioSegment = moneySegment("Portfolio", portfolioLabel, "money-segment-portfolio");
+    Node netWorthSegment = moneySegment("Net Worth", netWorthLabel, "money-segment-networth");
+
+    HBox box = new HBox(6, cashSegment, portfolioSegment, netWorthSegment);
+    box.getStyleClass().addAll("stat-pill", "money-pill", toneClass);
+    box.setFillHeight(false);
     box.setAlignment(Pos.CENTER_LEFT);
     return box;
+  }
+
+  private static Node moneySegment(String key, Label valueLabel, String styleClass) {
+    Label keyLabel = new Label(key);
+    keyLabel.getStyleClass().add("money-segment-key");
+
+    VBox textBox = new VBox(0, keyLabel, valueLabel);
+    textBox.setAlignment(Pos.CENTER_LEFT);
+
+    Region line = new Region();
+    line.getStyleClass().add("money-segment-line");
+    line.prefHeightProperty().bind(textBox.heightProperty());
+    line.minHeightProperty().bind(textBox.heightProperty());
+    line.maxHeightProperty().bind(textBox.heightProperty());
+
+    HBox segment = new HBox(8, line, textBox);
+    segment.getStyleClass().addAll("money-segment", styleClass);
+    segment.setAlignment(Pos.CENTER_LEFT);
+    return segment;
   }
 
   private static Node statusPill(String key, Label valueLabel, Arc progressArc, Tooltip tooltip) {
@@ -2564,13 +2860,15 @@ public final class GameView implements GameViewInterface {
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
     BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
-    Label ownedLbl = null;
+    Label ownedMaxLbl = null;
     if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-      ownedLbl = new Label("Owned: " + ownedQuantity.stripTrailingZeros().toPlainString());
-      ownedLbl.getStyleClass().add("stock-owned-label");
+      String ownedText = ownedQuantity.compareTo(capQuantity) >= 0
+          ? "Owned: MAX"
+          : "Owned: " + ownedQuantity.stripTrailingZeros().toPlainString()
+            + "/" + capQuantity.stripTrailingZeros().toPlainString();
+      ownedMaxLbl = new Label(ownedText);
+      ownedMaxLbl.getStyleClass().add("stock-owned-label");
     }
-    Label capLbl = new Label("Max: " + capQuantity.stripTrailingZeros().toPlainString());
-    capLbl.getStyleClass().add("stock-cap-label");
 
     // ── Favorite star button ─────────────────────────────────────────────
     boolean isFav = favorites.contains(stock.getSymbol());
@@ -2590,10 +2888,10 @@ public final class GameView implements GameViewInterface {
     favBtn.setOnMouseClicked(e -> e.consume());
 
     VBox left;
-    if (ownedLbl != null) {
-      left = new VBox(2, symLbl, compLbl, pctLbl, ownedLbl, capLbl);
+    if (ownedMaxLbl != null) {
+      left = new VBox(2, symLbl, compLbl, pctLbl, ownedMaxLbl);
     } else {
-      left = new VBox(2, symLbl, compLbl, pctLbl, capLbl);
+      left = new VBox(2, symLbl, compLbl, pctLbl);
     }
     VBox right = new VBox(4);
     right.setAlignment(Pos.TOP_RIGHT);

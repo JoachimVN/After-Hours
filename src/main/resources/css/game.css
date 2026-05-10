@@ -2,7 +2,9 @@
 
 /* Top bar */
 .game-top-bar {
-    -fx-background-color: rgba(5, 8, 24, 0.95);
+    -fx-background-color: linear-gradient(to right,
+        rgba(5, 8, 24, 0.95),
+        rgba(9, 18, 44, 0.95));
     -fx-padding: 10 20 10 16;
     -fx-border-color: rgba(30, 64, 128, 0.35);
     -fx-border-width: 0 0 1 0;
@@ -16,27 +18,68 @@
 }
 
 .game-icon-button {
-    -fx-background-color: rgba(15, 45, 94, 0.70);
-    -fx-text-fill: #7a9fc8;
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(18, 36, 74, 0.92),
+        rgba(13, 28, 60, 0.92));
+    -fx-text-fill: #bfd4f3;
     -fx-font-size: 22px;
     -fx-font-family: "Sans Serif";
     -fx-background-radius: 50%;
-    -fx-min-width: 44px;
-    -fx-min-height: 44px;
-    -fx-max-width: 44px;
-    -fx-max-height: 44px;
+    -fx-min-width: 42px;
+    -fx-min-height: 42px;
+    -fx-max-width: 42px;
+    -fx-max-height: 42px;
     -fx-padding: 0;
     -fx-text-overrun: clip;
-    -fx-border-color: rgba(30, 64, 128, 0.5);
+    -fx-border-color: rgba(101, 141, 203, 0.45);
     -fx-border-radius: 50%;
     -fx-border-width: 1;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 6, 0.05, 0, 1);
 }
 
 .game-icon-button:hover {
     -fx-background-color: rgba(245, 162, 1, 0.20);
     -fx-text-fill: #f5a201;
-    -fx-border-color: #f5a20150;
+    -fx-border-color: rgba(245, 162, 1, 0.35);
+}
+
+.profile-identity-button {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(18, 34, 70, 0.90),
+        rgba(12, 25, 54, 0.90));
+    -fx-border-color: rgba(100, 142, 206, 0.46);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 4 12 4 6;
+    -fx-text-fill: #d9e7fb;
+    -fx-min-height: 42px;
+    -fx-pref-height: 42px;
+    -fx-max-height: 42px;
+    -fx-cursor: hand;
+}
+
+.profile-identity-name-box {
+    -fx-alignment: center;
+    -fx-padding: 1 0 1 1;
+}
+
+.profile-identity-name {
+    -fx-fill: #d9e7fb;
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+
+.profile-identity-button:hover {
+    -fx-background-color: rgba(245, 162, 1, 0.20);
+    -fx-text-fill: #f5a201;
+    -fx-border-color: rgba(245, 162, 1, 0.35);
+}
+
+.profile-identity-button:hover .profile-identity-name {
+    -fx-fill: #f5a201;
 }
 
 /* Stat pills */
@@ -47,6 +90,9 @@
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 6 14 6 14;
+    -fx-min-height: 42px;
+    -fx-pref-height: 42px;
+    -fx-max-height: 42px;
 }
 
 .stat-pill-key {
@@ -63,15 +109,96 @@
 
 .status-pill {
     -fx-padding: 6 12 6 14;
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-effect: null;
+}
+
+.money-pill {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 5 10 5 10;
+    -fx-min-height: 42px;
+    -fx-pref-height: 42px;
+    -fx-max-height: 42px;
+    -fx-effect: null;
+}
+
+.money-segment {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 3 10 3 10;
+}
+
+.money-segment-line {
+    -fx-min-width: 2px;
+    -fx-pref-width: 2px;
+    -fx-max-width: 2px;
+    -fx-background-radius: 999;
+}
+
+.money-segment-key {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(196, 214, 242, 0.88);
+    -fx-opacity: 0.95;
+}
+
+.money-segment-value {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ecf3ff;
+}
+
+.money-pill-overview {
+    -fx-border-color: transparent;
+}
+
+.money-segment-cash {
+    -fx-background-color: transparent;
+}
+
+.money-segment-portfolio {
+    -fx-background-color: transparent;
+}
+
+.money-segment-networth {
+    -fx-background-color: transparent;
+}
+
+.money-segment-cash .money-segment-line {
+    -fx-background-color: rgba(78, 203, 113, 0.90);
+}
+
+.money-segment-portfolio .money-segment-line {
+    -fx-background-color: rgba(96, 165, 250, 0.90);
+}
+
+.money-segment-networth .money-segment-line {
+    -fx-background-color: rgba(245, 162, 1, 0.90);
+}
+
+.money-segment-cash .money-segment-key {
+    -fx-text-fill: rgba(78, 203, 113, 1.0);
+}
+
+.money-segment-portfolio .money-segment-key {
+    -fx-text-fill: rgba(96, 165, 250, 1.0);
+}
+
+.money-segment-networth .money-segment-key {
+    -fx-text-fill: rgba(245, 162, 1, 1.0);
 }
 
 .status-pill-value {
-    -fx-text-fill: #d9e8ff;
+    -fx-text-fill: #deebff;
 }
 
 .status-pill-ring-track {
     -fx-fill: transparent;
-    -fx-stroke: rgba(74, 104, 153, 0.65);
+    -fx-stroke: rgba(104, 138, 194, 0.62);
     -fx-stroke-width: 3px;
 }
 
@@ -490,6 +617,23 @@
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-padding: 10 14 10 14;
+}
+
+.trade-error-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #e05a5a;
+    -fx-font-style: italic;
+    -fx-wrap-text: true;
+    -fx-max-width: 420px;
+    -fx-text-alignment: center;
+}
+
+.sell-all-error-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #e05a5a;
+    -fx-font-style: italic;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
 }
 
 /* Price chart placeholder */

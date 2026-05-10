@@ -17,6 +17,8 @@ import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import edu.ntnu.idatt2003.g23.model.transaction.calculator.SaleCalculator;
 import edu.ntnu.idatt2003.g23.model.transaction.calculator.TransactionCalculator;
+import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
+
 import javafx.scene.layout.StackPane;
 
 public final class GameController {
@@ -181,24 +183,31 @@ public final class GameController {
 
   public void handleBuy(Stock stock, BigDecimal quantity) {
     if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-      view.showError("Quantity must be positive.");
+      view.showTradeError("Enter at least 1 share to buy.");
       return;
     }
     BigDecimal owned = getOwnedQuantity(stock.getSymbol());
     BigDecimal remainingCap = getStockOwnershipCap(stock).subtract(owned);
     if (remainingCap.compareTo(BigDecimal.ZERO) <= 0) {
-      view.showError("Share cap reached for " + stock.getSymbol() + ".");
+      view.showTradeError("You've maxed out your " + stock.getSymbol() + " position.");
       return;
     }
     if (quantity.compareTo(remainingCap) > 0) {
-      view.showError("Share cap exceeded. You can buy up to "
-          + remainingCap.stripTrailingZeros().toPlainString() + " more shares.");
+      view.showTradeError("Cap exceeded - max "
+          + remainingCap.stripTrailingZeros().toPlainString() + " more shares allowed.");
       return;
     }
 
     BigDecimal gross = stock.getSalesPrice().multiply(quantity);
     BigDecimal fee = gross.multiply(new BigDecimal("0.005"));
     BigDecimal total = gross.add(fee);
+    if (total.compareTo(player.getMoney()) > 0) {
+      view.showTradeError("Not enough cash - costs "
+          + CurrencyFormatter.format(total)
+          + ", you have "
+          + CurrencyFormatter.format(player.getMoney()) + ".");
+      return;
+    }
     view.showTradeConfirm("BUY", stock, quantity, gross, fee, BigDecimal.ZERO, total);
   }
 
@@ -227,7 +236,7 @@ public final class GameController {
         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     if (totalOwnedquantity.compareTo(BigDecimal.ZERO) <= 0) {
-      view.showError("You don't own any shares to sell.");
+      view.showSellAllError("Your portfolio is empty - nothing to sell!");
       return;
     }
 

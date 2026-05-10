@@ -153,7 +153,9 @@ public final class GameSaveLoader {
       if (Files.exists(jsonPath)) {
         JsonObject obj =
             GSON.fromJson(Files.readString(jsonPath, StandardCharsets.UTF_8), JsonObject.class);
-        obj.addProperty("displayName", newDisplayName.strip());
+        String trimmedName = newDisplayName.strip();
+        obj.addProperty("displayName", trimmedName);
+        obj.addProperty("playerName", trimmedName);
         Files.writeString(jsonPath, GSON.toJson(obj), StandardCharsets.UTF_8);
       }
     }
