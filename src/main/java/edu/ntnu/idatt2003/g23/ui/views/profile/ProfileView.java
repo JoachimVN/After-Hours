@@ -74,7 +74,7 @@ public final class ProfileView {
         : AvatarUtil.normalizeAvatarStem(currentAvatar);
     final String[] selectedAvatar = { initialAvatar };
 
-    // Track name changes for auto-save
+    // Track pending name edits while the field is focused
     final String[] originalName = { controller.getPlayerName() };
     final boolean[] nameChanged = { false };
 

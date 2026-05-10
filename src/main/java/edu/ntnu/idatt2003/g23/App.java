@@ -845,7 +845,6 @@ public class App extends Application {
           currentGameController != null ? currentGameController.getPlayerName() : null,
           currentGameController != null ? name -> {
             currentGameController.setPlayerName(name);
-            onSave.run();
           } : null);
     }
   }
@@ -888,7 +887,9 @@ public class App extends Application {
         },
         name -> {
           currentGameController.setPlayerName(name);
-          onSave.run();
+          if (currentGameView != null) {
+            currentGameView.updateData();
+          }
         },
         symbol -> {
           navigateKeepMusic(currentGamePage);

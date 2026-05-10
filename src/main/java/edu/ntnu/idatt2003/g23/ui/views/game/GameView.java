@@ -2496,15 +2496,6 @@ public final class GameView implements GameViewInterface {
     popup.requestFocus();
   }
 
-  private static Node statPill(String key, Label valueLabel) {
-    Label keyLbl = new Label(key);
-    keyLbl.getStyleClass().add("stat-pill-key");
-    VBox box = new VBox(1, keyLbl, valueLabel);
-    box.getStyleClass().add("stat-pill");
-    box.setAlignment(Pos.CENTER_LEFT);
-    return box;
-  }
-
   private static Node moneyPill(Label cashLabel, Label portfolioLabel,
                                 Label netWorthLabel, String toneClass) {
     Node cashSegment = moneySegment("Cash", cashLabel, "money-segment-cash");
