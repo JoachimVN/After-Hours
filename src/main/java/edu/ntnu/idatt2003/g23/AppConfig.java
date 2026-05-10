@@ -55,6 +55,18 @@ public final class AppConfig {
   public static final double[] PRESET_CASH_VALUES = {1_000, 5_000, 10_000, 50_000, 100_000};
   public static final String[] PRESET_CASH_LABELS = {"$1K", "$5K", "$10K", "$50K", "$100K"};
 
+  /**
+   * Returns the display name of the built-in market matching the given CSV resource path,
+   * or {@code "Market"} if no match is found.
+   */
+  public static String marketNameFor(String csvResource) {
+    return BUILT_IN_MARKETS.stream()
+        .filter(m -> m.csvResource().equals(csvResource))
+        .map(m -> m.name())
+        .findFirst()
+        .orElse("Market");
+  }
+
   private AppConfig() {
   }
 }

@@ -18,7 +18,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -31,6 +30,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.converter.DefaultStringConverter;
@@ -79,6 +79,8 @@ public final class CsvEditorView {
 
     BorderPane root = new BorderPane();
     root.getStyleClass().addAll("home-page", "background-overlay");
+    // Wrap in a StackPane so in-game overlays (e.g. the prices sub-editor) can be layered on top.
+    StackPane overlayRoot = new StackPane(root);
 
     // ── Top bar ───────────────────────────────────────────────────────────
     Button backButton = new Button("\u2190 Back");
@@ -161,23 +163,64 @@ public final class CsvEditorView {
       refreshState.run();
     });
 
-    // Prices
-    TableColumn<CsvRow, String> pricesCol = new TableColumn<>("Prices (semicolon-separated)");
+    // Prices — summary cell with an "Edit…" button; inline text editing is intentionally
+    // removed because a semicolon-joined string with thousands of entries is unworkable.
+    TableColumn<CsvRow, String> pricesCol = new TableColumn<>("Prices");
     pricesCol.setCellValueFactory(c -> c.getValue().pricesProperty());
-    pricesCol.setPrefWidth(260);
+    pricesCol.setPrefWidth(220);
     pricesCol.setSortable(false);
-    pricesCol.setOnEditCommit(e -> {
-      e.getRowValue().setPrices(e.getNewValue());
-      StockCsvLoader.validateRow(e.getRowValue());
-      table.refresh();
-      refreshState.run();
+    pricesCol.setEditable(false);
+    pricesCol.setCellFactory(col -> new TableCell<>() {
+      private final Label summaryLbl = new Label();
+      private final Button editBtn = new Button("\u270e");
+      private final Region spacer = new Region();
+      private final HBox box = new HBox(6, summaryLbl, spacer, editBtn);
+
+      private void openPricesEditor() {
+        int idx = getIndex();
+        if (idx < 0 || idx >= getTableView().getItems().size()) {
+          return;
+        }
+        CsvRow row = getTableView().getItems().get(idx);
+        PricesEditorDialog.open(overlayRoot, row, () -> {
+          table.refresh();
+          refreshState.run();
+        });
+      }
+
+      {
+        box.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        summaryLbl.getStyleClass().add("csv-prices-summary");
+        editBtn.getStyleClass().addAll("csv-inline-icon-btn", "csv-inline-edit-btn");
+        editBtn.setTooltip(new Tooltip("Edit price history"));
+        editBtn.setOnAction(e -> openPricesEditor());
+      }
+
+      @Override
+      protected void updateItem(String item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setGraphic(null);
+          setOnMouseClicked(null);
+          return;
+        }
+        summaryLbl.setText(buildPriceSummary(item));
+        setGraphic(box);
+        setOnMouseClicked(event -> {
+          if (event.getClickCount() == 2) {
+            openPricesEditor();
+            event.consume();
+          }
+        });
+      }
     });
 
     // Ordered list of editable columns — used by smartCell for Tab/Enter navigation.
-    List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol, pricesCol);
+    // Prices are excluded: they are edited via the sub-editor dialog, not inline.
+    List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol);
     symbolCol.setCellFactory(tc -> smartCell("symbol", table, editableCols));
     companyCol.setCellFactory(tc -> smartCell("company", table, editableCols));
-    pricesCol.setCellFactory(tc -> smartCell("prices", table, editableCols));
 
     // Table-level keyboard navigation — only active when no cell is being edited
     table.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
@@ -235,6 +278,7 @@ public final class CsvEditorView {
       @Override
       protected void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
+        setStyle("");
         if (empty || item == null || item.isBlank()) {
           setText(null);
           setTooltip(null);
@@ -245,20 +289,21 @@ public final class CsvEditorView {
         }
       }
     });
+    errorCol.visibleProperty().bind(hasErrors);
 
     // Skip (per-row button)
     TableColumn<CsvRow, Void> skipRowCol = new TableColumn<>("");
-    skipRowCol.setPrefWidth(70);
-    skipRowCol.setMinWidth(70);
-    skipRowCol.setMaxWidth(70);
+    skipRowCol.setPrefWidth(38);
+    skipRowCol.setMinWidth(38);
+    skipRowCol.setMaxWidth(44);
     skipRowCol.setSortable(false);
     skipRowCol.setEditable(false);
     skipRowCol.setCellFactory(col -> new TableCell<>() {
-      private final Button btn = new Button("Skip");
+      private final Button btn = new Button("\u2715");
 
       {
-        btn.getStyleClass().addAll("secondary-button", "csv-skip-button");
-        btn.setStyle("-fx-pref-height: 24; -fx-font-size: 11; -fx-padding: 2 8;");
+        btn.getStyleClass().addAll("csv-inline-icon-btn", "csv-inline-delete-btn");
+        btn.setTooltip(new Tooltip("Delete row"));
         btn.setOnAction(e -> {
           CsvRow row = getTableView().getItems().get(getIndex());
           rows.remove(row);
@@ -269,7 +314,11 @@ public final class CsvEditorView {
       @Override
       protected void updateItem(Void item, boolean empty) {
         super.updateItem(item, empty);
-        setGraphic(empty ? null : btn);
+        if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+          setGraphic(null);
+          return;
+        }
+        setGraphic(btn);
       }
     });
 
@@ -329,7 +378,7 @@ public final class CsvEditorView {
 
     // ── Bottom bar ────────────────────────────────────────────────────────
     Label hintLabel = new Label(
-        "Double-click a cell to edit \u2014 Tab/Enter navigates; Escape cancels an edit.");
+        "Double-click Symbol / Company to edit \u2014 click \u201cEdit\u2026\u201d in the Prices column to manage price points.");
     hintLabel.getStyleClass().add("sub-tagline");
 
     // Add Row button
@@ -396,23 +445,24 @@ public final class CsvEditorView {
     bottomBar.setPadding(new Insets(12, 32, 24, 32));
 
     // ── Assemble ──────────────────────────────────────────────────────────
-    VBox centerBox = new VBox(8, errorCountLabel, navBar, new Separator(), table);
+    VBox centerBox = new VBox(8, errorCountLabel, navBar, table);
     VBox.setVgrow(table, Priority.ALWAYS);
     centerBox.setPadding(new Insets(0, 32, 0, 32));
 
     root.setCenter(centerBox);
     root.setBottom(bottomBar);
 
-    // Escape → back
+    // Escape → back (only when no overlay is open and no cell is being edited)
     root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-      // Only navigate back when no cell is being edited (Escape is handled inside editing cells)
-      if (e.getCode() == KeyCode.ESCAPE && table.getEditingCell() == null) {
+      if (e.getCode() == KeyCode.ESCAPE
+          && table.getEditingCell() == null
+          && overlayRoot.getChildren().size() == 1) {
         onCancel.run();
         e.consume();
       }
     });
 
-    return root;
+    return overlayRoot;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -459,7 +509,6 @@ public final class CsvEditorView {
         Platform.runLater(() -> {
           table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
           table.getSelectionModel().clearAndSelect(row, col);
-          table.scrollTo(row);
           table.edit(row, col);
         });
       }
@@ -619,6 +668,33 @@ public final class CsvEditorView {
         }
       }
     }
+  }
+
+  /**
+   * Returns a short human-readable summary of a semicolon-separated price string.
+   * Examples: {@code "0 prices"}, {@code "1 price · 214.10"},
+   * {@code "10,000 prices · 100.00 → 214.10"}.
+   */
+  private static String buildPriceSummary(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return "0 prices";
+    }
+    String[] parts = raw.split(";");
+    String first = null;
+    String last = null;
+    long count = 0;
+    for (String p : parts) {
+      String t = p.trim();
+      if (!t.isEmpty()) {
+        if (first == null) first = t;
+        last = t;
+        count++;
+      }
+    }
+    if (count == 0) return "0 prices";
+    if (count == 1) return "Week 1 \u00B7 " + first;
+    return "Week " + String.format("%,d", count) + " \u00B7 "
+      + first + " \u2192 " + last;
   }
 
   /**

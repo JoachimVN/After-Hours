@@ -176,6 +176,13 @@ public final class StockCsvLoader {
     return new Stock(row.getSymbol().trim(), row.getCompany().trim(), parsePriceList(prices, false));
   }
 
+  /**
+   * Converts a list of valid (error-free) {@link CsvRow} objects to a list of {@link Stock}s.
+   */
+  public static List<Stock> toStocks(List<CsvRow> rows) {
+    return rows.stream().map(StockCsvLoader::rowToStock).toList();
+  }
+
   private static List<BigDecimal> parsePriceList(String rawPrices, boolean applyCap) {
     String[] raw = rawPrices.trim().split(";");
     List<BigDecimal> prices = new ArrayList<>();
