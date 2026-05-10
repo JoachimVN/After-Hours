@@ -68,6 +68,7 @@
               <version>3.12.0</version>
             </plugin>
 
+            <!-- Development: mvn javafx:run -->
             <plugin>
               <groupId>org.openjfx</groupId>
               <artifactId>javafx-maven-plugin</artifactId>
@@ -84,5 +85,134 @@
             </plugin>
       </plugins>
     </pluginManagement>
+
+    <!-- Plugins that are actively bound to lifecycle phases or run on demand -->
+    <plugins>
+
+      <!--
+        Distribution step 1: fat JAR.
+        Bundles Gson and all non-JavaFX deps into target/app-fat.jar.
+        JavaFX is excluded — it contains native libs that cannot be shaded.
+        Runs during: mvn package
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <outputFile>${project.build.directory}/app-fat.jar</outputFile>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>edu.ntnu.idatt2003.g23.App</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>org.openjfx:*</artifact>
+                  <excludes><exclude>**</exclude></excludes>
+                </filter>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Distribution step 2: copy platform-specific JavaFX JARs to target/javafx-mods/.
+        jpackage needs these on its module-path.
+        Change the classifier from 'win' to 'linux' or 'mac' when building on other platforms.
+        Runs during: mvn package
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.8.1</version>
+        <executions>
+          <execution>
+            <id>copy-javafx-mods</id>
+            <phase>package</phase>
+            <goals><goal>copy</goal></goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/javafx-mods</outputDirectory>
+              <artifactItems>
+                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId>
+                  <version>25.0.1</version><classifier>win</classifier></artifactItem>
+                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId>
+                  <version>25.0.1</version><classifier>win</classifier></artifactItem>
+                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId>
+                  <version>25.0.1</version><classifier>win</classifier></artifactItem>
+                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId>
+                  <version>25.0.1</version><classifier>win</classifier></artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Distribution step 3: native installer via jpackage.
+        Produces target/dist/After Hours-1.0.exe (Windows).
+        The installer bundles a JRE; recipients need nothing pre-installed.
+
+        Requires WiX Toolset 3.11+ on PATH for type=exe.
+        Use type=app-image instead if WiX is not available
+        (produces a plain folder you can zip and share).
+
+        Run after mvn package with: mvn exec:exec@jpackage
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.4.1</version>
+        <executions>
+          <execution>
+            <id>jpackage</id>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+              <executable>jpackage</executable>
+              <arguments>
+                <argument>--type</argument><argument>exe</argument>
+                <argument>--name</argument><argument>After Hours</argument>
+                <argument>--app-version</argument><argument>${project.version}</argument>
+                <argument>--vendor</argument><argument>NTNU</argument>
+                <argument>--description</argument><argument>After Hours stock trading game</argument>
+                <argument>--icon</argument>
+                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.ico</argument>
+                <argument>--input</argument><argument>${project.build.directory}</argument>
+                <argument>--main-jar</argument><argument>app-fat.jar</argument>
+                <argument>--main-class</argument><argument>edu.ntnu.idatt2003.g23.App</argument>
+                <argument>--module-path</argument>
+                <argument>${project.build.directory}/javafx-mods</argument>
+                <argument>--add-modules</argument>
+                <argument>javafx.controls,javafx.media</argument>
+                <argument>--java-options</argument>
+                <argument>--enable-native-access=javafx.graphics,javafx.media</argument>
+                <argument>--java-options</argument>
+                <argument>-Dglass.win.uiScale=1.25</argument>
+                <argument>--dest</argument><argument>${project.build.directory}/dist</argument>
+                <argument>--win-dir-chooser</argument>
+                <argument>--win-shortcut</argument>
+                <argument>--win-shortcut-prompt</argument>
+                <argument>--win-menu</argument>
+                <argument>--win-menu-group</argument><argument>After Hours</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
   </build>
 </project>
