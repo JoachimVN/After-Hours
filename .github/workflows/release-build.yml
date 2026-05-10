@@ -32,18 +32,6 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: Install WiX Toolset
-        shell: pwsh
-        run: |
-          $chocoPath = Join-Path $env:ChocolateyInstall 'bin\choco.exe'
-          if (-not (Test-Path $chocoPath)) {
-            $chocoPath = 'C:\ProgramData\chocolatey\bin\choco.exe'
-          }
-          if (-not (Test-Path $chocoPath)) {
-            throw 'Chocolatey is not available on this runner. Install WiX Toolset manually or install Chocolatey on the self-hosted runner.'
-          }
-          & $chocoPath install wixtoolset --no-progress -y
-
       - name: Resolve Version From Tag
         shell: pwsh
         run: |
@@ -79,20 +67,10 @@ jobs:
           $jarName = "AfterHours-$env:APP_VERSION.jar"
           "JAR_NAME=$jarName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Copy versioned JAR
+      - name: Rename to versioned JAR
         shell: pwsh
         run: |
-          Copy-Item -Path target/dist/AfterHours.jar -Destination "target/dist/$env:JAR_NAME"
-
-      - name: Build Windows Installer
-        shell: pwsh
-        run: |
-          mvn --batch-mode exec:exec@jpackage
-
-      - name: Create Portable Zip
-        shell: pwsh
-        run: |
-          Compress-Archive -Path target/dist/AfterHours.jar,target/dist/AfterHours.bat,target/dist/AfterHours.sh,target/dist/javafx-mods -DestinationPath target/dist/AfterHours-portable.zip -Force
+          Move-Item -Path target/dist/AfterHours.jar -Destination "target/dist/$env:JAR_NAME"
 
       - name: Publish GitHub Release Assets
         uses: softprops/action-gh-release@v2
@@ -101,9 +79,7 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ env.PRE_RELEASE == 'true' }}
           files: |
-            target/dist/After*-${{ env.APP_VERSION }}.exe
             target/dist/${{ env.JAR_NAME }}
-            target/dist/AfterHours-portable.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
