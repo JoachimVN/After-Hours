@@ -379,12 +379,10 @@ public final class GameController {
 
   public void setPlayerStatusOverride(PlayerStatus status) {
     statusOverride = status;
-    player.setStatus(status);
   }
 
   public void clearPlayerStatusOverride() {
     statusOverride = null;
-    player.calculateStatus();
   }
 
   public boolean isOwned(String symbol) {
