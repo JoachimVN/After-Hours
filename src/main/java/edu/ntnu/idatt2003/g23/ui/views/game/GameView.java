@@ -2387,17 +2387,9 @@ public final class GameView implements GameViewInterface {
     weekCol.setSortType(TableColumn.SortType.DESCENDING);
     table.getSortOrder().add(weekCol);
     table.sort();
-    // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
-    double rowH = 28;
-    double headerH = 30;
-    double tableH = headerH + Math.min(filteredTx.size(), 12) * rowH;
-    table.setPrefHeight(tableH);
-    table.setMinHeight(headerH + rowH);  // at least one row visible
-    // Grow the table when filter makes more rows visible
-    filteredTx.addListener((javafx.collections.ListChangeListener<TxRow>) c -> {
-      double h = headerH + Math.min(filteredTx.size(), 12) * rowH;
-      table.setPrefHeight(h);
-    });
+    // Let the table consume the available card space before showing scrollbars.
+    table.setMinHeight(58); // one row + header baseline
+    table.setMaxHeight(Double.MAX_VALUE);
     Label emptyLbl = new Label("No transactions yet.");
     emptyLbl.getStyleClass().add("market-movers-col-title");
     table.setPlaceholder(emptyLbl);
@@ -2470,8 +2462,10 @@ public final class GameView implements GameViewInterface {
     VBox card = new VBox(0, titleRow, controlsRow, table);
     card.getStyleClass().add("history-card");
     card.setMaxWidth(920);
+    card.setPrefHeight(580);
     card.setMaxHeight(580);
     card.setOpacity(0);
+    VBox.setVgrow(table, Priority.ALWAYS);
 
     GaussianBlur blur = new GaussianBlur(0);
     rootRef.setEffect(blur);
