@@ -417,6 +417,10 @@ public class App extends Application {
       showNoGamePage(false);
       return;
     }
+    Player previousPlayer = currentPlayer;
+    Exchange previousExchange = currentExchange;
+    String previousAutosaveId = currentAutosaveId;
+
     currentPlayer = player;
     currentExchange = exchange;
     currentSavePath = savePath;
@@ -427,10 +431,17 @@ public class App extends Application {
     if (savePath != null) {
       currentAutosaveId = normalizeAutosaveSlotId(savePath.getFileName().toString());
     } else {
-      String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
-      currentAutosaveId = safeName + "_"
-          + java.time.LocalDateTime.now().format(
-              java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+      boolean resumingSameInMemorySession = previousAutosaveId != null
+          && previousPlayer == player
+          && previousExchange == exchange;
+      if (resumingSameInMemorySession) {
+        currentAutosaveId = previousAutosaveId;
+      } else {
+        String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
+        currentAutosaveId = safeName + "_"
+            + java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+      }
     }
     GameController gameController = new GameController(player, exchange);
     final Runnable[] onGameProfileRef = new Runnable[1];
