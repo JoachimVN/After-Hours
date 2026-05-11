@@ -276,95 +276,92 @@ public class Exchange {
     if (frozen) {
       return;
     }
-    for (Stock stock : stockMap.values()) {
-      BigDecimal currentPrice = stock.getSalesPrice();
-
-      double min, max;
-      switch (stock.getVolatility()) {
-        case SLOW_RISE -> {
-          min = 0.0;
-          max = 4.0;
-        }
-        case SLOW_FALL -> {
-          min = -4.0;
-          max = 0.0;
-        }
-        case NORMAL_RISE -> {
-          min = 2.0;
-          max = 5.0;
-        }
-        case NORMAL_FALL -> {
-          min = -5.0;
-          max = -2.0;
-        }
-        case FAST -> {
-          min = 3.0;
-          max = 10.0;
-        }
-        case CHAOTIC -> {
-          min = 7.0;
-          max = 15.0;
-        }
-        default -> {
-          min = 0.0;
-          max = 3.0;
-        }  // STABLE
-      }
-
-      double percentageChange = (random.nextDouble() * (max - min)) + min;
-      BigDecimal multiplicativeChange =
-          BigDecimal.valueOf(1 + (percentageChange / 100));  // 1 to 1.10
-
-      boolean randomBool = random.nextBoolean();
-      boolean directional = stock.getVolatility() == Volatility.SLOW_FALL
-          || stock.getVolatility() == Volatility.NORMAL_FALL
-          || stock.getVolatility() == Volatility.SLOW_RISE
-          || stock.getVolatility() == Volatility.NORMAL_RISE;
-      if (!directional && randomBool) {
-        multiplicativeChange = BigDecimal.ONE.divide(multiplicativeChange, 4,
-            RoundingMode.HALF_UP); // Randomly invert to add unpredictability
-      }
-
-      BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
-
-      // Mean reversion — log-space pull toward the stock's initial price.
-      // Force is proportional to log(current/initial): negligible near the start,
-      // grows large enough to dominate any trend state when price diverges wildly.
-      // At 2× initial → ~1.4% pull/week; at 10× → ~4.6%; at 8000× → ~18%.
-      BigDecimal initialPrice = stock.getHistoricalPrices().get(0);
-      double logRatio = Math.log(newPrice.doubleValue() / initialPrice.doubleValue());
-      double reversionFactor = 1.0 - logRatio * ExchangeSimulationConfig.MEAN_REVERSION_STRENGTH;
-      reversionFactor = Math.max(0.50, Math.min(1.50, reversionFactor));
-      newPrice =
-          newPrice.multiply(BigDecimal.valueOf(reversionFactor)).setScale(6, RoundingMode.HALF_UP);
-
-      // Price floor — prevents approaching zero from compounding losses
-      if (newPrice.compareTo(BigDecimal.valueOf(0.01)) < 0) {
-        newPrice = BigDecimal.valueOf(0.01);
-      }
-
-      stock.addNewSalesPrice(newPrice);
-    }
-
-    // Per-stock volatility phase transitions — 50% chance per week to shift phase (average ~2 weeks per state)
-    for (Stock s : stockMap.values()) {
-      if (random.nextDouble() < 0.50) {
-        s.setVolatility(pickNextVolatility(s.getVolatility()));
-      }
-    }
-
-    // Spike events — each tier independently fires and applies to one random stock
     List<Stock> allStocks = new ArrayList<>(stockMap.values());
-    applySpike(allStocks, 0.18, 5, 30);
-    applySpike(allStocks, 0.10, 10, 50);
-    applySpike(allStocks, 0.05, 20, 70);
-    applySpike(allStocks, 0.02, 30, 90);
+    allStocks.forEach(this::advanceStockPrice);
+    applyVolatilityTransitions();
+    applyAllSpikes(allStocks);
+    enforceFloor(allStocks);
+  }
 
-    // Re-apply price floor after spikes — a downward spike can bypass the per-stock floor above
+  /** Simulates one week of price movement for a single stock. */
+  private void advanceStockPrice(Stock stock) {
+    BigDecimal currentPrice = stock.getSalesPrice();
+    double[] range = volatilityRange(stock.getVolatility());
+    double min = range[0];
+    double max = range[1];
+
+    double percentageChange = (random.nextDouble() * (max - min)) + min;
+    BigDecimal multiplicativeChange = BigDecimal.valueOf(1 + (percentageChange / 100));
+
+    boolean directional = stock.getVolatility() == Volatility.SLOW_FALL
+        || stock.getVolatility() == Volatility.NORMAL_FALL
+        || stock.getVolatility() == Volatility.SLOW_RISE
+        || stock.getVolatility() == Volatility.NORMAL_RISE;
+    if (!directional && random.nextBoolean()) {
+      multiplicativeChange = BigDecimal.ONE.divide(multiplicativeChange, 4, RoundingMode.HALF_UP);
+    }
+
+    BigDecimal newPrice = currentPrice.multiply(multiplicativeChange);
+    newPrice = applyMeanReversion(stock, newPrice);
+
+    if (newPrice.compareTo(BigDecimal.valueOf(0.01)) < 0) {
+      newPrice = BigDecimal.valueOf(0.01);
+    }
+    stock.addNewSalesPrice(newPrice);
+  }
+
+  /**
+   * Returns the [min, max] percentage-change range for the given volatility phase.
+   * Directional phases have a one-sided range; non-directional phases are centred near zero.
+   */
+  private static double[] volatilityRange(Volatility volatility) {
+    return switch (volatility) {
+      case SLOW_RISE -> new double[]{0.0, 4.0};
+      case SLOW_FALL -> new double[]{-4.0, 0.0};
+      case NORMAL_RISE -> new double[]{2.0, 5.0};
+      case NORMAL_FALL -> new double[]{-5.0, -2.0};
+      case FAST -> new double[]{3.0, 10.0};
+      case CHAOTIC -> new double[]{7.0, 15.0};
+      default -> new double[]{0.0, 3.0};
+    };
+  }
+
+  /**
+   * Applies log-space mean reversion toward the stock's initial price.
+   * Force is proportional to log(current/initial): negligible near the start,
+   * grows large enough to dominate any trend state when price diverges wildly.
+   */
+  private BigDecimal applyMeanReversion(Stock stock, BigDecimal price) {
+    BigDecimal initialPrice = stock.getHistoricalPrices().get(0);
+    double logRatio = Math.log(price.doubleValue() / initialPrice.doubleValue());
+    double reversionFactor = 1.0 - logRatio * ExchangeSimulationConfig.MEAN_REVERSION_STRENGTH;
+    reversionFactor = Math.max(0.50, Math.min(1.50, reversionFactor));
+    return price.multiply(BigDecimal.valueOf(reversionFactor)).setScale(6, RoundingMode.HALF_UP);
+  }
+
+  /** Applies per-stock volatility phase transitions. */
+  private void applyVolatilityTransitions() {
+    for (Stock stock : stockMap.values()) {
+      if (random.nextDouble() < 0.50) {
+        stock.setVolatility(pickNextVolatility(stock.getVolatility()));
+      }
+    }
+  }
+
+  /** Applies all configured spike tiers for the week. */
+  private void applyAllSpikes(List<Stock> stocks) {
+    applySpike(stocks, 0.18, 5, 30);
+    applySpike(stocks, 0.10, 10, 50);
+    applySpike(stocks, 0.05, 20, 70);
+    applySpike(stocks, 0.02, 30, 90);
+  }
+
+  /** Re-applies the minimum price floor after spike events. */
+  private static void enforceFloor(List<Stock> stocks) {
     BigDecimal priceFloor = BigDecimal.valueOf(0.01);
-    for (Stock s : allStocks) {
-      if (s.getSalesPrice().compareTo(priceFloor) < 0) {
-        s.setLatestSalesPrice(priceFloor);
+    for (Stock stock : stocks) {
+      if (stock.getSalesPrice().compareTo(priceFloor) < 0) {
+        stock.setLatestSalesPrice(priceFloor);
       }
     }
   }
