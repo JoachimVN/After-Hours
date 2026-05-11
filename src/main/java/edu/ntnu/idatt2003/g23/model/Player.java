@@ -254,20 +254,25 @@ public class Player {
     int weeks = getWeeksTraded();
     BigDecimal netWorth = getNetWorth();
 
+    PlayerStatus calculatedStatus;
     if (startingMoney.compareTo(BigDecimal.ZERO) == 0) {
-      status = PlayerStatus.NOVICE;
+      calculatedStatus = PlayerStatus.NOVICE;
     } else {
       BigDecimal growth = netWorth.divide(startingMoney, 4, RoundingMode.HALF_UP);
 
       if (weeks >= PlayerStatus.INVESTOR.getWeeksTargetForNextStatus()
           && growth.compareTo(PlayerStatus.INVESTOR.getGrowthTargetForNextStatus()) >= 0) {
-        status = PlayerStatus.SPECULATOR;
+        calculatedStatus = PlayerStatus.SPECULATOR;
       } else if (weeks >= PlayerStatus.NOVICE.getWeeksTargetForNextStatus()
           && growth.compareTo(PlayerStatus.NOVICE.getGrowthTargetForNextStatus()) >= 0) {
-        status = PlayerStatus.INVESTOR;
+        calculatedStatus = PlayerStatus.INVESTOR;
       } else {
-        status = PlayerStatus.NOVICE;
+        calculatedStatus = PlayerStatus.NOVICE;
       }
+    }
+
+    if (calculatedStatus.ordinal() > status.ordinal()) {
+      status = calculatedStatus;
     }
   }
 
