@@ -52,6 +52,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.Image;
@@ -639,7 +640,7 @@ public final class GameView implements GameViewInterface {
     // S → Settings | P → Profile
     // Escape → clear search, then go back to landing page
     overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-      boolean inTextField = e.getTarget() instanceof TextField;
+      boolean inTextField = e.getTarget() instanceof TextInputControl;
       // If a dialog popup is layered on top, ignore game shortcuts (Escape is handled per-popup)
       boolean dialogOpen = overlay.getChildren().size() > 2;
       if (dialogOpen) {
@@ -688,12 +689,20 @@ public final class GameView implements GameViewInterface {
             e.consume();
           }
         }
+        case ENTER -> {
+          if (!inTextField) {
+            e.consume();
+          }
+        }
         case ESCAPE -> {
-          if (!searchField.getText().isEmpty()) {
+          if (inTextField) {
+            overlay.requestFocus();
+            e.consume();
+          } else if (!searchField.getText().isEmpty()) {
             searchField.clear();
             searchField.getParent().requestFocus();
             e.consume();
-          } else if (!inTextField) {
+          } else {
             onBack.run();
             e.consume();
           }
