@@ -214,9 +214,9 @@
 .status-pill-tooltip {
     -fx-font-size: 11px;
     -fx-text-fill: #d9e8ff;
-    -fx-background-color: rgba(6, 12, 28, 0.97);
+    -fx-background-color: rgba(6, 12, 28, 0.8);
     -fx-background-radius: 8;
-    -fx-border-color: rgba(245, 162, 1, 0.45);
+    -fx-border-color: rgba(245, 162, 1, 0.1);
     -fx-border-radius: 8;
     -fx-border-width: 1;
     -fx-padding: 8 10 8 10;

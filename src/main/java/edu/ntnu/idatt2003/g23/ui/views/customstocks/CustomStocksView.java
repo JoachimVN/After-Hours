@@ -1,16 +1,27 @@
 package edu.ntnu.idatt2003.g23.ui.views.customstocks;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.function.Consumer;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
+import edu.ntnu.idatt2003.g23.model.MarketOption;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 
@@ -18,7 +29,22 @@ public final class CustomStocksView {
 
   public static BorderPane build(Runnable onBack, Runnable onMakeOwn,
                                  Consumer<File> onEditCsv, Consumer<File> onContinue,
+                                 Consumer<String> onEditBuiltInMarket,
+                                 Consumer<SaveMeta> onEditSaveFile,
+                                 Path currentSavePath,
                                  File initialFile) {
+    boolean editorOnlyMode = onContinue == null;
+    boolean hasBuiltInMarkets = onEditBuiltInMarket != null && !AppConfig.BUILT_IN_MARKETS.isEmpty();
+    List<SaveMeta> availableSaves = List.of();
+    if (onEditSaveFile != null) {
+      try {
+        availableSaves = GameSaveLoader.listSaves();
+      } catch (IOException ignored) {
+        availableSaves = List.of();
+      }
+    }
+    boolean hasSaveFiles = onEditSaveFile != null && !availableSaves.isEmpty();
+
     BorderPane root = new BorderPane();
     root.getStyleClass().addAll("home-page", "background-overlay");
 
@@ -69,6 +95,8 @@ public final class CustomStocksView {
     continueBtn.setMaxWidth(580);
     continueBtn.setStyle("-fx-pref-height: 58; -fx-font-size: 20;");
     continueBtn.setDisable(true);
+    continueBtn.setVisible(!editorOnlyMode);
+    continueBtn.setManaged(!editorOnlyMode);
 
     Runnable clearSelection = () -> {
       chosenFile[0] = null;
@@ -131,7 +159,7 @@ public final class CustomStocksView {
     });
 
     continueBtn.setOnAction(e -> {
-      if (chosenFile[0] != null) {
+      if (chosenFile[0] != null && onContinue != null) {
         onContinue.accept(chosenFile[0]);
       }
     });
@@ -175,6 +203,9 @@ public final class CustomStocksView {
 
     // ── Page layout ───────────────────────────────────────────────────────
     Label pageTitle = new Label("Custom Stock Data");
+    if (editorOnlyMode) {
+      pageTitle.setText("Edit Stock Data");
+    }
     pageTitle.getStyleClass().add("page-title");
 
     // Open CSV editor with empty data
@@ -187,7 +218,9 @@ public final class CustomStocksView {
       }
     });
 
-    Label actionHint = new Label("Create a fresh dataset or open the selected CSV in the editor.");
+    Label actionHint = new Label(editorOnlyMode
+        ? "Create a dataset, edit the current market, or open stock data in the editor."
+        : "Create a fresh dataset or open the selected CSV in the editor.");
     actionHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
 
     HBox editorBtnRow = new HBox(18, makeOwnBtn, editCsvBtn);
@@ -198,10 +231,109 @@ public final class CustomStocksView {
     editorSection.setAlignment(Pos.CENTER);
     editorSection.setPadding(new Insets(12, 0, 0, 0));
 
+    VBox saveSection = null;
+    if (hasSaveFiles) {
+      Label saveTitle = new Label("Open stock data from a save");
+      saveTitle.getStyleClass().add("setup-field-label");
+
+      Label saveHint = new Label(
+          "Pick a save and load its saved stock history into the CSV editor.");
+      saveHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+
+      ComboBox<SaveMeta> saveCombo = new ComboBox<>();
+      saveCombo.setPromptText("Select a save…");
+      saveCombo.getStyleClass().addAll("market-combo-box", "import-csv-market-picker");
+      saveCombo.setMaxWidth(Double.MAX_VALUE);
+      saveCombo.setCellFactory(lv -> saveMetaCell(currentSavePath));
+      saveCombo.setButtonCell(saveMetaCell(currentSavePath));
+      saveCombo.getItems().setAll(availableSaves);
+
+      Button openSaveBtn = new Button("\uD83D\uDCBE  Open Save Data");
+      openSaveBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
+      openSaveBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
+      openSaveBtn.setOnAction(e -> {
+        SaveMeta selected = saveCombo.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+          onEditSaveFile.accept(selected);
+        }
+      });
+
+      HBox saveControls = new HBox(14, saveCombo, openSaveBtn);
+      saveControls.setAlignment(Pos.CENTER_LEFT);
+      HBox.setHgrow(saveCombo, Priority.ALWAYS);
+
+      saveSection = new VBox(10, saveTitle, saveHint, saveControls);
+      saveSection.getStyleClass().add("import-csv-built-in-panel");
+      saveSection.setAlignment(Pos.CENTER_LEFT);
+      saveSection.setMaxWidth(580);
+      saveSection.setPadding(new Insets(18));
+    }
+
+    // ── Built-in Markets ──────────────────────────────────────────────────
+    VBox builtInSection = null;
+    if (hasBuiltInMarkets) {
+      Label builtInTitle = new Label("Edit a built-in market");
+      builtInTitle.getStyleClass().add("setup-field-label");
+
+      Label builtInHint = new Label("Pick one of the default markets and open it in the CSV editor.");
+      builtInHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+
+      ComboBox<MarketOption> builtInMarketBox = new ComboBox<>();
+      builtInMarketBox.getItems().addAll(AppConfig.BUILT_IN_MARKETS);
+      builtInMarketBox.getStyleClass().addAll("market-combo-box", "import-csv-market-picker");
+      builtInMarketBox.setPromptText("Choose a built-in market");
+      builtInMarketBox.setMaxWidth(Double.MAX_VALUE);
+      builtInMarketBox.setButtonCell(marketCell());
+      builtInMarketBox.setCellFactory(listView -> marketCell());
+
+      Button editBuiltInBtn = new Button("\u270e  Open in Editor");
+      editBuiltInBtn.getStyleClass().addAll("secondary-button", "import-csv-built-in-open-button");
+      editBuiltInBtn.setDisable(true);
+
+      builtInMarketBox.valueProperty().addListener((obs, oldValue, newValue) -> {
+        editBuiltInBtn.setDisable(newValue == null);
+      });
+
+      editBuiltInBtn.setOnAction(e -> {
+        MarketOption selectedMarket = builtInMarketBox.getValue();
+        if (selectedMarket != null) {
+          onEditBuiltInMarket.accept(selectedMarket.csvResource());
+        }
+      });
+
+      HBox builtInControls = new HBox(14, builtInMarketBox, editBuiltInBtn);
+      builtInControls.setAlignment(Pos.CENTER_LEFT);
+      HBox.setHgrow(builtInMarketBox, Priority.ALWAYS);
+
+      builtInSection = new VBox(10, builtInTitle, builtInHint, builtInControls);
+      builtInSection.getStyleClass().add("import-csv-built-in-panel");
+      builtInSection.setAlignment(Pos.CENTER_LEFT);
+      builtInSection.setMaxWidth(580);
+      builtInSection.setPadding(new Insets(18));
+    }
+
     VBox page = new VBox(22, pageTitle, dropZone, continueBtn, reqPanel, editorSection);
+    if (builtInSection != null) {
+      page.getChildren().add(builtInSection);
+    }
+    if (saveSection != null) {
+      page.getChildren().add(saveSection);
+    }
     page.setAlignment(Pos.CENTER);
+    page.setMaxWidth(700);
     page.setPadding(new Insets(0, 0, 40, 0));
-    root.setCenter(page);
+
+    HBox centeringBox = new HBox(page);
+    centeringBox.setAlignment(Pos.TOP_CENTER);
+    centeringBox.setPadding(new Insets(0, 32, 40, 32));
+
+    ScrollPane scroll = new ScrollPane(centeringBox);
+    scroll.setFitToWidth(true);
+    scroll.setFitToHeight(false);
+    scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    scroll.getStyleClass().add("import-csv-scroll");
+
+    root.setCenter(scroll);
 
     selectFile.accept(initialFile);
 
@@ -217,6 +349,49 @@ public final class CustomStocksView {
     HBox row = new HBox(12, colLabel, descLabel);
     row.setAlignment(Pos.CENTER_LEFT);
     return row;
+  }
+
+  private static ListCell<MarketOption> marketCell() {
+    return new ListCell<>() {
+      @Override
+      protected void updateItem(MarketOption market, boolean empty) {
+        super.updateItem(market, empty);
+        if (empty || market == null) {
+          setGraphic(null);
+          setText(null);
+        } else {
+          Label name = new Label(market.name());
+          name.getStyleClass().add("market-combo-name");
+          Label desc = new Label(market.description());
+          desc.getStyleClass().add("market-combo-desc");
+          setGraphic(new VBox(2, name, desc));
+          setText(null);
+        }
+      }
+    };
+  }
+
+  private static ListCell<SaveMeta> saveMetaCell(Path currentSavePath) {
+    return new ListCell<>() {
+      @Override
+      protected void updateItem(SaveMeta item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setText(null);
+          setStyle("");
+        } else {
+          boolean isCurrent = currentSavePath != null
+              && item.saveDir() != null
+              && item.saveDir().equals(currentSavePath);
+          String prefix = isCurrent ? "▶  " : (item.autosave() ? "⌛ " : "");
+          setText(prefix + item.displayName()
+              + "  •  Week " + item.week()
+              + "  •  " + item.savedAt()
+              + (isCurrent ? "  — Playing" : ""));
+          setStyle(isCurrent ? "-fx-text-fill: #f5a201; -fx-font-weight: bold;" : "");
+        }
+      }
+    };
   }
 
   private static VBox buildExample() {

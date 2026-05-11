@@ -11,6 +11,8 @@ import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -68,7 +70,9 @@ public final class SettingsView {
         ctrl.onResetAll,
         ctrl.onSave,
         ctrl.currentPlayerName,
-        ctrl.onNameChanged);
+        ctrl.onNameChanged,
+        ctrl.onOpenCsvTools,
+        ctrl.onEditCurrentMarketData);
   }
 
   // ── No-save overload (home / setup context) ───────────────────────────────
@@ -98,7 +102,7 @@ public final class SettingsView {
         onAutosaveToastChange, autosaveToastEnabled,
           onPerformanceModeChange, performanceModeEnabled,
           onMaxHistoryWeeksChange, maxHistoryWeeks,
-        null, null, null, null, null);
+        null, null, null, null, null, null, null);
   }
 
   // ── Full overload ─────────────────────────────────────────────────────────
@@ -129,7 +133,11 @@ public final class SettingsView {
       /** Current player name if in-game context (null-safe). */
       String currentPlayerName,
       /** Called with new player name if in-game (null-safe). */
-      Consumer<String> onNameChanged) {
+      Consumer<String> onNameChanged,
+      /** Opens the CSV tools page (null-safe). */
+      Runnable onOpenCsvTools,
+      /** Opens the current market directly in the CSV editor (in-game only, null-safe). */
+      Runnable onEditCurrentMarketData) {
 
     StackPane overlay = new StackPane();
     overlay.setPickOnBounds(false);
@@ -164,6 +172,8 @@ public final class SettingsView {
     title.setPadding(new Insets(0, 0, 8, 0));
 
     // ── Sections ──────────────────────────────────────────────────────────
+    BooleanProperty devModeProperty = new SimpleBooleanProperty(devModeEnabled);
+
     VBox audioSection = buildAudioSection(
         onMusicVolumeChange, initialMusicVolume, initialMusicMuted, onMusicMutedChange,
         onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange);
@@ -186,8 +196,10 @@ public final class SettingsView {
       onMaxHistoryWeeksChange);
 
     VBox dataSection = buildDataSection(stage, currentSavePath, onExport);
+    VBox csvEditorSection = buildCsvEditorSection(
+      onOpenCsvTools, onEditCurrentMarketData, devModeProperty);
     VBox keybindsSection = buildKeybindsSection(overlay);
-    VBox devSection = buildDevSection(devModeEnabled, onDevModeChange);
+    VBox devSection = buildDevSection(devModeEnabled, onDevModeChange, devModeProperty);
 
     VBox profileSection = null;
     if (currentPlayerName != null && onNameChanged != null) {
@@ -198,11 +210,11 @@ public final class SettingsView {
     if (profileSection != null) {
       allSections = new VBox(22,
           title, profileSection, audioSection, displaySection, gameSection, performanceSection,
-          dataSection, keybindsSection, devSection);
+          dataSection, csvEditorSection, keybindsSection, devSection);
     } else {
       allSections = new VBox(22,
           title, audioSection, displaySection, gameSection, performanceSection,
-          dataSection, keybindsSection, devSection);
+          dataSection, csvEditorSection, keybindsSection, devSection);
     }
     allSections.setAlignment(Pos.TOP_LEFT);
     allSections.setMaxWidth(700);
@@ -439,11 +451,40 @@ public final class SettingsView {
     if (onSave != null) {
       Button saveBtn = new Button("\uD83D\uDCBE  Save Game Now");
       saveBtn.getStyleClass().add("settings-save-game-btn");
-      saveBtn.setMaxWidth(Double.MAX_VALUE);
+      saveBtn.setMaxWidth(Region.USE_PREF_SIZE);
       saveBtn.setOnAction(e -> onSave.run());
       return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow, new VBox(12, saveBtn));
     }
     return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow);
+  }
+
+  private static VBox buildCsvEditorSection(Runnable onOpenCsvTools,
+                                            Runnable onEditCurrentMarketData,
+                                            BooleanProperty devModeEnabled) {
+    Label subLabel = new Label(
+        "Open the CSV editor tools to build, import, or edit stock datasets without starting a new game.");
+    subLabel.getStyleClass().add("settings-sublabel");
+    subLabel.setWrapText(true);
+
+    Button openToolsBtn = new Button("🔧  Open CSV Editing Tools");
+    openToolsBtn.getStyleClass().add("settings-toggle");
+    openToolsBtn.setDisable(onOpenCsvTools == null);
+    if (onOpenCsvTools != null) {
+      openToolsBtn.setOnAction(e -> onOpenCsvTools.run());
+    }
+
+    VBox actions = new VBox(12, openToolsBtn);
+
+    if (onEditCurrentMarketData != null) {
+      Button editCurrentBtn = new Button("✎  Edit Current Market Data");
+      editCurrentBtn.getStyleClass().add("settings-toggle");
+      editCurrentBtn.visibleProperty().bind(devModeEnabled);
+      editCurrentBtn.managedProperty().bind(devModeEnabled);
+      editCurrentBtn.setOnAction(e -> onEditCurrentMarketData.run());
+      actions.getChildren().add(editCurrentBtn);
+    }
+
+    return sectionCard("🧾  CSV Editor", new VBox(8, subLabel, actions));
   }
 
   private static VBox buildPerformanceSection(
@@ -463,8 +504,9 @@ public final class SettingsView {
     helpLabel.getStyleClass().addAll("settings-default-tag", "settings-performance-help");
 
     Label performanceHelpText = new Label(
-        "Performance mode keeps large saves smooth by virtualizing the stock list and capping "
-            + "history data. Increase Max History Weeks for more detail, or lower it for better speed.");
+      "Performance mode helps the game stay smooth on larger saves. It loads the stock list "
+        + "more efficiently and keeps less history in memory. Turn it on for faster scrolling "
+        + "and lower lag, or raise Max History Weeks if you want more historical detail.");
     performanceHelpText.getStyleClass().addAll("settings-sublabel", "settings-performance-help-text");
     performanceHelpText.setWrapText(true);
     performanceHelpText.setMaxWidth(520);
@@ -721,10 +763,15 @@ public final class SettingsView {
     return new VBox(8, groupLabel, grid);
   }
 
-  private static VBox buildDevSection(boolean devModeEnabled, Consumer<Boolean> onDevModeChange) {
+  private static VBox buildDevSection(boolean devModeEnabled,
+                                      Consumer<Boolean> onDevModeChange,
+                                      BooleanProperty devModeProperty) {
     VBox devRow = toggleRow("Developer Mode", devModeEnabled, true, false, isOn -> {
+      devModeProperty.set(isOn);
       AppConfig.DEV_MODE.set(isOn);
-      onDevModeChange.accept(isOn);
+      if (onDevModeChange != null) {
+        onDevModeChange.accept(isOn);
+      }
     });
     Label note = new Label("Shows extra debug information during gameplay.");
     note.getStyleClass().add("settings-sublabel");

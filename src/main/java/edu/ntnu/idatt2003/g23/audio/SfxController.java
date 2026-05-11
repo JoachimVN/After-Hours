@@ -1,16 +1,15 @@
 package edu.ntnu.idatt2003.g23.audio;
 
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.AudioClip;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.net.URL;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages sound-effect playback and the global SFX volume.
  *
- * <p>Each call to {@link #play(String)} fires a fire-and-forget {@link MediaPlayer}
- * that disposes itself when finished, leaving music playback unaffected.
+ * <p>Uses cached {@link AudioClip} instances for low-latency click/hover SFX.
  */
 public class SfxController {
 
@@ -28,13 +27,12 @@ public class SfxController {
   private static final double DEFAULT_VOLUME = 0.5;
 
   private final Class<?> resourceOwner;
+  private final Map<String, AudioClip> clipCache = new ConcurrentHashMap<>();
   private double volume = DEFAULT_VOLUME;
-  // Keeps a strong reference to each active player so the GC cannot collect
-  // it before playback finishes.
-  private final Set<MediaPlayer> activePlayers = new HashSet<>();
 
   public SfxController(Class<?> resourceOwner) {
     this.resourceOwner = resourceOwner;
+    preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY, PLAY2, PLAY3);
   }
 
   /**
@@ -55,18 +53,30 @@ public class SfxController {
    */
   public void play(String resourcePath, double volume) {
     try {
-      String path = resourceOwner.getResource(resourcePath).toExternalForm();
-      MediaPlayer sfx = new MediaPlayer(new Media(path));
-      sfx.setVolume(volume);
-      activePlayers.add(sfx);
-      sfx.setOnEndOfMedia(() -> {
-        sfx.stop();
-        sfx.dispose();
-        activePlayers.remove(sfx);
-      });
-      sfx.play();
+      AudioClip clip = getOrCreateClip(resourcePath);
+      if (clip == null) {
+        return;
+      }
+      double clamped = Math.max(0.0, Math.min(1.0, volume));
+      clip.play(clamped);
     } catch (Exception ignored) {
     }
+  }
+
+  private void preload(String... resourcePaths) {
+    for (String resourcePath : resourcePaths) {
+      getOrCreateClip(resourcePath);
+    }
+  }
+
+  private AudioClip getOrCreateClip(String resourcePath) {
+    return clipCache.computeIfAbsent(resourcePath, path -> {
+      URL resource = resourceOwner.getResource(path);
+      if (resource == null) {
+        return null;
+      }
+      return new AudioClip(resource.toExternalForm());
+    });
   }
 
   public void setVolume(double volume) {
