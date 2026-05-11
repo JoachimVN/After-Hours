@@ -274,10 +274,6 @@ public final class GameView implements GameViewInterface {
         if (stock == null || cell.isEmpty()) {
           return;
         }
-        if (selectedStock.get() == null
-            || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
-          notifyStockSelectionChanged();
-        }
         stockListView.getSelectionModel().select(stock);
       });
       return cell;
@@ -288,6 +284,7 @@ public final class GameView implements GameViewInterface {
       }
       if (selectedStock.get() == null
           || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
+        notifyStockSelectionChanged();
         selectedStock.set(stock);
       }
     });
