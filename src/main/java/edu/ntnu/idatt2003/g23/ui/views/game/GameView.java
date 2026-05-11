@@ -213,6 +213,7 @@ public final class GameView implements GameViewInterface {
     statusProgressArc.getStyleClass().add("status-pill-ring-progress");
 
     statusTooltip.setShowDelay(Duration.millis(120));
+    statusTooltip.setShowDuration(Duration.INDEFINITE);
     statusTooltip.getStyleClass().add("status-pill-tooltip");
 
     // ── Detail panel (right) — rebuilt on stock selection ────────────────

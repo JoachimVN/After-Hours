@@ -38,10 +38,10 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -66,9 +66,6 @@ public final class ProfileView {
       Consumer<String> onOpenStockFromPortfolio) {
 
     List<String> avatarNames = new ArrayList<>(AvatarUtil.loadSelectableAvatarNames());
-    if (avatarNames.isEmpty()) {
-      avatarNames.add("bust-in-silhouette");
-    }
     String initialAvatar = (currentAvatar == null || currentAvatar.isBlank())
         ? "bust-in-silhouette"
         : AvatarUtil.normalizeAvatarStem(currentAvatar);
@@ -168,70 +165,71 @@ public final class ProfileView {
       }
     });
 
-    TilePane avatarPicker = new TilePane();
+    List<Button> avatarButtons = new ArrayList<>();
+    GridPane avatarPicker = new GridPane();
     avatarPicker.getStyleClass().add("profile-avatar-picker");
     avatarPicker.setHgap(8);
     avatarPicker.setVgap(8);
-    avatarPicker.setPrefColumns(8);
-    avatarPicker.setPrefRows(2);
-    avatarPicker.setPrefTileWidth(38);
-    avatarPicker.setPrefTileHeight(38);
     avatarPicker.setMaxWidth(8 * 38 + 7 * 8);
-    for (String avatar : avatarNames) {
-      Button avatarBtn = new Button();
-      String pickerDisplayAvatar = AvatarUtil.getDisplayAvatarStem(avatar, chickPhaseUnlockedValue);
-      var avatarGraphic = AvatarUtil.createImageView(pickerDisplayAvatar, 25.2);
-      avatarBtn.setGraphic(avatarGraphic);
-      avatarBtn.setMinSize(38, 38);
-      avatarBtn.setPrefSize(38, 38);
-      avatarBtn.setMaxSize(38, 38);
-      avatarBtn.getStyleClass().add("profile-avatar-btn");
-      PlayerStatus requiredStatus = requiredStatusForAvatar(avatar);
-      boolean unlocked = isAvatarUnlocked(status, requiredStatus);
-      if (!unlocked) {
-        ColorAdjust grayscale = new ColorAdjust();
-        grayscale.setSaturation(-1.0);
-        avatarGraphic.setEffect(grayscale);
-        avatarGraphic.setOpacity(0.45);
-        avatarBtn.getStyleClass().add("profile-avatar-btn-locked");
-        Tooltip tooltip = new Tooltip("Unlocks at " + formatStatusName(requiredStatus));
-        tooltip.setShowDelay(Duration.millis(120));
-        tooltip.setShowDuration(Duration.seconds(20));
-        avatarBtn.setTooltip(tooltip);
-      }
-      if (avatar.equals(initialAvatar)) {
-        avatarBtn.getStyleClass().add("profile-avatar-btn-active");
-      }
-      avatarBtn.setOnAction(e -> {
-        if (!unlocked) {
-          return;
+    int selectableSlots = 16;
+    for (int row = 0; row < 2; row++) {
+      for (int col = 0; col < 8; col++) {
+        int index = row * 8 + col;
+        if (index < avatarNames.size() && index < selectableSlots) {
+          String avatar = avatarNames.get(index);
+          Button avatarBtn = new Button();
+          avatarButtons.add(avatarBtn);
+          String pickerDisplayAvatar = AvatarUtil.getDisplayAvatarStem(avatar, chickPhaseUnlockedValue);
+          var avatarGraphic = AvatarUtil.createImageView(pickerDisplayAvatar, 25.2);
+          avatarBtn.setGraphic(avatarGraphic);
+          avatarBtn.setMinSize(38, 38);
+          avatarBtn.setPrefSize(38, 38);
+          avatarBtn.setMaxSize(38, 38);
+          avatarBtn.getStyleClass().add("profile-avatar-btn");
+          PlayerStatus requiredStatus = requiredStatusForAvatar(avatar);
+          boolean unlocked = isAvatarUnlocked(status, requiredStatus);
+          if (!unlocked) {
+            ColorAdjust grayscale = new ColorAdjust();
+            grayscale.setSaturation(-1.0);
+            avatarGraphic.setEffect(grayscale);
+            avatarGraphic.setOpacity(0.45);
+            avatarBtn.getStyleClass().add("profile-avatar-btn-locked");
+            Tooltip tooltip = new Tooltip("Unlocks at " + formatStatusName(requiredStatus));
+            tooltip.setShowDelay(Duration.millis(120));
+            tooltip.setShowDuration(Duration.INDEFINITE);
+            avatarBtn.setTooltip(tooltip);
+          }
+          if (avatar.equals(initialAvatar)) {
+            avatarBtn.getStyleClass().add("profile-avatar-btn-active");
+          }
+          avatarBtn.setOnAction(e -> {
+            if (!unlocked) {
+              return;
+            }
+            avatarButtons.forEach(node -> node.getStyleClass().remove("profile-avatar-btn-active"));
+            if (avatar.equals(selectedAvatar[0])) {
+              selectedAvatar[0] = "bust-in-silhouette";
+              avatarDisplay.setGraphic(AvatarUtil.createImageView(selectedAvatar[0], 57.6));
+              avatarDisplay.setTooltip(null);
+              onAvatarChanged.accept(selectedAvatar[0]);
+              return;
+            }
+            selectedAvatar[0] = avatar;
+            String nextDisplayAvatar = AvatarUtil.getDisplayAvatarStem(avatar, chickPhaseUnlockedValue);
+            avatarDisplay.setGraphic(AvatarUtil.createImageView(nextDisplayAvatar, 57.6));
+            onAvatarChanged.accept(avatar);
+            avatarBtn.getStyleClass().add("profile-avatar-btn-active");
+          });
+          avatarPicker.add(avatarBtn, col, row);
+        } else {
+          Region slot = new Region();
+          slot.getStyleClass().add("profile-avatar-placeholder");
+          slot.setMinSize(38, 38);
+          slot.setPrefSize(38, 38);
+          slot.setMaxSize(38, 38);
+          avatarPicker.add(slot, col, row);
         }
-        avatarPicker.getChildren()
-            .forEach(node -> node.getStyleClass().remove("profile-avatar-btn-active"));
-        if (avatar.equals(selectedAvatar[0])) {
-          selectedAvatar[0] = "bust-in-silhouette";
-          avatarDisplay.setGraphic(AvatarUtil.createImageView(selectedAvatar[0], 57.6));
-          avatarDisplay.setTooltip(null);
-          onAvatarChanged.accept(selectedAvatar[0]);
-          return;
-        }
-        selectedAvatar[0] = avatar;
-        String nextDisplayAvatar = AvatarUtil.getDisplayAvatarStem(avatar, chickPhaseUnlockedValue);
-        avatarDisplay.setGraphic(AvatarUtil.createImageView(nextDisplayAvatar, 57.6));
-        onAvatarChanged.accept(avatar);
-        avatarBtn.getStyleClass().add("profile-avatar-btn-active");
-      });
-      avatarPicker.getChildren().add(avatarBtn);
-    }
-
-    int pickerSlots = 16;
-    for (int i = avatarPicker.getChildren().size(); i < pickerSlots; i++) {
-      Region slot = new Region();
-      slot.getStyleClass().add("profile-avatar-placeholder");
-      slot.setMinSize(38, 38);
-      slot.setPrefSize(38, 38);
-      slot.setMaxSize(38, 38);
-      avatarPicker.getChildren().add(slot);
+      }
     }
 
     VBox heroText = new VBox(6, profileNameField, profileSubtitle, avatarPicker);
