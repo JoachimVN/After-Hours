@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 
@@ -71,8 +72,7 @@ public final class CsvEditorView {
                              BiConsumer<List<CsvRow>, File> onSaveAs,
                              Runnable onReset) {
 
-    ObservableList<CsvRow> rows =
-        FXCollections.observableArrayList(result.getRows());
+    ObservableList<CsvRow> rows = createEditableRows(result);
 
     // Single source of truth for whether any row has an error.
     // Updated explicitly whenever rows are edited, added, or removed.
@@ -474,6 +474,24 @@ public final class CsvEditorView {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private static ObservableList<CsvRow> createEditableRows(CsvParseResult result) {
+    return FXCollections.observableArrayList(
+        result.getRows().stream()
+            .map(CsvEditorView::copyRow)
+            .collect(Collectors.toList()));
+  }
+
+  private static CsvRow copyRow(CsvRow source) {
+    CsvRow copy = new CsvRow(
+        source.getLineNumber(),
+        source.getSymbol(),
+        source.getCompany(),
+        source.getPrices(),
+        source.getErrorMessage());
+    copy.setErrorColumn(source.getErrorColumn());
+    return copy;
+  }
 
   private static void updateErrorCount(Label label, ObservableList<CsvRow> rows) {
     long errors = rows.stream().filter(CsvRow::hasError).count();

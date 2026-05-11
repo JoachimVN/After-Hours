@@ -10,6 +10,16 @@
     -fx-padding: 28;
 }
 
+.import-csv-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.import-csv-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
 .drop-zone.drag-over {
     -fx-border-color: #f5a201;
     -fx-background-color: #0e2040;
@@ -41,4 +51,22 @@
     -fx-min-width: 230;
     -fx-pref-height: 46;
     -fx-font-size: 14;
+}
+
+.import-csv-built-in-panel {
+    -fx-background-color: #07152c;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e408050;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+.import-csv-market-picker {
+    -fx-pref-width: 360;
+}
+
+.import-csv-built-in-open-button {
+    -fx-min-width: 176;
+    -fx-pref-height: 44;
+    -fx-font-size: 13;
 }

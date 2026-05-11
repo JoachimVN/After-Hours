@@ -8,16 +8,16 @@ import edu.ntnu.idatt2003.g23.model.MarketOption;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 
 public final class CustomStocksView {
@@ -28,12 +28,6 @@ public final class CustomStocksView {
                                  File initialFile) {
     BorderPane root = new BorderPane();
     root.getStyleClass().addAll("home-page", "background-overlay");
-
-    // ── Overlay for dialogs ───────────────────────────────────────────────
-    StackPane dialogOverlay = new StackPane();
-    dialogOverlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0);");
-    dialogOverlay.setMouseTransparent(true);
-    root.getChildren().add(0, dialogOverlay);
 
     // ── Top bar ──────────────────────────────────────────────────────────
     Button backButton = new Button("\u2190 Back");
@@ -212,27 +206,69 @@ public final class CustomStocksView {
     editorSection.setPadding(new Insets(12, 0, 0, 0));
 
     // ── Built-in Markets ──────────────────────────────────────────────────
-    Label builtInTitle = new Label("Or edit a built-in market:");
-    builtInTitle.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+    Label builtInTitle = new Label("Edit a built-in market");
+    builtInTitle.getStyleClass().add("setup-field-label");
 
-    HBox builtInBtnRow = new HBox(12);
-    builtInBtnRow.setAlignment(Pos.CENTER);
-    for (MarketOption market : AppConfig.BUILT_IN_MARKETS) {
-      Button marketBtn = new Button("\u270e  Edit " + market.name());
-      marketBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
-      marketBtn.setStyle("-fx-pref-height: 36; -fx-font-size: 12;");
-      marketBtn.setOnAction(e -> onEditBuiltInMarket.accept(market.csvResource()));
-      builtInBtnRow.getChildren().add(marketBtn);
-    }
+    Label builtInHint = new Label("Pick one of the bundled markets and open it in the CSV editor.");
+    builtInHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
 
-    VBox builtInSection = new VBox(8, builtInTitle, builtInBtnRow);
-    builtInSection.setAlignment(Pos.CENTER);
-    builtInSection.setPadding(new Insets(12, 0, 0, 0));
+    ComboBox<MarketOption> builtInMarketBox = new ComboBox<>();
+    builtInMarketBox.getItems().addAll(AppConfig.BUILT_IN_MARKETS);
+    builtInMarketBox.getStyleClass().addAll("market-combo-box", "import-csv-market-picker");
+    builtInMarketBox.setPromptText("Choose a built-in market");
+    builtInMarketBox.setMaxWidth(Double.MAX_VALUE);
+    builtInMarketBox.setButtonCell(marketCell());
+    builtInMarketBox.setCellFactory(listView -> marketCell());
+
+    Button editBuiltInBtn = new Button("\u270e  Open in Editor");
+    editBuiltInBtn.getStyleClass().addAll("secondary-button", "import-csv-built-in-open-button");
+    editBuiltInBtn.setDisable(true);
+
+    Label builtInDesc = new Label("Choose a market to load its default stock data.");
+    builtInDesc.getStyleClass().add("market-description-label");
+    builtInDesc.setWrapText(true);
+    builtInDesc.setMaxWidth(580);
+
+    builtInMarketBox.valueProperty().addListener((obs, oldValue, newValue) -> {
+      editBuiltInBtn.setDisable(newValue == null);
+      builtInDesc.setText(newValue == null
+          ? "Choose a market to load its default stock data."
+          : newValue.description());
+    });
+
+    editBuiltInBtn.setOnAction(e -> {
+      MarketOption selectedMarket = builtInMarketBox.getValue();
+      if (selectedMarket != null) {
+        onEditBuiltInMarket.accept(selectedMarket.csvResource());
+      }
+    });
+
+    HBox builtInControls = new HBox(14, builtInMarketBox, editBuiltInBtn);
+    builtInControls.setAlignment(Pos.CENTER_LEFT);
+    HBox.setHgrow(builtInMarketBox, Priority.ALWAYS);
+
+    VBox builtInSection = new VBox(10, builtInTitle, builtInHint, builtInControls, builtInDesc);
+    builtInSection.getStyleClass().add("import-csv-built-in-panel");
+    builtInSection.setAlignment(Pos.CENTER_LEFT);
+    builtInSection.setMaxWidth(580);
+    builtInSection.setPadding(new Insets(18));
 
     VBox page = new VBox(22, pageTitle, dropZone, continueBtn, reqPanel, editorSection, builtInSection);
     page.setAlignment(Pos.CENTER);
+    page.setMaxWidth(700);
     page.setPadding(new Insets(0, 0, 40, 0));
-    root.setCenter(page);
+
+    HBox centeringBox = new HBox(page);
+    centeringBox.setAlignment(Pos.TOP_CENTER);
+    centeringBox.setPadding(new Insets(0, 32, 40, 32));
+
+    ScrollPane scroll = new ScrollPane(centeringBox);
+    scroll.setFitToWidth(true);
+    scroll.setFitToHeight(false);
+    scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    scroll.getStyleClass().add("import-csv-scroll");
+
+    root.setCenter(scroll);
 
     selectFile.accept(initialFile);
 
@@ -248,6 +284,26 @@ public final class CustomStocksView {
     HBox row = new HBox(12, colLabel, descLabel);
     row.setAlignment(Pos.CENTER_LEFT);
     return row;
+  }
+
+  private static ListCell<MarketOption> marketCell() {
+    return new ListCell<>() {
+      @Override
+      protected void updateItem(MarketOption market, boolean empty) {
+        super.updateItem(market, empty);
+        if (empty || market == null) {
+          setGraphic(null);
+          setText(null);
+        } else {
+          Label name = new Label(market.name());
+          name.getStyleClass().add("market-combo-name");
+          Label desc = new Label(market.description());
+          desc.getStyleClass().add("market-combo-desc");
+          setGraphic(new VBox(2, name, desc));
+          setText(null);
+        }
+      }
+    };
   }
 
   private static VBox buildExample() {
