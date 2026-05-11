@@ -325,7 +325,9 @@
     -fx-min-width: 16;
     -fx-min-height: 16;
     -fx-alignment: center;
+    -fx-label-padding: 0;
     -fx-padding: 0;
+    -fx-translate-x: -2;
 }
 
 .settings-performance-help:hover {

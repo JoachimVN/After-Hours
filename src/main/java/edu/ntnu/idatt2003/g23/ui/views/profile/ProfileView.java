@@ -330,7 +330,7 @@ public final class ProfileView {
         levelingGuide.setText(requirement.statusName() + ": "
           + (weeksRemaining == 0 && growthRemaining.compareTo(BigDecimal.ZERO) == 0
               ? "Target met."
-              : "Remaining " + weeksRemaining + " week(s) and "
+              : "Remaining " + weeksRemaining + " week(s) traded and "
                   + growthRemaining.stripTrailingZeros().toPlainString() + "x growth."));
     };
 

@@ -463,8 +463,9 @@ public final class SettingsView {
     helpLabel.getStyleClass().addAll("settings-default-tag", "settings-performance-help");
 
     Label performanceHelpText = new Label(
-        "Performance mode keeps large saves smooth by virtualizing the stock list and capping "
-            + "history data. Increase Max History Weeks for more detail, or lower it for better speed.");
+      "Performance mode helps the game stay smooth on larger saves. It loads the stock list "
+        + "more efficiently and keeps less history in memory. Turn it on for faster scrolling "
+        + "and lower lag, or raise Max History Weeks if you want more historical detail.");
     performanceHelpText.getStyleClass().addAll("settings-sublabel", "settings-performance-help-text");
     performanceHelpText.setWrapText(true);
     performanceHelpText.setMaxWidth(520);

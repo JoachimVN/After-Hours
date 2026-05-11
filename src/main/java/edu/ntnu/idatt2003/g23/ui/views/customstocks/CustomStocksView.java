@@ -209,7 +209,7 @@ public final class CustomStocksView {
     Label builtInTitle = new Label("Edit a built-in market");
     builtInTitle.getStyleClass().add("setup-field-label");
 
-    Label builtInHint = new Label("Pick one of the bundled markets and open it in the CSV editor.");
+    Label builtInHint = new Label("Pick one of the default markets and open it in the CSV editor.");
     builtInHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
 
     ComboBox<MarketOption> builtInMarketBox = new ComboBox<>();
