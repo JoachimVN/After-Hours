@@ -117,6 +117,7 @@ public final class GameView implements GameViewInterface {
   private final FilteredList<Stock> filteredStocks;
   private final ObservableList<Share> portfolioItems;
   private final ObjectProperty<Stock> selectedStock;
+  private final TableView<Share> portfolioTable;
 
   private final TextField searchField;
   private final boolean performanceMode;
@@ -406,7 +407,7 @@ public final class GameView implements GameViewInterface {
     Label portTitle = new Label("Portfolio");
     portTitle.getStyleClass().add("game-panel-title");
 
-    TableView<Share> portfolioTable =
+    portfolioTable =
         buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
           if (selectedShareStock == null) {
             return;
@@ -814,6 +815,8 @@ public final class GameView implements GameViewInterface {
   }
 
   public void updateData() {
+    ShareSelectionKey selectedShareKey = capturePortfolioSelection();
+
     PlayerStatus status = gameController.getPlayerStatus();
     BigDecimal overallProgress = gameController.getPlayerStatusProgress();
     BigDecimal weeksProgress = gameController.getPlayerWeeksProgress();
@@ -835,8 +838,47 @@ public final class GameView implements GameViewInterface {
     netWorthVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
     updateProfileIdentityButton();
     portfolioItems.setAll(gameController.getPortfolioShares());
+    if (!portfolioTable.getSortOrder().isEmpty()) {
+      portfolioTable.sort();
+    }
+    restorePortfolioSelection(selectedShareKey);
+    portfolioTable.refresh();
     applyFilter();
     rebuildDetail();
+  }
+
+  private ShareSelectionKey capturePortfolioSelection() {
+    Share selected = portfolioTable.getSelectionModel().getSelectedItem();
+    if (selected == null || selected.getStock() == null) {
+      return null;
+    }
+    return new ShareSelectionKey(
+        selected.getStock().getSymbol(),
+        selected.getQuantity(),
+        selected.getPurchasePrice());
+  }
+
+  private void restorePortfolioSelection(ShareSelectionKey selectedShareKey) {
+    if (selectedShareKey == null) {
+      return;
+    }
+
+    for (int i = 0; i < portfolioItems.size(); i++) {
+      Share share = portfolioItems.get(i);
+      if (share.getStock() == null) {
+        continue;
+      }
+      boolean symbolMatch = selectedShareKey.symbol().equals(share.getStock().getSymbol());
+      boolean quantityMatch = selectedShareKey.quantity().compareTo(share.getQuantity()) == 0;
+      boolean priceMatch = selectedShareKey.purchasePrice().compareTo(share.getPurchasePrice()) == 0;
+      if (symbolMatch && quantityMatch && priceMatch) {
+        portfolioTable.getSelectionModel().select(i);
+        return;
+      }
+    }
+  }
+
+  private record ShareSelectionKey(String symbol, BigDecimal quantity, BigDecimal purchasePrice) {
   }
 
   private void updateProfileIdentityButton() {
