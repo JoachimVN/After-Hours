@@ -184,7 +184,7 @@
                 <argument>--description</argument>
                 <argument>After Hours stock trading game</argument>
                 <argument>--icon</argument>
-                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.ico</argument>
+                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.ico</argument>
                 <argument>--input</argument>
                 <argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument>
@@ -229,7 +229,7 @@
                 <argument>--description</argument>
                 <argument>After Hours stock trading game</argument>
                 <argument>--icon</argument>
-                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
+                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.png</argument>
                 <argument>--input</argument>
                 <argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument>
@@ -255,36 +255,10 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>jpackage</executable>
+              <executable>sh</executable>
               <arguments>
-                <argument>--type</argument>
-                <argument>app-image</argument>
-                <argument>--name</argument>
-                <argument>After Hours</argument>
-                <argument>--app-version</argument>
-                <argument>${project.version}</argument>
-                <argument>--vendor</argument>
-                <argument>NTNU</argument>
-                <argument>--description</argument>
-                <argument>After Hours stock trading game</argument>
-                <argument>--icon</argument>
-                <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
-                <argument>--input</argument>
-                <argument>${project.build.directory}/jpackage-input</argument>
-                <argument>--main-jar</argument>
-                <argument>app-fat.jar</argument>
-                <argument>--main-class</argument>
-                <argument>edu.ntnu.idatt2003.g23.App</argument>
-                <argument>--module-path</argument>
-                <argument>${project.build.directory}/javafx-mods</argument>
-                <argument>--add-modules</argument>
-                <argument>javafx.controls,javafx.media</argument>
-                <argument>--java-options</argument>
-                <argument>--enable-native-access=javafx.graphics,javafx.media</argument>
-                <argument>--java-options</argument>
-                <argument>-Dglass.mac.uiScale=1.25</argument>
-                <argument>--dest</argument>
-                <argument>${project.build.directory}/dist</argument>
+                <argument>-c</argument>
+                <argument>rm -rf "${java.io.tmpdir}/afterhours-dist/After Hours.app" &amp;&amp; jpackage --type app-image --name "After Hours" --app-version ${project.version} --vendor NTNU --description "After Hours stock trading game" --icon "${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.icns" --input "${project.build.directory}/jpackage-input" --main-jar app-fat.jar --main-class edu.ntnu.idatt2003.g23.App --module-path "${project.build.directory}/javafx-mods" --add-modules javafx.controls,javafx.media --java-options '--enable-native-access=javafx.graphics,javafx.media' --java-options '-Dglass.mac.uiScale=1.25' --dest "${java.io.tmpdir}/afterhours-dist" &amp;&amp; rm -rf "${project.build.directory}/dist/After Hours.app" &amp;&amp; cp -R "${java.io.tmpdir}/afterhours-dist/After Hours.app" "${project.build.directory}/dist/"</argument>
               </arguments>
             </configuration>
           </execution>
@@ -306,7 +280,13 @@
       </properties>
     </profile>
     <profile>
-      <id>mac</id>
+      <id>mac-arm64</id>
+      <properties>
+        <javafx.platform.classifier>mac-aarch64</javafx.platform.classifier>
+      </properties>
+    </profile>
+    <profile>
+      <id>mac-x64</id>
       <properties>
         <javafx.platform.classifier>mac</javafx.platform.classifier>
       </properties>
