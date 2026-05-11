@@ -146,6 +146,9 @@
               <target>
                 <mkdir />
                 <copy />
+                <delete />
+                <mkdir />
+                <copy />
                 <copy />
                 <copy />
                 <chmod />
@@ -183,7 +186,7 @@
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.ico</argument>
                 <argument>--input</argument>
-                <argument>${project.build.directory}</argument>
+                <argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument>
                 <argument>app-fat.jar</argument>
                 <argument>--main-class</argument>
@@ -228,7 +231,7 @@
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
                 <argument>--input</argument>
-                <argument>${project.build.directory}</argument>
+                <argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument>
                 <argument>app-fat.jar</argument>
                 <argument>--main-class</argument>
@@ -267,7 +270,7 @@
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
                 <argument>--input</argument>
-                <argument>${project.build.directory}</argument>
+                <argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument>
                 <argument>app-fat.jar</argument>
                 <argument>--main-class</argument>

@@ -206,6 +206,10 @@
                 <mkdir dir="${project.build.directory}/dist"/>
                 <copy file="${project.build.directory}/app-fat.jar"
                       tofile="${project.build.directory}/dist/AfterHours.jar"/>
+                  <delete dir="${project.build.directory}/jpackage-input"/>
+                  <mkdir dir="${project.build.directory}/jpackage-input"/>
+                  <copy file="${project.build.directory}/app-fat.jar"
+                    tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
                 <copy file="${project.basedir}/src/main/scripts/AfterHours.bat"
                       todir="${project.build.directory}/dist"/>
                 <copy file="${project.basedir}/src/main/scripts/AfterHours.sh"
@@ -248,7 +252,7 @@
                 <argument>--description</argument><argument>After Hours stock trading game</argument>
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.ico</argument>
-                <argument>--input</argument><argument>${project.build.directory}</argument>
+                <argument>--input</argument><argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument><argument>app-fat.jar</argument>
                 <argument>--main-class</argument><argument>edu.ntnu.idatt2003.g23.App</argument>
                 <argument>--module-path</argument>
@@ -281,7 +285,7 @@
                 <argument>--description</argument><argument>After Hours stock trading game</argument>
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
-                <argument>--input</argument><argument>${project.build.directory}</argument>
+                <argument>--input</argument><argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument><argument>app-fat.jar</argument>
                 <argument>--main-class</argument><argument>edu.ntnu.idatt2003.g23.App</argument>
                 <argument>--module-path</argument>
@@ -309,7 +313,7 @@
                 <argument>--description</argument><argument>After Hours stock trading game</argument>
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo.png</argument>
-                <argument>--input</argument><argument>${project.build.directory}</argument>
+                <argument>--input</argument><argument>${project.build.directory}/jpackage-input</argument>
                 <argument>--main-jar</argument><argument>app-fat.jar</argument>
                 <argument>--main-class</argument><argument>edu.ntnu.idatt2003.g23.App</argument>
                 <argument>--module-path</argument>
