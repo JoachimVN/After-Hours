@@ -241,6 +241,16 @@ public final class GameView implements GameViewInterface {
     this.stockListView.setFocusTraversable(false);
     this.stockListView.setCellFactory(lv -> {
       ListCell<Stock> cell = new ListCell<>() {
+        private void syncSelectedStyle() {
+          Node graphic = getGraphic();
+          if (graphic instanceof HBox card) {
+            card.getStyleClass().remove("stock-card-selected");
+            if (isSelected()) {
+              card.getStyleClass().add("stock-card-selected");
+            }
+          }
+        }
+
         @Override
         protected void updateItem(Stock stock, boolean empty) {
           super.updateItem(stock, empty);
@@ -249,7 +259,14 @@ public final class GameView implements GameViewInterface {
             setText(null);
           } else {
             setGraphic(buildStockCard(stock));
+            syncSelectedStyle();
           }
+        }
+
+        @Override
+        public void updateSelected(boolean selected) {
+          super.updateSelected(selected);
+          syncSelectedStyle();
         }
       };
       cell.setOnMouseClicked(e -> {
@@ -261,9 +278,18 @@ public final class GameView implements GameViewInterface {
             || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
           notifyStockSelectionChanged();
         }
-        selectedStock.set(stock);
+        stockListView.getSelectionModel().select(stock);
       });
       return cell;
+    });
+    this.stockListView.getSelectionModel().selectedItemProperty().addListener((obs, old, stock) -> {
+      if (stock == null) {
+        return;
+      }
+      if (selectedStock.get() == null
+          || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
+        selectedStock.set(stock);
+      }
     });
 
     // ── Search field (declared early for closure access) ─────────────────
@@ -299,7 +325,13 @@ public final class GameView implements GameViewInterface {
       }
       rebuildDetail();
       if (performanceMode) {
-        stockListView.refresh();
+        Stock selectedInList = stockListView.getSelectionModel().getSelectedItem();
+        if (stock == null) {
+          stockListView.getSelectionModel().clearSelection();
+        } else if (selectedInList == null
+            || !stock.getSymbol().equals(selectedInList.getSymbol())) {
+          stockListView.getSelectionModel().select(stock);
+        }
       } else {
         refreshSelectedStockCardStyles();
       }
@@ -803,15 +835,26 @@ public final class GameView implements GameViewInterface {
     }
 
     portfolioDividerRatio = clamp(portfolioDividerRatio, minRatio, maxRatio);
-    double detailHeight = Math.max(minDetailHeight, usableHeight * portfolioDividerRatio);
-    double portfolioHeight = Math.max(0, usableHeight * (1.0 - portfolioDividerRatio));
+    double detailHeight = snapToPixel(Math.max(minDetailHeight, usableHeight * portfolioDividerRatio));
+    double portfolioHeight = snapToPixel(Math.max(minPortfolioHeight, usableHeight - detailHeight));
+
+    // Keep total fixed to the available height to avoid 1px oscillation during layout passes.
+    double snappedUsable = snapToPixel(usableHeight);
+    double totalHeight = detailHeight + portfolioHeight;
+    if (totalHeight != snappedUsable) {
+      portfolioHeight = Math.max(minPortfolioHeight, portfolioHeight + (snappedUsable - totalHeight));
+    }
 
     detailArea.setMinHeight(minDetailHeight);
     detailArea.setPrefHeight(detailHeight);
     detailArea.setMaxHeight(detailHeight);
-    portfolioSection.setMinHeight(portfolioHeight);
+    portfolioSection.setMinHeight(minPortfolioHeight);
     portfolioSection.setPrefHeight(portfolioHeight);
     portfolioSection.setMaxHeight(portfolioHeight);
+  }
+
+  private static double snapToPixel(double value) {
+    return Math.max(0, Math.rint(value));
   }
 
   public void updateData() {
@@ -1070,6 +1113,7 @@ public final class GameView implements GameViewInterface {
       if (performanceMode) {
         for (int i = 0; i < sortedStocks.size(); i++) {
           if (sortedStocks.get(i).getSymbol().equals(symbol)) {
+            stockListView.getSelectionModel().select(i);
             stockListView.scrollTo(i);
             break;
           }
@@ -2954,7 +2998,7 @@ public final class GameView implements GameViewInterface {
     card.setPadding(new Insets(12, 14, 12, 14));
     card.setUserData(stock.getSymbol());
 
-    if (stock.equals(selectedStock.get())) {
+    if (!performanceMode && stock.equals(selectedStock.get())) {
       card.getStyleClass().add("stock-card-selected");
     }
 
