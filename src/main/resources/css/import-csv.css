@@ -63,6 +63,20 @@
 
 .import-csv-market-picker {
     -fx-pref-width: 360;
+    -fx-text-fill: #d7e7fb;
+    -fx-prompt-text-fill: rgba(215, 231, 251, 0.88);
+}
+
+.import-csv-market-picker > .list-cell {
+    -fx-text-fill: #d7e7fb;
+}
+
+.import-csv-market-picker .list-cell {
+    -fx-text-fill: #d7e7fb;
+}
+
+.import-csv-market-picker .label {
+    -fx-text-fill: #d7e7fb;
 }
 
 .import-csv-built-in-open-button {

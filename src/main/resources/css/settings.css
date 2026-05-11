@@ -230,19 +230,28 @@
 /* ── Save Game button ────────────────────────────────────────────────────── */
 
 .settings-save-game-btn {
-    -fx-background-color: #1a6e2e;
-    -fx-text-fill: white;
+    -fx-background-color: linear-gradient(to bottom, rgba(12, 29, 63, 0.94), rgba(7, 17, 39, 0.98));
+    -fx-text-fill: #edf5ff;
     -fx-font-size: 14;
     -fx-font-weight: bold;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
-    -fx-padding: 12 20 12 20;
+    -fx-background-radius: 11;
+    -fx-border-radius: 11;
+    -fx-border-color: rgba(86, 128, 191, 0.56);
+    -fx-border-width: 1;
+    -fx-padding: 12 18 12 18;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(26,110,46,0.4), 8, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(2, 7, 20, 0.58), 18, 0.18, 0, 4);
 }
 
 .settings-save-game-btn:hover {
-    -fx-background-color: #25963f;
+    -fx-background-color: linear-gradient(to bottom, rgba(18, 44, 91, 0.98), rgba(11, 26, 56, 0.98));
+    -fx-border-color: rgba(245, 162, 1, 0.68);
+    -fx-text-fill: #fff3d6;
+}
+
+.settings-save-game-btn:pressed {
+    -fx-background-color: linear-gradient(to bottom, rgba(8, 20, 43, 1.0), rgba(5, 13, 29, 1.0));
+    -fx-translate-y: 1;
 }
 
 /* ── Keybind cheat sheet ─────────────────────────────────────────────────── */
