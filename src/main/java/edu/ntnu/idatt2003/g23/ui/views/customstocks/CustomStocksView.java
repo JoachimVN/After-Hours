@@ -3,6 +3,8 @@ package edu.ntnu.idatt2003.g23.ui.views.customstocks;
 import java.io.File;
 import java.util.function.Consumer;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
+import edu.ntnu.idatt2003.g23.model.MarketOption;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -11,16 +13,27 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 
 public final class CustomStocksView {
 
   public static BorderPane build(Runnable onBack, Runnable onMakeOwn,
                                  Consumer<File> onEditCsv, Consumer<File> onContinue,
+                                 Consumer<String> onEditBuiltInMarket,
                                  File initialFile) {
     BorderPane root = new BorderPane();
     root.getStyleClass().addAll("home-page", "background-overlay");
+
+    // ── Overlay for dialogs ───────────────────────────────────────────────
+    StackPane dialogOverlay = new StackPane();
+    dialogOverlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0);");
+    dialogOverlay.setMouseTransparent(true);
+    root.getChildren().add(0, dialogOverlay);
 
     // ── Top bar ──────────────────────────────────────────────────────────
     Button backButton = new Button("\u2190 Back");
@@ -198,7 +211,25 @@ public final class CustomStocksView {
     editorSection.setAlignment(Pos.CENTER);
     editorSection.setPadding(new Insets(12, 0, 0, 0));
 
-    VBox page = new VBox(22, pageTitle, dropZone, continueBtn, reqPanel, editorSection);
+    // ── Built-in Markets ──────────────────────────────────────────────────
+    Label builtInTitle = new Label("Or edit a built-in market:");
+    builtInTitle.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+
+    HBox builtInBtnRow = new HBox(12);
+    builtInBtnRow.setAlignment(Pos.CENTER);
+    for (MarketOption market : AppConfig.BUILT_IN_MARKETS) {
+      Button marketBtn = new Button("\u270e  Edit " + market.name());
+      marketBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
+      marketBtn.setStyle("-fx-pref-height: 36; -fx-font-size: 12;");
+      marketBtn.setOnAction(e -> onEditBuiltInMarket.accept(market.csvResource()));
+      builtInBtnRow.getChildren().add(marketBtn);
+    }
+
+    VBox builtInSection = new VBox(8, builtInTitle, builtInBtnRow);
+    builtInSection.setAlignment(Pos.CENTER);
+    builtInSection.setPadding(new Insets(12, 0, 0, 0));
+
+    VBox page = new VBox(22, pageTitle, dropZone, continueBtn, reqPanel, editorSection, builtInSection);
     page.setAlignment(Pos.CENTER);
     page.setPadding(new Insets(0, 0, 40, 0));
     root.setCenter(page);

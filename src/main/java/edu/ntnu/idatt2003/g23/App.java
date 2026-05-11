@@ -3,6 +3,8 @@ package edu.ntnu.idatt2003.g23;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -287,6 +289,7 @@ public class App extends Application {
         () -> openCsvEditorFromImport(new CsvParseResult(List.of()), name, cash, selectedFile),
         file -> openCsvEditorFromImport(file, name, cash),
         file -> startGameWithCsv(name, cash, file),
+        csvResource -> openCsvEditorFromBuiltInMarket(csvResource, name, cash),
         selectedFile);
     navigateKeepMusic(importPage);
     fadeInPage(importPage);
@@ -337,7 +340,8 @@ public class App extends Application {
           result,
           withBack(this::goHomeKeepMusic),
           rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
-          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
+          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
+          () -> openCsvEditor(result, name, cash));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
     };
@@ -371,7 +375,8 @@ public class App extends Application {
           result,
           withBack(() -> goToCustomStocks(name, cash, selectedFile)),
           rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
-          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
+          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
+          () -> openCsvEditorFromImport(result, name, cash, selectedFile));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
     };
@@ -380,6 +385,41 @@ public class App extends Application {
     } else {
       doOpen.run();
     }
+  }
+
+  private void openCsvEditorFromBuiltInMarket(String csvResource, String name, double cash) {
+    runWithLoadingOverlay(
+        "Loading Market",
+        "Parsing stock data...",
+        () -> {
+          try (InputStream is = getClass().getClassLoader().getResourceAsStream(csvResource)) {
+            if (is == null) {
+              throw new IllegalStateException("Built-in market resource not found: " + csvResource);
+            }
+            return StockCsvLoader.parseWithErrors(new InputStreamReader(is, StandardCharsets.UTF_8));
+          } catch (IOException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+          }
+        },
+        result -> {
+          LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
+          Runnable doOpen = () -> {
+            Parent editorPage = CsvEditorView.build(
+                result,
+                withBack(() -> goToCustomStocks(name, cash, null)),
+                rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, AppConfig.marketNameFor(csvResource)),
+                (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
+                () -> openCsvEditorFromBuiltInMarket(csvResource, name, cash));
+            navigateKeepMusic(editorPage);
+            fadeInPage(editorPage);
+          };
+          if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+            overlayService.showLargeFileWarning(stats, doOpen);
+          } else {
+            doOpen.run();
+          }
+        },
+        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
   }
 
   private void saveCsvRowsAndStartGame(String name, double cash,

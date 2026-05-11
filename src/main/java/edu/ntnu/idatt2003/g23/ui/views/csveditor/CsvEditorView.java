@@ -64,10 +64,12 @@ public final class CsvEditorView {
    * @param onSaveAs   called with the validated row list and the chosen
    *                   destination file when the user chooses "Save As &amp; Continue";
    *                   the controller is responsible for writing and starting the game
+   * @param onReset    called when the user clicks "Reset to Defaults" to reload original data
    */
   public static Parent build(CsvParseResult result, Runnable onCancel,
                              Consumer<List<CsvRow>> onContinue,
-                             BiConsumer<List<CsvRow>, File> onSaveAs) {
+                             BiConsumer<List<CsvRow>, File> onSaveAs,
+                             Runnable onReset) {
 
     ObservableList<CsvRow> rows =
         FXCollections.observableArrayList(result.getRows());
@@ -404,6 +406,12 @@ public final class CsvEditorView {
       refreshState.run();
     });
 
+    // "Reset to Defaults" — reloads the original parse result
+    Button resetBtn = new Button("\u27F3  Reset to Defaults");
+    resetBtn.getStyleClass().addAll("secondary-button", "csv-skip-button");
+    resetBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+    resetBtn.setOnAction(e -> onReset.run());
+
     // "Continue without saving" — starts game in memory, no file picker
     Button continueBtn = new Button("\u25B6  Continue (no save)");
     continueBtn.getStyleClass().add("secondary-button");
@@ -440,7 +448,7 @@ public final class CsvEditorView {
     HBox.setHgrow(bottomSpacer, Priority.ALWAYS);
 
     HBox bottomBar =
-        new HBox(12, hintLabel, addRowBtn, bottomSpacer, skipAllBtn, continueBtn, saveBtn);
+        new HBox(12, hintLabel, addRowBtn, resetBtn, bottomSpacer, skipAllBtn, continueBtn, saveBtn);
     bottomBar.setAlignment(Pos.CENTER_LEFT);
     bottomBar.setPadding(new Insets(12, 32, 24, 32));
 
