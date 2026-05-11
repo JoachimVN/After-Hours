@@ -35,6 +35,18 @@ public class SfxController {
 
   public SfxController(Class<?> resourceOwner) {
     this.resourceOwner = resourceOwner;
+    // Warm up audio subsystem on a separate thread to avoid first-play delay on macOS
+    new Thread(() -> {
+      try {
+        Thread.sleep(100);
+        String path = resourceOwner.getResource(SELECT).toExternalForm();
+        MediaPlayer warmup = new MediaPlayer(new Media(path));
+        warmup.setVolume(0.0);
+        warmup.play();
+        warmup.setOnEndOfMedia(warmup::dispose);
+      } catch (Exception ignored) {
+      }
+    }, "AudioWarmup").start();
   }
 
   /**

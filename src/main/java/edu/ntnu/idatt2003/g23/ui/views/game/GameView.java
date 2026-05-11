@@ -432,7 +432,7 @@ public final class GameView implements GameViewInterface {
 
     VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockListNode);
     leftPanel.getStyleClass().add("game-left-panel");
-    leftPanel.setMinWidth(160);
+    leftPanel.setMinWidth(300);
     leftPanel.setMaxWidth(600);
 
     // ── Portfolio table (bottom of right panel) ──────────────────────────
@@ -463,7 +463,7 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setMinHeight(80);
+    portfolioTable.setMinHeight(160);
     VBox.setVgrow(portfolioTable, Priority.ALWAYS);
 
     VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
