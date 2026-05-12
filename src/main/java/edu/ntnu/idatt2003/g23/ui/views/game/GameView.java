@@ -91,10 +91,10 @@ public final class GameView implements GameViewInterface {
   private static final String ERROR_CONTAINER_KEY = "errorContainer";
   private static final String ERROR_CONTAINER_CLIP_KEY = "errorContainerClip";
   private static final Duration INLINE_ERROR_SIZE_ANIM = Duration.millis(220);
-  private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(2.2);
-  private static final Duration INLINE_ERROR_FADE = Duration.millis(420);
+  private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(4.0);
+  private static final Duration INLINE_ERROR_FADE = Duration.millis(600);
   private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
-  private static final Duration POPUP_ERROR_FADE = Duration.millis(320);
+  private static final Duration POPUP_ERROR_FADE = Duration.millis(300);
   private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
@@ -2352,7 +2352,8 @@ public final class GameView implements GameViewInterface {
     String[] txChipKeys = {"ALL", "BUY", "SELL"};
     String[] txChipLabels = {"All", "Buy", "Sell"};
     HBox txFilterRow = new HBox(6);
-    txFilterRow.getStyleClass().add("stock-filter-row");
+    txFilterRow.getStyleClass().addAll("stock-filter-row", "history-filter-row");
+    txFilterRow.setAlignment(Pos.CENTER_LEFT);
 
     applyTxFilter[0] = () -> {
       String lower = txSearch.getText() == null ? "" : txSearch.getText().trim().toLowerCase();
@@ -2545,7 +2546,7 @@ public final class GameView implements GameViewInterface {
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
     Label txSortLabel = new Label("Sort by:");
-    txSortLabel.getStyleClass().add("stock-row-section-label");
+    txSortLabel.getStyleClass().addAll("stock-row-section-label", "history-sort-label");
 
     HBox controlsRow = new HBox(10, txSearch, txSortLabel, txFilterRow);
     controlsRow.getStyleClass().add("history-controls-row");

@@ -1489,6 +1489,21 @@
     -fx-border-color: rgba(30, 64, 128, 0.20);
     -fx-border-width: 0 0 1 0;
     -fx-background-color: rgba(7, 12, 32, 0.60);
+    -fx-alignment: center-left;
+}
+
+.history-sort-label {
+    -fx-padding: 0;
+    -fx-translate-y: 1px;
+}
+
+.history-filter-row {
+    -fx-alignment: center-left;
+}
+
+.history-filter-row .stock-filter-chip {
+    -fx-min-height: 28px;
+    -fx-padding: 6 8 6 8;
 }
 
 .history-table {
