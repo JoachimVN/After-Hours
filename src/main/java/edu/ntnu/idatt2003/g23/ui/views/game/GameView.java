@@ -2119,12 +2119,13 @@ public final class GameView implements GameViewInterface {
     String[] tabRef = {"1W"};
     Button tab1w = new Button("1W");
     Button tab4w = new Button("4W");
+    Button tab10w = new Button("10W");
     Button tabAll = new Button("All");
-    for (Button t : new Button[] {tab1w, tab4w, tabAll}) {
+    for (Button t : new Button[] {tab1w, tab4w, tab10w, tabAll}) {
       t.getStyleClass().add("movers-tab");
     }
     tab1w.getStyleClass().add("movers-tab-active");
-    HBox tabBar = new HBox(4, tab1w, tab4w, tabAll);
+    HBox tabBar = new HBox(4, tab1w, tab4w, tab10w, tabAll);
     tabBar.getStyleClass().add("movers-tab-bar");
 
     Runnable[] dismissRef = {null};
@@ -2135,6 +2136,7 @@ public final class GameView implements GameViewInterface {
     rebuildRef[0] = () -> {
       int weeks = switch (tabRef[0]) {
         case "4W" -> 4;
+        case "10W" -> 10;
         case "All" -> -1;
         default -> 1;
       };
@@ -2168,6 +2170,16 @@ public final class GameView implements GameViewInterface {
       tabRef[0] = "4W";
       tab4w.getStyleClass().add("movers-tab-active");
       tab1w.getStyleClass().remove("movers-tab-active");
+      tab10w.getStyleClass().remove("movers-tab-active");
+      tabAll.getStyleClass().remove("movers-tab-active");
+      rebuildRef[0].run();
+    });
+    tab10w.setOnAction(ev -> {
+      notifyPanelOpen();
+      tabRef[0] = "10W";
+      tab10w.getStyleClass().add("movers-tab-active");
+      tab1w.getStyleClass().remove("movers-tab-active");
+      tab4w.getStyleClass().remove("movers-tab-active");
       tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
     });
@@ -2177,6 +2189,7 @@ public final class GameView implements GameViewInterface {
       tabAll.getStyleClass().add("movers-tab-active");
       tab1w.getStyleClass().remove("movers-tab-active");
       tab4w.getStyleClass().remove("movers-tab-active");
+      tab10w.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
     });
 
