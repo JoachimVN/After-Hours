@@ -3256,19 +3256,46 @@ public final class GameView implements GameViewInterface {
         gc.setLineWidth(1.5);
         gc.strokeOval(cx - 3.5, cy - 3.5, 7, 7);
         // Price chip near top of chart
-        String chipTxt = "Week " + (firstHistoryWeek + hi) + "  "
+        String weeklyChangeText = "";
+        Color weeklyChangeColor = Color.web("#8aa2c8", 0.90);
+        if (hi > 0 && prices.get(hi - 1).compareTo(BigDecimal.ZERO) != 0) {
+          BigDecimal weeklyPct = prices.get(hi).subtract(prices.get(hi - 1))
+              .divide(prices.get(hi - 1), 4, RoundingMode.HALF_UP)
+              .multiply(BigDecimal.valueOf(100))
+              .setScale(2, RoundingMode.HALF_UP);
+          if (weeklyPct.compareTo(BigDecimal.ZERO) != 0) {
+            String pctSign = weeklyPct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+            weeklyChangeText = pctSign + weeklyPct.toPlainString() + "%";
+            weeklyChangeColor = weeklyPct.compareTo(BigDecimal.ZERO) > 0
+                ? Color.web("#4ecb71", 0.95)
+                : Color.web("#e05a5a", 0.95);
+          }
+        }
+        String chipPrefix = "Week " + (firstHistoryWeek + hi) + "  "
           + CurrencyFormatter.format(prices.get(hi));
-        gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
-        double tw = chipTxt.length() * 6.0;
+        String chipSuffix = "";
+        javafx.scene.text.Font chipFont =
+            javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10);
+        gc.setFont(chipFont);
+        Text measureText = new Text();
+        measureText.setFont(chipFont);
+        measureText.setBoundsType(TextBoundsType.VISUAL);
+        measureText.setText(chipPrefix);
+        double prefixWidth = measureText.getLayoutBounds().getWidth();
+        measureText.setText(weeklyChangeText);
+        double pctWidth = measureText.getLayoutBounds().getWidth();
+        measureText.setText(chipSuffix);
+        double suffixWidth = measureText.getLayoutBounds().getWidth();
+        double pctGap = weeklyChangeText.isEmpty() ? 0.0 : 8.0;
+        double tw = prefixWidth + pctGap + pctWidth + suffixWidth;
         double chipX = Math.min(cx + 8, w - tw - 12);
         double chipY = padT + 2;
-        gc.setFill(Color.web("#060d20", 0.88));
-        gc.fillRoundRect(chipX - 5, chipY - 3, tw + 10, 16, 6, 6);
-        gc.setStroke(Color.web("#ffffff", 0.09));
-        gc.setLineWidth(0.5);
-        gc.strokeRoundRect(chipX - 5, chipY - 3, tw + 10, 16, 6, 6);
         gc.setFill(Color.web("#e8d8b0", 0.90));
-        gc.fillText(chipTxt, chipX, chipY + 11);
+        gc.fillText(chipPrefix, chipX, chipY + 11);
+        gc.setFill(weeklyChangeColor);
+        gc.fillText(weeklyChangeText, chipX + prefixWidth + pctGap, chipY + 11);
+        gc.setFill(Color.web("#e8d8b0", 0.90));
+        gc.fillText(chipSuffix, chipX + prefixWidth + pctGap + pctWidth, chipY + 11);
       }
 
       // Pre-compute which weeks have buys, sells, or both
