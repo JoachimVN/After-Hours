@@ -2352,14 +2352,14 @@ public final class GameView implements GameViewInterface {
     weekCol.setCellValueFactory(
         cd -> new SimpleStringProperty(String.valueOf(cd.getValue().week())));
     weekCol.setComparator(java.util.Comparator.comparingInt(Integer::parseInt));
-    weekCol.setMinWidth(34);
-    weekCol.setPrefWidth(34);
+    weekCol.setMinWidth(50);
+    weekCol.setPrefWidth(50);
 
     TableColumn<TxRow, String> typeCol = new TableColumn<>("Type");
     typeCol.setCellValueFactory(
         cd -> new SimpleStringProperty(cd.getValue().isBuy() ? "BUY" : "SELL"));
-    typeCol.setMinWidth(46);
-    typeCol.setPrefWidth(46);
+    typeCol.setMinWidth(56);
+    typeCol.setPrefWidth(56);
     typeCol.setComparator(String::compareTo);
     typeCol.setCellFactory(col -> new TableCell<>() {
       @Override
@@ -2377,44 +2377,44 @@ public final class GameView implements GameViewInterface {
 
     TableColumn<TxRow, String> symCol = new TableColumn<>("Symbol");
     symCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().symbol()));
-    symCol.setMinWidth(64);
-    symCol.setPrefWidth(72);
+    symCol.setMinWidth(76);
+    symCol.setPrefWidth(86);
 
     TableColumn<TxRow, String> compCol = new TableColumn<>("Company");
     compCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().company()));
-    compCol.setMinWidth(120);
-    compCol.setPrefWidth(160);
+    compCol.setMinWidth(140);
+    compCol.setPrefWidth(180);
 
     TableColumn<TxRow, String> quantityCol = new TableColumn<>("Quantity");
     quantityCol.setCellValueFactory(cd -> new SimpleStringProperty(
         cd.getValue().quantity().stripTrailingZeros().toPlainString()));
-    quantityCol.setMinWidth(50);
-    quantityCol.setPrefWidth(60);
+    quantityCol.setMinWidth(62);
+    quantityCol.setPrefWidth(72);
 
     TableColumn<TxRow, String> priceCol = new TableColumn<>("Price per share");
     priceCol.setCellValueFactory(
         cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().pricePerShare())));
-    priceCol.setMinWidth(70);
-    priceCol.setPrefWidth(80);
+    priceCol.setMinWidth(90);
+    priceCol.setPrefWidth(100);
 
     TableColumn<TxRow, String> feeCol = new TableColumn<>("Fee");
     feeCol.setCellValueFactory(
         cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().fee())));
-    feeCol.setMinWidth(60);
-    feeCol.setPrefWidth(70);
+    feeCol.setMinWidth(72);
+    feeCol.setPrefWidth(82);
 
     TableColumn<TxRow, String> taxCol = new TableColumn<>("Tax");
     taxCol.setCellValueFactory(cd -> new SimpleStringProperty(
         cd.getValue().tax().compareTo(BigDecimal.ZERO) == 0 ? "\u2014" :
             CurrencyFormatter.format(cd.getValue().tax())));
-    taxCol.setMinWidth(60);
-    taxCol.setPrefWidth(70);
+    taxCol.setMinWidth(72);
+    taxCol.setPrefWidth(82);
 
     TableColumn<TxRow, String> totalCol = new TableColumn<>("Total");
     totalCol.setCellValueFactory(
         cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().total())));
-    totalCol.setMinWidth(80);
-    totalCol.setPrefWidth(90);
+    totalCol.setMinWidth(96);
+    totalCol.setPrefWidth(108);
 
     table.getColumns().add(weekCol);
     table.getColumns().add(typeCol);
