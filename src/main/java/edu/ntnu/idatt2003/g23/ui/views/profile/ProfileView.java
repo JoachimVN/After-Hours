@@ -459,14 +459,23 @@ public final class ProfileView {
         Label positionValue = new Label(CurrencyFormatter.format(marketValue));
         positionValue.getStyleClass().add("profile-position-value");
 
-        String pnlText = (pnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
-            + CurrencyFormatter.format(pnl)
-            + " (" + pnlPct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%)";
+        String pnlText;
+        if (pnl.compareTo(BigDecimal.ZERO) == 0) {
+          pnlText = "\u2014";
+        } else {
+          pnlText = (pnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
+              + CurrencyFormatter.format(pnl)
+              + " (" + pnlPct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%)";
+        }
         Label pnlLabel = new Label(pnlText);
         pnlLabel.getStyleClass().add("profile-position-pnl");
-        pnlLabel.getStyleClass().add(pnl.compareTo(BigDecimal.ZERO) >= 0
-            ? "profile-value-up"
-            : "profile-value-down");
+        if (pnl.compareTo(BigDecimal.ZERO) == 0) {
+          pnlLabel.getStyleClass().add("profile-value-neutral");
+        } else {
+          pnlLabel.getStyleClass().add(pnl.compareTo(BigDecimal.ZERO) > 0
+              ? "profile-value-up"
+              : "profile-value-down");
+        }
         VBox right = new VBox(3, positionValue, pnlLabel);
         right.setAlignment(Pos.CENTER_RIGHT);
 

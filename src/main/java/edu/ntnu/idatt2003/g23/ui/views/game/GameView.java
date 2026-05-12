@@ -1185,10 +1185,16 @@ public final class GameView implements GameViewInterface {
     price.getStyleClass().add("detail-price");
 
     BigDecimal pct = stock.percentageChange();
-    String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-    Label pctBadge = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
-    pctBadge.getStyleClass()
-        .add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "detail-badge-up" : "detail-badge-down");
+    Label pctBadge;
+    if (pct.compareTo(BigDecimal.ZERO) == 0) {
+      pctBadge = new Label("\u2014");
+      pctBadge.getStyleClass().add("detail-badge-neutral");
+    } else {
+      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+      pctBadge = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+      pctBadge.getStyleClass()
+          .add(pct.compareTo(BigDecimal.ZERO) > 0 ? "detail-badge-up" : "detail-badge-down");
+    }
 
     // ── Fav star button (right of symbol) ────────────────────────────────
     boolean isFavDetail = favorites.contains(stock.getSymbol());
@@ -1601,7 +1607,10 @@ public final class GameView implements GameViewInterface {
       Share sh = c.getValue();
       BigDecimal pl = sh.getStock().getSalesPrice().subtract(sh.getPurchasePrice())
           .multiply(sh.getQuantity());
-      String sign = pl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+      if (pl.compareTo(BigDecimal.ZERO) == 0) {
+        return new SimpleStringProperty("\u2014");
+      }
+      String sign = pl.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
       return new SimpleStringProperty(sign + CurrencyFormatter.format(pl));
     });
     plCol.setCellFactory(col -> new TableCell<>() {
@@ -1614,8 +1623,50 @@ public final class GameView implements GameViewInterface {
           return;
         }
         setText(item);
-        boolean up = item.startsWith("+");
-        setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
+        if ("\u2014".equals(item)) {
+          setStyle("-fx-text-fill: #4a6899;");
+        } else {
+          boolean up = item.startsWith("+");
+          setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
+        }
+      }
+    });
+
+    TableColumn<Share, String> pctCol = new TableColumn<>("%");
+    pctCol.setMinWidth(72);
+    pctCol.setMaxWidth(90);
+    pctCol.setCellValueFactory(c -> {
+      Share sh = c.getValue();
+      BigDecimal cost = sh.getPurchasePrice();
+      if (cost.compareTo(BigDecimal.ZERO) == 0) {
+        return new SimpleStringProperty("\u2014");
+      }
+      BigDecimal pct = sh.getStock().getSalesPrice().subtract(cost)
+          .divide(cost, 4, RoundingMode.HALF_UP)
+          .multiply(BigDecimal.valueOf(100))
+          .setScale(2, RoundingMode.HALF_UP);
+      if (pct.compareTo(BigDecimal.ZERO) == 0) {
+        return new SimpleStringProperty("\u2014");
+      }
+      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+      return new SimpleStringProperty(sign + pct.toPlainString() + "%");
+    });
+    pctCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(String item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setText(null);
+          setStyle("");
+          return;
+        }
+        setText(item);
+        if ("\u2014".equals(item)) {
+          setStyle("-fx-text-fill: #4a6899;");
+        } else {
+          boolean up = item.startsWith("+");
+          setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
+        }
       }
     });
 
@@ -1624,6 +1675,7 @@ public final class GameView implements GameViewInterface {
     table.getColumns().add(boughtCol);
     table.getColumns().add(nowCol);
     table.getColumns().add(plCol);
+    table.getColumns().add(pctCol);
     return table;
   }
 
@@ -2492,7 +2544,7 @@ public final class GameView implements GameViewInterface {
     titleRow.getStyleClass().add("market-movers-header");
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
-    Label txSortLabel = new Label("Sort");
+    Label txSortLabel = new Label("Sort by:");
     txSortLabel.getStyleClass().add("stock-row-section-label");
 
     HBox controlsRow = new HBox(10, txSearch, txSortLabel, txFilterRow);
@@ -2940,10 +2992,16 @@ public final class GameView implements GameViewInterface {
     priceLbl.getStyleClass().add("stock-card-price");
 
     BigDecimal pct = stock.percentageChange();
-    String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-    Label pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
-    pctLbl.getStyleClass()
-        .add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
+    Label pctLbl;
+    if (pct.compareTo(BigDecimal.ZERO) == 0) {
+      pctLbl = new Label("\u2014");
+      pctLbl.getStyleClass().add("stock-pct-neutral");
+    } else {
+      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+      pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+      pctLbl.getStyleClass()
+          .add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+    }
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
     BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);

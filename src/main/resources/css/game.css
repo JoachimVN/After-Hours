@@ -530,6 +530,15 @@
     -fx-padding: 1 5 1 5;
 }
 
+.stock-pct-neutral {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+    -fx-background-color: rgba(30, 64, 128, 0.12);
+    -fx-background-radius: 4;
+    -fx-padding: 1 5 1 5;
+}
+
 /* Detail panel */
 .game-detail-area {
     -fx-padding: 0;
@@ -590,6 +599,20 @@
     -fx-background-color: rgba(160, 30, 30, 0.25);
     -fx-background-radius: 6;
     -fx-border-color: rgba(160, 30, 30, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 3 12 3 12;
+    -fx-min-width: 82px;
+    -fx-alignment: center;
+}
+
+.detail-badge-neutral {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+    -fx-background-color: rgba(30, 64, 128, 0.15);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
     -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-padding: 3 12 3 12;
@@ -1230,9 +1253,9 @@
 /* ── Stock filter / sort chips ──────────────────────────────────────────── */
 
 .stock-row-section-label {
-    -fx-font-size: 8px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: #2a3a58;
+    -fx-text-fill: #6a88b8;
     -fx-padding: 4 0 0 0;
 }
 
