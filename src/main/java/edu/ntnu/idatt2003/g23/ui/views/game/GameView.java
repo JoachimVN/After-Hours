@@ -2438,34 +2438,67 @@ public final class GameView implements GameViewInterface {
     compCol.setMinWidth(140);
     compCol.setPrefWidth(180);
 
-    TableColumn<TxRow, String> quantityCol = new TableColumn<>("Quantity");
-    quantityCol.setCellValueFactory(cd -> new SimpleStringProperty(
-        cd.getValue().quantity().stripTrailingZeros().toPlainString()));
+    TableColumn<TxRow, BigDecimal> quantityCol = new TableColumn<>("Quantity");
+    quantityCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().quantity()));
+    quantityCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : item.stripTrailingZeros().toPlainString());
+      }
+    });
     quantityCol.setMinWidth(62);
     quantityCol.setPrefWidth(72);
 
-    TableColumn<TxRow, String> priceCol = new TableColumn<>("Price per share");
-    priceCol.setCellValueFactory(
-        cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().pricePerShare())));
+    TableColumn<TxRow, BigDecimal> priceCol = new TableColumn<>("Price per share");
+    priceCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().pricePerShare()));
+    priceCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : CurrencyFormatter.format(item));
+      }
+    });
     priceCol.setMinWidth(90);
     priceCol.setPrefWidth(100);
 
-    TableColumn<TxRow, String> feeCol = new TableColumn<>("Fee");
-    feeCol.setCellValueFactory(
-        cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().fee())));
+    TableColumn<TxRow, BigDecimal> feeCol = new TableColumn<>("Fee");
+    feeCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().fee()));
+    feeCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : CurrencyFormatter.format(item));
+      }
+    });
     feeCol.setMinWidth(72);
     feeCol.setPrefWidth(82);
 
-    TableColumn<TxRow, String> taxCol = new TableColumn<>("Tax");
-    taxCol.setCellValueFactory(cd -> new SimpleStringProperty(
-        cd.getValue().tax().compareTo(BigDecimal.ZERO) == 0 ? "\u2014" :
-            CurrencyFormatter.format(cd.getValue().tax())));
+    TableColumn<TxRow, BigDecimal> taxCol = new TableColumn<>("Tax");
+    taxCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().tax()));
+    taxCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setText(null);
+          return;
+        }
+        setText(item.compareTo(BigDecimal.ZERO) == 0 ? "\u2014" : CurrencyFormatter.format(item));
+      }
+    });
     taxCol.setMinWidth(72);
     taxCol.setPrefWidth(82);
 
-    TableColumn<TxRow, String> totalCol = new TableColumn<>("Total");
-    totalCol.setCellValueFactory(
-        cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().total())));
+    TableColumn<TxRow, BigDecimal> totalCol = new TableColumn<>("Total");
+    totalCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().total()));
+    totalCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : CurrencyFormatter.format(item));
+      }
+    });
     totalCol.setMinWidth(96);
     totalCol.setPrefWidth(108);
 
