@@ -86,6 +86,9 @@ import javafx.util.Duration;
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
   private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.mp3";
+  private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.mp3";
+  private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.mp3";
+  private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.mp3";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -98,8 +101,8 @@ public final class GameView implements GameViewInterface {
   private static final Duration POPUP_ERROR_FADE = Duration.millis(300);
   private static final Duration SPIKE_POPUP_VISIBLE = Duration.seconds(8.0);
   private static final Duration SPIKE_POPUP_FADE = Duration.millis(220);
-  private static final BigDecimal MIN_UPWARD_SPIKE_POPUP_PCT = new BigDecimal("30.00");
-  private static final BigDecimal MIN_DOWNWARD_SPIKE_POPUP_PCT = new BigDecimal("-23.08");
+  private static final BigDecimal MIN_UPWARD_SPIKE_POPUP_PCT = new BigDecimal("20.00");
+  private static final BigDecimal MIN_DOWNWARD_SPIKE_POPUP_PCT = new BigDecimal("-16.67");
   private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
@@ -826,6 +829,9 @@ public final class GameView implements GameViewInterface {
       return;
     }
 
+    boolean hasUp = false;
+    boolean hasDown = false;
+
     for (String symbol : spikedSymbols) {
       Stock stock = allStocks.stream()
           .filter(s -> s.getSymbol().equals(symbol))
@@ -846,7 +852,18 @@ public final class GameView implements GameViewInterface {
       if (!qualifiesUpwardSpike && !qualifiesDownwardSpike) {
         continue;
       }
+      if (qualifiesUpwardSpike) hasUp = true;
+      if (qualifiesDownwardSpike) hasDown = true;
       addSpikePopup(stock, owned, changePct);
+    }
+
+    String soundPath = (hasUp && hasDown) ? SPIKE_BOTH_SOUND
+        : hasUp ? SPIKE_UP_SOUND
+        : hasDown ? SPIKE_DOWN_SOUND
+        : null;
+    if (soundPath != null) {
+      AudioClip spikeClip = loadAudioClip(soundPath);
+      playAudioClip(spikeClip, sfxVolumeSupplierField);
     }
   }
 
