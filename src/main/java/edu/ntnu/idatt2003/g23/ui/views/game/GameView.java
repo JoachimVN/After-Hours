@@ -684,7 +684,7 @@ public final class GameView implements GameViewInterface {
     root.setCenter(hSplit);
 
     // ── Dev panel ─────────────────────────────────────────────────────────
-    VBox devPanel = buildDevPanel();
+    StackPane devPanel = buildDevPanel();
     devPanel.visibleProperty().bind(AppConfig.DEV_MODE);
     devPanel.managedProperty().bind(AppConfig.DEV_MODE);
     StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
@@ -928,14 +928,6 @@ public final class GameView implements GameViewInterface {
     ttl.play();
   }
 
-  private void dismissSpikePopup(Node popup, PauseTransition ttl) {
-    if (ttl != null) {
-      ttl.stop();
-      spikePopupTimers.remove(ttl);
-    }
-    spikePopupList.getChildren().remove(popup);
-  }
-
   private void fadeOutSpikePopup(Node popup, PauseTransition ttl) {
     if (popup == null || !spikePopupList.getChildren().contains(popup)) {
       return;
@@ -958,14 +950,6 @@ public final class GameView implements GameViewInterface {
       spikePopupList.getChildren().remove(popup);
     });
     fade.play();
-  }
-
-  private void clearSpikePopups() {
-    for (PauseTransition timer : new ArrayList<>(spikePopupTimers)) {
-      timer.stop();
-    }
-    spikePopupTimers.clear();
-    spikePopupList.getChildren().clear();
   }
 
   private void showTestSpikePopup() {
@@ -3258,7 +3242,7 @@ public final class GameView implements GameViewInterface {
     return row;
   }
 
-  private VBox buildDevPanel() {
+  private StackPane buildDevPanel() {
     Label title = new Label("🛠  DEV MODE");
     title.getStyleClass().add("dev-panel-title");
 
@@ -3423,7 +3407,20 @@ public final class GameView implements GameViewInterface {
     panel.getStyleClass().add("dev-panel");
     panel.setMaxWidth(220);
     panel.setMaxHeight(Region.USE_PREF_SIZE);
-    return panel;
+
+    Button closeBtn = new Button("x");
+    closeBtn.getStyleClass().add("game-spike-close-btn");
+    closeBtn.setOnAction(e -> {
+      AppConfig.DEV_MODE.unbind();
+      AppConfig.DEV_MODE.set(false);
+    });
+    StackPane.setAlignment(closeBtn, Pos.TOP_RIGHT);
+
+    StackPane wrapper = new StackPane(panel, closeBtn);
+    wrapper.setMaxWidth(220);
+    wrapper.setMaxHeight(Region.USE_PREF_SIZE);
+    wrapper.setPickOnBounds(false);
+    return wrapper;
   }
 
   private static Button devBtn(String text) {

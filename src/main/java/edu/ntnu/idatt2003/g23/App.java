@@ -157,6 +157,12 @@ public class App extends Application {
     windowHeight = gs.windowHeight();
 
     AppConfig.DEV_MODE.set(gs.devMode());
+    AppConfig.DEV_MODE.addListener((obs, oldVal, newVal) -> {
+      if (Boolean.compare(newVal, devModeEnabled) != 0) {
+        devModeEnabled = newVal;
+        saveSettings();
+      }
+    });
     AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
     AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
     primaryStage = stage;
