@@ -81,6 +81,9 @@ import javafx.util.Duration;
  */
 public class App extends Application {
 
+  private static final double LANDING_THEME_CONTEXT_MULTIPLIER = 1.0;
+  private static final double NON_LANDING_THEME_CONTEXT_MULTIPLIER = 0.35;
+
   private StackPane root;
   private Parent homePage;
   private HomePageMusicController homePageMusicController;
@@ -1216,6 +1219,9 @@ public class App extends Application {
    */
   private void navigateKeepMusic(Parent page) {
     root.getChildren().setAll(backgroundCanvas, page);
+    if (!gameAudioContext) {
+      updateHomeThemeContextLoudness(page, true);
+    }
   }
 
   /**
@@ -1259,6 +1265,7 @@ public class App extends Application {
       performAutosave();
     }
     gameAudioContext = false;
+    homePageMusicController.setContextVolumeMultiplier(LANDING_THEME_CONTEXT_MULTIPLIER, false);
     if (musicMuted) {
       homePageMusicController.stop();
     } else {
@@ -1272,7 +1279,10 @@ public class App extends Application {
    */
   private void goHomeKeepMusic() {
     gameAudioContext = false;
-    fadeOutThenNavigate(() -> root.getChildren().setAll(backgroundCanvas, homePage));
+    fadeOutThenNavigate(() -> {
+      root.getChildren().setAll(backgroundCanvas, homePage);
+      updateHomeThemeContextLoudness(homePage, true);
+    });
   }
 
   private void playGameEntryAudio() {
@@ -1290,8 +1300,24 @@ public class App extends Application {
     if (gameAudioContext) {
       homePageMusicController.playAmbience();
     } else {
+      Parent currentPage = getCurrentPage();
+      updateHomeThemeContextLoudness(currentPage == null ? homePage : currentPage, false);
       homePageMusicController.play(null, null);
     }
+  }
+
+  private Parent getCurrentPage() {
+    if (root == null || root.getChildren().size() < 2) {
+      return null;
+    }
+    return (Parent) root.getChildren().get(root.getChildren().size() - 1);
+  }
+
+  private void updateHomeThemeContextLoudness(Parent page, boolean smooth) {
+    double contextMultiplier = page == homePage
+        ? LANDING_THEME_CONTEXT_MULTIPLIER
+        : NON_LANDING_THEME_CONTEXT_MULTIPLIER;
+    homePageMusicController.setContextVolumeMultiplier(contextMultiplier, smooth);
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -530,6 +530,15 @@
     -fx-padding: 1 5 1 5;
 }
 
+.stock-pct-neutral {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+    -fx-background-color: rgba(30, 64, 128, 0.12);
+    -fx-background-radius: 4;
+    -fx-padding: 1 5 1 5;
+}
+
 /* Detail panel */
 .game-detail-area {
     -fx-padding: 0;
@@ -590,6 +599,20 @@
     -fx-background-color: rgba(160, 30, 30, 0.25);
     -fx-background-radius: 6;
     -fx-border-color: rgba(160, 30, 30, 0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 3 12 3 12;
+    -fx-min-width: 82px;
+    -fx-alignment: center;
+}
+
+.detail-badge-neutral {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4a6899;
+    -fx-background-color: rgba(30, 64, 128, 0.15);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
     -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-padding: 3 12 3 12;
@@ -890,7 +913,7 @@
 
 .game-table .column-header .label {
     -fx-text-fill: #4a6899;
-    -fx-font-size: 10px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-alignment: center-left;
 }
@@ -928,8 +951,8 @@
 
 .game-table .table-cell {
     -fx-text-fill: #c8d8ee;
-    -fx-font-size: 11px;
-    -fx-padding: 4 6 4 6;
+    -fx-font-size: 13px;
+    -fx-padding: 6 8 6 8;
     -fx-border-color: transparent rgba(30, 64, 128, 0.10) transparent transparent;
     -fx-border-insets: 4 0 4 0;
     -fx-border-width: 0 1 0 0;
@@ -1206,9 +1229,10 @@
 .movers-tab {
     -fx-background-color: rgba(10, 20, 50, 0.60);
     -fx-text-fill: #4a6899;
-    -fx-font-size: 10px;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-padding: 3 12 3 12;
+    -fx-padding: 5 14 5 14;
+    -fx-min-height: 30px;
     -fx-background-radius: 12;
     -fx-border-color: rgba(30, 64, 128, 0.35);
     -fx-border-width: 1;
@@ -1230,9 +1254,9 @@
 /* ── Stock filter / sort chips ──────────────────────────────────────────── */
 
 .stock-row-section-label {
-    -fx-font-size: 8px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: #2a3a58;
+    -fx-text-fill: #6a88b8;
     -fx-padding: 4 0 0 0;
 }
 
@@ -1466,6 +1490,21 @@
     -fx-border-color: rgba(30, 64, 128, 0.20);
     -fx-border-width: 0 0 1 0;
     -fx-background-color: rgba(7, 12, 32, 0.60);
+    -fx-alignment: center-left;
+}
+
+.history-sort-label {
+    -fx-padding: 0;
+    -fx-translate-y: 1px;
+}
+
+.history-filter-row {
+    -fx-alignment: center-left;
+}
+
+.history-filter-row .stock-filter-chip {
+    -fx-min-height: 28px;
+    -fx-padding: 6 8 6 8;
 }
 
 .history-table {
@@ -1486,7 +1525,7 @@
 
 .history-table .column-header .label {
     -fx-text-fill: #4a6899;
-    -fx-font-size: 11px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-padding: 6 4 6 4;
 }
@@ -1531,8 +1570,8 @@
 
 .history-table .table-cell {
     -fx-text-fill: #c8d8ee;
-    -fx-font-size: 11px;
-    -fx-padding: 5 6 5 6;
+    -fx-font-size: 13px;
+    -fx-padding: 7 8 7 8;
 }
 
 .tx-type-buy,
