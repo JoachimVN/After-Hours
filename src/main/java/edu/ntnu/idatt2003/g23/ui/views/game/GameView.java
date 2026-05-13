@@ -111,6 +111,7 @@ public final class GameView implements GameViewInterface {
   private final HBox profileIdentityContent;
   private final StackPane profileNameBox;
   private final Text profileNameText;
+  private final Runnable onProfile;
   private final Runnable onPanelOpen;
   private final Runnable onStockSelectionChanged;
 
@@ -193,6 +194,7 @@ public final class GameView implements GameViewInterface {
     this.profileNameBox.setAlignment(Pos.CENTER);
     this.profileIdentityContent = new HBox(12, this.profileNameBox);
     this.profileIdentityContent.setAlignment(Pos.CENTER_LEFT);
+    this.onProfile = onProfile;
     this.onPanelOpen = onPanelOpen;
     this.onStockSelectionChanged = onStockSelectionChanged;
 
@@ -623,7 +625,7 @@ public final class GameView implements GameViewInterface {
     updateProfileIdentityButton();
     profileBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
     profileBtn.getStyleClass().add("profile-identity-button");
-    profileBtn.setOnAction(e -> onProfile.run());
+    profileBtn.setOnAction(e -> this.onProfile.run());
 
     settingsBtn.setText("⚙");
     settingsBtn.getStyleClass().add("game-icon-button");
@@ -2175,6 +2177,7 @@ public final class GameView implements GameViewInterface {
       default -> List.of();
     };
 
+    final List<HBox> newAvatarsRows = new ArrayList<>();
     VBox benefitsBox = new VBox(8);
     benefitsBox.getStyleClass().add("level-up-benefits-box");
     for (String[] b : benefits) {
@@ -2188,6 +2191,10 @@ public final class GameView implements GameViewInterface {
       HBox.setHgrow(rowSpacer, Priority.ALWAYS);
       HBox row = new HBox(10, emojLbl, nameLbl, rowSpacer, valLbl);
       row.getStyleClass().add("level-up-benefit-row");
+      if ("New Avatars".equals(b[1])) {
+        row.getStyleClass().add("level-up-benefit-row-clickable");
+        newAvatarsRows.add(row);
+      }
       row.setAlignment(Pos.CENTER_LEFT);
       benefitsBox.getChildren().add(row);
     }
@@ -2202,10 +2209,26 @@ public final class GameView implements GameViewInterface {
     HBox avatarRow = new HBox(14);
     avatarRow.setAlignment(Pos.CENTER);
     avatarRow.getStyleClass().add("level-up-avatar-row");
+    String previousAvatar = gameController.getSelectedPlayerAvatar();
+    final String[] selectedPopupAvatar = { null };
     for (String stem : unlockedAvatars) {
       ImageView iv = AvatarUtil.createImageView(stem, 48);
       StackPane avatarFrame = new StackPane(iv);
-      avatarFrame.getStyleClass().add("level-up-avatar-frame");
+      avatarFrame.getStyleClass().addAll("level-up-avatar-frame", "level-up-avatar-frame-clickable");
+      avatarFrame.setOnMouseClicked(e -> {
+        if (stem.equals(selectedPopupAvatar[0])) {
+          selectedPopupAvatar[0] = null;
+          gameController.setPlayerAvatar(previousAvatar);
+          avatarRow.getChildren().forEach(node -> node.getStyleClass().remove("level-up-avatar-frame-selected"));
+          updateProfileIdentityButton();
+          return;
+        }
+        selectedPopupAvatar[0] = stem;
+        gameController.setPlayerAvatar(stem);
+        avatarRow.getChildren().forEach(node -> node.getStyleClass().remove("level-up-avatar-frame-selected"));
+        avatarFrame.getStyleClass().add("level-up-avatar-frame-selected");
+        updateProfileIdentityButton();
+      });
       avatarRow.getChildren().add(avatarFrame);
     }
 
@@ -2308,6 +2331,13 @@ public final class GameView implements GameViewInterface {
         if (musicFilterOff != null) musicFilterOff.run();
       });
     };
+
+    for (HBox newAvatarsRow : newAvatarsRows) {
+      newAvatarsRow.setOnMouseClicked(ev -> {
+        dismiss.run();
+        this.onProfile.run();
+      });
+    }
 
     continueBtn.setOnAction(ev -> dismiss.run());
     dimBackdrop.setOnMouseClicked(ev -> dismiss.run());

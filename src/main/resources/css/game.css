@@ -1725,6 +1725,33 @@
     -fx-padding: 10 10 10 10;
 }
 
+.level-up-avatar-frame-clickable {
+    -fx-cursor: hand;
+}
+
+.level-up-avatar-frame-clickable:hover {
+    -fx-background-color: rgba(42, 96, 182, 0.34);
+    -fx-border-color: rgba(96, 169, 255, 0.85);
+    -fx-effect: dropshadow(gaussian, rgba(58, 152, 255, 0.34), 10, 0.35, 0, 1);
+}
+
+.level-up-avatar-frame-selected {
+    -fx-background-color: rgba(28, 132, 78, 0.26);
+    -fx-border-color: rgba(66, 224, 141, 0.95);
+    -fx-effect: dropshadow(gaussian, rgba(66, 224, 141, 0.28), 12, 0.4, 0, 1);
+}
+
+.level-up-benefit-row-clickable {
+    -fx-cursor: hand;
+}
+
+.level-up-benefit-row-clickable:hover {
+    -fx-background-color: rgba(58, 123, 204, 0.24);
+    -fx-border-color: rgba(132, 206, 255, 0.95);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
 .level-up-footer-area {
     -fx-padding: 14 28 22 28;
     -fx-border-color: rgba(30, 64, 128, 0.22);

@@ -750,6 +750,7 @@ public class App extends Application {
 
     onGameProfileRef[0] = () -> {
       sfxController.play(SfxController.PROFILE);
+      currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -818,6 +819,7 @@ public class App extends Application {
     GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : null;
     Runnable onGameProfile = () -> {
       sfxController.play(SfxController.PROFILE);
+      currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
