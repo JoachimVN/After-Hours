@@ -143,6 +143,13 @@ public final class GameView implements GameViewInterface {
   private PlayerStatus lastKnownStatus = null;
   private AudioClip levelUpClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
+  private Runnable musicFilterOn = null;
+  private Runnable musicFilterOff = null;
+
+  public void setMusicFilterCallbacks(Runnable onFilter, Runnable offFilter) {
+    this.musicFilterOn = onFilter;
+    this.musicFilterOff = offFilter;
+  }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
@@ -2096,8 +2103,7 @@ public final class GameView implements GameViewInterface {
     dimIn.setToValue(1);
     blurIn.play();
     dimIn.play();
-
-    // ── Card appears after 1.5s delay (matches the strong beat) ─────────
+    if (musicFilterOn != null) musicFilterOn.run();
     PauseTransition cardDelay = new PauseTransition(Duration.millis(1500));
     cardDelay.setOnFinished(ev -> {
       FadeTransition cardIn = new FadeTransition(Duration.millis(340), card);
@@ -2154,6 +2160,7 @@ public final class GameView implements GameViewInterface {
       blurOut.setOnFinished(fev -> {
         overlayRef.getChildren().remove(popup);
         rootRef.setEffect(null);
+        if (musicFilterOff != null) musicFilterOff.run();
       });
     };
 

@@ -485,6 +485,9 @@ public class App extends Application {
             uiState);
     currentGameController = gameController;
     currentGameView = gameview;
+    gameview.setMusicFilterCallbacks(
+        homePageMusicController::applyLowPassFilter,
+        homePageMusicController::removeFilter);
     currentGamePage = gameview.getRoot();
     playGameEntryAudio();
     navigateToGame(currentGamePage);
@@ -528,6 +531,9 @@ public class App extends Application {
         sfxController::getVolume,
         preservedUiState);
     currentGameView = refreshed;
+    refreshed.setMusicFilterCallbacks(
+        homePageMusicController::applyLowPassFilter,
+        homePageMusicController::removeFilter);
     currentGamePage = refreshed.getRoot();
   }
 
