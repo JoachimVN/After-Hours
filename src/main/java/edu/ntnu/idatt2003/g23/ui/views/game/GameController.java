@@ -57,7 +57,7 @@ public final class GameController {
 
       // Use SaleCalculator with a proportional slice of the lot
       Share partial = new Share(stock, sq, lot.getPurchasePrice());
-      SaleCalculator calc = new SaleCalculator(partial);
+      SaleCalculator calc = new SaleCalculator(partial, getPlayerTaxRate());
 
       tGross = tGross.add(calc.calculateGross());
       tFee = tFee.add(calc.calculateCommission());
@@ -77,7 +77,7 @@ public final class GameController {
     BigDecimal totalquantity = BigDecimal.ZERO;
 
     for (Share lot : player.getPortfolio().getShares()) {
-      SaleCalculator calc = new SaleCalculator(lot);
+      SaleCalculator calc = new SaleCalculator(lot, getPlayerTaxRate());
 
       tGross = tGross.add(calc.calculateGross());
       tFee = tFee.add(calc.calculateCommission());
@@ -164,7 +164,7 @@ public final class GameController {
       } else {
         sellShare = lot;
       }
-      Transaction tx = exchange.sell(sellShare, player);
+      Transaction tx = exchange.sell(sellShare, player, getPlayerTaxRate());
       tx.commit(player);
       TransactionCalculator calculator = tx.getCalculator();
       tGross = tGross.add(calculator.calculateGross());
@@ -274,6 +274,10 @@ public final class GameController {
 
   public BigDecimal getPlayerNetWorth() {
     return player.getNetWorth();
+  }
+
+  public BigDecimal getPlayerTaxRate() {
+    return getPlayerStatus().getTaxRate();
   }
 
   public PlayerStatus getPlayerStatus() {

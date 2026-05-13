@@ -1595,3 +1595,121 @@
     -fx-pref-width: 0;
     -fx-pref-height: 0;
 }
+/* ═══════════════════════════════════════════════════════════════════
+   LEVEL UP POPUP
+   ═══════════════════════════════════════════════════════════════════ */
+
+.level-up-backdrop {
+    -fx-background-color: rgba(2, 4, 14, 0.75);
+}
+
+.level-up-card {
+    -fx-background-color: rgba(7, 12, 32, 0.98);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.88), 52, 0, 0, 12);
+}
+
+.level-up-header-area {
+    -fx-padding: 28 32 22 32;
+    -fx-border-color: rgba(30, 64, 128, 0.28);
+    -fx-border-width: 0 0 1 0;
+}
+
+.level-up-title {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+    -fx-padding: 0 0 4 0;
+}
+
+.level-up-status-name {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-padding: 0 0 8 0;
+}
+
+.level-up-tagline {
+    -fx-font-size: 12px;
+    -fx-text-fill: #4a6899;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+}
+
+.level-up-divider {
+    -fx-pref-height: 0;
+}
+
+.level-up-body-area {
+    -fx-padding: 16 28 16 28;
+}
+
+.level-up-benefits-box {
+    -fx-padding: 0;
+}
+
+.level-up-benefit-row {
+    -fx-background-color: rgba(30, 64, 128, 0.18);
+    -fx-background-radius: 8;
+    -fx-padding: 9 14 9 14;
+}
+
+.level-up-benefit-icon {
+    -fx-font-size: 16px;
+    -fx-min-width: 26;
+}
+
+.level-up-benefit-name {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8aabcc;
+}
+
+.level-up-benefit-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.level-up-avatar-row {
+    -fx-padding: 4 0 2 0;
+}
+
+.level-up-avatar-frame {
+    -fx-background-color: rgba(30, 64, 128, 0.28);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(30, 64, 128, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 10 10 10 10;
+}
+
+.level-up-footer-area {
+    -fx-padding: 14 28 22 28;
+    -fx-border-color: rgba(30, 64, 128, 0.22);
+    -fx-border-width: 1 0 0 0;
+}
+
+.level-up-continue-btn {
+    -fx-background-color: linear-gradient(to right, #1a8c40, #22a34e);
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 32 10 32;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.50), 8, 0, 0, 2);
+    -fx-max-width: infinity;
+}
+
+.level-up-continue-btn:hover {
+    -fx-background-color: linear-gradient(to right, #1fa049, #27b857);
+}
+
+.level-up-continue-btn:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}

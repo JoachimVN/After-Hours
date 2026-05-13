@@ -84,6 +84,7 @@ import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
+  private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.mp3";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -139,6 +140,9 @@ public final class GameView implements GameViewInterface {
   private Node rootRef = null;
   private SplitPane hSplitRef = null;
   private double portfolioDividerRatio = 0.85;
+  private PlayerStatus lastKnownStatus = null;
+  private AudioClip levelUpClip = null;
+  private DoubleSupplier sfxVolumeSupplierField = null;
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
@@ -159,6 +163,9 @@ public final class GameView implements GameViewInterface {
                   GameUiState initialState) {
     this.gameController = gameController;
     this.gameController.setView(this);
+    this.sfxVolumeSupplierField = sfxVolumeSupplier;
+    this.levelUpClip = loadAudioClip(LEVEL_UP_SOUND);
+    this.lastKnownStatus = gameController.getPlayerStatus();
 
     this.statusVal = new Label();
     this.cashVal = new Label();
@@ -805,6 +812,10 @@ public final class GameView implements GameViewInterface {
 
   public void updateData() {
     PlayerStatus status = gameController.getPlayerStatus();
+    if (lastKnownStatus != null && status.ordinal() > lastKnownStatus.ordinal()) {
+      showLevelUpPopup(status);
+    }
+    lastKnownStatus = status;
     BigDecimal overallProgress = gameController.getPlayerStatusProgress();
     BigDecimal weeksProgress = gameController.getPlayerWeeksProgress();
     BigDecimal growthProgress = gameController.getPlayerNetWorthProgress();
@@ -1950,6 +1961,214 @@ public final class GameView implements GameViewInterface {
     });
 
     overlayRef.getChildren().add(popup);
+  }
+
+  private void showLevelUpPopup(PlayerStatus newStatus) {
+    if (overlayRef == null) {
+      return;
+    }
+
+    // Play Level_Up.mp3 immediately — audio has built-in fade-in then strong hit at ~1.5s
+    if (levelUpClip != null && sfxVolumeSupplierField != null) {
+      double vol = Math.min(sfxVolumeSupplierField.getAsDouble() * 1.3, 1.0);
+      levelUpClip.play(vol);
+    }
+
+    GaussianBlur blur = new GaussianBlur(0);
+    rootRef.setEffect(blur);
+
+    Region dimBackdrop = new Region();
+    dimBackdrop.getStyleClass().add("level-up-backdrop");
+    dimBackdrop.setOpacity(0);
+
+    // ── Title & flavor text ─────────────────────────────────────────────
+    String statusName = switch (newStatus) {
+      case INVESTOR -> "INVESTOR";
+      case SPECULATOR -> "SPECULATOR";
+      default -> newStatus.name();
+    };
+    String tagline = switch (newStatus) {
+      case INVESTOR -> "You've proven yourself as a serious market participant.";
+      case SPECULATOR -> "You now operate at the highest level of the market.";
+      default -> "A new chapter begins.";
+    };
+
+    Label titleLbl = new Label("LEVEL UP");
+    titleLbl.getStyleClass().add("level-up-title");
+
+    Label statusNameLbl = new Label(statusName);
+    statusNameLbl.getStyleClass().add("level-up-status-name");
+
+    Label taglineLbl = new Label(tagline);
+    taglineLbl.getStyleClass().add("level-up-tagline");
+
+    VBox titleBlock = new VBox(6, titleLbl, statusNameLbl, taglineLbl);
+    titleBlock.setAlignment(Pos.CENTER);
+
+    Region divider = new Region();
+    divider.getStyleClass().add("level-up-divider");
+
+    // ── Benefits list ───────────────────────────────────────────────────
+    List<String[]> benefits = switch (newStatus) {
+      case INVESTOR -> List.of(
+          new String[]{"\uD83D\uDCB0", "Tax Rate", "25%  (was 30%)"},
+          new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D71.5 max shares per stock"},
+          new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
+      );
+      case SPECULATOR -> List.of(
+          new String[]{"\uD83D\uDCB0", "Tax Rate", "20%  (was 25%)"},
+          new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D72.0 max shares per stock"},
+          new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
+      );
+      default -> List.of();
+    };
+
+    VBox benefitsBox = new VBox(8);
+    benefitsBox.getStyleClass().add("level-up-benefits-box");
+    for (String[] b : benefits) {
+      Label emojLbl = new Label(b[0]);
+      emojLbl.getStyleClass().add("level-up-benefit-icon");
+      Label nameLbl = new Label(b[1]);
+      nameLbl.getStyleClass().add("level-up-benefit-name");
+      Label valLbl = new Label(b[2]);
+      valLbl.getStyleClass().add("level-up-benefit-value");
+      Region rowSpacer = new Region();
+      HBox.setHgrow(rowSpacer, Priority.ALWAYS);
+      HBox row = new HBox(10, emojLbl, nameLbl, rowSpacer, valLbl);
+      row.getStyleClass().add("level-up-benefit-row");
+      row.setAlignment(Pos.CENTER_LEFT);
+      benefitsBox.getChildren().add(row);
+    }
+
+    // ── Unlocked avatars ────────────────────────────────────────────────
+    List<String> unlockedAvatars = switch (newStatus) {
+      case INVESTOR -> List.of("man-office-worker", "woman-office-worker");
+      case SPECULATOR -> List.of("man-in-tuxedo", "woman-in-tuxedo");
+      default -> List.of();
+    };
+
+    HBox avatarRow = new HBox(14);
+    avatarRow.setAlignment(Pos.CENTER);
+    avatarRow.getStyleClass().add("level-up-avatar-row");
+    for (String stem : unlockedAvatars) {
+      ImageView iv = AvatarUtil.createImageView(stem, 48);
+      StackPane avatarFrame = new StackPane(iv);
+      avatarFrame.getStyleClass().add("level-up-avatar-frame");
+      avatarRow.getChildren().add(avatarFrame);
+    }
+
+    Button continueBtn = new Button("Continue");
+    continueBtn.getStyleClass().add("level-up-continue-btn");
+
+    VBox headerArea = new VBox(0, titleBlock);
+    headerArea.getStyleClass().add("level-up-header-area");
+    headerArea.setAlignment(Pos.CENTER);
+
+    VBox bodyArea = new VBox(14, benefitsBox, avatarRow);
+    bodyArea.getStyleClass().add("level-up-body-area");
+    bodyArea.setAlignment(Pos.CENTER);
+
+    VBox footerArea = new VBox(continueBtn);
+    footerArea.getStyleClass().add("level-up-footer-area");
+    footerArea.setAlignment(Pos.CENTER);
+
+    VBox card = new VBox(0, headerArea, divider, bodyArea, footerArea);
+    card.getStyleClass().add("level-up-card");
+    card.setMaxWidth(440);
+    card.setMaxHeight(Region.USE_PREF_SIZE);
+    card.setAlignment(Pos.CENTER);
+    card.setOpacity(0);
+    card.setScaleX(0.88);
+    card.setScaleY(0.88);
+
+    StackPane popup = new StackPane(dimBackdrop, card);
+    StackPane.setAlignment(card, Pos.CENTER);
+    overlayRef.getChildren().add(popup);
+
+    // ── Backdrop fades in immediately ───────────────────────────────────
+    Timeline blurIn = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(600),
+            new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT))
+    );
+    FadeTransition dimIn = new FadeTransition(Duration.millis(500), dimBackdrop);
+    dimIn.setFromValue(0);
+    dimIn.setToValue(1);
+    blurIn.play();
+    dimIn.play();
+
+    // ── Card appears after 1.5s delay (matches the strong beat) ─────────
+    PauseTransition cardDelay = new PauseTransition(Duration.millis(1500));
+    cardDelay.setOnFinished(ev -> {
+      FadeTransition cardIn = new FadeTransition(Duration.millis(340), card);
+      cardIn.setFromValue(0);
+      cardIn.setToValue(1);
+      Timeline scaleIn = new Timeline(
+          new KeyFrame(Duration.ZERO,
+              new KeyValue(card.scaleXProperty(), 0.88, Interpolator.EASE_OUT),
+              new KeyValue(card.scaleYProperty(), 0.88, Interpolator.EASE_OUT)),
+          new KeyFrame(Duration.millis(380),
+              new KeyValue(card.scaleXProperty(), 1.0, Interpolator.EASE_OUT),
+              new KeyValue(card.scaleYProperty(), 1.0, Interpolator.EASE_OUT))
+      );
+      cardIn.play();
+      scaleIn.play();
+
+      // ── Grow pulse 2.4s after card appears ────────────────────────────
+      PauseTransition pulseDelay = new PauseTransition(Duration.millis(900));
+      pulseDelay.setOnFinished(pev -> {
+        Timeline pulse = new Timeline(
+            new KeyFrame(Duration.ZERO,
+                new KeyValue(card.scaleXProperty(), 1.0),
+                new KeyValue(card.scaleYProperty(), 1.0)),
+            new KeyFrame(Duration.millis(150),
+                new KeyValue(card.scaleXProperty(), 1.06, Interpolator.EASE_OUT),
+                new KeyValue(card.scaleYProperty(), 1.06, Interpolator.EASE_OUT)),
+            new KeyFrame(Duration.millis(320),
+                new KeyValue(card.scaleXProperty(), 1.0, Interpolator.EASE_IN),
+                new KeyValue(card.scaleYProperty(), 1.0, Interpolator.EASE_IN))
+        );
+        pulse.play();
+      });
+      pulseDelay.play();
+    });
+    cardDelay.play();
+
+    // ── Dismiss ─────────────────────────────────────────────────────────
+    Runnable dismiss = () -> {
+      cardDelay.stop();
+      Timeline blurOut = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), blur.getRadius())),
+          new KeyFrame(Duration.millis(250),
+              new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
+      );
+      FadeTransition dimOut = new FadeTransition(Duration.millis(220), dimBackdrop);
+      dimOut.setFromValue(dimBackdrop.getOpacity());
+      dimOut.setToValue(0);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+      cardOut.setFromValue(card.getOpacity());
+      cardOut.setToValue(0);
+      blurOut.play();
+      dimOut.play();
+      cardOut.play();
+      blurOut.setOnFinished(fev -> {
+        overlayRef.getChildren().remove(popup);
+        rootRef.setEffect(null);
+      });
+    };
+
+    continueBtn.setOnAction(ev -> dismiss.run());
+    dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE
+          || ev.getCode() == javafx.scene.input.KeyCode.ENTER
+          || ev.getCode() == javafx.scene.input.KeyCode.SPACE) {
+        dismiss.run();
+        ev.consume();
+      }
+    });
+    popup.setFocusTraversable(true);
+    Platform.runLater(popup::requestFocus);
   }
 
   private void showMarketMovers() {

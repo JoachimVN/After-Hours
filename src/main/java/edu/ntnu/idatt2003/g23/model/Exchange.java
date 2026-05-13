@@ -261,6 +261,17 @@ public class Exchange {
     return TransactionFactory.createSale(share, this.week);
   }
 
+  public Transaction sell(Share share, Player player, java.math.BigDecimal taxRate) {
+    if (share == null) {
+      throw new IllegalArgumentException("Share cannot be null");
+    }
+    if (player == null) {
+      throw new IllegalArgumentException("Player cannot be null");
+    }
+
+    return TransactionFactory.createSale(share, this.week, taxRate);
+  }
+
   /**
    * Freezes or unfreezes price simulation (dev mode).
    */

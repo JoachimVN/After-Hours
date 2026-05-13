@@ -2,6 +2,8 @@ package edu.ntnu.idatt2003.g23.model.transaction;
 
 import java.math.BigDecimal;
 
+import java.math.BigDecimal;
+
 import edu.ntnu.idatt2003.g23.model.Player;
 import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.transaction.calculator.SaleCalculator;
@@ -19,6 +21,10 @@ public class Sale extends Transaction {
    */
   public Sale(Share share, int week) {
     super(share, week, new SaleCalculator(share));
+  }
+
+  public Sale(Share share, int week, BigDecimal taxRate) {
+    super(share, week, new SaleCalculator(share, taxRate));
   }
 
   /**
