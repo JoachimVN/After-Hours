@@ -96,6 +96,10 @@ public final class GameView implements GameViewInterface {
   private static final Duration INLINE_ERROR_FADE = Duration.millis(600);
   private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
   private static final Duration POPUP_ERROR_FADE = Duration.millis(300);
+  private static final Duration SPIKE_POPUP_VISIBLE = Duration.seconds(8.0);
+  private static final Duration SPIKE_POPUP_FADE = Duration.millis(220);
+  private static final BigDecimal MIN_UPWARD_SPIKE_POPUP_PCT = new BigDecimal("30.00");
+  private static final BigDecimal MIN_DOWNWARD_SPIKE_POPUP_PCT = new BigDecimal("-23.08");
   private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
@@ -136,6 +140,8 @@ public final class GameView implements GameViewInterface {
   private AnimationTimer highlightFadeTimer = null;
 
   private final VBox detailArea;
+  private final VBox spikePopupList;
+  private final List<PauseTransition> spikePopupTimers;
   private Label currentTradeErrorLabel;
   private Label currentSellAllErrorLabel;
 
@@ -242,6 +248,11 @@ public final class GameView implements GameViewInterface {
     detailClip.widthProperty().bind(detailArea.widthProperty());
     detailClip.heightProperty().bind(detailArea.heightProperty());
     detailArea.setClip(detailClip);
+    this.spikePopupList = new VBox(8);
+    this.spikePopupList.getStyleClass().add("game-spike-popup-list");
+    this.spikePopupList.setAlignment(Pos.TOP_RIGHT);
+    this.spikePopupList.setPickOnBounds(false);
+    this.spikePopupTimers = new ArrayList<>();
 
     // ── Stock list (left panel) — standard or virtualized (performance mode)
     this.stockListBox = new VBox(4);
@@ -598,8 +609,14 @@ public final class GameView implements GameViewInterface {
       showTransactionHistory();
     });
 
-    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, historyBtn,
-        marketMoversBtn);
+    HBox marketActionRow = new HBox(10, historyBtn, marketMoversBtn);
+    marketActionRow.setAlignment(Pos.CENTER_RIGHT);
+
+    VBox marketActionBox = new VBox(8, marketActionRow);
+    marketActionBox.getStyleClass().add("game-market-action-box");
+    marketActionBox.setAlignment(Pos.TOP_RIGHT);
+
+    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, marketActionBox);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
 
@@ -669,7 +686,9 @@ public final class GameView implements GameViewInterface {
     devPanel.managedProperty().bind(AppConfig.DEV_MODE);
     StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
 
-    StackPane overlay = new StackPane(root, devPanel);
+    StackPane overlay = new StackPane(root, spikePopupList, devPanel);
+    StackPane.setAlignment(spikePopupList, Pos.TOP_RIGHT);
+    StackPane.setMargin(spikePopupList, new Insets(150, 12, 0, 0));
     overlayRef = overlay;
 
     // Restore selected stock from saved UI state
@@ -801,6 +820,149 @@ public final class GameView implements GameViewInterface {
     rebuildDetail();
   }
 
+  private void maybeShowSpikePopups() {
+    List<String> spikedSymbols = gameController.consumeLastSpikeSymbols();
+    if (spikedSymbols.isEmpty()) {
+      return;
+    }
+
+    for (String symbol : spikedSymbols) {
+      Stock stock = allStocks.stream()
+          .filter(s -> s.getSymbol().equals(symbol))
+          .findFirst()
+          .orElse(null);
+      if (stock == null) {
+        continue;
+      }
+      boolean owned = gameController.isOwned(symbol);
+      boolean watchlisted = favorites.contains(symbol);
+      if (!owned && !watchlisted) {
+        continue;
+      }
+
+      BigDecimal changePct = stock.percentageChange().setScale(2, RoundingMode.HALF_UP);
+      boolean qualifiesUpwardSpike = changePct.compareTo(MIN_UPWARD_SPIKE_POPUP_PCT) >= 0;
+      boolean qualifiesDownwardSpike = changePct.compareTo(MIN_DOWNWARD_SPIKE_POPUP_PCT) <= 0;
+      if (!qualifiesUpwardSpike && !qualifiesDownwardSpike) {
+        continue;
+      }
+      addSpikePopup(stock, owned, changePct);
+    }
+  }
+
+  private void addSpikePopup(Stock stock, boolean owned, BigDecimal changePct) {
+    Label symbolBadge = new Label(stock.getSymbol());
+    symbolBadge.getStyleClass().add("profile-badge");
+
+    Label ownedWatchlist = new Label(owned ? "Owned" : "Watchlist");
+    ownedWatchlist.getStyleClass().add("profile-favorite-owned-chip");
+    if (owned) {
+      ownedWatchlist.getStyleClass().add("profile-favorite-owned-chip-owned");
+    }
+
+    Label company = new Label(stock.getCompany());
+    company.getStyleClass().add("profile-position-sub");
+
+    VBox identityBlock = new VBox(4, company, ownedWatchlist);
+    identityBlock.setAlignment(Pos.CENTER_LEFT);
+
+    boolean up = changePct.compareTo(BigDecimal.ZERO) >= 0;
+    String pctText = (up ? "+" : "") + changePct.toPlainString() + "%";
+    Label pctLabel = new Label(pctText);
+    pctLabel.getStyleClass().addAll("profile-position-pnl", up ? "profile-value-up" : "profile-value-down");
+
+    Label arrowLabel = new Label(up ? "↗" : "↘");
+    arrowLabel.getStyleClass().addAll("game-spike-arrow", up ? "profile-value-up" : "profile-value-down");
+
+    HBox trend = new HBox(5, pctLabel, arrowLabel);
+    trend.setAlignment(Pos.CENTER_RIGHT);
+
+    Button closeBtn = new Button("x");
+    closeBtn.getStyleClass().add("game-spike-close-btn");
+
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    HBox content = new HBox(10, symbolBadge, identityBlock, spacer, trend);
+    content.setAlignment(Pos.CENTER_LEFT);
+    content.setMaxWidth(Double.MAX_VALUE);
+    content.setPadding(new Insets(10, 42, 10, 11));
+
+    StackPane popup = new StackPane(content, closeBtn);
+    popup.getStyleClass().addAll("game-spike-popup", "game-spike-popup-clickable");
+    popup.setMaxWidth(Double.MAX_VALUE);
+    StackPane.setAlignment(content, Pos.CENTER_LEFT);
+    StackPane.setAlignment(closeBtn, Pos.TOP_RIGHT);
+    StackPane.setMargin(closeBtn, new Insets(4, 6, 0, 0));
+
+    PauseTransition ttl = new PauseTransition(SPIKE_POPUP_VISIBLE);
+    ttl.setOnFinished(e -> fadeOutSpikePopup(popup, ttl));
+    closeBtn.setOnAction(e -> {
+      e.consume();
+      fadeOutSpikePopup(popup, ttl);
+    });
+    popup.setOnMouseClicked(e -> {
+      selectStockBySymbol(stock.getSymbol());
+      fadeOutSpikePopup(popup, ttl);
+    });
+
+    spikePopupList.getChildren().add(popup);
+    spikePopupTimers.add(ttl);
+    ttl.play();
+  }
+
+  private void dismissSpikePopup(Node popup, PauseTransition ttl) {
+    if (ttl != null) {
+      ttl.stop();
+      spikePopupTimers.remove(ttl);
+    }
+    spikePopupList.getChildren().remove(popup);
+  }
+
+  private void fadeOutSpikePopup(Node popup, PauseTransition ttl) {
+    if (popup == null || !spikePopupList.getChildren().contains(popup)) {
+      return;
+    }
+    if (Boolean.TRUE.equals(popup.getProperties().get("spikePopupFading"))) {
+      return;
+    }
+    popup.getProperties().put("spikePopupFading", true);
+    if (ttl != null) {
+      ttl.stop();
+      spikePopupTimers.remove(ttl);
+    }
+
+    FadeTransition fade = new FadeTransition(SPIKE_POPUP_FADE, popup);
+    fade.setFromValue(popup.getOpacity());
+    fade.setToValue(0.0);
+    fade.setOnFinished(e -> {
+      popup.getProperties().remove("spikePopupFading");
+      popup.setOpacity(1.0);
+      spikePopupList.getChildren().remove(popup);
+    });
+    fade.play();
+  }
+
+  private void clearSpikePopups() {
+    for (PauseTransition timer : new ArrayList<>(spikePopupTimers)) {
+      timer.stop();
+    }
+    spikePopupTimers.clear();
+    spikePopupList.getChildren().clear();
+  }
+
+  private void showTestSpikePopup() {
+    Stock target = selectedStock.get();
+    if (target == null && !allStocks.isEmpty()) {
+      target = allStocks.get(0);
+    }
+    if (target == null) {
+      return;
+    }
+    boolean owned = gameController.isOwned(target.getSymbol());
+    addSpikePopup(target, owned, new BigDecimal("42.00"));
+  }
+
   private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
                                       Region portfolioResizeHandle, double initialRatio) {
     this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.85;
@@ -905,6 +1067,7 @@ public final class GameView implements GameViewInterface {
     portfolioTable.refresh();
     applyFilter();
     rebuildDetail();
+    maybeShowSpikePopups();
   }
 
   private ShareSelectionKey capturePortfolioSelection() {
@@ -1613,78 +1776,68 @@ public final class GameView implements GameViewInterface {
 
     TableColumn<Share, String> symCol = col("Symbol", c ->
         c.getStock().getSymbol(), 70, 85);
-    TableColumn<Share, String> quantityCol = col("Quantity", c ->
-        c.getQuantity().stripTrailingZeros().toPlainString(), 45, 65);
-    TableColumn<Share, String> boughtCol = col("Bought", c ->
-        CurrencyFormatter.format(c.getPurchasePrice().multiply(c.getQuantity())), 85, 110);
-    TableColumn<Share, String> nowCol = col("Now", c ->
-        CurrencyFormatter.format(c.getStock().getSalesPrice().multiply(c.getQuantity())), 85, 110);
+    TableColumn<Share, BigDecimal> quantityCol = numericCol("Quantity", Share::getQuantity, 45, 65,
+        value -> value.stripTrailingZeros().toPlainString());
+    TableColumn<Share, BigDecimal> boughtCol = numericCol("Bought",
+        c -> c.getPurchasePrice().multiply(c.getQuantity()), 85, 110, CurrencyFormatter::format);
+    TableColumn<Share, BigDecimal> nowCol = numericCol("Now",
+        c -> c.getStock().getSalesPrice().multiply(c.getQuantity()), 85, 110, CurrencyFormatter::format);
 
-    TableColumn<Share, String> plCol = new TableColumn<>("P&L");
+    TableColumn<Share, BigDecimal> plCol = new TableColumn<>("P&L");
     plCol.setMinWidth(90);
     plCol.setMaxWidth(120);
-    plCol.setCellValueFactory(c -> {
-      Share sh = c.getValue();
-      BigDecimal pl = sh.getStock().getSalesPrice().subtract(sh.getPurchasePrice())
-          .multiply(sh.getQuantity());
-      if (pl.compareTo(BigDecimal.ZERO) == 0) {
-        return new SimpleStringProperty("\u2014");
-      }
-      String sign = pl.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-      return new SimpleStringProperty(sign + CurrencyFormatter.format(pl));
-    });
+    plCol.setCellValueFactory(c -> new SimpleObjectProperty<>(
+        c.getValue().getStock().getSalesPrice().subtract(c.getValue().getPurchasePrice())
+            .multiply(c.getValue().getQuantity())));
     plCol.setCellFactory(col -> new TableCell<>() {
       @Override
-      protected void updateItem(String item, boolean empty) {
+      protected void updateItem(BigDecimal item, boolean empty) {
         super.updateItem(item, empty);
         if (empty || item == null) {
           setText(null);
           setStyle("");
           return;
         }
-        setText(item);
-        if ("\u2014".equals(item)) {
+        if (item.compareTo(BigDecimal.ZERO) == 0) {
+          setText("\u2014");
           setStyle("-fx-text-fill: #4a6899;");
         } else {
-          boolean up = item.startsWith("+");
+          boolean up = item.compareTo(BigDecimal.ZERO) > 0;
+          setText((up ? "+" : "") + CurrencyFormatter.format(item));
           setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
         }
       }
     });
 
-    TableColumn<Share, String> pctCol = new TableColumn<>("%");
+    TableColumn<Share, BigDecimal> pctCol = new TableColumn<>("%");
     pctCol.setMinWidth(72);
     pctCol.setMaxWidth(90);
     pctCol.setCellValueFactory(c -> {
       Share sh = c.getValue();
       BigDecimal cost = sh.getPurchasePrice();
       if (cost.compareTo(BigDecimal.ZERO) == 0) {
-        return new SimpleStringProperty("\u2014");
+        return new SimpleObjectProperty<>(BigDecimal.ZERO);
       }
-      BigDecimal pct = sh.getStock().getSalesPrice().subtract(cost)
+      return new SimpleObjectProperty<>(sh.getStock().getSalesPrice().subtract(cost)
           .divide(cost, 4, RoundingMode.HALF_UP)
           .multiply(BigDecimal.valueOf(100))
-          .setScale(2, RoundingMode.HALF_UP);
-      if (pct.compareTo(BigDecimal.ZERO) == 0) {
-        return new SimpleStringProperty("\u2014");
-      }
-      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-      return new SimpleStringProperty(sign + pct.toPlainString() + "%");
+          .setScale(2, RoundingMode.HALF_UP));
     });
     pctCol.setCellFactory(col -> new TableCell<>() {
       @Override
-      protected void updateItem(String item, boolean empty) {
+      protected void updateItem(BigDecimal item, boolean empty) {
         super.updateItem(item, empty);
         if (empty || item == null) {
           setText(null);
           setStyle("");
           return;
         }
-        setText(item);
-        if ("\u2014".equals(item)) {
+        if (item.compareTo(BigDecimal.ZERO) == 0) {
+          setText("\u2014");
           setStyle("-fx-text-fill: #4a6899;");
         } else {
-          boolean up = item.startsWith("+");
+          boolean up = item.compareTo(BigDecimal.ZERO) > 0;
+          setText((up ? "+" : "") + item.toPlainString() + "%");
           setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
         }
       }
@@ -3198,6 +3351,7 @@ public final class GameView implements GameViewInterface {
     Button statusInvestorBtn = devBtn("INVESTOR");
     Button statusSpeculatorBtn = devBtn("SPECULATOR");
     Button statusAutoBtn = devBtn("Auto Status");
+    Button testSpikeBtn = devBtn("Test Spike Notif");
 
     Runnable refreshStatusDisplay = () ->
         statusDisplay.setText("Status: " + formatStatus(gameController.getPlayerStatus()));
@@ -3222,6 +3376,7 @@ public final class GameView implements GameViewInterface {
       refreshStatusDisplay.run();
       updateData();
     });
+    testSpikeBtn.setOnAction(e -> showTestSpikePopup());
     HBox statusRow = new HBox(4, statusNoviceBtn, statusInvestorBtn, statusSpeculatorBtn);
     statusRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -3245,6 +3400,7 @@ public final class GameView implements GameViewInterface {
         statusDisplay,
         statusRow,
         statusAutoBtn,
+        testSpikeBtn,
         freezeBtn
     );
     panel.getStyleClass().add("dev-panel");
@@ -3877,6 +4033,25 @@ public final class GameView implements GameViewInterface {
                                                 double min, double max) {
     TableColumn<Share, String> c = new TableColumn<>(title);
     c.setCellValueFactory(cell -> new SimpleStringProperty(fn.apply(cell.getValue())));
+    c.setMinWidth(min);
+    c.setMaxWidth(max);
+    return c;
+  }
+
+  private static TableColumn<Share, BigDecimal> numericCol(String title,
+                                                            java.util.function.Function<Share, BigDecimal> fn,
+                                                            double min,
+                                                            double max,
+                                                            java.util.function.Function<BigDecimal, String> formatter) {
+    TableColumn<Share, BigDecimal> c = new TableColumn<>(title);
+    c.setCellValueFactory(cell -> new SimpleObjectProperty<>(fn.apply(cell.getValue())));
+    c.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : formatter.apply(item));
+      }
+    });
     c.setMinWidth(min);
     c.setMaxWidth(max);
     return c;

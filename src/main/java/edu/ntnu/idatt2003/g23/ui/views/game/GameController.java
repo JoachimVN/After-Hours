@@ -256,6 +256,10 @@ public final class GameController {
     return exchange.getStocks();
   }
 
+  public List<String> consumeLastSpikeSymbols() {
+    return exchange.consumeLastSpikeSymbols();
+  }
+
   public String getExchangeName() {
     return exchange.getName();
   }

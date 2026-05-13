@@ -25,6 +25,7 @@ public class Exchange {
   private Map<String, Stock> stockMap;
   private Random random;
   private boolean frozen = false;
+  private final List<String> lastSpikeSymbols = new ArrayList<>();
 
   /**
    * Transition weight matrix for volatility phases.
@@ -284,6 +285,7 @@ public class Exchange {
    */
   public void advance() {
     this.week++;
+    lastSpikeSymbols.clear();
     if (frozen) {
       return;
     }
@@ -402,8 +404,21 @@ public class Exchange {
         newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
       }
       target.setLatestSalesPrice(newPrice);
+      String symbol = target.getSymbol();
+      if (!lastSpikeSymbols.contains(symbol)) {
+        lastSpikeSymbols.add(symbol);
+      }
     }
 
+  }
+
+  /**
+   * Returns and clears symbols that were directly affected by this week's spike events.
+   */
+  public List<String> consumeLastSpikeSymbols() {
+    List<String> snapshot = List.copyOf(lastSpikeSymbols);
+    lastSpikeSymbols.clear();
+    return snapshot;
   }
 
   private Volatility pickNextVolatility(Volatility current) {
