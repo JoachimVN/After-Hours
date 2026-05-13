@@ -2140,9 +2140,9 @@ public final class GameView implements GameViewInterface {
       default -> newStatus.name();
     };
     String tagline = switch (newStatus) {
-      case INVESTOR -> "You've proven yourself as a serious market participant.";
-      case SPECULATOR -> "You now operate at the highest level of the market.";
-      default -> "A new chapter begins.";
+      case INVESTOR -> "How late did you stay up to get here?.";
+      case SPECULATOR -> "It's officially past your bedtime.\nWell done.";
+      default -> "Don't stay up too late!.";
     };
 
     Label titleLbl = new Label("LEVEL UP");

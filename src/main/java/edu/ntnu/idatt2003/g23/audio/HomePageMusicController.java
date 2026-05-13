@@ -60,9 +60,9 @@ public class HomePageMusicController {
   private String lastGameStartTrack = null;
   private boolean eqFilterActive = false;
 
-  // Low-pass gains per band (32 Hz … 16 kHz) — attenuates mids/highs for a
-  // "heard-through-a-wall" effect while the level-up overlay is visible.
-  private static final double[] LOW_PASS_GAINS = { 0, 0, 0, 0, 0, -4, -10, -18, -24, -24 };
+  // Status-change low-pass gains (32 Hz ... 16 kHz).
+  // Stronger cutoff: start attenuation earlier and cut highs harder.
+  private static final double[] LOW_PASS_GAINS = { 0, 0, 0, -3, -7, -12, -18, -23, -24, -24 };
 
   public HomePageMusicController(Class<?> resourceOwner) {
     this.resourceOwner = resourceOwner;
