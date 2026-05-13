@@ -709,8 +709,8 @@ public final class GameView implements GameViewInterface {
     // Escape → clear search, then go back to landing page
     overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
       boolean inTextField = e.getTarget() instanceof TextInputControl;
-      // If a dialog popup is layered on top, ignore game shortcuts (Escape is handled per-popup)
-      boolean dialogOpen = overlay.getChildren().size() > 2;
+      // Base children: root + spikePopupList + devPanel. Any extra layer means a modal popup is open.
+      boolean dialogOpen = overlay.getChildren().size() > 3;
       if (dialogOpen) {
         return;
       }
