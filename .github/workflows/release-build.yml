@@ -72,6 +72,13 @@ jobs:
         run: |
           Move-Item -Path target/dist/AfterHours.jar -Destination "target/dist/$env:JAR_NAME"
 
+      - name: Create portable zip
+        shell: pwsh
+        run: |
+          $zipName = "AfterHours-$env:APP_VERSION-portable.zip"
+          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Compress-Archive -Path "target/dist/$env:JAR_NAME", "target/dist/javafx-mods", "target/dist/AfterHours.bat", "target/dist/AfterHours.sh" -DestinationPath "target/dist/$zipName"
+
       - name: Publish GitHub Release Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -79,7 +86,7 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ env.PRE_RELEASE == 'true' }}
           files: |
-            target/dist/${{ env.JAR_NAME }}
+            target/dist/${{ env.ZIP_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -52,6 +52,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.Image;
@@ -91,10 +92,10 @@ public final class GameView implements GameViewInterface {
   private static final String ERROR_CONTAINER_KEY = "errorContainer";
   private static final String ERROR_CONTAINER_CLIP_KEY = "errorContainerClip";
   private static final Duration INLINE_ERROR_SIZE_ANIM = Duration.millis(220);
-  private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(2.2);
-  private static final Duration INLINE_ERROR_FADE = Duration.millis(420);
+  private static final Duration INLINE_ERROR_VISIBLE = Duration.seconds(4.0);
+  private static final Duration INLINE_ERROR_FADE = Duration.millis(600);
   private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
-  private static final Duration POPUP_ERROR_FADE = Duration.millis(320);
+  private static final Duration POPUP_ERROR_FADE = Duration.millis(300);
   private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
@@ -117,6 +118,7 @@ public final class GameView implements GameViewInterface {
   private final FilteredList<Stock> filteredStocks;
   private final ObservableList<Share> portfolioItems;
   private final ObjectProperty<Stock> selectedStock;
+  private final TableView<Share> portfolioTable;
 
   private final TextField searchField;
   private final boolean performanceMode;
@@ -227,6 +229,7 @@ public final class GameView implements GameViewInterface {
     statusProgressArc.getStyleClass().add("status-pill-ring-progress");
 
     statusTooltip.setShowDelay(Duration.millis(120));
+    statusTooltip.setShowDuration(Duration.INDEFINITE);
     statusTooltip.getStyleClass().add("status-pill-tooltip");
 
     // ── Detail panel (right) — rebuilt on stock selection ────────────────
@@ -252,6 +255,16 @@ public final class GameView implements GameViewInterface {
     this.stockListView.setFocusTraversable(false);
     this.stockListView.setCellFactory(lv -> {
       ListCell<Stock> cell = new ListCell<>() {
+        private void syncSelectedStyle() {
+          Node graphic = getGraphic();
+          if (graphic instanceof HBox card) {
+            card.getStyleClass().remove("stock-card-selected");
+            if (isSelected()) {
+              card.getStyleClass().add("stock-card-selected");
+            }
+          }
+        }
+
         @Override
         protected void updateItem(Stock stock, boolean empty) {
           super.updateItem(stock, empty);
@@ -260,7 +273,14 @@ public final class GameView implements GameViewInterface {
             setText(null);
           } else {
             setGraphic(buildStockCard(stock));
+            syncSelectedStyle();
           }
+        }
+
+        @Override
+        public void updateSelected(boolean selected) {
+          super.updateSelected(selected);
+          syncSelectedStyle();
         }
       };
       cell.setOnMouseClicked(e -> {
@@ -268,13 +288,19 @@ public final class GameView implements GameViewInterface {
         if (stock == null || cell.isEmpty()) {
           return;
         }
-        if (selectedStock.get() == null
-            || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
-          notifyStockSelectionChanged();
-        }
-        selectedStock.set(stock);
+        stockListView.getSelectionModel().select(stock);
       });
       return cell;
+    });
+    this.stockListView.getSelectionModel().selectedItemProperty().addListener((obs, old, stock) -> {
+      if (stock == null) {
+        return;
+      }
+      if (selectedStock.get() == null
+          || !stock.getSymbol().equals(selectedStock.get().getSymbol())) {
+        notifyStockSelectionChanged();
+        selectedStock.set(stock);
+      }
     });
 
     // ── Search field (declared early for closure access) ─────────────────
@@ -310,7 +336,13 @@ public final class GameView implements GameViewInterface {
       }
       rebuildDetail();
       if (performanceMode) {
-        stockListView.refresh();
+        Stock selectedInList = stockListView.getSelectionModel().getSelectedItem();
+        if (stock == null) {
+          stockListView.getSelectionModel().clearSelection();
+        } else if (selectedInList == null
+            || !stock.getSymbol().equals(selectedInList.getSymbol())) {
+          stockListView.getSelectionModel().select(stock);
+        }
       } else {
         refreshSelectedStockCardStyles();
       }
@@ -411,14 +443,14 @@ public final class GameView implements GameViewInterface {
 
     VBox leftPanel = new VBox(8, marketTitle, searchField, filterRow, sortRow, stockListNode);
     leftPanel.getStyleClass().add("game-left-panel");
-    leftPanel.setMinWidth(160);
+    leftPanel.setMinWidth(300);
     leftPanel.setMaxWidth(600);
 
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
     portTitle.getStyleClass().add("game-panel-title");
 
-    TableView<Share> portfolioTable =
+    portfolioTable =
         buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
           if (selectedShareStock == null) {
             return;
@@ -442,7 +474,7 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setMinHeight(80);
+    portfolioTable.setMinHeight(160);
     VBox.setVgrow(portfolioTable, Priority.ALWAYS);
 
     VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
@@ -652,7 +684,7 @@ public final class GameView implements GameViewInterface {
     // S → Settings | P → Profile
     // Escape → clear search, then go back to landing page
     overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-      boolean inTextField = e.getTarget() instanceof TextField;
+      boolean inTextField = e.getTarget() instanceof TextInputControl;
       // If a dialog popup is layered on top, ignore game shortcuts (Escape is handled per-popup)
       boolean dialogOpen = overlay.getChildren().size() > 2;
       if (dialogOpen) {
@@ -701,12 +733,20 @@ public final class GameView implements GameViewInterface {
             e.consume();
           }
         }
+        case ENTER -> {
+          if (!inTextField) {
+            e.consume();
+          }
+        }
         case ESCAPE -> {
-          if (!searchField.getText().isEmpty()) {
+          if (inTextField) {
+            overlay.requestFocus();
+            e.consume();
+          } else if (!searchField.getText().isEmpty()) {
             searchField.clear();
             searchField.getParent().requestFocus();
             e.consume();
-          } else if (!inTextField) {
+          } else {
             onBack.run();
             e.consume();
           }
@@ -806,18 +846,31 @@ public final class GameView implements GameViewInterface {
     }
 
     portfolioDividerRatio = clamp(portfolioDividerRatio, minRatio, maxRatio);
-    double detailHeight = Math.max(minDetailHeight, usableHeight * portfolioDividerRatio);
-    double portfolioHeight = Math.max(0, usableHeight * (1.0 - portfolioDividerRatio));
+    double detailHeight = snapToPixel(Math.max(minDetailHeight, usableHeight * portfolioDividerRatio));
+    double portfolioHeight = snapToPixel(Math.max(minPortfolioHeight, usableHeight - detailHeight));
+
+    // Keep total fixed to the available height to avoid 1px oscillation during layout passes.
+    double snappedUsable = snapToPixel(usableHeight);
+    double totalHeight = detailHeight + portfolioHeight;
+    if (totalHeight != snappedUsable) {
+      portfolioHeight = Math.max(minPortfolioHeight, portfolioHeight + (snappedUsable - totalHeight));
+    }
 
     detailArea.setMinHeight(minDetailHeight);
     detailArea.setPrefHeight(detailHeight);
     detailArea.setMaxHeight(detailHeight);
-    portfolioSection.setMinHeight(portfolioHeight);
+    portfolioSection.setMinHeight(minPortfolioHeight);
     portfolioSection.setPrefHeight(portfolioHeight);
     portfolioSection.setMaxHeight(portfolioHeight);
   }
 
+  private static double snapToPixel(double value) {
+    return Math.max(0, Math.rint(value));
+  }
+
   public void updateData() {
+    ShareSelectionKey selectedShareKey = capturePortfolioSelection();
+
     PlayerStatus status = gameController.getPlayerStatus();
     if (lastKnownStatus != null && status.ordinal() > lastKnownStatus.ordinal()) {
       showLevelUpPopup(status);
@@ -843,8 +896,47 @@ public final class GameView implements GameViewInterface {
     netWorthVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
     updateProfileIdentityButton();
     portfolioItems.setAll(gameController.getPortfolioShares());
+    if (!portfolioTable.getSortOrder().isEmpty()) {
+      portfolioTable.sort();
+    }
+    restorePortfolioSelection(selectedShareKey);
+    portfolioTable.refresh();
     applyFilter();
     rebuildDetail();
+  }
+
+  private ShareSelectionKey capturePortfolioSelection() {
+    Share selected = portfolioTable.getSelectionModel().getSelectedItem();
+    if (selected == null || selected.getStock() == null) {
+      return null;
+    }
+    return new ShareSelectionKey(
+        selected.getStock().getSymbol(),
+        selected.getQuantity(),
+        selected.getPurchasePrice());
+  }
+
+  private void restorePortfolioSelection(ShareSelectionKey selectedShareKey) {
+    if (selectedShareKey == null) {
+      return;
+    }
+
+    for (int i = 0; i < portfolioItems.size(); i++) {
+      Share share = portfolioItems.get(i);
+      if (share.getStock() == null) {
+        continue;
+      }
+      boolean symbolMatch = selectedShareKey.symbol().equals(share.getStock().getSymbol());
+      boolean quantityMatch = selectedShareKey.quantity().compareTo(share.getQuantity()) == 0;
+      boolean priceMatch = selectedShareKey.purchasePrice().compareTo(share.getPurchasePrice()) == 0;
+      if (symbolMatch && quantityMatch && priceMatch) {
+        portfolioTable.getSelectionModel().select(i);
+        return;
+      }
+    }
+  }
+
+  private record ShareSelectionKey(String symbol, BigDecimal quantity, BigDecimal purchasePrice) {
   }
 
   private void updateProfileIdentityButton() {
@@ -1036,6 +1128,7 @@ public final class GameView implements GameViewInterface {
       if (performanceMode) {
         for (int i = 0; i < sortedStocks.size(); i++) {
           if (sortedStocks.get(i).getSymbol().equals(symbol)) {
+            stockListView.getSelectionModel().select(i);
             stockListView.scrollTo(i);
             break;
           }
@@ -1110,10 +1203,16 @@ public final class GameView implements GameViewInterface {
     price.getStyleClass().add("detail-price");
 
     BigDecimal pct = stock.percentageChange();
-    String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-    Label pctBadge = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
-    pctBadge.getStyleClass()
-        .add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "detail-badge-up" : "detail-badge-down");
+    Label pctBadge;
+    if (pct.compareTo(BigDecimal.ZERO) == 0) {
+      pctBadge = new Label("\u2014");
+      pctBadge.getStyleClass().add("detail-badge-neutral");
+    } else {
+      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+      pctBadge = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+      pctBadge.getStyleClass()
+          .add(pct.compareTo(BigDecimal.ZERO) > 0 ? "detail-badge-up" : "detail-badge-down");
+    }
 
     // ── Fav star button (right of symbol) ────────────────────────────────
     boolean isFavDetail = favorites.contains(stock.getSymbol());
@@ -1526,7 +1625,10 @@ public final class GameView implements GameViewInterface {
       Share sh = c.getValue();
       BigDecimal pl = sh.getStock().getSalesPrice().subtract(sh.getPurchasePrice())
           .multiply(sh.getQuantity());
-      String sign = pl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+      if (pl.compareTo(BigDecimal.ZERO) == 0) {
+        return new SimpleStringProperty("\u2014");
+      }
+      String sign = pl.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
       return new SimpleStringProperty(sign + CurrencyFormatter.format(pl));
     });
     plCol.setCellFactory(col -> new TableCell<>() {
@@ -1539,8 +1641,50 @@ public final class GameView implements GameViewInterface {
           return;
         }
         setText(item);
-        boolean up = item.startsWith("+");
-        setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
+        if ("\u2014".equals(item)) {
+          setStyle("-fx-text-fill: #4a6899;");
+        } else {
+          boolean up = item.startsWith("+");
+          setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
+        }
+      }
+    });
+
+    TableColumn<Share, String> pctCol = new TableColumn<>("%");
+    pctCol.setMinWidth(72);
+    pctCol.setMaxWidth(90);
+    pctCol.setCellValueFactory(c -> {
+      Share sh = c.getValue();
+      BigDecimal cost = sh.getPurchasePrice();
+      if (cost.compareTo(BigDecimal.ZERO) == 0) {
+        return new SimpleStringProperty("\u2014");
+      }
+      BigDecimal pct = sh.getStock().getSalesPrice().subtract(cost)
+          .divide(cost, 4, RoundingMode.HALF_UP)
+          .multiply(BigDecimal.valueOf(100))
+          .setScale(2, RoundingMode.HALF_UP);
+      if (pct.compareTo(BigDecimal.ZERO) == 0) {
+        return new SimpleStringProperty("\u2014");
+      }
+      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+      return new SimpleStringProperty(sign + pct.toPlainString() + "%");
+    });
+    pctCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(String item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setText(null);
+          setStyle("");
+          return;
+        }
+        setText(item);
+        if ("\u2014".equals(item)) {
+          setStyle("-fx-text-fill: #4a6899;");
+        } else {
+          boolean up = item.startsWith("+");
+          setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
+        }
       }
     });
 
@@ -1549,6 +1693,7 @@ public final class GameView implements GameViewInterface {
     table.getColumns().add(boughtCol);
     table.getColumns().add(nowCol);
     table.getColumns().add(plCol);
+    table.getColumns().add(pctCol);
     return table;
   }
 
@@ -2200,12 +2345,13 @@ public final class GameView implements GameViewInterface {
     String[] tabRef = {"1W"};
     Button tab1w = new Button("1W");
     Button tab4w = new Button("4W");
+    Button tab10w = new Button("10W");
     Button tabAll = new Button("All");
-    for (Button t : new Button[] {tab1w, tab4w, tabAll}) {
+    for (Button t : new Button[] {tab1w, tab4w, tab10w, tabAll}) {
       t.getStyleClass().add("movers-tab");
     }
     tab1w.getStyleClass().add("movers-tab-active");
-    HBox tabBar = new HBox(4, tab1w, tab4w, tabAll);
+    HBox tabBar = new HBox(4, tab1w, tab4w, tab10w, tabAll);
     tabBar.getStyleClass().add("movers-tab-bar");
 
     Runnable[] dismissRef = {null};
@@ -2216,6 +2362,7 @@ public final class GameView implements GameViewInterface {
     rebuildRef[0] = () -> {
       int weeks = switch (tabRef[0]) {
         case "4W" -> 4;
+        case "10W" -> 10;
         case "All" -> -1;
         default -> 1;
       };
@@ -2249,6 +2396,16 @@ public final class GameView implements GameViewInterface {
       tabRef[0] = "4W";
       tab4w.getStyleClass().add("movers-tab-active");
       tab1w.getStyleClass().remove("movers-tab-active");
+      tab10w.getStyleClass().remove("movers-tab-active");
+      tabAll.getStyleClass().remove("movers-tab-active");
+      rebuildRef[0].run();
+    });
+    tab10w.setOnAction(ev -> {
+      notifyPanelOpen();
+      tabRef[0] = "10W";
+      tab10w.getStyleClass().add("movers-tab-active");
+      tab1w.getStyleClass().remove("movers-tab-active");
+      tab4w.getStyleClass().remove("movers-tab-active");
       tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
     });
@@ -2258,6 +2415,7 @@ public final class GameView implements GameViewInterface {
       tabAll.getStyleClass().add("movers-tab-active");
       tab1w.getStyleClass().remove("movers-tab-active");
       tab4w.getStyleClass().remove("movers-tab-active");
+      tab10w.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
     });
 
@@ -2433,7 +2591,8 @@ public final class GameView implements GameViewInterface {
     String[] txChipKeys = {"ALL", "BUY", "SELL"};
     String[] txChipLabels = {"All", "Buy", "Sell"};
     HBox txFilterRow = new HBox(6);
-    txFilterRow.getStyleClass().add("stock-filter-row");
+    txFilterRow.getStyleClass().addAll("stock-filter-row", "history-filter-row");
+    txFilterRow.setAlignment(Pos.CENTER_LEFT);
 
     applyTxFilter[0] = () -> {
       String lower = txSearch.getText() == null ? "" : txSearch.getText().trim().toLowerCase();
@@ -2485,14 +2644,14 @@ public final class GameView implements GameViewInterface {
     weekCol.setCellValueFactory(
         cd -> new SimpleStringProperty(String.valueOf(cd.getValue().week())));
     weekCol.setComparator(java.util.Comparator.comparingInt(Integer::parseInt));
-    weekCol.setMinWidth(34);
-    weekCol.setPrefWidth(34);
+    weekCol.setMinWidth(50);
+    weekCol.setPrefWidth(50);
 
     TableColumn<TxRow, String> typeCol = new TableColumn<>("Type");
     typeCol.setCellValueFactory(
         cd -> new SimpleStringProperty(cd.getValue().isBuy() ? "BUY" : "SELL"));
-    typeCol.setMinWidth(46);
-    typeCol.setPrefWidth(46);
+    typeCol.setMinWidth(56);
+    typeCol.setPrefWidth(56);
     typeCol.setComparator(String::compareTo);
     typeCol.setCellFactory(col -> new TableCell<>() {
       @Override
@@ -2510,44 +2669,77 @@ public final class GameView implements GameViewInterface {
 
     TableColumn<TxRow, String> symCol = new TableColumn<>("Symbol");
     symCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().symbol()));
-    symCol.setMinWidth(64);
-    symCol.setPrefWidth(72);
+    symCol.setMinWidth(76);
+    symCol.setPrefWidth(86);
 
     TableColumn<TxRow, String> compCol = new TableColumn<>("Company");
     compCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().company()));
-    compCol.setMinWidth(120);
-    compCol.setPrefWidth(160);
+    compCol.setMinWidth(140);
+    compCol.setPrefWidth(180);
 
-    TableColumn<TxRow, String> quantityCol = new TableColumn<>("Quantity");
-    quantityCol.setCellValueFactory(cd -> new SimpleStringProperty(
-        cd.getValue().quantity().stripTrailingZeros().toPlainString()));
-    quantityCol.setMinWidth(50);
-    quantityCol.setPrefWidth(60);
+    TableColumn<TxRow, BigDecimal> quantityCol = new TableColumn<>("Quantity");
+    quantityCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().quantity()));
+    quantityCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : item.stripTrailingZeros().toPlainString());
+      }
+    });
+    quantityCol.setMinWidth(62);
+    quantityCol.setPrefWidth(72);
 
-    TableColumn<TxRow, String> priceCol = new TableColumn<>("Price per share");
-    priceCol.setCellValueFactory(
-        cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().pricePerShare())));
-    priceCol.setMinWidth(70);
-    priceCol.setPrefWidth(80);
+    TableColumn<TxRow, BigDecimal> priceCol = new TableColumn<>("Price per share");
+    priceCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().pricePerShare()));
+    priceCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : CurrencyFormatter.format(item));
+      }
+    });
+    priceCol.setMinWidth(90);
+    priceCol.setPrefWidth(100);
 
-    TableColumn<TxRow, String> feeCol = new TableColumn<>("Fee");
-    feeCol.setCellValueFactory(
-        cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().fee())));
-    feeCol.setMinWidth(60);
-    feeCol.setPrefWidth(70);
+    TableColumn<TxRow, BigDecimal> feeCol = new TableColumn<>("Fee");
+    feeCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().fee()));
+    feeCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : CurrencyFormatter.format(item));
+      }
+    });
+    feeCol.setMinWidth(72);
+    feeCol.setPrefWidth(82);
 
-    TableColumn<TxRow, String> taxCol = new TableColumn<>("Tax");
-    taxCol.setCellValueFactory(cd -> new SimpleStringProperty(
-        cd.getValue().tax().compareTo(BigDecimal.ZERO) == 0 ? "\u2014" :
-            CurrencyFormatter.format(cd.getValue().tax())));
-    taxCol.setMinWidth(60);
-    taxCol.setPrefWidth(70);
+    TableColumn<TxRow, BigDecimal> taxCol = new TableColumn<>("Tax");
+    taxCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().tax()));
+    taxCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setText(null);
+          return;
+        }
+        setText(item.compareTo(BigDecimal.ZERO) == 0 ? "\u2014" : CurrencyFormatter.format(item));
+      }
+    });
+    taxCol.setMinWidth(72);
+    taxCol.setPrefWidth(82);
 
-    TableColumn<TxRow, String> totalCol = new TableColumn<>("Total");
-    totalCol.setCellValueFactory(
-        cd -> new SimpleStringProperty(CurrencyFormatter.format(cd.getValue().total())));
-    totalCol.setMinWidth(80);
-    totalCol.setPrefWidth(90);
+    TableColumn<TxRow, BigDecimal> totalCol = new TableColumn<>("Total");
+    totalCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().total()));
+    totalCol.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : CurrencyFormatter.format(item));
+      }
+    });
+    totalCol.setMinWidth(96);
+    totalCol.setPrefWidth(108);
 
     table.getColumns().add(weekCol);
     table.getColumns().add(typeCol);
@@ -2561,17 +2753,9 @@ public final class GameView implements GameViewInterface {
     weekCol.setSortType(TableColumn.SortType.DESCENDING);
     table.getSortOrder().add(weekCol);
     table.sort();
-    // Size table to fit its rows (28px per row + 30px header), capped at 12 rows
-    double rowH = 28;
-    double headerH = 30;
-    double tableH = headerH + Math.min(filteredTx.size(), 12) * rowH;
-    table.setPrefHeight(tableH);
-    table.setMinHeight(headerH + rowH);  // at least one row visible
-    // Grow the table when filter makes more rows visible
-    filteredTx.addListener((javafx.collections.ListChangeListener<TxRow>) c -> {
-      double h = headerH + Math.min(filteredTx.size(), 12) * rowH;
-      table.setPrefHeight(h);
-    });
+    // Let the table consume the available card space before showing scrollbars.
+    table.setMinHeight(58); // one row + header baseline
+    table.setMaxHeight(Double.MAX_VALUE);
     Label emptyLbl = new Label("No transactions yet.");
     emptyLbl.getStyleClass().add("market-movers-col-title");
     table.setPlaceholder(emptyLbl);
@@ -2633,8 +2817,8 @@ public final class GameView implements GameViewInterface {
     titleRow.getStyleClass().add("market-movers-header");
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
-    Label txSortLabel = new Label("Sort");
-    txSortLabel.getStyleClass().add("stock-row-section-label");
+    Label txSortLabel = new Label("Sort by:");
+    txSortLabel.getStyleClass().addAll("stock-row-section-label", "history-sort-label");
 
     HBox controlsRow = new HBox(10, txSearch, txSortLabel, txFilterRow);
     controlsRow.getStyleClass().add("history-controls-row");
@@ -2644,8 +2828,10 @@ public final class GameView implements GameViewInterface {
     VBox card = new VBox(0, titleRow, controlsRow, table);
     card.getStyleClass().add("history-card");
     card.setMaxWidth(920);
+    card.setPrefHeight(580);
     card.setMaxHeight(580);
     card.setOpacity(0);
+    VBox.setVgrow(table, Priority.ALWAYS);
 
     GaussianBlur blur = new GaussianBlur(0);
     rootRef.setEffect(blur);
@@ -3079,10 +3265,16 @@ public final class GameView implements GameViewInterface {
     priceLbl.getStyleClass().add("stock-card-price");
 
     BigDecimal pct = stock.percentageChange();
-    String sign = pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-    Label pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
-    pctLbl.getStyleClass()
-        .add(pct.compareTo(BigDecimal.ZERO) >= 0 ? "stock-pct-up" : "stock-pct-down");
+    Label pctLbl;
+    if (pct.compareTo(BigDecimal.ZERO) == 0) {
+      pctLbl = new Label("\u2014");
+      pctLbl.getStyleClass().add("stock-pct-neutral");
+    } else {
+      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+      pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+      pctLbl.getStyleClass()
+          .add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+    }
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
     BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
@@ -3134,7 +3326,7 @@ public final class GameView implements GameViewInterface {
     card.setPadding(new Insets(12, 14, 12, 14));
     card.setUserData(stock.getSymbol());
 
-    if (stock.equals(selectedStock.get())) {
+    if (!performanceMode && stock.equals(selectedStock.get())) {
       card.getStyleClass().add("stock-card-selected");
     }
 
@@ -3336,19 +3528,46 @@ public final class GameView implements GameViewInterface {
         gc.setLineWidth(1.5);
         gc.strokeOval(cx - 3.5, cy - 3.5, 7, 7);
         // Price chip near top of chart
-        String chipTxt = "Week " + (firstHistoryWeek + hi) + "  "
+        String weeklyChangeText = "";
+        Color weeklyChangeColor = Color.web("#8aa2c8", 0.90);
+        if (hi > 0 && prices.get(hi - 1).compareTo(BigDecimal.ZERO) != 0) {
+          BigDecimal weeklyPct = prices.get(hi).subtract(prices.get(hi - 1))
+              .divide(prices.get(hi - 1), 4, RoundingMode.HALF_UP)
+              .multiply(BigDecimal.valueOf(100))
+              .setScale(2, RoundingMode.HALF_UP);
+          if (weeklyPct.compareTo(BigDecimal.ZERO) != 0) {
+            String pctSign = weeklyPct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+            weeklyChangeText = pctSign + weeklyPct.toPlainString() + "%";
+            weeklyChangeColor = weeklyPct.compareTo(BigDecimal.ZERO) > 0
+                ? Color.web("#4ecb71", 0.95)
+                : Color.web("#e05a5a", 0.95);
+          }
+        }
+        String chipPrefix = "Week " + (firstHistoryWeek + hi) + "  "
           + CurrencyFormatter.format(prices.get(hi));
-        gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10));
-        double tw = chipTxt.length() * 6.0;
+        String chipSuffix = "";
+        javafx.scene.text.Font chipFont =
+            javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 10);
+        gc.setFont(chipFont);
+        Text measureText = new Text();
+        measureText.setFont(chipFont);
+        measureText.setBoundsType(TextBoundsType.VISUAL);
+        measureText.setText(chipPrefix);
+        double prefixWidth = measureText.getLayoutBounds().getWidth();
+        measureText.setText(weeklyChangeText);
+        double pctWidth = measureText.getLayoutBounds().getWidth();
+        measureText.setText(chipSuffix);
+        double suffixWidth = measureText.getLayoutBounds().getWidth();
+        double pctGap = weeklyChangeText.isEmpty() ? 0.0 : 8.0;
+        double tw = prefixWidth + pctGap + pctWidth + suffixWidth;
         double chipX = Math.min(cx + 8, w - tw - 12);
         double chipY = padT + 2;
-        gc.setFill(Color.web("#060d20", 0.88));
-        gc.fillRoundRect(chipX - 5, chipY - 3, tw + 10, 16, 6, 6);
-        gc.setStroke(Color.web("#ffffff", 0.09));
-        gc.setLineWidth(0.5);
-        gc.strokeRoundRect(chipX - 5, chipY - 3, tw + 10, 16, 6, 6);
         gc.setFill(Color.web("#e8d8b0", 0.90));
-        gc.fillText(chipTxt, chipX, chipY + 11);
+        gc.fillText(chipPrefix, chipX, chipY + 11);
+        gc.setFill(weeklyChangeColor);
+        gc.fillText(weeklyChangeText, chipX + prefixWidth + pctGap, chipY + 11);
+        gc.setFill(Color.web("#e8d8b0", 0.90));
+        gc.fillText(chipSuffix, chipX + prefixWidth + pctGap + pctWidth, chipY + 11);
       }
 
       // Pre-compute which weeks have buys, sells, or both

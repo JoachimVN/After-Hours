@@ -405,6 +405,10 @@
   -fx-text-fill: #e05a5a;
 }
 
+.profile-value-neutral {
+  -fx-text-fill: #4a6899;
+}
+
 .profile-badge {
   -fx-background-color: linear-gradient(to bottom right, rgba(28, 56, 92, 0.92), rgba(20, 46, 80, 0.92));
   -fx-text-fill: #d9ecff;

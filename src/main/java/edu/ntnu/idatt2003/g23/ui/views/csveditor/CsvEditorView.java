@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 
@@ -64,13 +65,35 @@ public final class CsvEditorView {
    * @param onSaveAs   called with the validated row list and the chosen
    *                   destination file when the user chooses "Save As &amp; Continue";
    *                   the controller is responsible for writing and starting the game
+   * @param onReset    called when the user clicks "Reset to Defaults" to reload original data
    */
   public static Parent build(CsvParseResult result, Runnable onCancel,
                              Consumer<List<CsvRow>> onContinue,
-                             BiConsumer<List<CsvRow>, File> onSaveAs) {
+                             BiConsumer<List<CsvRow>, File> onSaveAs,
+                             Runnable onReset) {
+    return build(result, onCancel, onContinue, onSaveAs, onReset,
+      true, "\u25B6  Continue (no save)", "\u2714  Save As & Continue");
+    }
 
-    ObservableList<CsvRow> rows =
-        FXCollections.observableArrayList(result.getRows());
+    /**
+     * Builds a standalone CSV editor that only supports saving/exporting.
+     */
+    public static Parent buildStandalone(CsvParseResult result, Runnable onCancel,
+                       BiConsumer<List<CsvRow>, File> onSaveAs,
+                       Runnable onReset) {
+    return build(result, onCancel, null, onSaveAs, onReset,
+      false, null, "\u2714  Save As");
+    }
+
+    private static Parent build(CsvParseResult result, Runnable onCancel,
+                  Consumer<List<CsvRow>> onContinue,
+                  BiConsumer<List<CsvRow>, File> onSaveAs,
+                  Runnable onReset,
+                  boolean showContinueAction,
+                  String continueButtonText,
+                  String saveButtonText) {
+
+    ObservableList<CsvRow> rows = createEditableRows(result);
 
     // Single source of truth for whether any row has an error.
     // Updated explicitly whenever rows are edited, added, or removed.
@@ -253,8 +276,9 @@ public final class CsvEditorView {
         }
         event.consume();
       } else if (event.getCode() == KeyCode.ENTER) {
-        TableColumn<CsvRow, ?> col = pos.getTableColumn() != null
-            ? (TableColumn<CsvRow, ?>) pos.getTableColumn() : editableCols.get(0);
+        int currentEditableColIndex = editableCols.indexOf(pos.getTableColumn());
+        TableColumn<CsvRow, ?> col = currentEditableColIndex >= 0
+            ? editableCols.get(currentEditableColIndex) : editableCols.get(0);
         if (event.isShiftDown()) {
           if (ri > 0) {
             selectCell(table, ri - 1, col);
@@ -404,20 +428,30 @@ public final class CsvEditorView {
       refreshState.run();
     });
 
+    // "Reset to Defaults" — reloads the original parse result
+    Button resetBtn = new Button("\u27F3  Reset to Defaults");
+    resetBtn.getStyleClass().addAll("secondary-button", "csv-skip-button");
+    resetBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+    resetBtn.setOnAction(e -> onReset.run());
+
     // "Continue without saving" — starts game in memory, no file picker
-    Button continueBtn = new Button("\u25B6  Continue (no save)");
-    continueBtn.getStyleClass().add("secondary-button");
-    continueBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
-    continueBtn.disableProperty().bind(hasErrors);
-    continueBtn.setOnAction(e -> {
-      if (rows.stream().anyMatch(CsvRow::hasError)) {
-        return;
-      }
-      onContinue.accept(List.copyOf(rows));
-    });
+    Button continueBtn = null;
+    if (showContinueAction) {
+      continueBtn = new Button(continueButtonText);
+      continueBtn.getStyleClass().add("secondary-button");
+      continueBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+      continueBtn.disableProperty().bind(hasErrors);
+      Button finalContinueBtn = continueBtn;
+      finalContinueBtn.setOnAction(e -> {
+        if (rows.stream().anyMatch(CsvRow::hasError)) {
+          return;
+        }
+        onContinue.accept(List.copyOf(rows));
+      });
+    }
 
     // "Save As & Continue" — shows file picker, delegates I/O to the controller
-    Button saveBtn = new Button("\u2714  Save As & Continue");
+    Button saveBtn = new Button(saveButtonText);
     saveBtn.getStyleClass().add("start-button");
     saveBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 15;");
     saveBtn.disableProperty().bind(hasErrors);
@@ -439,8 +473,11 @@ public final class CsvEditorView {
     Region bottomSpacer = new Region();
     HBox.setHgrow(bottomSpacer, Priority.ALWAYS);
 
-    HBox bottomBar =
-        new HBox(12, hintLabel, addRowBtn, bottomSpacer, skipAllBtn, continueBtn, saveBtn);
+    HBox bottomBar = new HBox(12, hintLabel, addRowBtn, resetBtn, bottomSpacer, skipAllBtn);
+    if (continueBtn != null) {
+      bottomBar.getChildren().add(continueBtn);
+    }
+    bottomBar.getChildren().add(saveBtn);
     bottomBar.setAlignment(Pos.CENTER_LEFT);
     bottomBar.setPadding(new Insets(12, 32, 24, 32));
 
@@ -466,6 +503,24 @@ public final class CsvEditorView {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private static ObservableList<CsvRow> createEditableRows(CsvParseResult result) {
+    return FXCollections.observableArrayList(
+        result.getRows().stream()
+            .map(CsvEditorView::copyRow)
+            .collect(Collectors.toList()));
+  }
+
+  private static CsvRow copyRow(CsvRow source) {
+    CsvRow copy = new CsvRow(
+        source.getLineNumber(),
+        source.getSymbol(),
+        source.getCompany(),
+        source.getPrices(),
+        source.getErrorMessage());
+    copy.setErrorColumn(source.getErrorColumn());
+    return copy;
+  }
 
   private static void updateErrorCount(Label label, ObservableList<CsvRow> rows) {
     long errors = rows.stream().filter(CsvRow::hasError).count();

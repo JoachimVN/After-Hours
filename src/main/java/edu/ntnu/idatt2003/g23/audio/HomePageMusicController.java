@@ -34,20 +34,27 @@ public class HomePageMusicController {
   );
   private static final Duration FADE_DURATION = Duration.seconds(1.0);
   private static final Duration AMBIENCE_FADE_IN_DURATION = Duration.seconds(0.1);
+  private static final Duration CONTEXT_EQ_FADE_DURATION = Duration.seconds(0.6);
   private static final double DEFAULT_VOLUME = 0.50;
+  private static final double NON_LANDING_EQ_CUTOFF_HZ = 1000.0;
+  private static final double EQ_FLAT_GAIN_DB = 0.0;
+  private static final double EQ_HIGH_CUT_GAIN_DB = -24.0;
   private static final double MAIN_THEME_VOLUME_MULTIPLIER = 0.8;
   private static final double AMBIENCE1_VOLUME_MULTIPLIER = 0.50;
   private static final double AMBIENCE2_VOLUME_MULTIPLIER = 1.0;
   private static final double AMBIENCE3_VOLUME_MULTIPLIER = 0.75;
   private static final double AMBIENCE4_VOLUME_MULTIPLIER = 0.75;
-  private static final double AMBIENCE5_VOLUME_MULTIPLIER = 0.75;
+  private static final double AMBIENCE5_VOLUME_MULTIPLIER = 0.50;
 
   private final Class<?> resourceOwner;
   private final Map<String, Media> mediaCache = new HashMap<>();
   private MediaPlayer mediaPlayer;
   private double volume = DEFAULT_VOLUME;
   private double currentTrackMultiplier = 1.0;
+  private double contextVolumeMultiplier = 1.0;
+  private boolean currentTrackIsHomeTheme = false;
   private Timeline fadeTimeline;
+  private Timeline eqAdjustTimeline;
 
   private List<String> ambienceQueue = new ArrayList<>();
   private String lastGameStartTrack = null;
@@ -94,8 +101,10 @@ public class HomePageMusicController {
         throw new IllegalStateException("Unable to load home music");
       }
       mediaPlayer = new MediaPlayer(media);
+      currentTrackIsHomeTheme = true;
       currentTrackMultiplier = MAIN_THEME_VOLUME_MULTIPLIER;
-      mediaPlayer.setVolume(volume * currentTrackMultiplier);
+      mediaPlayer.setVolume(effectiveVolume());
+      applyThemeEqProfile(mediaPlayer, false);
       mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
       if (onPlaying != null) {
         mediaPlayer.setOnPlaying(onPlaying);
@@ -167,6 +176,7 @@ public class HomePageMusicController {
       }
       final MediaPlayer sfxPlayer = new MediaPlayer(media);
       mediaPlayer = sfxPlayer;
+      currentTrackIsHomeTheme = false;
       sfxPlayer.setVolume(sfxVolume);
       sfxPlayer.setOnEndOfMedia(() -> {
         sfxPlayer.stop();
@@ -199,7 +209,10 @@ public class HomePageMusicController {
       }
       currentTrackMultiplier = multiplierFor(track);
       mediaPlayer = new MediaPlayer(media);
-      if (eqFilterActive) applyEqToCurrentPlayer();
+      currentTrackIsHomeTheme = false;
+      if (eqFilterActive) {
+        applyEqToCurrentPlayer();
+      }
       mediaPlayer.setVolume(0.0);
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();
@@ -207,7 +220,7 @@ public class HomePageMusicController {
         fadeTimeline.stop();
       }
       MediaPlayer ambiencePlayer = mediaPlayer;
-      double targetVolume = volume * currentTrackMultiplier;
+      double targetVolume = effectiveVolume();
       fadeTimeline = new Timeline(
           new KeyFrame(Duration.ZERO,
               new KeyValue(ambiencePlayer.volumeProperty(), 0.0)),
@@ -221,6 +234,7 @@ public class HomePageMusicController {
   }
 
   private void fadeOutThen(Runnable after) {
+    stopEqAdjustTimeline();
     if (fadeTimeline != null) {
       fadeTimeline.stop();
     }
@@ -259,8 +273,11 @@ public class HomePageMusicController {
       }
       currentTrackMultiplier = multiplierFor(track);
       mediaPlayer = new MediaPlayer(media);
-      if (eqFilterActive) applyEqToCurrentPlayer();
-      mediaPlayer.setVolume(volume * currentTrackMultiplier);
+      currentTrackIsHomeTheme = false;
+      mediaPlayer.setVolume(effectiveVolume());
+      if (eqFilterActive) {
+        applyEqToCurrentPlayer();
+      }
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();
     } catch (Exception ignored) {
@@ -360,6 +377,7 @@ public class HomePageMusicController {
   }
 
   public void stop() {
+    stopEqAdjustTimeline();
     if (fadeTimeline != null) {
       fadeTimeline.stop();
       fadeTimeline = null;
@@ -370,12 +388,84 @@ public class HomePageMusicController {
     mediaPlayer.stop();
     mediaPlayer.dispose();
     mediaPlayer = null;
+    currentTrackIsHomeTheme = false;
   }
 
   public void setVolume(double volume) {
     this.volume = volume;
     if (mediaPlayer != null) {
-      mediaPlayer.setVolume(volume * currentTrackMultiplier);
+      mediaPlayer.setVolume(effectiveVolume());
+    }
+  }
+
+  /**
+   * Updates Theme.mp3 context profile. Volume is unchanged; EQ profile may change.
+   * Use 1.0 for landing profile and a lower value for non-landing profile.
+   */
+  public void setContextVolumeMultiplier(double multiplier, boolean smooth) {
+    contextVolumeMultiplier = Math.max(0.0, multiplier);
+    if (mediaPlayer == null || !currentTrackIsHomeTheme) {
+      return;
+    }
+    if (!smooth) {
+      applyThemeEqProfile(mediaPlayer, false);
+      return;
+    }
+    applyThemeEqProfile(mediaPlayer, true);
+  }
+
+  private double effectiveVolume() {
+    return volume * currentTrackMultiplier;
+  }
+
+  private void applyThemeEqProfile(MediaPlayer player, boolean smooth) {
+    if (player == null || !currentTrackIsHomeTheme) {
+      return;
+    }
+    AudioEqualizer equalizer = player.getAudioEqualizer();
+    if (equalizer == null) {
+      return;
+    }
+    equalizer.setEnabled(true);
+
+    if (!smooth) {
+      stopEqAdjustTimeline();
+      for (EqualizerBand band : equalizer.getBands()) {
+        band.setGain(targetGainForBand(band));
+      }
+      return;
+    }
+
+    stopEqAdjustTimeline();
+    List<KeyValue> gainTargets = new ArrayList<>();
+    for (EqualizerBand band : equalizer.getBands()) {
+      gainTargets.add(new KeyValue(band.gainProperty(), targetGainForBand(band)));
+    }
+    if (gainTargets.isEmpty()) {
+      return;
+    }
+    eqAdjustTimeline = new Timeline(
+        new KeyFrame(CONTEXT_EQ_FADE_DURATION, gainTargets.toArray(new KeyValue[0]))
+    );
+    eqAdjustTimeline.setOnFinished(e -> {
+      if (eqAdjustTimeline != null) {
+        eqAdjustTimeline = null;
+      }
+    });
+    eqAdjustTimeline.play();
+  }
+
+  private double targetGainForBand(EqualizerBand band) {
+    if (contextVolumeMultiplier < 0.999 && band.getCenterFrequency() >= NON_LANDING_EQ_CUTOFF_HZ) {
+      return EQ_HIGH_CUT_GAIN_DB;
+    }
+    return EQ_FLAT_GAIN_DB;
+  }
+
+  private void stopEqAdjustTimeline() {
+    if (eqAdjustTimeline != null) {
+      eqAdjustTimeline.stop();
+      eqAdjustTimeline = null;
     }
   }
 

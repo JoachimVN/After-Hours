@@ -1,8 +1,9 @@
 package edu.ntnu.idatt2003.g23.ui.util;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,6 +17,7 @@ import javafx.scene.image.ImageView;
 public final class AvatarUtil {
 
   private static final String EMOJI_PATH = "/images/emojis/";
+  private static final String AVATAR_ORDER_RESOURCE = "/data/avatar-order.txt";
   private static final String DEFAULT_AVATAR = "bust-in-silhouette";
   private static final String CHICK_BASE_STEM = "egg";
   private static final Set<String> CHICK_STEMS = Set.of(
@@ -39,52 +41,20 @@ public final class AvatarUtil {
    * Lines starting with # are treated as comments and ignored.
    */
   public static List<String> loadAvatarNames() {
-    URL dirUrl = AvatarUtil.class.getResource(EMOJI_PATH);
-    if (dirUrl == null) {
-      return List.of();
-    }
-    try {
-      Path dir = Path.of(dirUrl.toURI());
-
-      // Collect all available PNG stems recursively (alphabetical fallback order).
-      // This supports grouped emoji folders like humans/, animals-1/, animals-2/,
-      // etc.
-      List<String> allStems;
-      try (var stream = Files.walk(dir)) {
-        allStems = stream
-            .filter(Files::isRegularFile)
-            .filter(p -> p.toString().toLowerCase().endsWith(".png"))
-            // Ignore animals-2 folder
-            .filter(p -> !p.toString().replace('\\', '/').contains("/animals-2/"))
-            .map(p -> p.getFileName().toString().replaceFirst("\\.png$", ""))
-            .distinct()
-            .sorted()
-            .collect(Collectors.toList());
+    try (var input = AvatarUtil.class.getResourceAsStream(AVATAR_ORDER_RESOURCE)) {
+      if (input == null) {
+        return List.of(DEFAULT_AVATAR);
       }
-
-      // Apply avatar-order.txt if present
-      URL orderUrl = AvatarUtil.class.getResource("/data/avatar-order.txt");
-      Path orderFile = orderUrl != null ? Path.of(orderUrl.toURI()) : null;
-      if (orderFile == null) {
-        orderFile = dir.resolve("avatar-order.txt"); // fallback
-      }
-      if (orderFile != null && Files.exists(orderFile)) {
-        List<String> ordered = Files.readAllLines(orderFile).stream()
+      try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+        return reader.lines()
             .map(String::strip)
             .map(AvatarUtil::normalizeAvatarStem)
-            .filter(l -> !l.isBlank() && !l.startsWith("#"))
-            .filter(allStems::contains)
-            .collect(Collectors.toList());
-        // LinkedHashSet preserves insertion order and deduplicates
-        SequencedSet<String> result = new LinkedHashSet<>(ordered);
-        // Append any PNG not mentioned in order.txt
-        allStems.stream().filter(s -> !result.contains(s)).forEach(result::add);
-        return new ArrayList<>(result);
+            .filter(line -> !line.isBlank() && !line.startsWith("#"))
+            .distinct()
+            .collect(Collectors.toCollection(ArrayList::new));
       }
-
-      return allStems;
     } catch (Exception e) {
-      return List.of();
+      return List.of(DEFAULT_AVATAR);
     }
   }
 
@@ -106,16 +76,45 @@ public final class AvatarUtil {
    * Used for the profile avatar picker.
    */
   public static List<String> loadSelectableAvatarNames() {
-    List<String> names = loadAvatarNames().stream()
-        .map(AvatarUtil::normalizeAvatarStem)
-        .filter(s -> !DEFAULT_AVATAR.equals(s))
-        .filter(s -> !HIDDEN_SELECTABLE_AVATARS.contains(s))
-        .distinct()
-        .collect(Collectors.toList());
+    List<String> names = new ArrayList<>();
+
+    try (var input = AvatarUtil.class.getResourceAsStream(AVATAR_ORDER_RESOURCE)) {
+      if (input == null) {
+        return List.of(DEFAULT_AVATAR);
+      }
+      try (var reader = new java.io.BufferedReader(
+          new java.io.InputStreamReader(input, java.nio.charset.StandardCharsets.UTF_8))) {
+        reader.lines()
+            .map(String::strip)
+            .map(AvatarUtil::normalizeAvatarStem)
+            .filter(line -> !line.isBlank() && !line.startsWith("#"))
+            .filter(stem -> !DEFAULT_AVATAR.equals(stem))
+            .filter(stem -> !HIDDEN_SELECTABLE_AVATARS.contains(stem))
+            .distinct()
+            .forEach(names::add);
+      }
+    } catch (Exception e) {
+      return List.of(DEFAULT_AVATAR);
+    }
+
     if (names.isEmpty()) {
       return List.of(DEFAULT_AVATAR);
     }
     return names;
+  }
+
+  /**
+   * Returns the selectable avatars grouped into picker rows.
+   * The current resource order keeps humans on the first row and animals on the second row.
+   */
+  public static List<List<String>> loadSelectableAvatarRows() {
+    List<String> names = loadSelectableAvatarNames();
+    List<String> firstRow = new ArrayList<>(names.subList(0, Math.min(8, names.size())));
+    List<String> secondRow = new ArrayList<>();
+    if (names.size() > 8) {
+      secondRow.addAll(names.subList(8, Math.min(16, names.size())));
+    }
+    return List.of(firstRow, secondRow);
   }
 
   public static boolean isChickAvatar(String avatar) {
@@ -158,30 +157,19 @@ public final class AvatarUtil {
   private static URL resolveAvatarUrl(String stem) {
     String file = stem + ".png";
 
-    // Fast path for flat structure.
-    URL direct = AvatarUtil.class.getResource(EMOJI_PATH + file);
-    if (direct != null) {
-      return direct;
-    }
-
-    // Fallback for nested folder structures under /images/emojis/.
-    URL dirUrl = AvatarUtil.class.getResource(EMOJI_PATH);
-    if (dirUrl == null) {
-      return null;
-    }
-    try {
-      Path dir = Path.of(dirUrl.toURI());
-      try (var stream = Files.walk(dir)) {
-        Path match = stream
-            .filter(Files::isRegularFile)
-            .filter(p -> !p.toString().replace('\\', '/').contains("/animals-2/"))
-            .filter(p -> p.getFileName().toString().equalsIgnoreCase(file))
-            .findFirst()
-            .orElse(null);
-        return match == null ? null : match.toUri().toURL();
+    String[] candidatePaths = {
+        EMOJI_PATH + file,
+        EMOJI_PATH + "humans/" + file,
+        EMOJI_PATH + "animals-1/" + file,
+        EMOJI_PATH + "animals-1/chicks/" + file,
+        EMOJI_PATH + "animals-2/" + file
+    };
+    for (String candidatePath : candidatePaths) {
+      URL candidate = AvatarUtil.class.getResource(candidatePath);
+      if (candidate != null) {
+        return candidate;
       }
-    } catch (Exception e) {
-      return null;
     }
+    return null;
   }
 }
