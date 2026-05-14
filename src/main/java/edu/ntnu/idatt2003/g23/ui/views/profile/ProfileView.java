@@ -678,6 +678,7 @@ public final class ProfileView {
     replaySlider.setMinorTickCount(0);
     replaySlider.setShowTickMarks(true);
     replaySlider.setShowTickLabels(true);
+    installSliderFill(replaySlider);
 
     Region replaySliderLeftPad = new Region();
     Region replaySliderRightPad = new Region();
@@ -1184,5 +1185,27 @@ public final class ProfileView {
     }
     String lower = status.name().toLowerCase(Locale.ROOT);
     return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+  }
+
+  private static void installSliderFill(Slider slider) {
+    Runnable applyFill = () -> {
+      Node track = slider.lookup(".track");
+      if (!(track instanceof Region trackRegion)) {
+        return;
+      }
+
+      double min = slider.getMin();
+      double max = slider.getMax();
+      double pct = max <= min ? 0.0 : (slider.getValue() - min) / (max - min);
+      pct = Math.max(0.0, Math.min(1.0, pct));
+      double stop = pct * 100.0;
+      trackRegion.setStyle("-fx-background-color: linear-gradient(to right, "
+          + "#f5a201 " + stop + "%, "
+          + "#0f2d5e " + stop + "%);");
+    };
+
+    slider.skinProperty().addListener((obs, oldSkin, newSkin) -> Platform.runLater(applyFill));
+    slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
+    Platform.runLater(applyFill);
   }
 }

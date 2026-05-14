@@ -530,9 +530,6 @@ public final class GameView implements GameViewInterface {
     // ── Right panel: explicit vertical layout with dedicated drag handle ──
     Region portfolioResizeHandle = new Region();
     portfolioResizeHandle.getStyleClass().add("game-portfolio-resize-handle");
-    portfolioResizeHandle.setMinHeight(4);
-    portfolioResizeHandle.setPrefHeight(4);
-    portfolioResizeHandle.setMaxHeight(4);
 
     VBox rightPanel = new VBox(detailArea, portfolioResizeHandle, portfolioSection);
     rightPanel.getStyleClass().add("game-right-panel");

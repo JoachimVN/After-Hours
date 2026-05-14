@@ -319,9 +319,9 @@
 
 .game-body-split>.split-pane-divider {
     -fx-padding: 0;
-    -fx-pref-width: 10px;
-    -fx-min-width: 10px;
-    -fx-max-width: 10px;
+    -fx-pref-width: 6px;
+    -fx-min-width: 6px;
+    -fx-max-width: 6px;
     -fx-background-color: rgba(10, 20, 50, 0.22);
     -fx-cursor: h-resize;
 }
@@ -340,28 +340,31 @@
 .game-portfolio-resize-handle {
     -fx-background-color: linear-gradient(to right,
             rgba(16, 30, 64, 0.0) 0%,
-            rgba(30, 64, 128, 0.12) 24%,
-            rgba(30, 64, 128, 0.34) 40%,
-            rgba(30, 64, 128, 0.50) 50%,
-            rgba(30, 64, 128, 0.34) 60%,
-            rgba(30, 64, 128, 0.12) 76%,
+            rgba(30, 64, 128, 0.2) 24%,
+            rgba(30, 64, 128, 0.35) 40%,
+            rgba(37, 81, 163, 0.6) 50%,
+            rgba(30, 64, 128, 0.35) 60%,
+            rgba(30, 64, 128, 0.2) 76%,
             rgba(16, 30, 64, 0.0) 100%);
-    -fx-min-height: 4px;
-    -fx-pref-height: 4px;
-    -fx-max-height: 4px;
+    -fx-min-height: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-height: 6px;
     -fx-cursor: v-resize;
 }
 
-.game-portfolio-resize-handle:hover {
+.game-portfolio-resize-handle:hover,
+.game-portfolio-resize-handle:pressed {
     -fx-background-color: linear-gradient(to right,
             rgba(30, 64, 128, 0.0) 0%,
-            rgba(52, 78, 114, 0.14) 24%,
-            rgba(52, 78, 114, 0.40) 40%,
-            rgba(52, 78, 114, 0.60) 50%,
-            rgba(52, 78, 114, 0.40) 60%,
-            rgba(52, 78, 114, 0.14) 76%,
+            rgba(51, 84, 130, 0.2) 24%,
+            rgba(41, 75, 121, 0.5) 40%,
+            rgba(54, 112, 194, 0.8) 50%,
+            rgba(41, 75, 121, 0.5) 60%,
+            rgba(51, 84, 130, 0.2) 76%,
             rgba(30, 64, 128, 0.0) 100%);
 }
+
+
 
 .split-pane.game-right-split>.split-pane-divider {
     -fx-background-color: rgba(10, 20, 50, 0.22);
@@ -589,8 +592,8 @@
 .game-detail-header {
     -fx-background-color: rgba(8, 14, 36, 0.92);
     -fx-padding: 20 24 16 24;
-    -fx-border-color: rgba(30, 64, 128, 0.30);
-    -fx-border-width: 0 0 1 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 
 .detail-symbol {
@@ -666,12 +669,12 @@
 
 /* Trade panel */
 .trade-panel {
-    -fx-background-color: rgba(10, 18, 44, 0.90);
-    -fx-background-radius: 10;
-    -fx-border-color: rgba(12, 24, 52, 0.80);
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-padding: 10 14 10 14;
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 16 0 0 0;
 }
 
 .trade-error-label {

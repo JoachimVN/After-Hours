@@ -522,16 +522,28 @@
 }
 
 .profile-replay-slider .track {
-  -fx-background-color: rgba(15, 45, 94, 0.82);
-  -fx-pref-height: 7;
+  -fx-background-color: #0f2d5e;
+  -fx-pref-height: 6;
   -fx-background-radius: 4;
 }
 
 .profile-replay-slider .thumb {
   -fx-background-color: #f5a201;
-  -fx-pref-width: 16;
-  -fx-pref-height: 16;
-  -fx-background-radius: 10;
+  -fx-background-radius: 100;
+  -fx-pref-width: 18;
+  -fx-pref-height: 18;
+  -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 8, 0, 0, 2);
+  -fx-cursor: open-hand;
+}
+
+.profile-replay-slider .thumb:hover {
+  -fx-background-color: #eaba5a;
+  -fx-cursor: open-hand;
+}
+
+.profile-replay-slider .thumb:pressed {
+  -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.75), 8, 0, 0, 2);
+  -fx-cursor: closed-hand;
 }
 
 .profile-replay-slider .axis {
