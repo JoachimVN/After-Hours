@@ -38,6 +38,7 @@ import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -3595,6 +3596,72 @@ public final class GameView implements GameViewInterface {
     wrapper.setMaxWidth(220);
     wrapper.setMaxHeight(Region.USE_PREF_SIZE);
     wrapper.setPickOnBounds(false);
+
+    // Drag the panel from most non-interactive areas.
+    final double[] dragStartSceneX = {0};
+    final double[] dragStartSceneY = {0};
+    final double[] dragStartTranslateX = {0};
+    final double[] dragStartTranslateY = {0};
+    final boolean[] isDraggingPanel = {false};
+    java.util.function.Predicate<Node> dragBlockedTarget =
+        n -> n instanceof Button || n instanceof TextInputControl;
+
+    java.util.function.Consumer<javafx.scene.input.MouseEvent> startDrag = e -> {
+      if (e.getTarget() instanceof Node target && dragBlockedTarget.test(target)) {
+        return;
+      }
+      dragStartSceneX[0] = e.getSceneX();
+      dragStartSceneY[0] = e.getSceneY();
+      dragStartTranslateX[0] = wrapper.getTranslateX();
+      dragStartTranslateY[0] = wrapper.getTranslateY();
+      isDraggingPanel[0] = true;
+      wrapper.setCursor(Cursor.CLOSED_HAND);
+      e.consume();
+    };
+
+    java.util.function.Consumer<javafx.scene.input.MouseEvent> dragPanel = e -> {
+      if (e.getTarget() instanceof Node target && dragBlockedTarget.test(target)) {
+        return;
+      }
+      double dx = e.getSceneX() - dragStartSceneX[0];
+      double dy = e.getSceneY() - dragStartSceneY[0];
+      wrapper.setTranslateX(dragStartTranslateX[0] + dx);
+      wrapper.setTranslateY(dragStartTranslateY[0] + dy);
+      e.consume();
+    };
+
+    java.util.function.Consumer<javafx.scene.input.MouseEvent> endDrag = e -> {
+      if (!isDraggingPanel[0]) {
+        return;
+      }
+      isDraggingPanel[0] = false;
+      if (e.getTarget() instanceof Node target && !dragBlockedTarget.test(target)) {
+        wrapper.setCursor(Cursor.OPEN_HAND);
+      } else {
+        wrapper.setCursor(Cursor.DEFAULT);
+      }
+      e.consume();
+    };
+
+    panel.setOnMouseMoved(e -> {
+      if (isDraggingPanel[0]) {
+        return;
+      }
+      if (e.getTarget() instanceof Node target && !dragBlockedTarget.test(target)) {
+        wrapper.setCursor(Cursor.OPEN_HAND);
+      } else {
+        wrapper.setCursor(Cursor.DEFAULT);
+      }
+    });
+    panel.setOnMouseExited(e -> {
+      if (!isDraggingPanel[0]) {
+        wrapper.setCursor(Cursor.DEFAULT);
+      }
+    });
+
+    panel.setOnMousePressed(e -> startDrag.accept(e));
+    panel.setOnMouseDragged(e -> dragPanel.accept(e));
+    panel.setOnMouseReleased(e -> endDrag.accept(e));
     return wrapper;
   }
 
