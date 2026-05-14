@@ -58,11 +58,12 @@ public final class SaveSelectView {
     topBar.setPadding(new Insets(24, 32, 0, 32));
 
     // ── Title ─────────────────────────────────────────────────────────────
-    Label title = new Label("Continue Game");
+    List<SaveMeta> saves = controller.loadSaveList();
+    boolean hasSavesOrSession = !saves.isEmpty() || controller.hasSession();
+    Label title = new Label(hasSavesOrSession ? "Continue Game" : "New Game");
     title.getStyleClass().add("page-title");
 
     // ── Save list ─────────────────────────────────────────────────────────
-    List<SaveMeta> saves = controller.loadSaveList();
 
     VBox cardList = new VBox(16);
     cardList.setAlignment(Pos.TOP_CENTER);
