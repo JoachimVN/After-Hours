@@ -1597,8 +1597,18 @@ public final class GameView implements GameViewInterface {
       updateSellAmount.run();
     };
 
-    maxBuyBtn.setOnAction(e -> applyMaxForBuy.run());
-    maxSellBtn.setOnAction(e -> applyMaxForSell.run());
+    maxBuyBtn.setOnAction(e -> {
+      applyMaxForBuy.run();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
+    });
+    maxSellBtn.setOnAction(e -> {
+      applyMaxForSell.run();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
+    });
 
     Label tradeErrorLbl = new Label();
     tradeErrorLbl.getStyleClass().add("trade-error-label");
@@ -1709,6 +1719,10 @@ public final class GameView implements GameViewInterface {
       clearTradeError.run();
       BigDecimal quantity = BigDecimal.valueOf(parsedquantity);
       gameController.handleBuy(stock, quantity);
+      amountField.clear();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
     });
 
     // ── SELL button (secondary — fixed width) ──────────────────────────────
@@ -1754,6 +1768,10 @@ public final class GameView implements GameViewInterface {
       List<BigDecimal> preview = gameController.previewSell(stock, sellquantity);
       showTradeConfirm("SELL", stock, sellquantity, preview.get(0), preview.get(1), preview.get(2),
           preview.get(3));
+      amountField.clear();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
     });
 
     VBox selectorColumn = new VBox(4, stepper, amountField, tradeErrorBox);

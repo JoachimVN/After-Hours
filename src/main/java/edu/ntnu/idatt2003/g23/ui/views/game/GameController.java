@@ -236,7 +236,7 @@ public final class GameController {
         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     if (totalOwnedquantity.compareTo(BigDecimal.ZERO) <= 0) {
-      view.showSellAllError("Your portfolio is empty - nothing to sell!");
+      view.showSellAllError("There is nothing to sell");
       return;
     }
 
