@@ -441,6 +441,17 @@
   -fx-cursor: crosshair;
 }
 
+.profile-replay-empty-dim {
+  -fx-background-color: rgba(2, 9, 18, 0.62);
+  -fx-background-radius: 10;
+}
+
+.profile-replay-empty-text {
+  -fx-text-fill: #b7d4ea;
+  -fx-font-size: 20px;
+  -fx-font-weight: 600;
+}
+
 .profile-crosshair-line {
   -fx-stroke: rgba(30, 64, 128, 0.5);
   -fx-stroke-width: 1;

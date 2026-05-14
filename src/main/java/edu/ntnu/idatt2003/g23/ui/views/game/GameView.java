@@ -27,6 +27,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -151,7 +152,7 @@ public final class GameView implements GameViewInterface {
   private StackPane overlayRef = null;
   private Node rootRef = null;
   private SplitPane hSplitRef = null;
-  private double portfolioDividerRatio = 0.85;
+  private double portfolioDividerRatio = 0.78;
   private PlayerStatus lastKnownStatus = null;
   private AudioClip levelUpClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
@@ -465,6 +466,14 @@ public final class GameView implements GameViewInterface {
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
     portTitle.getStyleClass().add("game-panel-title");
+    Label portSummaryHint = new Label("View summary");
+    portSummaryHint.getStyleClass().add("game-portfolio-summary-hint");
+    Region portHeaderSpacer = new Region();
+    HBox.setHgrow(portHeaderSpacer, Priority.ALWAYS);
+    HBox portHeader = new HBox(8, portTitle, portHeaderSpacer, portSummaryHint);
+    portHeader.getStyleClass().add("game-portfolio-header");
+    portHeader.setAlignment(Pos.CENTER_LEFT);
+    portHeader.setOnMouseClicked(e -> showPortfolioSummary());
 
     portfolioTable =
         buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
@@ -490,12 +499,31 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setMinHeight(160);
+    portfolioTable.setMinHeight(400);
+        portfolioTable.setPlaceholder(new Region());
+        portfolioTable.visibleProperty().bind(Bindings.isNotEmpty(portfolioItems));
+        portfolioTable.managedProperty().bind(Bindings.isNotEmpty(portfolioItems));
     VBox.setVgrow(portfolioTable, Priority.ALWAYS);
 
-    VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
+      Label emptyPortfolioLbl = new Label("No shares owned yet");
+      emptyPortfolioLbl.getStyleClass().add("game-portfolio-empty");
+      StackPane emptyPortfolioOverlay = new StackPane(emptyPortfolioLbl);
+      emptyPortfolioOverlay.getStyleClass().add("game-portfolio-empty-overlay");
+      emptyPortfolioOverlay.setMouseTransparent(true);
+      emptyPortfolioOverlay.setPickOnBounds(false);
+      emptyPortfolioOverlay.setAlignment(Pos.CENTER);
+    emptyPortfolioOverlay.visibleProperty().bind(Bindings.isEmpty(portfolioItems));
+    emptyPortfolioOverlay.managedProperty().bind(Bindings.isEmpty(portfolioItems));
+
+      StackPane portfolioContent = new StackPane(portfolioTable, emptyPortfolioOverlay);
+      StackPane.setAlignment(portfolioTable, Pos.CENTER);
+      StackPane.setAlignment(emptyPortfolioOverlay, Pos.CENTER);
+      VBox.setVgrow(portfolioContent, Priority.ALWAYS);
+
+      VBox portfolioSection = new VBox(0, portHeader, portfolioContent);
     portfolioSection.getStyleClass().add("game-portfolio-pane");
-    portfolioSection.setMinHeight(96);
+    portfolioSection.setMinHeight(400);
+    portfolioSection.setPrefHeight(400);
     portfolioSection.setMaxHeight(Region.USE_PREF_SIZE);
 
     // ── Right panel: explicit vertical layout with dedicated drag handle ──
@@ -510,7 +538,7 @@ public final class GameView implements GameViewInterface {
     HBox.setHgrow(rightPanel, Priority.ALWAYS);
     VBox.setVgrow(rightPanel, Priority.ALWAYS);
     double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
-      ? initialState.portfolioDivider() : 0.85;
+      ? initialState.portfolioDivider() : 0.78;
     installPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle, initPortDivider);
 
     // ── Body: horizontal split (sidebar | right panel) ────────────────────
@@ -966,7 +994,7 @@ public final class GameView implements GameViewInterface {
 
   private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
                                       Region portfolioResizeHandle, double initialRatio) {
-    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.85;
+    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.78;
 
     final double[] dragStartY = {0};
     final double[] dragStartRatio = {portfolioDividerRatio};
@@ -1000,7 +1028,7 @@ public final class GameView implements GameViewInterface {
       return;
     }
 
-    double minDetailHeight = Math.max(180, detailArea.minHeight(-1));
+    double minDetailHeight = Math.max(340, detailArea.minHeight(-1));
     double minPortfolioHeight = 96;
     double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
     double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
@@ -3087,6 +3115,153 @@ public final class GameView implements GameViewInterface {
         }
         default -> {
         }
+      }
+    });
+    popup.requestFocus();
+  }
+
+  private void showPortfolioSummary() {
+    Runnable[] dismissRef = {null};
+
+    // ── Summary stats ─────────────────────────────────────────────────────
+    BigDecimal totalInvested = portfolioItems.stream()
+        .map(s -> s.getPurchasePrice().multiply(s.getQuantity()))
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal totalValue = gameController.getPortfolioNetWorth();
+    BigDecimal totalPnl = totalValue.subtract(totalInvested);
+    int holdingsCount = portfolioItems.size();
+
+    Label holdingsVal = new Label(holdingsCount + (holdingsCount == 1 ? " stock" : " stocks"));
+    holdingsVal.getStyleClass().add("portfolio-summary-stat-value");
+    Label holdingsLbl = new Label("Holdings");
+    holdingsLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox holdingsBox = new VBox(2, holdingsLbl, holdingsVal);
+    holdingsBox.setAlignment(Pos.CENTER_LEFT);
+
+    Label investedVal = new Label(CurrencyFormatter.format(totalInvested));
+    investedVal.getStyleClass().add("portfolio-summary-stat-value");
+    Label investedLbl = new Label("Invested");
+    investedLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox investedBox = new VBox(2, investedLbl, investedVal);
+    investedBox.setAlignment(Pos.CENTER_LEFT);
+
+    Label valueVal = new Label(CurrencyFormatter.format(totalValue));
+    valueVal.getStyleClass().add("portfolio-summary-stat-value");
+    Label valueLbl = new Label("Current Value");
+    valueLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox valueBox = new VBox(2, valueLbl, valueVal);
+    valueBox.setAlignment(Pos.CENTER_LEFT);
+
+    boolean pnlZero = totalPnl.compareTo(BigDecimal.ZERO) == 0;
+    boolean pnlUp = totalPnl.compareTo(BigDecimal.ZERO) > 0;
+    BigDecimal pnlPct = totalInvested.compareTo(BigDecimal.ZERO) == 0
+        ? BigDecimal.ZERO
+        : totalPnl.divide(totalInvested, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
+    String pnlText = pnlZero
+      ? "\u2014"
+      : (pnlUp ? "+" : "") + CurrencyFormatter.format(totalPnl)
+        + " (" + (pnlUp ? "+" : "") + pnlPct.toPlainString() + "%)";
+    Label pnlVal = new Label(pnlText);
+    if (pnlZero) {
+      pnlVal.getStyleClass().add("portfolio-summary-stat-value");
+    } else {
+      pnlVal.getStyleClass().addAll("portfolio-summary-stat-value",
+        pnlUp ? "portfolio-summary-pnl-up" : "portfolio-summary-pnl-down");
+    }
+    Label pnlLbl = new Label("Total P&L");
+    pnlLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox pnlBox = new VBox(2, pnlLbl, pnlVal);
+    pnlBox.setAlignment(Pos.CENTER_LEFT);
+
+    Region sp1 = new Region(); HBox.setHgrow(sp1, Priority.ALWAYS);
+    Region sp2 = new Region(); HBox.setHgrow(sp2, Priority.ALWAYS);
+    Region sp3 = new Region(); HBox.setHgrow(sp3, Priority.ALWAYS);
+    HBox statsStrip = new HBox(0, holdingsBox, sp1, investedBox, sp2, valueBox, sp3, pnlBox);
+    statsStrip.getStyleClass().add("portfolio-summary-stats-strip");
+    statsStrip.setAlignment(Pos.CENTER_LEFT);
+
+    // ── Portfolio table ───────────────────────────────────────────────────
+    TableView<Share> table = buildPortfolioTable(portfolioItems, stock -> {
+      if (dismissRef[0] != null) dismissRef[0].run();
+      allStocks.stream().filter(s -> s.getSymbol().equals(stock.getSymbol()))
+          .findFirst().ifPresent(target -> {
+            if (target == selectedStock.get()) {
+              rebuildDetail();
+            } else {
+              notifyStockSelectionChanged();
+              selectedStock.set(target);
+            }
+            focusStockCardInList(stock.getSymbol());
+          });
+    });
+    table.getStyleClass().add("history-table");
+    table.setMinHeight(58);
+    table.setMaxHeight(Double.MAX_VALUE);
+
+    // ── Layout ────────────────────────────────────────────────────────────
+    Label titleLbl = new Label("\uD83D\uDCC8  Portfolio Summary");
+    titleLbl.getStyleClass().add("market-movers-title");
+    Button closeBtn = new Button("\u2715");
+    closeBtn.getStyleClass().add("market-movers-close-btn");
+    Region titleSpacer = new Region();
+    HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+    HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+    titleRow.getStyleClass().add("market-movers-header");
+    titleRow.setAlignment(Pos.CENTER_LEFT);
+
+    VBox card = new VBox(0, titleRow, statsStrip, table);
+    card.getStyleClass().add("history-card");
+    card.setMaxWidth(880);
+    card.setPrefHeight(520);
+    card.setMaxHeight(520);
+    card.setOpacity(0);
+    VBox.setVgrow(table, Priority.ALWAYS);
+
+    GaussianBlur blur = new GaussianBlur(0);
+    rootRef.setEffect(blur);
+
+    Region dimBackdrop = new Region();
+    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.setOpacity(0);
+
+    StackPane popup = new StackPane(dimBackdrop, card);
+    StackPane.setAlignment(card, Pos.CENTER);
+    overlayRef.getChildren().add(popup);
+
+    Timeline blurIn = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(300),
+            new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT)));
+    FadeTransition dimIn = new FadeTransition(Duration.millis(300), dimBackdrop);
+    dimIn.setFromValue(0); dimIn.setToValue(1);
+    FadeTransition cardIn = new FadeTransition(Duration.millis(220), card);
+    cardIn.setFromValue(0); cardIn.setToValue(1);
+    cardIn.setDelay(Duration.millis(80));
+    blurIn.play(); dimIn.play(); cardIn.play();
+
+    Runnable dismiss = () -> {
+      Timeline blurOut = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 8)),
+          new KeyFrame(Duration.millis(250),
+              new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN)));
+      FadeTransition dimOut = new FadeTransition(Duration.millis(250), dimBackdrop);
+      dimOut.setFromValue(1); dimOut.setToValue(0);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+      cardOut.setFromValue(1); cardOut.setToValue(0);
+      blurOut.play(); dimOut.play(); cardOut.play();
+      blurOut.setOnFinished(ev -> {
+        overlayRef.getChildren().remove(popup);
+        rootRef.setEffect(null);
+      });
+    };
+    dismissRef[0] = dismiss;
+    closeBtn.setOnAction(ev -> dismiss.run());
+    dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+        dismiss.run();
+        ev.consume();
       }
     });
     popup.requestFocus();

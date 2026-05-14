@@ -192,6 +192,16 @@
     -fx-text-fill: rgba(245, 162, 1, 1.0);
 }
 
+.game-portfolio-empty-overlay {
+    -fx-background-color: transparent;
+}
+
+.game-portfolio-empty {
+    -fx-text-fill: #8fb0cf;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
 .status-pill-value {
     -fx-text-fill: #deebff;
 }
@@ -375,10 +385,31 @@
 }
 
 .game-panel-title {
-    -fx-font-size: 13px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
     -fx-text-fill: #7a9fc8;
     -fx-padding: 4 8 4 8;
+}
+
+.game-portfolio-header {
+    -fx-alignment: center-left;
+    -fx-padding: 2 8 4 8;
+    -fx-cursor: hand;
+}
+
+.game-portfolio-header:hover {
+    -fx-background-color: rgba(30, 64, 128, 0.14);
+    -fx-background-radius: 8;
+}
+
+.game-portfolio-header:hover .game-panel-title {
+    -fx-text-fill: #f5a201;
+}
+
+.game-portfolio-summary-hint {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #9fc4e4;
 }
 
 .game-search-field {
@@ -1838,4 +1869,31 @@
     -fx-background-transparent: true;
     -fx-background-color: rgba(122, 159, 200, 0);
     -fx-text-fill: #f2f8ff;
+}
+
+.portfolio-summary-stats-strip {
+    -fx-padding: 10 14;
+    /* -fx-background-color: rgba(8, 16, 28, 0.16); */
+    -fx-background-color: linear-gradient(to left, rgba(9, 25, 49, 0.12), rgba(15, 52, 108, 0.24));
+    -fx-background-radius: 0;
+}
+
+.portfolio-summary-stat-key {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7fa8cc;
+    -fx-font-weight: 700;
+}
+
+.portfolio-summary-stat-value {
+    -fx-font-size: 13px;
+    -fx-text-fill: #d6efff;
+    -fx-font-weight: 700;
+}
+
+.portfolio-summary-pnl-up {
+    -fx-text-fill: #4ecb71;
+}
+
+.portfolio-summary-pnl-down {
+    -fx-text-fill: #e05a5a;
 }
