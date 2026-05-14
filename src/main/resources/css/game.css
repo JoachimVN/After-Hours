@@ -402,7 +402,8 @@
     -fx-background-radius: 8;
 }
 
-.game-portfolio-header:hover .game-panel-title {
+.game-portfolio-header:hover .game-panel-title,
+.game-portfolio-header:hover .game-portfolio-summary-hint {
     -fx-text-fill: #f5a201;
 }
 
