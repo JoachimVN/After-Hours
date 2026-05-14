@@ -11,6 +11,7 @@ import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
@@ -843,6 +844,7 @@ public final class SettingsView {
     slider.setShowTickMarks(true);
     slider.setShowTickLabels(true);
     slider.setMajorTickUnit(25);
+    installSliderFill(slider);
     HBox.setHgrow(slider, Priority.ALWAYS);
 
     ToggleButton muteToggle = new ToggleButton(initialMuted ? "MUTED" : "ON");
@@ -867,6 +869,27 @@ public final class SettingsView {
     sliderRow.setMaxWidth(Double.MAX_VALUE);
 
     return new VBox(4, label, defaultVolumeTag, sliderRow);
+  }
+
+  private static void installSliderFill(Slider slider) {
+    Runnable applyFill = () -> {
+      Node track = slider.lookup(".track");
+      if (!(track instanceof Region trackRegion)) {
+        return;
+      }
+      double min = slider.getMin();
+      double max = slider.getMax();
+      double pct = max <= min ? 0.0 : (slider.getValue() - min) / (max - min);
+      pct = Math.max(0.0, Math.min(1.0, pct));
+      double stop = pct * 100.0;
+      trackRegion.setStyle("-fx-background-color: linear-gradient(to right, "
+          + "#f5a201 " + stop + "%, "
+          + "#0f2d5e " + stop + "%);");
+    };
+
+    slider.skinProperty().addListener((obs, oldSkin, newSkin) -> Platform.runLater(applyFill));
+    slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
+    Platform.runLater(applyFill);
   }
 
   private static ListCell<SaveMeta> saveMetaCell(Path currentSavePath) {

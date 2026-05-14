@@ -133,6 +133,13 @@
     -fx-pref-height: 18;
 }
 
+.settings-slider .thumb:hover {
+    -fx-background-color: #eaba5a;
+}
+
+.settings-slider .thumb:pressed {
+}
+
 /* ── Resolution controls ─────────────────────────────────────────────────── */
 
 .settings-combo {
