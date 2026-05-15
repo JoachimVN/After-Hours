@@ -1325,7 +1325,8 @@
     -fx-padding: 0 4 4 4;
 }
 
-.stock-filter-chip {
+.stock-filter-chip,
+.stock-sort-chip {
     -fx-background-color: rgba(10, 20, 50, 0.60);
     -fx-text-fill: #4a6899;
     -fx-font-size: 10px;
@@ -1338,12 +1339,14 @@
     -fx-cursor: hand;
 }
 
-.stock-filter-chip:hover {
+.stock-filter-chip:hover,
+.stock-sort-chip:hover {
     -fx-background-color: rgba(20, 38, 78, 0.80);
     -fx-text-fill: #7a9fc8;
 }
 
-.stock-filter-chip-active {
+.stock-filter-chip-active,
+.stock-sort-chip-active {
     -fx-background-color: rgba(30, 64, 128, 0.45);
     -fx-text-fill: #e8d8b0;
     -fx-border-color: rgba(86, 132, 194, 0.62);
@@ -1361,62 +1364,20 @@
     -fx-border-color: rgba(48, 86, 148, 0.46);
 }
 
-.stock-filter-chip-clear.stock-filter-chip-active {
-    -fx-background-color: rgba(30, 64, 128, 0.40);
-    -fx-text-fill: #d9cfae;
-    -fx-border-color: rgba(245, 162, 1, 0.33);
-}
-
-.stock-filter-chip-disabled {
-    -fx-background-color: rgba(10, 20, 50, 0.30);
-    -fx-text-fill: rgba(74, 104, 153, 0.45);
-    -fx-border-color: rgba(30, 64, 128, 0.18);
-    -fx-opacity: 1;
-    -fx-cursor: default;
-}
-
-.stock-filter-chip-disabled:hover {
-    -fx-background-color: rgba(10, 20, 50, 0.30);
-    -fx-text-fill: rgba(74, 104, 153, 0.45);
-    -fx-border-color: rgba(30, 64, 128, 0.18);
-}
-
-.stock-sort-chip {
-    -fx-background-color: rgba(18, 36, 76, 0.50);
-    -fx-text-fill: #7a9fc8;
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-padding: 2 7 2 7;
-    -fx-border-color: rgba(30, 64, 128, 0.55);
-    -fx-background-radius: 10;
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-cursor: hand;
-}
-
-.stock-sort-chip:hover {
-    -fx-text-fill: #7a9fc8;
-    -fx-background-color: rgba(34, 66, 124, 0.75);
-}
-
+.stock-filter-chip-disabled,
 .stock-sort-chip-disabled {
-    -fx-background-color: rgba(8, 14, 34, 0.30);
-    -fx-text-fill: rgba(66, 86, 117, 0.58);
-    -fx-border-color: rgba(28, 44, 72, 0.45);
+    -fx-background-color: rgba(10, 20, 50, 0.30);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
     -fx-opacity: 1;
     -fx-cursor: default;
 }
 
+.stock-filter-chip-disabled:hover,
 .stock-sort-chip-disabled:hover {
-    -fx-background-color: rgba(8, 14, 34, 0.30);
-    -fx-text-fill: rgba(66, 86, 117, 0.58);
-    -fx-border-color: rgba(28, 44, 72, 0.45);
-}
-
-.stock-sort-chip-active {
-    -fx-background-color: rgba(25, 50, 100, 0.55);
-    -fx-text-fill: #9ec0ea;
-    -fx-border-color: rgba(86, 132, 194, 0.62);
+    -fx-background-color: rgba(10, 20, 50, 0.30);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
 }
 
 .game-filter-tooltip,
