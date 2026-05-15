@@ -192,6 +192,16 @@
     -fx-text-fill: rgba(245, 162, 1, 1.0);
 }
 
+.game-portfolio-empty-overlay {
+    -fx-background-color: transparent;
+}
+
+.game-portfolio-empty {
+    -fx-text-fill: #8fb0cf;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
 .status-pill-value {
     -fx-text-fill: #deebff;
 }
@@ -309,9 +319,9 @@
 
 .game-body-split>.split-pane-divider {
     -fx-padding: 0;
-    -fx-pref-width: 10px;
-    -fx-min-width: 10px;
-    -fx-max-width: 10px;
+    -fx-pref-width: 6px;
+    -fx-min-width: 6px;
+    -fx-max-width: 6px;
     -fx-background-color: rgba(10, 20, 50, 0.22);
     -fx-cursor: h-resize;
 }
@@ -330,28 +340,31 @@
 .game-portfolio-resize-handle {
     -fx-background-color: linear-gradient(to right,
             rgba(16, 30, 64, 0.0) 0%,
-            rgba(30, 64, 128, 0.12) 24%,
-            rgba(30, 64, 128, 0.34) 40%,
-            rgba(30, 64, 128, 0.50) 50%,
-            rgba(30, 64, 128, 0.34) 60%,
-            rgba(30, 64, 128, 0.12) 76%,
+            rgba(30, 64, 128, 0.2) 24%,
+            rgba(30, 64, 128, 0.35) 40%,
+            rgba(37, 81, 163, 0.6) 50%,
+            rgba(30, 64, 128, 0.35) 60%,
+            rgba(30, 64, 128, 0.2) 76%,
             rgba(16, 30, 64, 0.0) 100%);
-    -fx-min-height: 4px;
-    -fx-pref-height: 4px;
-    -fx-max-height: 4px;
+    -fx-min-height: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-height: 6px;
     -fx-cursor: v-resize;
 }
 
-.game-portfolio-resize-handle:hover {
+.game-portfolio-resize-handle:hover,
+.game-portfolio-resize-handle:pressed {
     -fx-background-color: linear-gradient(to right,
             rgba(30, 64, 128, 0.0) 0%,
-            rgba(52, 78, 114, 0.14) 24%,
-            rgba(52, 78, 114, 0.40) 40%,
-            rgba(52, 78, 114, 0.60) 50%,
-            rgba(52, 78, 114, 0.40) 60%,
-            rgba(52, 78, 114, 0.14) 76%,
+            rgba(51, 84, 130, 0.2) 24%,
+            rgba(41, 75, 121, 0.5) 40%,
+            rgba(54, 112, 194, 0.8) 50%,
+            rgba(41, 75, 121, 0.5) 60%,
+            rgba(51, 84, 130, 0.2) 76%,
             rgba(30, 64, 128, 0.0) 100%);
 }
+
+
 
 .split-pane.game-right-split>.split-pane-divider {
     -fx-background-color: rgba(10, 20, 50, 0.22);
@@ -375,10 +388,32 @@
 }
 
 .game-panel-title {
-    -fx-font-size: 13px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
     -fx-text-fill: #7a9fc8;
     -fx-padding: 4 8 4 8;
+}
+
+.game-portfolio-header {
+    -fx-alignment: center-left;
+    -fx-padding: 2 8 4 8;
+    -fx-cursor: hand;
+}
+
+.game-portfolio-header:hover {
+    -fx-background-color: rgba(30, 64, 128, 0.14);
+    -fx-background-radius: 8;
+}
+
+.game-portfolio-header:hover .game-panel-title,
+.game-portfolio-header:hover .game-portfolio-summary-hint {
+    -fx-text-fill: #f5a201;
+}
+
+.game-portfolio-summary-hint {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #9fc4e4;
 }
 
 .game-search-field {
@@ -557,8 +592,8 @@
 .game-detail-header {
     -fx-background-color: rgba(8, 14, 36, 0.92);
     -fx-padding: 20 24 16 24;
-    -fx-border-color: rgba(30, 64, 128, 0.30);
-    -fx-border-width: 0 0 1 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 
 .detail-symbol {
@@ -634,12 +669,12 @@
 
 /* Trade panel */
 .trade-panel {
-    -fx-background-color: rgba(10, 18, 44, 0.90);
-    -fx-background-radius: 10;
-    -fx-border-color: rgba(245, 162, 1, 0.20);
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-padding: 10 14 10 14;
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 16 0 0 0;
 }
 
 .trade-error-label {
@@ -774,7 +809,7 @@
     -fx-font-weight: bold;
     -fx-min-height: 24px;
     -fx-max-height: 24px;
-    -fx-pref-width: 110px;
+    -fx-pref-width: 140px;
     -fx-padding: 0 14 0 14;
     -fx-border-width: 1;
     -fx-border-radius: 12;
@@ -1633,4 +1668,236 @@
     -fx-shape: " ";
     -fx-pref-width: 0;
     -fx-pref-height: 0;
+}
+/* ═══════════════════════════════════════════════════════════════════
+   LEVEL UP POPUP
+   ═══════════════════════════════════════════════════════════════════ */
+
+.level-up-backdrop {
+    -fx-background-color: rgba(2, 4, 14, 0.75);
+}
+
+.level-up-card {
+    -fx-background-color: rgba(7, 12, 32, 0.98);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.88), 52, 0, 0, 12);
+}
+
+.level-up-header-area {
+    -fx-padding: 28 32 22 32;
+    -fx-border-color: rgba(30, 64, 128, 0.28);
+    -fx-border-width: 0 0 1 0;
+}
+
+.level-up-title {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8d8b0;
+    -fx-padding: 0 0 4 0;
+}
+
+.level-up-status-name {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5a201;
+    -fx-padding: 0 0 8 0;
+}
+
+.level-up-tagline {
+    -fx-font-size: 12px;
+    -fx-text-fill: #4a6899;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+}
+
+.level-up-divider {
+    -fx-pref-height: 0;
+}
+
+.level-up-body-area {
+    -fx-padding: 16 28 16 28;
+}
+
+.level-up-benefits-box {
+    -fx-padding: 0;
+}
+
+.level-up-benefit-row {
+    -fx-background-color: rgba(30, 64, 128, 0.18);
+    -fx-background-radius: 8;
+    -fx-padding: 9 14 9 14;
+}
+
+.level-up-benefit-icon {
+    -fx-font-size: 16px;
+    -fx-min-width: 26;
+}
+
+.level-up-benefit-name {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8aabcc;
+}
+
+.level-up-benefit-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.level-up-avatar-row {
+    -fx-padding: 4 0 2 0;
+}
+
+.level-up-avatar-frame {
+    -fx-background-color: rgba(30, 64, 128, 0.28);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(30, 64, 128, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 10 10 10 10;
+}
+
+.level-up-avatar-frame-clickable {
+    -fx-cursor: hand;
+}
+
+.level-up-avatar-frame-clickable:hover {
+    -fx-background-color: rgba(42, 96, 182, 0.34);
+    -fx-border-color: rgba(96, 169, 255, 0.85);
+    -fx-effect: dropshadow(gaussian, rgba(58, 152, 255, 0.34), 10, 0.35, 0, 1);
+}
+
+.level-up-avatar-frame-selected {
+    -fx-background-color: rgba(28, 132, 78, 0.26);
+    -fx-border-color: rgba(66, 224, 141, 0.95);
+    -fx-effect: dropshadow(gaussian, rgba(66, 224, 141, 0.28), 12, 0.4, 0, 1);
+}
+
+.level-up-benefit-row-clickable {
+    -fx-cursor: hand;
+}
+
+.level-up-benefit-row-clickable:hover {
+    -fx-background-color: rgba(58, 123, 204, 0.24);
+    -fx-border-color: rgba(132, 206, 255, 0.95);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+.level-up-footer-area {
+    -fx-padding: 14 28 22 28;
+    -fx-border-color: rgba(30, 64, 128, 0.22);
+    -fx-border-width: 1 0 0 0;
+}
+
+.level-up-continue-btn {
+    -fx-background-color: linear-gradient(to right, #1a8c40, #22a34e);
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 32 10 32;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.50), 8, 0, 0, 2);
+    -fx-max-width: infinity;
+}
+
+.level-up-continue-btn:hover {
+    -fx-background-color: linear-gradient(to right, #1fa049, #27b857);
+}
+
+.level-up-continue-btn:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.game-market-action-box {
+    -fx-alignment: top-right;
+}
+
+.game-spike-popup-list {
+    -fx-max-width: 390;
+    -fx-min-width: 330;
+    -fx-pref-width: 390;
+    -fx-alignment: top-right;
+}
+
+.game-spike-popup {
+    -fx-background-color: rgba(7, 14, 31, 0.92);
+    -fx-border-color: rgba(79, 126, 186, 0.30);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 0;
+}
+
+.game-spike-popup-clickable {
+    -fx-cursor: hand;
+}
+
+.game-spike-popup-clickable:hover {
+    -fx-background-color: rgba(14, 24, 48, 0.96);
+    -fx-border-color: rgba(245, 162, 1, 0.44);
+    -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.18), 12, 0.35, 0, 0);
+}
+
+.game-spike-popup .profile-position-sub {
+    -fx-font-size: 13px;
+}
+
+.game-spike-arrow {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+}
+
+.game-spike-close-btn {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-text-fill: #9fbfdc;
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-cursor: hand;
+    -fx-padding: 0 6 0 6;
+    -fx-background-radius: 6;
+    -fx-effect: null;
+}
+
+.game-spike-close-btn:hover {
+    -fx-background-transparent: true;
+    -fx-background-color: rgba(122, 159, 200, 0);
+    -fx-text-fill: #f2f8ff;
+}
+
+.portfolio-summary-stats-strip {
+    -fx-padding: 10 14;
+    /* -fx-background-color: rgba(8, 16, 28, 0.16); */
+    -fx-background-color: linear-gradient(to left, rgba(9, 25, 49, 0.12), rgba(15, 52, 108, 0.24));
+    -fx-background-radius: 0;
+}
+
+.portfolio-summary-stat-key {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7fa8cc;
+    -fx-font-weight: 700;
+}
+
+.portfolio-summary-stat-value {
+    -fx-font-size: 13px;
+    -fx-text-fill: #d6efff;
+    -fx-font-weight: 700;
+}
+
+.portfolio-summary-pnl-up {
+    -fx-text-fill: #4ecb71;
+}
+
+.portfolio-summary-pnl-down {
+    -fx-text-fill: #e05a5a;
 }

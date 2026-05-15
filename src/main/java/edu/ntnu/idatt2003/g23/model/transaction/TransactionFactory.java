@@ -1,5 +1,7 @@
 package edu.ntnu.idatt2003.g23.model.transaction;
 
+import java.math.BigDecimal;
+
 import edu.ntnu.idatt2003.g23.model.Share;
 
 /**
@@ -35,6 +37,10 @@ public final class TransactionFactory {
    */
   public static Transaction createSale(Share share, int week) {
     return new Sale(share, week);
+  }
+
+  public static Transaction createSale(Share share, int week, BigDecimal taxRate) {
+    return new Sale(share, week, taxRate);
   }
 
   /**

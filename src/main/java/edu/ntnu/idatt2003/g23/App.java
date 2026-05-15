@@ -157,6 +157,12 @@ public class App extends Application {
     windowHeight = gs.windowHeight();
 
     AppConfig.DEV_MODE.set(gs.devMode());
+    AppConfig.DEV_MODE.addListener((obs, oldVal, newVal) -> {
+      if (Boolean.compare(newVal, devModeEnabled) != 0) {
+        devModeEnabled = newVal;
+        saveSettings();
+      }
+    });
     AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
     AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
     primaryStage = stage;
@@ -750,6 +756,7 @@ public class App extends Application {
 
     onGameProfileRef[0] = () -> {
       sfxController.play(SfxController.PROFILE);
+      currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -797,6 +804,9 @@ public class App extends Application {
             uiState);
     currentGameController = gameController;
     currentGameView = gameview;
+    gameview.setMusicFilterCallbacks(
+        homePageMusicController::applyLowPassFilter,
+        homePageMusicController::removeFilter);
     currentGamePage = gameview.getRoot();
     playGameEntryAudio();
     navigateToGame(currentGamePage);
@@ -815,6 +825,7 @@ public class App extends Application {
     GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : null;
     Runnable onGameProfile = () -> {
       sfxController.play(SfxController.PROFILE);
+      currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -840,6 +851,9 @@ public class App extends Application {
         sfxController::getVolume,
         preservedUiState);
     currentGameView = refreshed;
+    refreshed.setMusicFilterCallbacks(
+        homePageMusicController::applyLowPassFilter,
+        homePageMusicController::removeFilter);
     currentGamePage = refreshed.getRoot();
   }
 

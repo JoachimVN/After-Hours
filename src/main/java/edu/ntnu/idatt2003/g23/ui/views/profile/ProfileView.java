@@ -499,6 +499,7 @@ public final class ProfileView {
       }
     }
     final List<GameController.ReplayPoint> timelinePoints = replayPoints;
+    final boolean noReplayHistoryYet = controller.getCurrentWeek() <= 1;
     final List<GameController.ReplayPoint> chartPoints = new ArrayList<>();
     if (!timelinePoints.isEmpty()) {
       chartPoints.add(timelinePoints.get(0));
@@ -603,6 +604,21 @@ public final class ProfileView {
     StackPane replayChartLayer = new StackPane(replayChart, hoverValueChip);
     replayChartLayer.getStyleClass().add("profile-crosshair-layer");
 
+    if (noReplayHistoryYet) {
+      Region emptyDim = new Region();
+      emptyDim.getStyleClass().add("profile-replay-empty-dim");
+      emptyDim.setMouseTransparent(true);
+      StackPane.setAlignment(emptyDim, Pos.CENTER);
+
+      Label emptyState = new Label("No history yet.");
+      emptyState.setWrapText(true);
+      emptyState.getStyleClass().addAll("profile-empty", "profile-replay-empty-text");
+      emptyState.setStyle("-fx-text-alignment: center;");
+      StackPane.setAlignment(emptyState, Pos.CENTER);
+      replayChartLayer.getChildren().add(emptyDim);
+      replayChartLayer.getChildren().add(emptyState);
+    }
+
     XYChart.Series<Number, Number> replaySeries = new XYChart.Series<>();
     XYChart.Series<Number, Number> verticalMarkerSeries = new XYChart.Series<>();
     replayChart.getData().add(replaySeries);
@@ -662,6 +678,7 @@ public final class ProfileView {
     replaySlider.setMinorTickCount(0);
     replaySlider.setShowTickMarks(true);
     replaySlider.setShowTickLabels(true);
+    installSliderFill(replaySlider);
 
     Region replaySliderLeftPad = new Region();
     Region replaySliderRightPad = new Region();
@@ -725,7 +742,7 @@ public final class ProfileView {
     };
 
     Runnable refreshMarkerAndHover = () -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet) {
         verticalMarkerSeries.getData().clear();
         replayStatus.setText("No replay data available yet.");
         hoverValueChip.setVisible(false);
@@ -792,7 +809,7 @@ public final class ProfileView {
     };
 
     final Runnable refreshReplay = () -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet || timelinePoints.isEmpty()) {
         replaySeries.getData().clear();
         lastRenderedWeekRef[0] = -1;
         lastRenderedPointIndexRef[0] = -1;
@@ -857,7 +874,7 @@ public final class ProfileView {
         .addListener((obs, oldV, newV) -> alignReplaySliderToPlot.run());
 
     replayChart.setOnMouseMoved(e -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet || timelinePoints.isEmpty()) {
         return;
       }
       Node plotBackground = replayChart.lookup(".chart-plot-background");
@@ -945,7 +962,7 @@ public final class ProfileView {
     playBtnRef[0] = playBtn;
     playBtn.getStyleClass().add("profile-action-btn");
     playBtn.setOnAction(e -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet || timelinePoints.isEmpty()) {
         return;
       }
       if (onReplayControlSelect != null) {
@@ -997,7 +1014,7 @@ public final class ProfileView {
       speedBtn.setText("Speed: " + speedLabel + "x");
     });
 
-    if (replayPoints.isEmpty()) {
+    if (noReplayHistoryYet || replayPoints.isEmpty()) {
       replaySlider.setDisable(true);
       playBtn.setDisable(true);
       restartBtn.setDisable(true);
@@ -1168,5 +1185,27 @@ public final class ProfileView {
     }
     String lower = status.name().toLowerCase(Locale.ROOT);
     return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+  }
+
+  private static void installSliderFill(Slider slider) {
+    Runnable applyFill = () -> {
+      Node track = slider.lookup(".track");
+      if (!(track instanceof Region trackRegion)) {
+        return;
+      }
+
+      double min = slider.getMin();
+      double max = slider.getMax();
+      double pct = max <= min ? 0.0 : (slider.getValue() - min) / (max - min);
+      pct = Math.max(0.0, Math.min(1.0, pct));
+      double stop = pct * 100.0;
+      trackRegion.setStyle("-fx-background-color: linear-gradient(to right, "
+          + "#f5a201 " + stop + "%, "
+          + "#0f2d5e " + stop + "%);");
+    };
+
+    slider.skinProperty().addListener((obs, oldSkin, newSkin) -> Platform.runLater(applyFill));
+    slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
+    Platform.runLater(applyFill);
   }
 }

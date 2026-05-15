@@ -23,6 +23,7 @@ public class SfxController {
   public static final String PLAY = "/audio/sfx/play/Play.mp3";
   public static final String PLAY2 = "/audio/sfx/play/Play2.mp3";
   public static final String PLAY3 = "/audio/sfx/play/Play3.mp3";
+  public static final String LEVEL_UP = "/audio/sfx/Level_Up.mp3";
 
   private static final double DEFAULT_VOLUME = 0.5;
 

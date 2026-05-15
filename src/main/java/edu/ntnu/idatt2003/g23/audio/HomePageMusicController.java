@@ -58,6 +58,11 @@ public class HomePageMusicController {
 
   private List<String> ambienceQueue = new ArrayList<>();
   private String lastGameStartTrack = null;
+  private boolean eqFilterActive = false;
+
+  // Status-change low-pass gains (32 Hz ... 16 kHz).
+  // Stronger cutoff: start attenuation earlier and cut highs harder.
+  private static final double[] LOW_PASS_GAINS = { 0, 0, 0, -3, -7, -12, -18, -23, -24, -24 };
 
   public HomePageMusicController(Class<?> resourceOwner) {
     this.resourceOwner = resourceOwner;
@@ -205,6 +210,9 @@ public class HomePageMusicController {
       currentTrackMultiplier = multiplierFor(track);
       mediaPlayer = new MediaPlayer(media);
       currentTrackIsHomeTheme = false;
+      if (eqFilterActive) {
+        applyEqToCurrentPlayer();
+      }
       mediaPlayer.setVolume(0.0);
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();
@@ -267,6 +275,9 @@ public class HomePageMusicController {
       mediaPlayer = new MediaPlayer(media);
       currentTrackIsHomeTheme = false;
       mediaPlayer.setVolume(effectiveVolume());
+      if (eqFilterActive) {
+        applyEqToCurrentPlayer();
+      }
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();
     } catch (Exception ignored) {
@@ -291,6 +302,78 @@ public class HomePageMusicController {
       return AMBIENCE5_VOLUME_MULTIPLIER;
     }
     return 1.0;
+  }
+
+  /**
+   * Fades the low-pass EQ in over {@code durationMs} ms on the current player
+   * and sets the flag so future tracks start filtered instantly.
+   */
+  public void applyLowPassFilter() {
+    eqFilterActive = true;
+    fadeEqToCurrentPlayer(LOW_PASS_GAINS, 600);
+  }
+
+  /**
+   * Fades the EQ back to flat over {@code durationMs} ms, then disables it.
+   */
+  public void removeFilter() {
+    eqFilterActive = false;
+    if (mediaPlayer == null) {
+      return;
+    }
+    AudioEqualizer eq = mediaPlayer.getAudioEqualizer();
+    if (!eq.isEnabled()) {
+      return;
+    }
+    var bands = eq.getBands();
+    int count = Math.min(bands.size(), LOW_PASS_GAINS.length);
+    java.util.List<KeyValue> kvs = new java.util.ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      kvs.add(new KeyValue(bands.get(i).gainProperty(), bands.get(i).getGain()));
+    }
+    java.util.List<KeyValue> kvsEnd = new java.util.ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      kvsEnd.add(new KeyValue(bands.get(i).gainProperty(), 0.0));
+    }
+    Timeline eqOut = new Timeline(
+        new KeyFrame(Duration.ZERO, kvs.toArray(new KeyValue[0])),
+        new KeyFrame(Duration.millis(400), kvsEnd.toArray(new KeyValue[0]))
+    );
+    eqOut.setOnFinished(e -> eq.setEnabled(false));
+    eqOut.play();
+  }
+
+  private void fadeEqToCurrentPlayer(double[] targetGains, long durationMs) {
+    if (mediaPlayer == null) {
+      return;
+    }
+    AudioEqualizer eq = mediaPlayer.getAudioEqualizer();
+    eq.setEnabled(true);
+    var bands = eq.getBands();
+    int count = Math.min(bands.size(), targetGains.length);
+    java.util.List<KeyValue> kvsStart = new java.util.ArrayList<>();
+    java.util.List<KeyValue> kvsEnd = new java.util.ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      kvsStart.add(new KeyValue(bands.get(i).gainProperty(), bands.get(i).getGain()));
+      kvsEnd.add(new KeyValue(bands.get(i).gainProperty(), targetGains[i]));
+    }
+    new Timeline(
+        new KeyFrame(Duration.ZERO, kvsStart.toArray(new KeyValue[0])),
+        new KeyFrame(Duration.millis(durationMs), kvsEnd.toArray(new KeyValue[0]))
+    ).play();
+  }
+
+  // Called when a new track starts while filter is active — snap to target immediately.
+  private void applyEqToCurrentPlayer() {
+    if (mediaPlayer == null) {
+      return;
+    }
+    AudioEqualizer eq = mediaPlayer.getAudioEqualizer();
+    eq.setEnabled(true);
+    var bands = eq.getBands();
+    for (int i = 0; i < bands.size() && i < LOW_PASS_GAINS.length; i++) {
+      bands.get(i).setGain(LOW_PASS_GAINS[i]);
+    }
   }
 
   public void stop() {
