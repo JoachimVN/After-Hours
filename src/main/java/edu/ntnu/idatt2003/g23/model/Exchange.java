@@ -423,6 +423,8 @@ public class Exchange {
     applySpike(stocks, 0.10, 10, 50);
     applySpike(stocks, 0.05, 20, 70);
     applySpike(stocks, 0.02, 30, 90);
+    applySpike(stocks, 0.005, 75, 150);
+    applySpike(stocks, 0.001, 150, 300);
   }
 
   /** Re-applies the minimum price floor after spike events. */

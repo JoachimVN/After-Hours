@@ -160,6 +160,7 @@ public final class GameView implements GameViewInterface {
 
   private final VBox detailArea;
   private final VBox spikePopupList;
+  private final ScrollPane spikePopupScroll;
   private final List<PauseTransition> spikePopupTimers;
   private Label currentTradeErrorLabel;
   private Label currentSellAllErrorLabel;
@@ -329,6 +330,16 @@ public final class GameView implements GameViewInterface {
     this.spikePopupList.getStyleClass().add("game-spike-popup-list");
     this.spikePopupList.setAlignment(Pos.TOP_RIGHT);
     this.spikePopupList.setPickOnBounds(false);
+    this.spikePopupScroll = new ScrollPane(spikePopupList);
+    this.spikePopupScroll.getStyleClass().add("game-spike-popup-scroll");
+    this.spikePopupScroll.setFitToWidth(true);
+    this.spikePopupScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    this.spikePopupScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    this.spikePopupScroll.setPannable(true);
+    this.spikePopupScroll.setFocusTraversable(false);
+    this.spikePopupScroll.visibleProperty().bind(Bindings.isNotEmpty(this.spikePopupList.getChildren()));
+    this.spikePopupScroll.managedProperty().bind(this.spikePopupScroll.visibleProperty());
+    this.spikePopupScroll.mouseTransparentProperty().bind(Bindings.isEmpty(this.spikePopupList.getChildren()));
     this.spikePopupTimers = new ArrayList<>();
 
     // ── Stock list (left panel) — standard or virtualized (performance mode)
@@ -674,13 +685,13 @@ public final class GameView implements GameViewInterface {
     calmDownLbl.getStyleClass().add("calm-down-label");
     calmDownLbl.setOpacity(0);
     calmDownLbl.setMouseTransparent(true);
+    calmDownLbl.setTranslateY(-2);
 
     Button playBtn = new Button("\u25B6");
     playBtn.getStyleClass().add("week-play-btn");
     this.tutorialNextWeekBtnTarget = playBtn;
 
-    StackPane playStack = new StackPane(calmDownLbl, playBtn);
-    StackPane.setAlignment(calmDownLbl, Pos.TOP_CENTER);
+    StackPane playStack = new StackPane(playBtn);
     StackPane.setAlignment(playBtn, Pos.CENTER);
     playBtn.setMaxWidth(Double.MAX_VALUE);
     playBtn.setMaxHeight(Double.MAX_VALUE);
@@ -714,6 +725,11 @@ public final class GameView implements GameViewInterface {
     weekCard.add(weekInfo, 0, 0);
     weekCard.add(weekDivider, 1, 0);
     weekCard.add(playStack, 2, 0);
+    weekCard.add(calmDownLbl, 0, 0);
+    GridPane.setColumnSpan(calmDownLbl, 3);
+    GridPane.setHalignment(calmDownLbl, javafx.geometry.HPos.CENTER);
+    GridPane.setValignment(calmDownLbl, javafx.geometry.VPos.TOP);
+    GridPane.setMargin(calmDownLbl, new Insets(2, 0, 0, 0));
 
     FadeTransition[] calmFade = {null};
 
@@ -770,7 +786,7 @@ public final class GameView implements GameViewInterface {
     HBox.setHgrow(subSpacer, Priority.ALWAYS);
 
     Button historyBtn = new Button("\uD83D\uDCCB  History");
-    historyBtn.getStyleClass().add("market-movers-button");
+    historyBtn.getStyleClass().add("transaction-history-button");
     historyBtn.setOnAction(e -> {
       notifyPanelOpen();
       showTransactionHistory();
@@ -854,9 +870,10 @@ public final class GameView implements GameViewInterface {
     devPanel.managedProperty().bind(AppConfig.DEV_MODE);
     StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
 
-    StackPane overlay = new StackPane(root, spikePopupList, devPanel);
-    StackPane.setAlignment(spikePopupList, Pos.TOP_RIGHT);
-    StackPane.setMargin(spikePopupList, new Insets(150, 12, 0, 0));
+    StackPane overlay = new StackPane(root, spikePopupScroll, devPanel);
+    StackPane.setAlignment(spikePopupScroll, Pos.TOP_RIGHT);
+    StackPane.setMargin(spikePopupScroll, new Insets(150, 12, 12, 0));
+    spikePopupScroll.maxHeightProperty().bind(Bindings.max(120, overlay.heightProperty().subtract(170)));
     overlayRef = overlay;
 
     // Restore selected stock from saved UI state
@@ -1885,7 +1902,8 @@ public final class GameView implements GameViewInterface {
       fadeOutSpikePopup(popup, ttl);
     });
 
-    spikePopupList.getChildren().add(popup);
+    spikePopupList.getChildren().add(0, popup);
+    spikePopupScroll.setVvalue(0.0);
     spikePopupTimers.add(ttl);
     ttl.play();
   }
@@ -3634,7 +3652,7 @@ public final class GameView implements GameViewInterface {
     rootRef.setEffect(blur);
 
     Region dimBackdrop = new Region();
-    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.getStyleClass().add("backdrop");
     dimBackdrop.setOpacity(0);
 
     Label titleLbl = new Label("\uD83D\uDCC8  Market Movers");
@@ -4196,7 +4214,7 @@ public final class GameView implements GameViewInterface {
     rootRef.setEffect(blur);
 
     Region dimBackdrop = new Region();
-    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.getStyleClass().add("backdrop");
     dimBackdrop.setOpacity(0);
 
     StackPane popup = new StackPane(dimBackdrop, card);
@@ -4375,7 +4393,7 @@ public final class GameView implements GameViewInterface {
     rootRef.setEffect(blur);
 
     Region dimBackdrop = new Region();
-    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.getStyleClass().add("backdrop");
     dimBackdrop.setOpacity(0);
 
     StackPane popup = new StackPane(dimBackdrop, card);

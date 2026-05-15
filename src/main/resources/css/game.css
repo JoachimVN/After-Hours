@@ -324,10 +324,17 @@
 }
 
 .calm-down-label {
-    -fx-text-fill: #f5a201;
-    -fx-font-size: 12px;
+    -fx-text-fill: #ffd88f;
+    -fx-font-size: 11px;
     -fx-font-style: italic;
-    -fx-padding: 0 4 0 0;
+    -fx-font-weight: 700;
+    -fx-padding: 2 8 2 8;
+    -fx-background-color: linear-gradient(to right, rgba(24, 34, 63, 0.95), rgba(18, 27, 54, 0.95));
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(245, 162, 1, 0.42);
+    -fx-border-width: 1;
+    -fx-border-radius: 999;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 8, 0.22, 0, 1);
 }
 
 /* Left panel */
@@ -520,7 +527,7 @@
 
 /* Stock cards */
 .stock-card {
-    -fx-background-color: rgba(12, 24, 52, 0.80);
+    -fx-background-color: linear-gradient(to right, rgba(12, 24, 52, 0.80), rgba(8, 16, 36, 0.80));
     -fx-background-radius: 10;
     -fx-border-color: rgba(30, 64, 128, 0.30);
     -fx-border-width: 1;
@@ -529,11 +536,11 @@
 }
 
 .stock-card:hover {
-    -fx-background-color: rgba(20, 38, 78, 0.90);
+    -fx-background-color: linear-gradient(to right, rgba(22, 43, 93, 0.95), rgba(8, 16, 36, 0.95));
 }
 
 .stock-card-selected {
-    -fx-background-color: rgba(25, 45, 95, 0.95);
+    -fx-background-color: linear-gradient(to right, rgba(25, 45, 95, 0.95), rgba(8, 16, 36, 0.95));
     -fx-border-color: rgba(245, 162, 1, 0.55);
 }
 
@@ -1132,8 +1139,9 @@
 
 /* ── Market Movers Panel ─────────────────────────────────────────────────── */
 
-.market-movers-button {
-    -fx-background-color: rgba(15, 45, 94, 0.70);
+.market-movers-button,
+.transaction-history-button {
+    -fx-background-color: linear-gradient(to right, rgba(15, 45, 94, 0.70), rgba(10, 31, 65, 0.7));
     -fx-text-fill: #7a9fc8;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
@@ -1145,13 +1153,14 @@
     -fx-cursor: hand;
 }
 
-.market-movers-button:hover {
-    -fx-background-color: rgba(245, 162, 1, 0.20);
+.market-movers-button:hover,
+.transaction-history-button:hover {
+    -fx-background-color: linear-gradient(to top right, rgba(245, 162, 1, 0.20), rgba(245, 162, 1, 0.10));
     -fx-text-fill: #f5a201;
     -fx-border-color: rgba(245, 162, 1, 0.35);
 }
 
-.market-movers-backdrop {
+.backdrop {
     -fx-background-color: rgba(2, 4, 14, 0.72);
 }
 
@@ -2110,6 +2119,20 @@
     -fx-min-width: 330;
     -fx-pref-width: 390;
     -fx-alignment: top-right;
+}
+
+.game-spike-popup-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-fit-to-width: true;
+    -fx-max-width: 390;
+    -fx-min-width: 330;
+    -fx-pref-width: 390;
+}
+
+.game-spike-popup-scroll>.viewport {
+    -fx-background-color: transparent;
 }
 
 .game-spike-popup {
