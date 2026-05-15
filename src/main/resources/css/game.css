@@ -1642,9 +1642,8 @@
 
 .game-tutorial-title {
     -fx-text-fill: #ffd98f;
-    -fx-font-size: 24px;
-    -fx-font-family: "Georgia";
-    -fx-font-weight: 700;
+    -fx-font-size: 32px;
+    -fx-font-family: "Harlow Solid Italic";
 }
 
 .game-tutorial-body {
@@ -1696,6 +1695,12 @@
 .game-tutorial-toggle .box {
     -fx-background-color: rgba(20, 38, 76, 0.95);
     -fx-border-color: rgba(92, 130, 191, 0.75);
+}
+
+.game-tutorial-toggle:hover .box {
+    -fx-background-color: rgba(20, 38, 76, 1.0);
+    -fx-border-color: rgba(122, 183, 255, 0.75);
+    -fx-cursor: hand;
 }
 
 .game-tutorial-toggle:selected .mark {

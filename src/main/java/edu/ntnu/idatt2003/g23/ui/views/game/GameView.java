@@ -1256,6 +1256,16 @@ public final class GameView implements GameViewInterface {
     tutorialBodyLbl.setText(text != null ? text : "");
   }
 
+  private void setTutorialTitleText(String title) {
+    if (tutorialTitleLbl == null) {
+      return;
+    }
+    tutorialTitleLbl.setGraphic(null);
+    tutorialTitleLbl.setContentDisplay(ContentDisplay.TEXT_ONLY);
+    tutorialTitleLbl.setStyle("");
+    tutorialTitleLbl.setText(title != null ? title : "");
+  }
+
   private void setTutorialFinanceBody() {
     if (tutorialBodyFrame == null || tutorialBodyRichFlow == null) {
       return;
@@ -1302,7 +1312,7 @@ public final class GameView implements GameViewInterface {
       tutorialCard.setCursor(Cursor.DEFAULT);
     }
     int humanStep = step + 1;
-    tutorialStepLbl.setText("Tutorial " + humanStep + " / " + tutorialStepCount());
+    tutorialStepLbl.setText(humanStep + " / " + tutorialStepCount());
     tutorialBackBtn.setDisable(step == 0);
     tutorialNextBtn.setText(step == tutorialStepCount() - 1 ? "Finish" : "Next");
     tutorialNextBtn.setDisable(!isTutorialStepComplete(step));
@@ -1324,26 +1334,26 @@ public final class GameView implements GameViewInterface {
     boolean financeBody = false;
     switch (step) {
       case 0 -> {
-        tutorialTitleLbl.setText("Welcome to After Hours");
+        setTutorialTitleText("After Hours Demo");
         bodyText =
             "This guide is interactive and you can close it anytime. \nIf you don't want to see it again, just check the box below.";
       }
       case 1 -> {
-        tutorialTitleLbl.setText("Find Stocks");
+        setTutorialTitleText("Find Stocks");
         bodyText =
             "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details.";
         stepTarget = tutorialStockAreaTarget;
         completionHint = "Select a stock you want to invest in to continue.";
       }
       case 2 -> {
-        tutorialTitleLbl.setText("First Trade");
+        setTutorialTitleText("First Trade");
         bodyText =
           "Use the highlighted trade panel to buy your first share(s). Start with the buy controls.";
         stepTarget = tutorialTradeAreaTarget;
         completionHint = "Complete one transaction to continue.";
       }
       case 3 -> {
-        tutorialTitleLbl.setText("Advance to Next Week");
+        setTutorialTitleText("Advance to Next Week");
         bodyText =
             "Click the \u25B6 Play button to advance to the next week and simulate market movement.";
         stepTarget = tutorialNextWeekBtnTarget;
@@ -1354,12 +1364,12 @@ public final class GameView implements GameViewInterface {
         }
       }
       case 4 -> {
-        tutorialTitleLbl.setText("Read Your Totals");
+        setTutorialTitleText("Read Your Totals");
         financeBody = true;
         stepTarget = tutorialFinanceOverviewTarget;
       }
       case 5 -> {
-        tutorialTitleLbl.setText("Portfolio");
+        setTutorialTitleText("Portfolio");
         bodyText =
           "Hold + Drag the selected bar below to open up your portfolio.\nThis is where you can track your holdings and see their performance.\n\nYou can also open a full summary by clicking the header.";
         stepTarget = tutorialPortfolioAreaTarget;
@@ -1369,7 +1379,7 @@ public final class GameView implements GameViewInterface {
       }
       case 6 -> {
         if (tutorialUseMoversStep) {
-          tutorialTitleLbl.setText("Market Movers");
+          setTutorialTitleText("Market Movers");
           if (tutorialUseTwoStockMoversCopy) {
             bodyText =
             "With two stocks, the movers list is short. Use it to see the top mover this week and compare direction.";
@@ -1380,7 +1390,7 @@ public final class GameView implements GameViewInterface {
           stepTarget = tutorialMarketMoversBtnTarget;
           completionHint = "Open Market Movers to continue.";
         } else {
-          tutorialTitleLbl.setText("Track Price Change");
+          setTutorialTitleText("Track Price Change");
           bodyText =
               "With a single-stock market, focus on week-to-week price change and how it affects your holdings.";
           stepTarget = tutorialNextWeekBtnTarget;
@@ -1388,9 +1398,9 @@ public final class GameView implements GameViewInterface {
         }
       }
       case 7 -> {
-        tutorialTitleLbl.setText("You're Ready");
+        setTutorialTitleText("You're On Your Own Now");
         bodyText =
-        "Continue this run to keep everything exactly as it is, or reset the session to start fresh.";
+        "This was just a sample. Make your move. \nContinue this run, or reset the session to start fresh.";
       }
       default -> {
       }
