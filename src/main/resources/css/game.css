@@ -259,8 +259,39 @@
     -fx-background-color: linear-gradient(to bottom right, #0d26467a, #0a204280);
     -fx-background-radius: 10;
     -fx-border-radius: 10;
-    -fx-padding: 6 16 6 16;
-    -fx-min-width: 60px;
+    -fx-padding: 6 0 6 0;
+    -fx-pref-width: 128px;
+}
+
+.week-card-divider {
+    -fx-min-width: 1px;
+    -fx-pref-width: 1px;
+    -fx-max-width: 1px;
+    -fx-min-height: 24px;
+    -fx-background-color: rgba(96, 141, 210, 0.22);
+    -fx-background-radius: 999;
+}
+
+.week-play-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: rgba(191, 212, 243, 0.75);
+    -fx-font-size: 30px;
+    -fx-font-family: "Sans Serif";
+    -fx-background-radius: 6;
+    -fx-padding: 4 0 4 0;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+.week-play-btn:hover {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f5a201;
+}
+
+.week-play-btn:pressed {
+    -fx-text-fill: #ffffff;
+    -fx-background-color: transparent;
 }
 
 .week-number {

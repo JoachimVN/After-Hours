@@ -69,7 +69,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -656,21 +658,52 @@ public final class GameView implements GameViewInterface {
     }
     this.hSplitRef = hSplit;
 
-    // ── Sub-bar: week + next-week ─────────────────────────────────────────
-    VBox weekCard = new VBox(2,
-        labelSmall("WEEK"),
-        weekNumLbl);
-    weekCard.getStyleClass().add("week-card");
-    weekCard.setAlignment(Pos.CENTER);
-
-    Button nextWeekBtn = new Button("\u25B6  Next Week");
-    nextWeekBtn.getStyleClass().add("next-week-button");
-    this.tutorialNextWeekBtnTarget = nextWeekBtn;
+    // ── Sub-bar: combined week card (info + play button) ────────────────────
+    VBox weekInfo = new VBox(2, labelSmall("WEEK"), weekNumLbl);
+    weekInfo.setAlignment(Pos.CENTER);
 
     Label calmDownLbl = new Label("\uD83D\uDE0C Calm down");
     calmDownLbl.getStyleClass().add("calm-down-label");
     calmDownLbl.setOpacity(0);
     calmDownLbl.setMouseTransparent(true);
+
+    Button playBtn = new Button("\u25B6");
+    playBtn.getStyleClass().add("week-play-btn");
+    this.tutorialNextWeekBtnTarget = playBtn;
+
+    StackPane playStack = new StackPane(calmDownLbl, playBtn);
+    StackPane.setAlignment(calmDownLbl, Pos.TOP_CENTER);
+    StackPane.setAlignment(playBtn, Pos.CENTER);
+    playBtn.setMaxWidth(Double.MAX_VALUE);
+    playBtn.setMaxHeight(Double.MAX_VALUE);
+
+    Region weekDivider = new Region();
+    weekDivider.getStyleClass().add("week-card-divider");
+
+    ColumnConstraints colInfo = new ColumnConstraints();
+    colInfo.setPercentWidth(50);
+    ColumnConstraints colDivider = new ColumnConstraints();
+    colDivider.setMinWidth(1);
+    colDivider.setPrefWidth(1);
+    colDivider.setMaxWidth(1);
+    ColumnConstraints colPlay = new ColumnConstraints();
+    colPlay.setPercentWidth(50);
+
+    GridPane weekCard = new GridPane();
+    weekCard.getStyleClass().add("week-card");
+    weekCard.getColumnConstraints().addAll(colInfo, colDivider, colPlay);
+    weekCard.setAlignment(Pos.CENTER);
+    GridPane.setHalignment(weekInfo, javafx.geometry.HPos.CENTER);
+    GridPane.setValignment(weekInfo, javafx.geometry.VPos.CENTER);
+    GridPane.setHalignment(playStack, javafx.geometry.HPos.CENTER);
+    GridPane.setValignment(playStack, javafx.geometry.VPos.CENTER);
+    GridPane.setFillWidth(weekInfo, true);
+    GridPane.setFillWidth(playStack, true);
+    GridPane.setFillHeight(weekInfo, true);
+    GridPane.setFillHeight(playStack, true);
+    weekCard.add(weekInfo, 0, 0);
+    weekCard.add(weekDivider, 1, 0);
+    weekCard.add(playStack, 2, 0);
 
     FadeTransition[] calmFade = {null};
 
@@ -680,13 +713,13 @@ public final class GameView implements GameViewInterface {
 
     AudioClip weekAdvanceClip = loadAudioClip(WEEK_ADVANCE_SOUND);
     boolean[] playedOnMousePress = {false};
-    nextWeekBtn.setOnMousePressed(e -> {
+    playBtn.setOnMousePressed(e -> {
       playedOnMousePress[0] = true;
       playAudioClip(weekAdvanceClip,
           () -> Math.min(sfxVolumeSupplier.getAsDouble() * 1.10, 1.0)); // 10% volume boost
     });
 
-    nextWeekBtn.setOnAction(e -> {
+    playBtn.setOnAction(e -> {
       if (!playedOnMousePress[0]) {
         playAudioClip(weekAdvanceClip, () -> Math.min(sfxVolumeSupplier.getAsDouble() * 1.10, 1.0));
       }
@@ -739,8 +772,6 @@ public final class GameView implements GameViewInterface {
       showMarketMovers();
       refreshTutorialProgress();
     });
-    VBox nextWeekStack = new VBox(2, calmDownLbl, nextWeekBtn);
-    nextWeekStack.setAlignment(Pos.BOTTOM_CENTER);
     Region subSpacer = new Region();
     HBox.setHgrow(subSpacer, Priority.ALWAYS);
 
@@ -758,7 +789,7 @@ public final class GameView implements GameViewInterface {
     marketActionBox.getStyleClass().add("game-market-action-box");
     marketActionBox.setAlignment(Pos.TOP_RIGHT);
 
-    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, marketActionBox);
+    HBox subBar = new HBox(16, weekCard, sellAllStack, subSpacer, marketActionBox);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
 
@@ -862,7 +893,7 @@ public final class GameView implements GameViewInterface {
       switch (e.getCode()) {
         case N, SPACE -> {
           if (!inTextField) {
-            nextWeekBtn.fire();
+            playBtn.fire();
             e.consume();
           }
         }
@@ -1303,7 +1334,7 @@ public final class GameView implements GameViewInterface {
       case 3 -> {
         tutorialTitleLbl.setText("Advance to Next Week");
         bodyText =
-            "Click Next Week to advance to the next week and simulate market movement.";
+            "Click the \u25B6 play button on the week card to advance to the next week and simulate market movement.";
         stepTarget = tutorialNextWeekBtnTarget;
         completionHint = "Advance at least one week to continue.";
         if (!tutorialSpikeScheduled) {
