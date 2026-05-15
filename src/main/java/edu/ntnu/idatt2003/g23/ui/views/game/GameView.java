@@ -88,6 +88,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
@@ -178,6 +179,8 @@ public final class GameView implements GameViewInterface {
   private HBox tutorialFinishRow = null;
   private Label tutorialTitleLbl = null;
   private Label tutorialBodyLbl = null;
+  private TextFlow tutorialBodyRichFlow = null;
+  private VBox tutorialBodyFrame = null;
   private Label tutorialStepLbl = null;
   private Button tutorialBackBtn = null;
   private Button tutorialNextBtn = null;
@@ -200,6 +203,7 @@ public final class GameView implements GameViewInterface {
   private Node tutorialTradeAreaTarget = null;
   private Node tutorialPortfolioAreaTarget = null;
   private Region tutorialPortfolioResizeHandleTarget = null;
+  private Node tutorialFinanceOverviewTarget = null;
   private Node tutorialMoversCardTarget = null;
   private Node tutorialMoversTabBarTarget = null;
   private Button tutorialNextWeekBtnTarget = null;
@@ -745,6 +749,7 @@ public final class GameView implements GameViewInterface {
 
     Node statusPill = statusPill("Player Status", statusVal, statusProgressArc, statusTooltip);
     Node financePill = moneyPill(cashVal, portfolioVal, netWorthVal, "money-pill-overview");
+    this.tutorialFinanceOverviewTarget = financePill;
 
     updateProfileIdentityButton();
     profileBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -1010,7 +1015,10 @@ public final class GameView implements GameViewInterface {
     tutorialBodyLbl = new Label();
     tutorialBodyLbl.getStyleClass().add("game-tutorial-body");
     tutorialBodyLbl.setWrapText(true);
-    VBox tutorialBodyFrame = new VBox(tutorialBodyLbl);
+    tutorialBodyRichFlow = new TextFlow();
+    tutorialBodyRichFlow.getStyleClass().add("game-tutorial-body-rich");
+    tutorialBodyRichFlow.setMaxWidth(Double.MAX_VALUE);
+    tutorialBodyFrame = new VBox(tutorialBodyLbl);
     tutorialBodyFrame.getStyleClass().add("game-tutorial-body-frame");
 
     tutorialDontShowAgainToggle = new CheckBox("Don't show tutorial next time");
@@ -1105,8 +1113,43 @@ public final class GameView implements GameViewInterface {
     });
   }
 
+  private void setTutorialBodyText(String text) {
+    if (tutorialBodyFrame == null || tutorialBodyLbl == null) {
+      return;
+    }
+    tutorialBodyFrame.getChildren().setAll(tutorialBodyLbl);
+    tutorialBodyLbl.setText(text != null ? text : "");
+  }
+
+  private void setTutorialFinanceBody() {
+    if (tutorialBodyFrame == null || tutorialBodyRichFlow == null) {
+      return;
+    }
+    tutorialBodyRichFlow.getChildren().setAll(
+        tutorialBodyText("The money bar keeps your core numbers in view.\n"),
+        tutorialBodyAccent("Cash", "game-tutorial-body-cash"),
+        tutorialBodyText(" is what you can spend right now.\n"),
+        tutorialBodyAccent("Portfolio", "game-tutorial-body-portfolio"),
+        tutorialBodyText(" is the current market value of the shares you hold.\n"),
+        tutorialBodyAccent("Net Worth", "game-tutorial-body-networth"),
+        tutorialBodyText(" is the two combined."));
+    tutorialBodyFrame.getChildren().setAll(tutorialBodyRichFlow);
+  }
+
+  private Text tutorialBodyText(String value) {
+    Text text = new Text(value);
+    text.getStyleClass().add("game-tutorial-body-text");
+    return text;
+  }
+
+  private Text tutorialBodyAccent(String value, String styleClass) {
+    Text text = tutorialBodyText(value);
+    text.getStyleClass().add(styleClass);
+    return text;
+  }
+
   private int tutorialStepCount() {
-    return 7;
+    return 8;
   }
 
   private void updateTutorialStep() {
@@ -1135,30 +1178,32 @@ public final class GameView implements GameViewInterface {
     clearTutorialHighlight();
     Node stepTarget = null;
     String completionHint = "";
+    String bodyText = "";
+    boolean financeBody = false;
     switch (step) {
       case 0 -> {
         tutorialTitleLbl.setText("Welcome to After Hours");
-        tutorialBodyLbl.setText(
-            "This guide is interactive and you can close it anytime. \nIf you don't want to see it again, just check the box below.");
+        bodyText =
+            "This guide is interactive and you can close it anytime. \nIf you don't want to see it again, just check the box below.";
       }
       case 1 -> {
         tutorialTitleLbl.setText("Find Stocks Quickly");
-        tutorialBodyLbl.setText(
-            "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details. \nSome of these features will not work until you start trading.");
+        bodyText =
+            "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details. \nSome of these features will not work until you start trading.";
         stepTarget = tutorialStockAreaTarget;
         completionHint = "Select a stock you want to invest in to continue.";
       }
       case 2 -> {
         tutorialTitleLbl.setText("Your First Trade");
-        tutorialBodyLbl.setText(
-          "Use the highlighted trade panel to buy your first share(s). Start with the buy controls.");
+        bodyText =
+          "Use the highlighted trade panel to buy your first share(s). Start with the buy controls.";
         stepTarget = tutorialTradeAreaTarget;
         completionHint = "Complete one transaction to continue.";
       }
       case 3 -> {
         tutorialTitleLbl.setText("Advance to Next Week");
-        tutorialBodyLbl.setText(
-            "Click Next Week to advance to the next week and simulate market movement.");
+        bodyText =
+            "Click Next Week to advance to the next week and simulate market movement.";
         stepTarget = tutorialNextWeekBtnTarget;
         completionHint = "Advance at least one week to continue.";
         if (!tutorialSpikeScheduled) {
@@ -1167,53 +1212,63 @@ public final class GameView implements GameViewInterface {
         }
       }
       case 4 -> {
+        tutorialTitleLbl.setText("Read Your Totals");
+        financeBody = true;
+        stepTarget = tutorialFinanceOverviewTarget;
+      }
+      case 5 -> {
         tutorialTitleLbl.setText("Portfolio");
-        tutorialBodyLbl.setText(
-            "Hold + Drag the selected bar below to open up your portfolio.\nThis is where you can track your holdings and see their performance.");
+        bodyText =
+          "Hold + Drag the selected bar below to open up your portfolio.\nThis is where you can track your holdings and see their performance.\n\nYou can also open a full summary by clicking the header.";
         stepTarget = tutorialPortfolioAreaTarget;
         completionHint = tutorialTouchedPortfolio
             ? "Inspect the portfolio, then continue."
             : "Touch the resize bar to continue.";
       }
-      case 5 -> {
+      case 6 -> {
         if (tutorialUseMoversStep) {
           tutorialTitleLbl.setText("Market Movers");
           if (tutorialUseTwoStockMoversCopy) {
-            tutorialBodyLbl.setText(
-                "With two stocks, the movers list is short. Use it to see the top mover this week and compare direction.");
+            bodyText =
+            "With two stocks, the movers list is short. Use it to see the top mover this week and compare direction.";
           } else {
-            tutorialBodyLbl.setText(
-                "Open Market Movers to inspect top gainers and losers. This helps you spot momentum and analyze the market before trading.");
+            bodyText =
+            "Open Market Movers to inspect top gainers and losers. This helps you spot momentum and analyze the market before trading.";
           }
           stepTarget = tutorialMarketMoversBtnTarget;
           completionHint = "Open Market Movers to continue.";
         } else {
           tutorialTitleLbl.setText("Track Price Change");
-          tutorialBodyLbl.setText(
-              "With a single-stock market, focus on week-to-week price change and how it affects your holdings.");
+          bodyText =
+              "With a single-stock market, focus on week-to-week price change and how it affects your holdings.";
           stepTarget = tutorialNextWeekBtnTarget;
           completionHint = "Advance one week to continue.";
         }
       }
-      case 6 -> {
+      case 7 -> {
         tutorialTitleLbl.setText("You're Ready");
-        tutorialBodyLbl.setText(
-        "Continue this run to keep everything exactly as it is, or reset the session to start fresh.");
+        bodyText =
+        "Continue this run to keep everything exactly as it is, or reset the session to start fresh.";
       }
       default -> {
       }
     }
-    if (!completionHint.isEmpty() && !isTutorialStepComplete(step)) {
-      tutorialBodyLbl.setText(tutorialBodyLbl.getText() + "\n\n" + completionHint);
+    if (financeBody) {
+      setTutorialFinanceBody();
+    } else {
+      if (!completionHint.isEmpty() && !isTutorialStepComplete(step)) {
+        bodyText = bodyText + "\n\n" + completionHint;
+      }
+      setTutorialBodyText(bodyText);
     }
     setTutorialBackdropBlur(step == 0);
     if (step == 0) {
       showTutorialBackdropOnly();
       positionTutorialCard(null);
-    } else if (step == 4 && tutorialTouchedPortfolio) {
+    } else if (step == 5 && tutorialTouchedPortfolio) {
       clearTutorialHighlight();
       positionTutorialCard(null);
-    } else if (step == 2 || step == 4) {
+    } else if (step == 2 || step == 5) {
       highlightTutorialNode(stepTarget);
       positionTutorialCard(null);
     } else {
@@ -1233,12 +1288,12 @@ public final class GameView implements GameViewInterface {
 
   private boolean isTutorialStepComplete(int step) {
     return switch (step) {
-      case 0, 6 -> true;
+      case 0, 4, 7 -> true;
       case 1 -> tutorialDidSelectStock;
       case 2 -> tutorialDidTrade;
       case 3 -> tutorialDidAdvanceWeek;
-      case 4 -> tutorialTouchedPortfolio;
-      case 5 -> tutorialUseMoversStep ? tutorialOpenedMovers : tutorialDidAdvanceWeek;
+      case 5 -> tutorialTouchedPortfolio;
+      case 6 -> tutorialUseMoversStep ? tutorialOpenedMovers : tutorialDidAdvanceWeek;
       default -> true;
     };
   }
@@ -1318,7 +1373,7 @@ public final class GameView implements GameViewInterface {
     if (overlayRef == null || target == null) {
       return null;
     }
-    if (tutorialStepIndex == 4) {
+    if (tutorialStepIndex == 5) {
       Bounds portfolioBounds = getPortfolioTutorialBounds();
       if (portfolioBounds != null) {
         return portfolioBounds;
@@ -1367,14 +1422,14 @@ public final class GameView implements GameViewInterface {
       return;
     }
 
-    double pad = tutorialStepIndex == 4 ? 2 : 10;
+    double pad = tutorialStepIndex == 5 ? 2 : 10;
     double x = Math.max(0, overlayBounds.getMinX() - pad);
     double y = Math.max(0, overlayBounds.getMinY() - pad);
     double w = Math.min(overlayW - x, overlayBounds.getWidth() + pad * 2);
     double h = Math.min(overlayH - y, overlayBounds.getHeight() + pad * 2);
 
-    double minW = tutorialStepIndex == 4 ? 24 : 120;
-    double minH = tutorialStepIndex == 4 ? 10 : 56;
+    double minW = tutorialStepIndex == 5 ? 24 : 120;
+    double minH = tutorialStepIndex == 5 ? 10 : 56;
     if (w < minW) {
       double centerX = x + w * 0.5;
       x = Math.max(0, Math.min(overlayW - minW, centerX - minW * 0.5));
@@ -1456,7 +1511,7 @@ public final class GameView implements GameViewInterface {
     boolean lowTarget = b.getMaxY() >= overlayH * 0.62;
     boolean highTarget = b.getMinY() <= overlayH * 0.25;
     boolean tradeStep = tutorialStepIndex == 2;
-    boolean portfolioStep = tutorialStepIndex == 4;
+    boolean portfolioStep = tutorialStepIndex == 5;
 
     if (tradeStep) {
       double chosenX = clamp(centerX, 16, Math.max(16, overlayW - cardW - 16));
@@ -1533,7 +1588,7 @@ public final class GameView implements GameViewInterface {
       }
     }
 
-    if (tutorialStepIndex == 5) {
+    if (tutorialStepIndex == 6) {
       chosenX = clamp(chosenX - 200, 16, Math.max(16, overlayW - cardW - 16));
     }
 
@@ -3470,8 +3525,8 @@ public final class GameView implements GameViewInterface {
         rootRef.setEffect(null);
         tutorialMoversCardTarget = null;
         tutorialMoversTabBarTarget = null;
-        if (tutorialUseMoversStep && tutorialStepIndex == 5) {
-          tutorialStepIndex = 6;
+        if (tutorialUseMoversStep && tutorialStepIndex == 6) {
+          tutorialStepIndex = 7;
         }
         resumeTutorialOverlay();
         refreshTutorialProgress();

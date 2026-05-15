@@ -1567,6 +1567,30 @@
     -fx-line-spacing: 2px;
 }
 
+.game-tutorial-body-rich {
+    -fx-line-spacing: 2px;
+}
+
+.game-tutorial-body-text {
+    -fx-fill: #d7e7ff;
+    -fx-font-size: 13px;
+}
+
+.game-tutorial-body-cash {
+    -fx-fill: rgba(78, 203, 113, 1.0);
+    -fx-font-weight: 700;
+}
+
+.game-tutorial-body-portfolio {
+    -fx-fill: rgba(96, 165, 250, 1.0);
+    -fx-font-weight: 700;
+}
+
+.game-tutorial-body-networth {
+    -fx-fill: rgba(245, 162, 1, 1.0);
+    -fx-font-weight: 700;
+}
+
 .game-tutorial-body-frame {
     -fx-background-color: linear-gradient(to bottom,
         rgba(15, 32, 70, 0.78),
