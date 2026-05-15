@@ -194,10 +194,8 @@ public final class ProfileView {
             avatarGraphic.setEffect(grayscale);
             avatarGraphic.setOpacity(0.45);
             avatarBtn.getStyleClass().add("profile-avatar-btn-locked");
-            Tooltip tooltip = new Tooltip("Unlocks at " + formatStatusName(requiredStatus));
-            tooltip.setShowDelay(Duration.millis(120));
-            tooltip.setShowDuration(Duration.INDEFINITE);
-            avatarBtn.setTooltip(tooltip);
+            avatarBtn.setTooltip(buildLockedHintTooltip(
+                "Unlocks at " + formatStatusName(requiredStatus)));
           }
           if (avatar.equals(initialAvatar)) {
             avatarBtn.getStyleClass().add("profile-avatar-btn-active");
@@ -1177,6 +1175,14 @@ public final class ProfileView {
 
   private static boolean isAvatarUnlocked(PlayerStatus currentStatus, PlayerStatus requiredStatus) {
     return requiredStatus == null || currentStatus.ordinal() >= requiredStatus.ordinal();
+  }
+
+  private static Tooltip buildLockedHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("profile-avatar-locked-tooltip");
+    return tooltip;
   }
 
   private static String formatStatusName(PlayerStatus status) {

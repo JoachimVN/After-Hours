@@ -1294,6 +1294,20 @@
     -fx-cursor: default;
 }
 
+.movers-tab-disabled {
+    -fx-background-color: rgba(10, 20, 50, 0.25);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
+.movers-tab-disabled:hover {
+    -fx-background-color: rgba(10, 20, 50, 0.25);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+}
+
 /* ── Stock filter / sort chips ──────────────────────────────────────────── */
 
 .stock-row-section-label {
@@ -1332,37 +1346,89 @@
 .stock-filter-chip-active {
     -fx-background-color: rgba(30, 64, 128, 0.45);
     -fx-text-fill: #e8d8b0;
-    -fx-border-color: rgba(245, 162, 1, 0.40);
+    -fx-border-color: rgba(86, 132, 194, 0.62);
+}
+
+.stock-filter-chip-clear {
+    -fx-background-color: rgba(10, 20, 50, 0.62);
+    -fx-text-fill: #5a78a6;
+    -fx-border-color: rgba(30, 64, 128, 0.38);
+}
+
+.stock-filter-chip-clear:hover {
+    -fx-background-color: rgba(20, 38, 78, 0.82);
+    -fx-text-fill: #86a8d2;
+    -fx-border-color: rgba(48, 86, 148, 0.46);
+}
+
+.stock-filter-chip-clear.stock-filter-chip-active {
+    -fx-background-color: rgba(30, 64, 128, 0.40);
+    -fx-text-fill: #d9cfae;
+    -fx-border-color: rgba(245, 162, 1, 0.33);
+}
+
+.stock-filter-chip-disabled {
+    -fx-background-color: rgba(10, 20, 50, 0.30);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
+.stock-filter-chip-disabled:hover {
+    -fx-background-color: rgba(10, 20, 50, 0.30);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
 }
 
 .stock-sort-chip {
-    -fx-background-color: rgba(10, 20, 50, 0.40);
-    -fx-text-fill: #344e72;
-    -fx-font-size: 9px;
+    -fx-background-color: rgba(18, 36, 76, 0.50);
+    -fx-text-fill: #7a9fc8;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2 7 2 7;
+    -fx-border-color: rgba(30, 64, 128, 0.55);
     -fx-background-radius: 10;
-    -fx-border-color: rgba(30, 64, 128, 0.22);
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-cursor: hand;
 }
 
 .stock-sort-chip:hover {
-    -fx-background-color: rgba(20, 38, 78, 0.65);
-    -fx-text-fill: #5a78a8;
+    -fx-text-fill: #7a9fc8;
+    -fx-background-color: rgba(34, 66, 124, 0.75);
+}
+
+.stock-sort-chip-disabled {
+    -fx-background-color: rgba(8, 14, 34, 0.30);
+    -fx-text-fill: rgba(66, 86, 117, 0.58);
+    -fx-border-color: rgba(28, 44, 72, 0.45);
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
+.stock-sort-chip-disabled:hover {
+    -fx-background-color: rgba(8, 14, 34, 0.30);
+    -fx-text-fill: rgba(66, 86, 117, 0.58);
+    -fx-border-color: rgba(28, 44, 72, 0.45);
 }
 
 .stock-sort-chip-active {
     -fx-background-color: rgba(25, 50, 100, 0.55);
-    -fx-text-fill: #7a9fc8;
-    -fx-border-color: rgba(30, 64, 128, 0.55);
+    -fx-text-fill: #9ec0ea;
+    -fx-border-color: rgba(86, 132, 194, 0.62);
 }
 
-.stock-sort-chip-active {
-    -fx-background-color: rgba(25, 50, 100, 0.55);
-    -fx-text-fill: #7a9fc8;
-    -fx-border-color: rgba(30, 64, 128, 0.55);
+.game-filter-tooltip,
+.game-sort-tooltip {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #e9f2ff;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: rgba(4, 14, 32, 0.75);
 }
 
 /* ── Dev panel ───────────────────────────────────────────────────────────── */

@@ -149,6 +149,9 @@ public final class GameView implements GameViewInterface {
   private final Set<String> activeFilters;
   private final List<String> filterChipOrder;
   private FlowPane filterChipsPane;
+  private Button sortNameChip;
+  private Button sortPriceChip;
+  private Button sortChangeChip;
   private String stockSort;
   private TxRow highlightedTx = null;
   private AnimationTimer highlightFadeTimer = null;
@@ -454,6 +457,9 @@ public final class GameView implements GameViewInterface {
     Button sortName = new Button("A\u2013Z");
     Button sortPrice = new Button("Price \u25bc");
     Button sortChg = new Button("Change \u25bc");
+    this.sortNameChip = sortName;
+    this.sortPriceChip = sortPrice;
+    this.sortChangeChip = sortChg;
     sortName.getStyleClass().add("stock-sort-chip");
     sortPrice.getStyleClass().add("stock-sort-chip");
     sortChg.getStyleClass().add("stock-sort-chip");
@@ -473,6 +479,9 @@ public final class GameView implements GameViewInterface {
     sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
 
     sortName.setOnAction(ev -> {
+      if (sortName.getStyleClass().contains("stock-sort-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       if (sortName.getStyleClass().contains("stock-sort-chip-active")) {
         stockSort = stockSort.equals("NAME_DESC") ? "NAME" : "NAME_DESC";
@@ -486,6 +495,9 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
     sortPrice.setOnAction(ev -> {
+      if (sortPrice.getStyleClass().contains("stock-sort-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       if (sortPrice.getStyleClass().contains("stock-sort-chip-active")) {
         // toggle direction
@@ -500,6 +512,9 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
     sortChg.setOnAction(ev -> {
+      if (sortChg.getStyleClass().contains("stock-sort-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       if (sortChg.getStyleClass().contains("stock-sort-chip-active")) {
         stockSort = stockSort.equals("CHG_DESC") ? "CHG_ASC" : "CHG_DESC";
@@ -512,6 +527,8 @@ public final class GameView implements GameViewInterface {
       sortChg.setText("Change " + (stockSort.equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
       applyFilter();
     });
+
+    updateSortChipAvailability();
 
     Label sortLabel = new Label("SORT");
     sortLabel.getStyleClass().add("stock-row-section-label");
@@ -1189,7 +1206,7 @@ public final class GameView implements GameViewInterface {
       case 1 -> {
         tutorialTitleLbl.setText("Find Stocks Quickly");
         bodyText =
-            "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details. \nSome of these features will not work until you start trading.";
+            "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details.";
         stepTarget = tutorialStockAreaTarget;
         completionHint = "Select a stock you want to invest in to continue.";
       }
@@ -1264,7 +1281,7 @@ public final class GameView implements GameViewInterface {
     setTutorialBackdropBlur(step == 0);
     if (step == 0) {
       showTutorialBackdropOnly();
-      positionTutorialCard(null);
+      centerTutorialCard();
     } else if (step == 5 && tutorialTouchedPortfolio) {
       clearTutorialHighlight();
       positionTutorialCard(null);
@@ -1276,6 +1293,14 @@ public final class GameView implements GameViewInterface {
       positionTutorialCard(stepTarget);
     }
     tutorialOverlay.toFront();
+  }
+
+  private void centerTutorialCard() {
+    if (tutorialCard == null) {
+      return;
+    }
+    StackPane.setAlignment(tutorialCard, Pos.CENTER);
+    StackPane.setMargin(tutorialCard, Insets.EMPTY);
   }
 
   private void refreshTutorialProgressFlags() {
@@ -1973,13 +1998,20 @@ public final class GameView implements GameViewInterface {
   private void rebuildFilterChips() {
     filterChipsPane.getChildren().clear();
 
-    // ── "All" chip always first (clears active filters) ──────────────────
-    Button allChip = new Button("All");
+    // ── "Clear" chip always first (clears active filters) ────────────────
+    Button allChip = new Button("Clear");
     allChip.getStyleClass().add("stock-filter-chip");
+    allChip.getStyleClass().add("stock-filter-chip-clear");
     if (activeFilters.isEmpty()) {
       allChip.getStyleClass().add("stock-filter-chip-active");
     }
+    boolean allDisabled = activeFilters.isEmpty();
+    setVisualDisabled(allChip, allDisabled, "stock-filter-chip-disabled");
+    allChip.setTooltip(null);
     allChip.setOnAction(ev -> {
+      if (allChip.getStyleClass().contains("stock-filter-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       activeFilters.clear();
       rebuildFilterChips();
@@ -2002,7 +2034,19 @@ public final class GameView implements GameViewInterface {
         chip.getStyleClass().add("stock-filter-chip-active");
       }
 
+      boolean applicable = canApplyFilterChip(key);
+      if (!applicable && !activeFilters.contains(key)) {
+        setVisualDisabled(chip, true, "stock-filter-chip-disabled");
+        chip.setTooltip(buildFilterHintTooltip(filterDisabledReason(key)));
+      } else {
+        setVisualDisabled(chip, false, "stock-filter-chip-disabled");
+        chip.setTooltip(null);
+      }
+
       chip.setOnAction(ev -> {
+        if (chip.getStyleClass().contains("stock-filter-chip-disabled")) {
+          return;
+        }
         notifyPanelOpen();
         if (activeFilters.contains(key)) {
           activeFilters.remove(key);
@@ -2015,6 +2059,9 @@ public final class GameView implements GameViewInterface {
 
       // ── Drag to reorder ───────────────────────────────────────────────
       chip.setOnDragDetected(ev -> {
+        if (chip.getStyleClass().contains("stock-filter-chip-disabled")) {
+          return;
+        }
         Dragboard db = chip.startDragAndDrop(TransferMode.MOVE);
         ClipboardContent cc = new ClipboardContent();
         cc.putString(key);
@@ -2101,6 +2148,94 @@ public final class GameView implements GameViewInterface {
     }
 
     rebuildStockList(sortCmp);
+    updateSortChipAvailability();
+    rebuildFilterChips();
+  }
+
+  private boolean canApplyFilterChip(String key) {
+    String lower = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
+    return allStocks.stream().anyMatch(s -> {
+      boolean textMatch = lower.isEmpty()
+          || s.getSymbol().toLowerCase().contains(lower)
+          || s.getCompany().toLowerCase().contains(lower);
+      return textMatch && matchesFilter(s, key);
+    });
+  }
+
+  private String filterDisabledReason(String key) {
+    return switch (key) {
+      case "FAVORITES" -> "No favorites in the current search";
+      case "OWNED" -> "No owned stocks in the current search";
+      case "UP" -> "No rising stocks in the current search";
+      case "DOWN" -> "No falling stocks in the current search";
+      default -> "Nothing to filter here";
+    };
+  }
+
+  private Tooltip buildLockedHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("profile-avatar-locked-tooltip");
+    return tooltip;
+  }
+
+  private Tooltip buildFilterHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("game-filter-tooltip");
+    return tooltip;
+  }
+
+  private Tooltip buildSortHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("game-sort-tooltip");
+    return tooltip;
+  }
+
+  private void updateSortChipAvailability() {
+    if (sortNameChip == null || sortPriceChip == null || sortChangeChip == null) {
+      return;
+    }
+
+    int visibleCount = filteredStocks.size();
+    boolean hasMultiple = visibleCount > 1;
+
+    setVisualDisabled(sortNameChip, !hasMultiple, "stock-sort-chip-disabled");
+    sortNameChip.setTooltip(!hasMultiple
+      ? buildSortHintTooltip("Need at least 2 visible stocks to sort")
+      : null);
+
+    boolean hasDifferentPrices = hasMultiple
+        && filteredStocks.stream().map(Stock::getSalesPrice).distinct().limit(2).count() > 1;
+    setVisualDisabled(sortPriceChip, !hasDifferentPrices, "stock-sort-chip-disabled");
+    sortPriceChip.setTooltip(!hasDifferentPrices
+      ? buildSortHintTooltip(hasMultiple
+        ? "All stocks have the same price"
+        : "Need at least 2 visible stocks to sort")
+      : null);
+
+    boolean hasDifferentChanges = hasMultiple
+        && filteredStocks.stream().map(Stock::percentageChange).distinct().limit(2).count() > 1;
+    setVisualDisabled(sortChangeChip, !hasDifferentChanges, "stock-sort-chip-disabled");
+    sortChangeChip.setTooltip(!hasDifferentChanges
+      ? buildSortHintTooltip(hasMultiple
+        ? "All stocks have the same change"
+        : "Need at least 2 visible stocks to sort")
+      : null);
+  }
+
+  private void setVisualDisabled(Button button, boolean disabled, String styleClass) {
+    if (disabled) {
+      if (!button.getStyleClass().contains(styleClass)) {
+        button.getStyleClass().add(styleClass);
+      }
+    } else {
+      button.getStyleClass().remove(styleClass);
+    }
   }
 
   private boolean matchesFilter(Stock s, String filter) {
@@ -3405,9 +3540,28 @@ public final class GameView implements GameViewInterface {
     }
 
     int weeksAdvanced = Math.max(0, gameController.getCurrentWeek() - 1);
-    tab4w.setDisable(weeksAdvanced < 4);
-    tab10w.setDisable(weeksAdvanced < 10);
-    tabAll.setDisable(weeksAdvanced < 2);
+    boolean lock1w = weeksAdvanced < 1;
+    boolean lock4w = weeksAdvanced < 4;
+    boolean lock10w = weeksAdvanced < 10;
+    boolean lockAll = weeksAdvanced < 2;
+
+    setVisualDisabled(tab1w, lock1w, "movers-tab-disabled");
+    setVisualDisabled(tab4w, lock4w, "movers-tab-disabled");
+    setVisualDisabled(tab10w, lock10w, "movers-tab-disabled");
+    setVisualDisabled(tabAll, lockAll, "movers-tab-disabled");
+
+    tab1w.setTooltip(lock1w
+      ? buildLockedHintTooltip("Need at least 1 completed week")
+      : null);
+    tab4w.setTooltip(lock4w
+      ? buildLockedHintTooltip("Need at least 4 completed weeks")
+      : null);
+    tab10w.setTooltip(lock10w
+      ? buildLockedHintTooltip("Need at least 10 completed weeks")
+      : null);
+    tabAll.setTooltip(lockAll
+      ? buildLockedHintTooltip("Need at least 2 completed weeks")
+      : null);
 
     Runnable clearActiveTabs = () -> {
       tab1w.getStyleClass().remove("movers-tab-active");
@@ -3416,7 +3570,9 @@ public final class GameView implements GameViewInterface {
       tabAll.getStyleClass().remove("movers-tab-active");
     };
 
-    tab1w.getStyleClass().add("movers-tab-active");
+    if (!lock1w) {
+      tab1w.getStyleClass().add("movers-tab-active");
+    }
     HBox tabBar = new HBox(4, tab1w, tab4w, tab10w, tabAll);
     tabBar.getStyleClass().add("movers-tab-bar");
 
@@ -3450,6 +3606,9 @@ public final class GameView implements GameViewInterface {
     rebuildRef[0].run();
 
     tab1w.setOnAction(ev -> {
+      if (tab1w.getStyleClass().contains("movers-tab-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "1W";
       clearActiveTabs.run();
@@ -3458,7 +3617,7 @@ public final class GameView implements GameViewInterface {
       refreshTutorialProgress();
     });
     tab4w.setOnAction(ev -> {
-      if (tab4w.isDisable()) {
+      if (tab4w.getStyleClass().contains("movers-tab-disabled")) {
         return;
       }
       notifyPanelOpen();
@@ -3469,7 +3628,7 @@ public final class GameView implements GameViewInterface {
       refreshTutorialProgress();
     });
     tab10w.setOnAction(ev -> {
-      if (tab10w.isDisable()) {
+      if (tab10w.getStyleClass().contains("movers-tab-disabled")) {
         return;
       }
       notifyPanelOpen();
@@ -3480,7 +3639,7 @@ public final class GameView implements GameViewInterface {
       refreshTutorialProgress();
     });
     tabAll.setOnAction(ev -> {
-      if (tabAll.isDisable()) {
+      if (tabAll.getStyleClass().contains("movers-tab-disabled")) {
         return;
       }
       notifyPanelOpen();
