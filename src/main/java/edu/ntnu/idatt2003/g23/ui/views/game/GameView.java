@@ -191,6 +191,12 @@ public final class GameView implements GameViewInterface {
   private Button tutorialKeepProgressBtn = null;
   private Button tutorialStartFreshBtn = null;
   private CheckBox tutorialDontShowAgainToggle = null;
+  private int tutorialCardDragStep = -1;
+  private boolean tutorialCardDragging = false;
+  private double tutorialCardDragStartSceneX = 0;
+  private double tutorialCardDragStartSceneY = 0;
+  private double tutorialCardDragStartTranslateX = 0;
+  private double tutorialCardDragStartTranslateY = 0;
   private int tutorialStepIndex = 0;
   private boolean tutorialDismissedThisSession = false;
   private boolean tutorialDidSelectStock = false;
@@ -1122,6 +1128,68 @@ public final class GameView implements GameViewInterface {
         tutorialNavRow,
         tutorialFinishRow);
 
+    java.util.function.Predicate<Node> tutorialDragBlockedTarget =
+        n -> n instanceof Button || n instanceof CheckBox || n instanceof TextInputControl;
+
+    java.util.function.Consumer<MouseEvent> startTutorialDrag = e -> {
+      if (e.getTarget() instanceof Node target && tutorialDragBlockedTarget.test(target)) {
+        return;
+      }
+      tutorialCardDragStartSceneX = e.getSceneX();
+      tutorialCardDragStartSceneY = e.getSceneY();
+      tutorialCardDragStartTranslateX = tutorialCard.getTranslateX();
+      tutorialCardDragStartTranslateY = tutorialCard.getTranslateY();
+      tutorialCardDragging = true;
+      tutorialCard.setCursor(Cursor.CLOSED_HAND);
+      e.consume();
+    };
+
+    java.util.function.Consumer<MouseEvent> dragTutorialCard = e -> {
+      if (!tutorialCardDragging) {
+        return;
+      }
+      if (e.getTarget() instanceof Node target && tutorialDragBlockedTarget.test(target)) {
+        return;
+      }
+      double dx = e.getSceneX() - tutorialCardDragStartSceneX;
+      double dy = e.getSceneY() - tutorialCardDragStartSceneY;
+      tutorialCard.setTranslateX(tutorialCardDragStartTranslateX + dx);
+      tutorialCard.setTranslateY(tutorialCardDragStartTranslateY + dy);
+      e.consume();
+    };
+
+    java.util.function.Consumer<MouseEvent> endTutorialDrag = e -> {
+      if (!tutorialCardDragging) {
+        return;
+      }
+      tutorialCardDragging = false;
+      if (e.getTarget() instanceof Node target && !tutorialDragBlockedTarget.test(target)) {
+        tutorialCard.setCursor(Cursor.OPEN_HAND);
+      } else {
+        tutorialCard.setCursor(Cursor.DEFAULT);
+      }
+      e.consume();
+    };
+
+    tutorialCard.setOnMouseMoved(e -> {
+      if (tutorialCardDragging) {
+        return;
+      }
+      if (e.getTarget() instanceof Node target && !tutorialDragBlockedTarget.test(target)) {
+        tutorialCard.setCursor(Cursor.OPEN_HAND);
+      } else {
+        tutorialCard.setCursor(Cursor.DEFAULT);
+      }
+    });
+    tutorialCard.setOnMouseExited(e -> {
+      if (!tutorialCardDragging) {
+        tutorialCard.setCursor(Cursor.DEFAULT);
+      }
+    });
+    tutorialCard.setOnMousePressed(e -> startTutorialDrag.accept(e));
+    tutorialCard.setOnMouseDragged(e -> dragTutorialCard.accept(e));
+    tutorialCard.setOnMouseReleased(e -> endTutorialDrag.accept(e));
+
     StackPane.setAlignment(tutorialCard, Pos.TOP_CENTER);
     StackPane.setMargin(tutorialCard, new Insets(96, 0, 0, 0));
     tutorialOverlay.getChildren().addAll(tutorialShadeLayer, tutorialCard);
@@ -1184,6 +1252,13 @@ public final class GameView implements GameViewInterface {
     refreshTutorialProgressFlags();
     int step = Math.max(0, Math.min(tutorialStepCount() - 1, tutorialStepIndex));
     tutorialStepIndex = step;
+    if (tutorialCard != null && tutorialCardDragStep != step) {
+      tutorialCardDragStep = step;
+      tutorialCard.setTranslateX(0);
+      tutorialCard.setTranslateY(0);
+      tutorialCardDragging = false;
+      tutorialCard.setCursor(Cursor.DEFAULT);
+    }
     int humanStep = step + 1;
     tutorialStepLbl.setText("Tutorial " + humanStep + " / " + tutorialStepCount());
     tutorialBackBtn.setDisable(step == 0);
@@ -1212,14 +1287,14 @@ public final class GameView implements GameViewInterface {
             "This guide is interactive and you can close it anytime. \nIf you don't want to see it again, just check the box below.";
       }
       case 1 -> {
-        tutorialTitleLbl.setText("Find Stocks Quickly");
+        tutorialTitleLbl.setText("Find Stocks");
         bodyText =
             "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details.";
         stepTarget = tutorialStockAreaTarget;
         completionHint = "Select a stock you want to invest in to continue.";
       }
       case 2 -> {
-        tutorialTitleLbl.setText("Your First Trade");
+        tutorialTitleLbl.setText("First Trade");
         bodyText =
           "Use the highlighted trade panel to buy your first share(s). Start with the buy controls.";
         stepTarget = tutorialTradeAreaTarget;
