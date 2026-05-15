@@ -564,6 +564,13 @@ public final class GameView implements GameViewInterface {
     portSummaryHint.getStyleClass().add("game-portfolio-summary-hint");
     Region portHeaderSpacer = new Region();
     HBox.setHgrow(portHeaderSpacer, Priority.ALWAYS);
+
+    Label sellAllErrorLbl = new Label();
+    sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
+    sellAllErrorLbl.setWrapText(true);
+    VBox sellAllErrorBox = createInlineErrorBox(sellAllErrorLbl);
+    currentSellAllErrorLabel = sellAllErrorLbl;
+
     HBox portHeader = new HBox(8, portTitle, portHeaderSpacer, portSummaryHint);
     portHeader.getStyleClass().add("game-portfolio-header");
     portHeader.setAlignment(Pos.CENTER_LEFT);
@@ -618,7 +625,7 @@ public final class GameView implements GameViewInterface {
         refreshTutorialProgress();
       });
 
-      VBox portfolioSection = new VBox(0, portHeader, portfolioContent);
+      VBox portfolioSection = new VBox(0, portHeader, sellAllErrorBox, portfolioContent);
     portfolioSection.getStyleClass().add("game-portfolio-pane");
     portfolioSection.setMinHeight(200);
     portfolioSection.setPrefHeight(200);
@@ -661,6 +668,7 @@ public final class GameView implements GameViewInterface {
     // ── Sub-bar: combined week card (info + play button) ────────────────────
     VBox weekInfo = new VBox(2, labelSmall("WEEK"), weekNumLbl);
     weekInfo.setAlignment(Pos.CENTER);
+    weekInfo.setPadding(new Insets(0, 8, 0, 8));
 
     Label calmDownLbl = new Label("\uD83D\uDE0C Calm down");
     calmDownLbl.getStyleClass().add("calm-down-label");
@@ -681,13 +689,15 @@ public final class GameView implements GameViewInterface {
     weekDivider.getStyleClass().add("week-card-divider");
 
     ColumnConstraints colInfo = new ColumnConstraints();
-    colInfo.setPercentWidth(50);
+    colInfo.setHgrow(javafx.scene.layout.Priority.ALWAYS);
     ColumnConstraints colDivider = new ColumnConstraints();
     colDivider.setMinWidth(1);
     colDivider.setPrefWidth(1);
     colDivider.setMaxWidth(1);
     ColumnConstraints colPlay = new ColumnConstraints();
-    colPlay.setPercentWidth(50);
+    colPlay.setMinWidth(54);
+    colPlay.setPrefWidth(54);
+    colPlay.setMaxWidth(54);
 
     GridPane weekCard = new GridPane();
     weekCard.getStyleClass().add("week-card");
@@ -747,22 +757,6 @@ public final class GameView implements GameViewInterface {
       refreshTutorialProgress();
     });
 
-    Button sellAllHoldingsBtn = new Button("\u2198  Sell All Holdings");
-    sellAllHoldingsBtn.getStyleClass().addAll("next-week-button", "sell-all-holdings-button");
-    sellAllHoldingsBtn.setOnAction(e -> {
-      if (currentSellAllErrorLabel != null) {
-        hideInlineError(currentSellAllErrorLabel, true);
-      }
-      gameController.handleSellAll(overlayRef);
-    });
-    Label sellAllErrorLbl = new Label();
-    sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
-    sellAllErrorLbl.setWrapText(true);
-    VBox sellAllErrorBox = createInlineErrorBox(sellAllErrorLbl);
-    currentSellAllErrorLabel = sellAllErrorLbl;
-    VBox sellAllStack = new VBox(2, sellAllErrorBox, sellAllHoldingsBtn);
-    sellAllStack.setAlignment(Pos.BOTTOM_CENTER);
-
     Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
     marketMoversBtn.getStyleClass().add("market-movers-button");
     this.tutorialMarketMoversBtnTarget = marketMoversBtn;
@@ -789,7 +783,7 @@ public final class GameView implements GameViewInterface {
     marketActionBox.getStyleClass().add("game-market-action-box");
     marketActionBox.setAlignment(Pos.TOP_RIGHT);
 
-    HBox subBar = new HBox(16, weekCard, sellAllStack, subSpacer, marketActionBox);
+    HBox subBar = new HBox(16, weekCard, subSpacer, marketActionBox);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
 
@@ -1334,7 +1328,7 @@ public final class GameView implements GameViewInterface {
       case 3 -> {
         tutorialTitleLbl.setText("Advance to Next Week");
         bodyText =
-            "Click the \u25B6 play button on the week card to advance to the next week and simulate market movement.";
+            "Click the \u25B6 Play button to advance to the next week and simulate market movement.";
         stepTarget = tutorialNextWeekBtnTarget;
         completionHint = "Advance at least one week to continue.";
         if (!tutorialSpikeScheduled) {
@@ -1577,7 +1571,7 @@ public final class GameView implements GameViewInterface {
     double w = Math.min(overlayW - x, overlayBounds.getWidth() + pad * 2);
     double h = Math.min(overlayH - y, overlayBounds.getHeight() + pad * 2);
 
-    double minW = tutorialStepIndex == 5 ? 24 : 120;
+    double minW = tutorialStepIndex == 5 ? 24 : (target == tutorialNextWeekBtnTarget ? 74 : 120);
     double minH = tutorialStepIndex == 5 ? 10 : 56;
     if (w < minW) {
       double centerX = x + w * 0.5;
@@ -4359,7 +4353,13 @@ public final class GameView implements GameViewInterface {
     closeBtn.getStyleClass().add("market-movers-close-btn");
     Region titleSpacer = new Region();
     HBox.setHgrow(titleSpacer, Priority.ALWAYS);
-    HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+    Button popupSellAllBtn = new Button("\u2198 Sell All");
+    popupSellAllBtn.getStyleClass().add("sell-all-holdings-button");
+    popupSellAllBtn.setOnAction(ev -> {
+      if (dismissRef[0] != null) dismissRef[0].run();
+      gameController.handleSellAll(overlayRef);
+    });
+    HBox titleRow = new HBox(12, titleLbl, titleSpacer, popupSellAllBtn, closeBtn);
     titleRow.getStyleClass().add("market-movers-header");
     titleRow.setAlignment(Pos.CENTER_LEFT);
 

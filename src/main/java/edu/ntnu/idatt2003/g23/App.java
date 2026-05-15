@@ -772,6 +772,7 @@ public class App extends Application {
           this::performSave));
     };
     onGameSettingsRef[0] = () -> {
+      sfxController.play(SfxController.SETTINGS);
       boolean perfModeAtOpen = performanceModeEnabled;
       int maxHistoryAtOpen = maxHistoryWeeks;
       navigateKeepMusic(buildSettingsView(

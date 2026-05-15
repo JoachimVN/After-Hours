@@ -260,7 +260,7 @@
     -fx-background-radius: 10;
     -fx-border-radius: 10;
     -fx-padding: 6 0 6 0;
-    -fx-pref-width: 128px;
+    -fx-min-width: 108px;
 }
 
 .week-card-divider {
@@ -1093,12 +1093,23 @@
 }
 
 .sell-all-holdings-button {
-    -fx-background-color: linear-gradient(to right, #7a1c1c, #5e1414);
-    -fx-border-color: rgba(180, 40, 40, 0.50);
+    -fx-background-color: transparent;
+    -fx-text-fill: rgba(220, 100, 100, 0.72);
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 7 2 7;
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(190, 60, 60, 0.32);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
+    -fx-effect: null;
 }
 
 .sell-all-holdings-button:hover {
-    -fx-background-color: linear-gradient(to right, #9e2222, #7a1c1c);
+    -fx-background-color: rgba(160, 30, 30, 0.18);
+    -fx-text-fill: rgba(255, 130, 130, 0.92);
+    -fx-border-color: rgba(220, 80, 80, 0.50);
 }
 
 .trade-btn-label {
