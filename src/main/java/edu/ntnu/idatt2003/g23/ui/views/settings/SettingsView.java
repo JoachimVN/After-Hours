@@ -65,6 +65,7 @@ public final class SettingsView {
         ctrl.onDevModeChange, ctrl.devModeEnabled,
         ctrl.onAutosaveChange, ctrl.autosaveEnabled,
         ctrl.onAutosaveToastChange, ctrl.autosaveToast,
+        ctrl.onShowTutorialChange, ctrl.showTutorial,
         ctrl.onPerformanceModeChange, ctrl.performanceModeEnabled,
         ctrl.onMaxHistoryWeeksChange, ctrl.maxHistoryWeeks,
         ctrl.currentSavePath,
@@ -90,6 +91,7 @@ public final class SettingsView {
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
+      Consumer<Boolean> onShowTutorialChange, boolean showTutorialEnabled,
       Consumer<Boolean> onPerformanceModeChange, boolean performanceModeEnabled,
       Consumer<Integer> onMaxHistoryWeeksChange, int maxHistoryWeeks) {
     return build(onBack, stage,
@@ -101,6 +103,7 @@ public final class SettingsView {
         onDevModeChange, devModeEnabled,
         onAutosaveChange, autosaveEnabled,
         onAutosaveToastChange, autosaveToastEnabled,
+        onShowTutorialChange, showTutorialEnabled,
           onPerformanceModeChange, performanceModeEnabled,
           onMaxHistoryWeeksChange, maxHistoryWeeks,
         null, null, null, null, null, null, null);
@@ -126,6 +129,7 @@ public final class SettingsView {
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
+      Consumer<Boolean> onShowTutorialChange, boolean showTutorialEnabled,
       Consumer<Boolean> onPerformanceModeChange, boolean performanceModeEnabled,
       Consumer<Integer> onMaxHistoryWeeksChange, int maxHistoryWeeks,
       Path currentSavePath,
@@ -189,6 +193,7 @@ public final class SettingsView {
     VBox gameSection = buildGameSection(
         autosaveEnabled, onAutosaveChange,
         autosaveToastEnabled, onAutosaveToastChange,
+      showTutorialEnabled, onShowTutorialChange,
         onSave);
     VBox performanceSection = buildPerformanceSection(
       performanceModeEnabled,
@@ -442,21 +447,25 @@ public final class SettingsView {
   private static VBox buildGameSection(
       boolean autosaveEnabled, Consumer<Boolean> onAutosaveChange,
       boolean autosaveToastEnabled, Consumer<Boolean> onAutosaveToastChange,
+      boolean showTutorialEnabled, Consumer<Boolean> onShowTutorialChange,
       Runnable onSave) {
 
     VBox autosaveRow =
         toggleRow("Autosave (every minute)", autosaveEnabled, false, false, onAutosaveChange);
     VBox toastRow = toggleRow("Show Autosave Notification", autosaveToastEnabled, false, true,
         onAutosaveToastChange);
+    VBox tutorialRow = toggleRow("Show Tutorial", showTutorialEnabled, false, true,
+        onShowTutorialChange);
 
     if (onSave != null) {
       Button saveBtn = new Button("\uD83D\uDCBE  Save Game Now");
       saveBtn.getStyleClass().add("settings-save-game-btn");
       saveBtn.setMaxWidth(Region.USE_PREF_SIZE);
       saveBtn.setOnAction(e -> onSave.run());
-      return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow, new VBox(12, saveBtn));
+      return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow, tutorialRow,
+          new VBox(12, saveBtn));
     }
-    return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow);
+    return sectionCard("\uD83C\uDFAE  Game", autosaveRow, toastRow, tutorialRow);
   }
 
   private static VBox buildCsvEditorSection(Runnable onOpenCsvTools,

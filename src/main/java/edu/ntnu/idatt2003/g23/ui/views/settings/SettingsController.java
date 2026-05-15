@@ -54,6 +54,8 @@ public final class SettingsController {
   public Consumer<Boolean> onAutosaveChange;
   public boolean autosaveToast;
   public Consumer<Boolean> onAutosaveToastChange;
+  public boolean showTutorial;
+  public Consumer<Boolean> onShowTutorialChange;
   public boolean performanceModeEnabled;
   public Consumer<Boolean> onPerformanceModeChange;
   public int maxHistoryWeeks;
