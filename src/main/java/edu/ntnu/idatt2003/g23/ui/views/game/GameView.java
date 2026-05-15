@@ -3187,12 +3187,12 @@ public final class GameView implements GameViewInterface {
     // ── Benefits list ───────────────────────────────────────────────────
     List<String[]> benefits = switch (newStatus) {
       case INVESTOR -> List.of(
-          new String[]{"\uD83D\uDCB0", "Tax Rate", "25%  (was 30%)"},
+          new String[]{"\uD83D\uDCB0", "Income Tax Rate", "25%  (was 30%)"},
           new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D71.5 max shares per stock"},
           new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
       );
       case SPECULATOR -> List.of(
-          new String[]{"\uD83D\uDCB0", "Tax Rate", "20%  (was 25%)"},
+          new String[]{"\uD83D\uDCB0", "Income Tax Rate", "20%  (was 25%)"},
           new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D72.0 max shares per stock"},
           new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
       );
@@ -3403,6 +3403,19 @@ public final class GameView implements GameViewInterface {
     for (Button t : new Button[] {tab1w, tab4w, tab10w, tabAll}) {
       t.getStyleClass().add("movers-tab");
     }
+
+    int weeksAdvanced = Math.max(0, gameController.getCurrentWeek() - 1);
+    tab4w.setDisable(weeksAdvanced < 4);
+    tab10w.setDisable(weeksAdvanced < 10);
+    tabAll.setDisable(weeksAdvanced < 2);
+
+    Runnable clearActiveTabs = () -> {
+      tab1w.getStyleClass().remove("movers-tab-active");
+      tab4w.getStyleClass().remove("movers-tab-active");
+      tab10w.getStyleClass().remove("movers-tab-active");
+      tabAll.getStyleClass().remove("movers-tab-active");
+    };
+
     tab1w.getStyleClass().add("movers-tab-active");
     HBox tabBar = new HBox(4, tab1w, tab4w, tab10w, tabAll);
     tabBar.getStyleClass().add("movers-tab-bar");
@@ -3439,39 +3452,41 @@ public final class GameView implements GameViewInterface {
     tab1w.setOnAction(ev -> {
       notifyPanelOpen();
       tabRef[0] = "1W";
+      clearActiveTabs.run();
       tab1w.getStyleClass().add("movers-tab-active");
-      tab4w.getStyleClass().remove("movers-tab-active");
-      tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
       refreshTutorialProgress();
     });
     tab4w.setOnAction(ev -> {
+      if (tab4w.isDisable()) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "4W";
+      clearActiveTabs.run();
       tab4w.getStyleClass().add("movers-tab-active");
-      tab1w.getStyleClass().remove("movers-tab-active");
-      tab10w.getStyleClass().remove("movers-tab-active");
-      tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
       refreshTutorialProgress();
     });
     tab10w.setOnAction(ev -> {
+      if (tab10w.isDisable()) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "10W";
+      clearActiveTabs.run();
       tab10w.getStyleClass().add("movers-tab-active");
-      tab1w.getStyleClass().remove("movers-tab-active");
-      tab4w.getStyleClass().remove("movers-tab-active");
-      tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
       refreshTutorialProgress();
     });
     tabAll.setOnAction(ev -> {
+      if (tabAll.isDisable()) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "All";
+      clearActiveTabs.run();
       tabAll.getStyleClass().add("movers-tab-active");
-      tab1w.getStyleClass().remove("movers-tab-active");
-      tab4w.getStyleClass().remove("movers-tab-active");
-      tab10w.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
       refreshTutorialProgress();
     });

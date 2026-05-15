@@ -1286,6 +1286,14 @@
     -fx-border-color: rgba(30, 64, 128, 0.70);
 }
 
+.movers-tab:disabled {
+    -fx-background-color: rgba(10, 20, 50, 0.25);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
 /* ── Stock filter / sort chips ──────────────────────────────────────────── */
 
 .stock-row-section-label {
