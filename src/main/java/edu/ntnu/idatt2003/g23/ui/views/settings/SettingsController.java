@@ -78,6 +78,13 @@ public final class SettingsController {
   /** Notified when the player changes their display name. In-game only. */
   public Consumer<String> onNameChanged;
 
+  // ── CSV Data Editing ──────────────────────────────────────────────────────
+
+  /** Opens the CSV tools page. Available in all contexts. */
+  public Runnable onOpenCsvTools;
+  /** Opens the current in-game market directly in the CSV editor. In-game only. */
+  public Runnable onEditCurrentMarketData;
+
   // ── Constructor ───────────────────────────────────────────────────────────
 
   public SettingsController(Runnable onBack, Stage stage) {

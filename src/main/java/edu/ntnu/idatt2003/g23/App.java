@@ -3,9 +3,14 @@ package edu.ntnu.idatt2003.g23;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
@@ -13,13 +18,20 @@ import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer.LoadStats;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
+import edu.ntnu.idatt2003.g23.io.CsvRow;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.io.GlobalSettingsManager;
+import edu.ntnu.idatt2003.g23.io.StockCsvExporter;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
+import edu.ntnu.idatt2003.g23.model.transaction.TransactionFactory;
 import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.AppOverlayService;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
@@ -68,6 +80,9 @@ import javafx.util.Duration;
  * - goHomeKeepMusic() no music change (from non-game contexts)
  */
 public class App extends Application {
+
+  private static final double LANDING_THEME_CONTEXT_MULTIPLIER = 1.0;
+  private static final double NON_LANDING_THEME_CONTEXT_MULTIPLIER = 0.35;
 
   private StackPane root;
   private Parent homePage;
@@ -287,6 +302,9 @@ public class App extends Application {
         () -> openCsvEditorFromImport(new CsvParseResult(List.of()), name, cash, selectedFile),
         file -> openCsvEditorFromImport(file, name, cash),
         file -> startGameWithCsv(name, cash, file),
+        csvResource -> openCsvEditorFromBuiltInMarket(csvResource, name, cash),
+        meta -> openCsvEditorFromSaveMeta(meta, name, cash),
+        currentSavePath,
         selectedFile);
     navigateKeepMusic(importPage);
     fadeInPage(importPage);
@@ -337,7 +355,8 @@ public class App extends Application {
           result,
           withBack(this::goHomeKeepMusic),
           rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
-          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
+          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
+          () -> openCsvEditor(result, name, cash));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
     };
@@ -371,7 +390,8 @@ public class App extends Application {
           result,
           withBack(() -> goToCustomStocks(name, cash, selectedFile)),
           rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
-          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file));
+          (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
+          () -> openCsvEditorFromImport(result, name, cash, selectedFile));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
     };
@@ -380,6 +400,50 @@ public class App extends Application {
     } else {
       doOpen.run();
     }
+  }
+
+  private void openCsvEditorFromBuiltInMarket(String csvResource, String name, double cash) {
+    runWithLoadingOverlay(
+        "Loading Market",
+        "Parsing stock data...",
+        () -> {
+          try (InputStream is = getClass().getClassLoader().getResourceAsStream(csvResource)) {
+            if (is == null) {
+              throw new IllegalStateException("Built-in market resource not found: " + csvResource);
+            }
+            return StockCsvLoader.parseWithErrors(new InputStreamReader(is, StandardCharsets.UTF_8));
+          } catch (IOException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+          }
+        },
+        result -> {
+          LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
+          Runnable doOpen = () -> {
+            Parent editorPage = CsvEditorView.build(
+                result,
+                withBack(() -> goToCustomStocks(name, cash, null)),
+                rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, AppConfig.marketNameFor(csvResource)),
+                (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
+                () -> openCsvEditorFromBuiltInMarket(csvResource, name, cash));
+            navigateKeepMusic(editorPage);
+            fadeInPage(editorPage);
+          };
+          if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+            overlayService.showLargeFileWarning(stats, doOpen);
+          } else {
+            doOpen.run();
+          }
+        },
+        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
+  }
+
+  private void openCsvEditorFromSaveMeta(SaveMeta selectedSave, String name, double cash) {
+    File saveStocksFile = resolveSaveStocksFile(selectedSave);
+    if (saveStocksFile == null) {
+      overlayService.showNotification("Save Error", "Could not locate stocks.csv for that save.", false);
+      return;
+    }
+    openCsvEditorFromImport(saveStocksFile, name, cash);
   }
 
   private void saveCsvRowsAndStartGame(String name, double cash,
@@ -391,6 +455,243 @@ public class App extends Application {
       return;
     }
     buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market");
+  }
+
+  private void openBlankCsvEditorStandalone(Runnable onBack) {
+    openCsvEditorStandalone(new CsvParseResult(List.of()), onBack,
+        () -> openBlankCsvEditorStandalone(onBack));
+  }
+
+  private void openCsvEditorStandalone(CsvParseResult result, Runnable onBack,
+      Runnable onReset) {
+    LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
+    Runnable doOpen = () -> {
+      Parent editorPage = CsvEditorView.buildStandalone(
+          result,
+          withBack(onBack),
+          (editedRows, file) -> {
+            try {
+              StockCsvExporter.writeCsvRows(file.toPath(), editedRows);
+              overlayService.showNotification("Saved", "Stock data exported to:\n" + file.getName(), true);
+              onBack.run();
+            } catch (IOException e) {
+              overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+            }
+          },
+          onReset);
+      navigateKeepMusic(editorPage);
+      fadeInPage(editorPage);
+    };
+    if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+      overlayService.showLargeFileWarning(stats, doOpen);
+    } else {
+      doOpen.run();
+    }
+  }
+
+  private void openCsvEditorFromImportStandalone(File csvFile, Runnable onBack) {
+    runWithLoadingOverlay(
+        "Opening CSV Editor",
+        "Parsing CSV data...",
+        () -> {
+          try {
+            return StockCsvLoader.parseWithErrors(new FileReader(csvFile, StandardCharsets.UTF_8));
+          } catch (IOException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+          }
+        },
+        result -> openCsvEditorStandalone(result, onBack,
+            () -> openCsvEditorFromImportStandalone(csvFile, onBack)),
+        error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
+  }
+
+  private void openCsvEditorFromBuiltInMarketStandalone(String csvResource, Runnable onBack) {
+    runWithLoadingOverlay(
+        "Loading Market",
+        "Parsing stock data...",
+        () -> {
+          try (InputStream is = getClass().getClassLoader().getResourceAsStream(csvResource)) {
+            if (is == null) {
+              throw new IllegalStateException("Built-in market resource not found: " + csvResource);
+            }
+            return StockCsvLoader.parseWithErrors(new InputStreamReader(is, StandardCharsets.UTF_8));
+          } catch (IOException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+          }
+        },
+        result -> openCsvEditorStandalone(result, onBack,
+            () -> openCsvEditorFromBuiltInMarketStandalone(csvResource, onBack)),
+        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
+  }
+
+  private void openCsvEditorFromSaveMetaStandalone(SaveMeta selectedSave, Runnable onBack) {
+    File saveStocksFile = resolveSaveStocksFile(selectedSave);
+    if (saveStocksFile == null) {
+      overlayService.showNotification("Save Error", "Could not locate stocks.csv for that save.", false);
+      return;
+    }
+    openCsvEditorFromImportStandalone(saveStocksFile, onBack);
+  }
+
+  private void openCurrentMarketCsvEditorForGame(Runnable onBack) {
+    if (currentExchange == null || currentPlayer == null || currentGamePage == null) {
+      overlayService.showNotification("Error", "No active game session", false);
+      return;
+    }
+
+    CsvParseResult result = currentExchangeAsParseResult();
+    LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
+    Runnable doOpen = () -> {
+      Parent editorPage = CsvEditorView.build(
+          result,
+          withBack(onBack),
+          rows -> applyEditedMarketToCurrentGame(rows, null),
+          (rows, file) -> applyEditedMarketToCurrentGame(rows, file),
+          () -> openCurrentMarketCsvEditorForGame(onBack));
+      navigateKeepMusic(editorPage);
+      fadeInPage(editorPage);
+    };
+    if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+      overlayService.showLargeFileWarning(stats, doOpen);
+    } else {
+      doOpen.run();
+    }
+  }
+
+  /**
+   * Formats a stock's price history as a semicolon-delimited CSV string.
+   * Keeps the full in-memory values so the editor sees the exact current history.
+   */
+  private String formatStockPricesForCsv(Stock stock) {
+    List<BigDecimal> prices = stock.getHistoricalPrices();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < prices.size(); i++) {
+      if (i > 0) {
+        sb.append(";");
+      }
+      sb.append(prices.get(i).stripTrailingZeros().toPlainString());
+    }
+    return sb.toString();
+  }
+
+  private CsvParseResult currentExchangeAsParseResult() {
+    List<CsvRow> rows = new ArrayList<>();
+    int lineNum = 1;
+    for (Stock stock : currentExchange.getStocks()) {
+      rows.add(new CsvRow(lineNum++, stock.getSymbol(), stock.getCompany(),
+          formatStockPricesForCsv(stock), ""));
+    }
+    return new CsvParseResult(rows);
+  }
+
+  private File resolveSaveStocksFile(SaveMeta selectedSave) {
+    if (selectedSave == null || selectedSave.saveDir() == null) {
+      return null;
+    }
+    File stocksFile = selectedSave.saveDir().resolve("stocks.csv").toFile();
+    return stocksFile.isFile() ? stocksFile : null;
+  }
+
+  private void openStockDataToolsFromSettings(Parent settingsPage) {
+    final Parent[] stockToolsPageRef = new Parent[1];
+    Runnable returnToStockTools = () -> {
+      if (stockToolsPageRef[0] != null) {
+        navigateKeepMusic(stockToolsPageRef[0]);
+      }
+    };
+
+    Parent stockToolsPage = CustomStocksView.build(
+        withBack(() -> navigateKeepMusic(settingsPage)),
+        () -> openBlankCsvEditorStandalone(returnToStockTools),
+        file -> openCsvEditorFromImportStandalone(file, returnToStockTools),
+        null,
+        csvResource -> openCsvEditorFromBuiltInMarketStandalone(csvResource, returnToStockTools),
+        meta -> openCsvEditorFromSaveMetaStandalone(meta, returnToStockTools),
+        currentSavePath,
+        null);
+    stockToolsPageRef[0] = stockToolsPage;
+    navigateKeepMusic(stockToolsPage);
+    fadeInPage(stockToolsPage);
+  }
+
+  private void applyEditedMarketToCurrentGame(List<CsvRow> rows, File exportFile) {
+    if (currentPlayer == null || currentExchange == null) {
+      overlayService.showNotification("Error", "No active game session", false);
+      return;
+    }
+    if (exportFile != null) {
+      try {
+        StockCsvExporter.writeCsvRows(exportFile.toPath(), rows);
+      } catch (IOException e) {
+        overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+        return;
+      }
+    }
+
+    Exchange updatedExchange = new Exchange(currentExchange.getName(), StockCsvLoader.toStocks(rows));
+    updatedExchange.setWeek(currentExchange.getWeek());
+
+    Player updatedPlayer;
+    try {
+      updatedPlayer = rebuildPlayerForEditedExchange(currentPlayer, updatedExchange);
+    } catch (IllegalStateException e) {
+      overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+      return;
+    }
+
+    GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : currentUiState;
+    buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState);
+    if (exportFile != null) {
+      overlayService.showNotification("Saved", "Stock data exported to:\n" + exportFile.getName(), true);
+    }
+  }
+
+  private Player rebuildPlayerForEditedExchange(Player sourcePlayer, Exchange updatedExchange) {
+    Set<String> availableSymbols = new LinkedHashSet<>();
+    for (Stock stock : updatedExchange.getStocks()) {
+      availableSymbols.add(stock.getSymbol());
+    }
+
+    Set<String> requiredSymbols = new LinkedHashSet<>();
+    for (Share share : sourcePlayer.getPortfolio().getShares()) {
+      requiredSymbols.add(share.getStock().getSymbol());
+    }
+    for (Transaction tx : sourcePlayer.getTransactionArchive().getAll()) {
+      requiredSymbols.add(tx.getShare().getStock().getSymbol());
+    }
+
+    List<String> missingSymbols = requiredSymbols.stream()
+        .filter(symbol -> !availableSymbols.contains(symbol))
+        .toList();
+    if (!missingSymbols.isEmpty()) {
+      throw new IllegalStateException(
+          "You can't remove or rename symbols that exist in this save: " + String.join(", ", missingSymbols));
+    }
+
+    Player rebuiltPlayer = new Player(sourcePlayer.getName(), sourcePlayer.getStartingMoney());
+    rebuiltPlayer.setMoney(sourcePlayer.getMoney());
+    rebuiltPlayer.setStatus(sourcePlayer.getStatus());
+    rebuiltPlayer.setProfileAvatar(sourcePlayer.getProfileAvatar());
+    rebuiltPlayer.setWeeksUsingChickAvatar(sourcePlayer.getWeeksUsingChickAvatar());
+    rebuiltPlayer.setWeeklySnapshots(sourcePlayer.getWeeklySnapshots());
+
+    for (Share share : sourcePlayer.getPortfolio().getShares()) {
+      rebuiltPlayer.getPortfolio().addShare(remapShare(share, updatedExchange));
+    }
+    for (Transaction tx : sourcePlayer.getTransactionArchive().getAll()) {
+      Share remappedShare = remapShare(tx.getShare(), updatedExchange);
+      Transaction rebuiltTx = tx instanceof Purchase
+          ? TransactionFactory.createPurchase(remappedShare, tx.getWeek())
+          : TransactionFactory.createSale(remappedShare, tx.getWeek());
+      rebuiltPlayer.getTransactionArchive().add(rebuiltTx);
+    }
+
+    return rebuiltPlayer;
+  }
+
+  private Share remapShare(Share sourceShare, Exchange updatedExchange) {
+    Stock updatedStock = updatedExchange.getStock(sourceShare.getStock().getSymbol());
+    return new Share(updatedStock, sourceShare.getQuantity(), sourceShare.getPurchasePrice());
   }
 
   private void buildAndStartGame(String name, double cash, List<Stock> stocks, boolean fromEditor,
@@ -417,6 +718,10 @@ public class App extends Application {
       showNoGamePage(false);
       return;
     }
+    Player previousPlayer = currentPlayer;
+    Exchange previousExchange = currentExchange;
+    String previousAutosaveId = currentAutosaveId;
+
     currentPlayer = player;
     currentExchange = exchange;
     currentSavePath = savePath;
@@ -427,10 +732,17 @@ public class App extends Application {
     if (savePath != null) {
       currentAutosaveId = normalizeAutosaveSlotId(savePath.getFileName().toString());
     } else {
-      String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
-      currentAutosaveId = safeName + "_"
-          + java.time.LocalDateTime.now().format(
-              java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+      boolean resumingSameInMemorySession = previousAutosaveId != null
+          && previousPlayer == player
+          && previousExchange == exchange;
+      if (resumingSameInMemorySession) {
+        currentAutosaveId = previousAutosaveId;
+      } else {
+        String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
+        currentAutosaveId = safeName + "_"
+            + java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+      }
     }
     GameController gameController = new GameController(player, exchange);
     final Runnable[] onGameProfileRef = new Runnable[1];
@@ -606,6 +918,7 @@ public class App extends Application {
   }
 
   private Parent buildSettingsView(Runnable onBack, Runnable onSave) {
+    final Parent[] settingsPageRef = new Parent[1];
     SettingsController ctrl = new SettingsController(
         () -> {
           sfxController.play(SfxController.BACK, Math.min(sfxController.getVolume() * 1.5, 1.0));
@@ -748,9 +1061,27 @@ public class App extends Application {
           ? currentGameController.getPlayerName() : null;
       ctrl.onNameChanged = currentGameController != null
           ? name -> currentGameController.setPlayerName(name) : null;
+      ctrl.onOpenCsvTools = () -> {
+        if (settingsPageRef[0] != null) {
+          openStockDataToolsFromSettings(settingsPageRef[0]);
+        }
+      };
+      ctrl.onEditCurrentMarketData = () -> {
+        if (settingsPageRef[0] != null) {
+          openCurrentMarketCsvEditorForGame(() -> navigateKeepMusic(settingsPageRef[0]));
+        }
+      };
+    } else {
+      ctrl.onOpenCsvTools = () -> {
+        if (settingsPageRef[0] != null) {
+          openStockDataToolsFromSettings(settingsPageRef[0]);
+        }
+      };
     }
 
-    return SettingsView.build(ctrl);
+    Parent settingsPage = SettingsView.build(ctrl);
+    settingsPageRef[0] = settingsPage;
+    return settingsPage;
   }
 
   private Parent buildProfileView(Runnable onBackToGame, Runnable onSave) {
@@ -888,6 +1219,9 @@ public class App extends Application {
    */
   private void navigateKeepMusic(Parent page) {
     root.getChildren().setAll(backgroundCanvas, page);
+    if (!gameAudioContext) {
+      updateHomeThemeContextLoudness(page, true);
+    }
   }
 
   /**
@@ -931,6 +1265,7 @@ public class App extends Application {
       performAutosave();
     }
     gameAudioContext = false;
+    homePageMusicController.setContextVolumeMultiplier(LANDING_THEME_CONTEXT_MULTIPLIER, false);
     if (musicMuted) {
       homePageMusicController.stop();
     } else {
@@ -944,7 +1279,10 @@ public class App extends Application {
    */
   private void goHomeKeepMusic() {
     gameAudioContext = false;
-    fadeOutThenNavigate(() -> root.getChildren().setAll(backgroundCanvas, homePage));
+    fadeOutThenNavigate(() -> {
+      root.getChildren().setAll(backgroundCanvas, homePage);
+      updateHomeThemeContextLoudness(homePage, true);
+    });
   }
 
   private void playGameEntryAudio() {
@@ -962,8 +1300,24 @@ public class App extends Application {
     if (gameAudioContext) {
       homePageMusicController.playAmbience();
     } else {
+      Parent currentPage = getCurrentPage();
+      updateHomeThemeContextLoudness(currentPage == null ? homePage : currentPage, false);
       homePageMusicController.play(null, null);
     }
+  }
+
+  private Parent getCurrentPage() {
+    if (root == null || root.getChildren().size() < 2) {
+      return null;
+    }
+    return (Parent) root.getChildren().get(root.getChildren().size() - 1);
+  }
+
+  private void updateHomeThemeContextLoudness(Parent page, boolean smooth) {
+    double contextMultiplier = page == homePage
+        ? LANDING_THEME_CONTEXT_MULTIPLIER
+        : NON_LANDING_THEME_CONTEXT_MULTIPLIER;
+    homePageMusicController.setContextVolumeMultiplier(contextMultiplier, smooth);
   }
 
   // ─────────────────────────────────────────────────────────────────────────

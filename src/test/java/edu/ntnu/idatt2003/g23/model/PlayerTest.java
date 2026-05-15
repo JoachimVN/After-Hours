@@ -380,6 +380,26 @@ class PlayerTest {
     }
 
     @Test
+    @DisplayName("calculateStatus does not demote once INVESTOR has been reached")
+    void testCalculateStatusDoesNotDemoteInvestor() {
+      Player player = new Player("Alice", new BigDecimal("1000.00"));
+      Stock stock = new Stock("AAPL", "Apple Inc.", List.of(new BigDecimal("150")));
+      Share share = new Share(stock, new BigDecimal("1"), new BigDecimal("140"));
+      for (int i = 1; i <= 10; i++) {
+        player.getTransactionArchive().add(new Purchase(share, i));
+      }
+
+      player.addMoney(new BigDecimal("200.00")); // reaches INVESTOR threshold
+      player.calculateStatus();
+      assertEquals(PlayerStatus.INVESTOR, player.getStatus());
+
+      player.withdrawMoney(new BigDecimal("300.00")); // growth drops below INVESTOR threshold
+      player.calculateStatus();
+
+      assertEquals(PlayerStatus.INVESTOR, player.getStatus());
+    }
+
+    @Test
     @DisplayName("calculateStatusProgress returns 0 with zero starting money")
     void testCalculateStatusProgressZeroStartingMoney() {
       Player player = new Player("Walter", BigDecimal.ZERO);
