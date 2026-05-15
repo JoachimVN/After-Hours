@@ -546,6 +546,8 @@ public final class GameView implements GameViewInterface {
     leftPanel.setMinWidth(300);
     leftPanel.setMaxWidth(600);
     this.tutorialStockAreaTarget = leftPanel;
+    leftPanel.widthProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
+    leftPanel.heightProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
 
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
@@ -628,6 +630,8 @@ public final class GameView implements GameViewInterface {
     rightPanel.getStyleClass().add("game-right-panel");
     HBox.setHgrow(rightPanel, Priority.ALWAYS);
     VBox.setVgrow(rightPanel, Priority.ALWAYS);
+    rightPanel.widthProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
+    rightPanel.heightProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
     double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
       ? initialState.portfolioDivider() : 1.0;
     installPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle, initPortDivider);
@@ -640,6 +644,10 @@ public final class GameView implements GameViewInterface {
     double initSidebarDivider = (initialState != null && initialState.sidebarDivider() > 0)
       ? initialState.sidebarDivider() : 0.125;
     hSplit.setDividerPositions(initSidebarDivider);
+    if (!hSplit.getDividers().isEmpty()) {
+      hSplit.getDividers().get(0).positionProperty().addListener((obs, oldV, newV) ->
+          refreshTutorialLayout());
+    }
     this.hSplitRef = hSplit;
 
     // ── Sub-bar: week + next-week ─────────────────────────────────────────
@@ -1333,9 +1341,19 @@ public final class GameView implements GameViewInterface {
     updateTutorialStep();
   }
 
+  private void refreshTutorialLayout() {
+    if (!isTutorialVisible() || tutorialSuspendDepth > 0) {
+      return;
+    }
+    tutorialOverlay.toFront();
+    updateTutorialStep();
+  }
+
   private void maybeAdvanceTutorialAfterTrade() {
     if (tutorialStepIndex == 2 && tutorialDidTrade) {
       tutorialStepIndex = 3;
+    } else if (tutorialStepIndex == 3 && tutorialDidAdvanceWeek) {
+      tutorialStepIndex = 4;
     }
   }
 
