@@ -129,8 +129,8 @@ public final class AppOverlayService {
 
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("dialog-cancel-btn");
-    Button proceedBtn = new Button("Risk Everything");
-    proceedBtn.getStyleClass().add("dialog-confirm-sell-btn");
+    Button proceedBtn = new Button("Proceed Anyway");
+    proceedBtn.getStyleClass().add("dialog-error-btn");
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);

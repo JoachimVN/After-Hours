@@ -15,26 +15,26 @@
 .settings-section-card {
     -fx-background-color: rgba(7, 9, 31, 0.12);
     -fx-border-color: transparent transparent transparent rgba(245, 162, 1, 0.28);
-    -fx-border-width: 0 0 0 2;
-    -fx-padding: 10 16 14 18;
+    -fx-border-width: 0px 0px 0px 2px;
+    -fx-padding: 10px 16px 14px 18px;
 }
 
 .settings-section-title {
-    -fx-font-size: 13;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-text-fill: rgba(245, 162, 1, 0.75);
-    -fx-padding: 0 0 1 0;
+    -fx-padding: 0px 0px 1px 0px;
 }
 
 .settings-section-sep .line {
     -fx-border-color: rgba(30, 58, 110, 0.75);
-    -fx-border-width: 0 0 1 0; /* horizontal line */
+    -fx-border-width: 0px 0px 1px 0px;
 }
 
 /* ── Labels ──────────────────────────────────────────────────────────────── */
 
 .settings-label {
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-text-fill: #c8d8f0;
 }
 
@@ -42,13 +42,13 @@
     -fx-background-color: rgba(15, 45, 94, 0.32);
     -fx-text-fill: #f0f7ff;
     -fx-prompt-text-fill: rgba(200, 216, 240, 0.45);
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-font-weight: 700;
-    -fx-background-radius: 10;
+    -fx-background-radius: 10px;
     -fx-border-color: rgba(74, 104, 153, 0.45);
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-padding: 8 12 8 12;
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-padding: 8px 12px 8px 12px;
 }
 
 .settings-profile-name-field:focused {
@@ -57,7 +57,7 @@
 }
 
 .settings-sublabel {
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-text-fill: #4a6899;
 }
 
@@ -66,14 +66,14 @@
 .settings-toggle {
     -fx-background-color: rgba(15, 45, 94, 0.55);
     -fx-text-fill: #8ab4d8;
-    -fx-font-size: 11;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-background-radius: 20;
+    -fx-background-radius: 20px;
     -fx-border-color: rgba(30, 64, 128, 0.55);
-    -fx-border-width: 1;
-    -fx-border-radius: 20;
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
     -fx-cursor: hand;
-    -fx-padding: 5 18 5 18;
+    -fx-padding: 5px 18px 5px 18px;
 }
 
 .settings-toggle:hover {
@@ -122,15 +122,15 @@
 
 .settings-slider .track {
     -fx-background-color: #0f2d5e;
-    -fx-pref-height: 6;
-    -fx-background-radius: 4;
+    -fx-pref-height: 6px;
+    -fx-background-radius: 4px;
 }
 
 .settings-slider .thumb {
     -fx-background-color: #f5a201;
-    -fx-background-radius: 100;
-    -fx-pref-width: 18;
-    -fx-pref-height: 18;
+    -fx-background-radius: 100px;
+    -fx-pref-width: 18px;
+    -fx-pref-height: 18px;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 8, 0, 0, 2);
     -fx-cursor: open-hand;
 }
@@ -150,10 +150,10 @@
 .settings-combo {
     -fx-background-color: rgba(15, 45, 94, 0.38);
     -fx-text-fill: #c8d8f0;
-    -fx-font-size: 13;
+    -fx-font-size: 13px;
     -fx-border-color: rgba(30, 64, 128, 0.55);
-    -fx-border-radius: 20;
-    -fx-background-radius: 20;
+    -fx-border-radius: 20px;
+    -fx-background-radius: 20px;
     -fx-cursor: hand;
 }
 
@@ -172,8 +172,8 @@
 .settings-combo .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #c8d8f0;
-    -fx-font-size: 13;
-    -fx-padding: 5 12 5 12;
+    -fx-font-size: 13px;
+    -fx-padding: 5px 12px 5px 12px;
 }
 
 .settings-combo .list-cell:selected {
@@ -184,8 +184,8 @@
 .settings-combo .list-view {
     -fx-background-color: rgba(5, 8, 28, 0.95);
     -fx-border-color: rgba(30, 64, 128, 0.70);
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 12, 0, 0, 4);
 }
 
@@ -195,14 +195,14 @@
 .settings-combo .combo-box-base .label,
 .settings-combo .list-cell {
     -fx-background-color: transparent !important;
-    -fx-background-insets: 0;
-    -fx-padding: 0;
+    -fx-background-insets: 0px;
+    -fx-padding: 0px;
 }
 
 
 
 .settings-combo .list-cell {
-    -fx-padding: 4 0 4 6; /* Padding so text doesn't touch the edges */
+    -fx-padding: 4px 0px 4px 6px;
 }
 
 
@@ -212,10 +212,10 @@
     -fx-text-fill: #c8d8ee;
     -fx-prompt-text-fill: #4a6899;
     -fx-border-color: #1e3a6e;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-    -fx-padding: 5 8 5 8;
-    -fx-font-size: 13;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 5px 8px 5px 8px;
+    -fx-font-size: 13px;
 }
 
 .settings-resolution-field:focused {
@@ -225,14 +225,14 @@
 .settings-apply-btn {
     -fx-background-color: #0f2d5e;
     -fx-text-fill: #4ecb71;
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-background-radius: 6;
+    -fx-background-radius: 6px;
     -fx-border-color: #1e4080;
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
     -fx-cursor: hand;
-    -fx-padding: 5 14 5 14;
+    -fx-padding: 5px 14px 5px 14px;
 }
 
 .settings-apply-btn:hover {
@@ -244,13 +244,13 @@
 .settings-save-game-btn {
     -fx-background-color: linear-gradient(to bottom, rgba(12, 29, 63, 0.94), rgba(7, 17, 39, 0.98));
     -fx-text-fill: #edf5ff;
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-background-radius: 11;
-    -fx-border-radius: 11;
+    -fx-background-radius: 11px;
+    -fx-border-radius: 11px;
     -fx-border-color: rgba(86, 128, 191, 0.56);
-    -fx-border-width: 1;
-    -fx-padding: 12 18 12 18;
+    -fx-border-width: 1px;
+    -fx-padding: 12px 18px 12px 18px;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(2, 7, 20, 0.58), 18, 0.18, 0, 4);
 }
@@ -269,19 +269,19 @@
 /* ── Keybind cheat sheet ─────────────────────────────────────────────────── */
 
 .settings-keybind-key {
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-text-fill: #f5a201;
-    -fx-label-padding: 0;
+    -fx-label-padding: 0px;
     -fx-background-color: rgba(245, 162, 1, 0.16);
     -fx-border-color: rgba(245, 162, 1, 0.45);
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-    -fx-padding: 3 10 3 10;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 3px 10px 3px 10px;
 }
 
 .settings-keybind-desc {
-    -fx-font-size: 13;
+    -fx-font-size: 13px;
     -fx-text-fill: #c8d8f0;
 }
 
@@ -294,32 +294,32 @@
 .keybind-popup-card {
     -fx-background-color: rgba(5, 8, 28, 0.97);
     -fx-border-color: rgba(30, 64, 128, 0.80);
-    -fx-border-radius: 12;
-    -fx-background-radius: 12;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 28, 0, 0, 6);
 }
 
 .keybind-popup-title {
-    -fx-font-size: 17;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
     -fx-text-fill: #f5a201;
 }
 
 .keybind-popup-group {
-    -fx-font-size: 10;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-text-fill: rgba(160, 205, 242, 0.70);
-    -fx-padding: 2 0 1 0;
+    -fx-padding: 2px 0px 1px 0px;
 }
 
 .keybind-popup-close {
     -fx-background-color: transparent;
     -fx-text-fill: #4a6899;
-    -fx-font-size: 15;
-    -fx-background-radius: 20;
+    -fx-font-size: 15px;
+    -fx-background-radius: 20px;
     -fx-border-color: transparent;
     -fx-cursor: hand;
-    -fx-padding: 0 6 2 6;
+    -fx-padding: 0px 6px 2px 6px;
 }
 
 .keybind-popup-close:hover {
@@ -330,24 +330,24 @@
 /* ── Default value tag ───────────────────────────────────────────────────── */
 
 .settings-default-tag {
-    -fx-font-size: 10;
+    -fx-font-size: 10px;
     -fx-text-fill: rgba(74, 104, 153, 0.65);
 }
 
 .settings-performance-help {
-    -fx-font-size: 11;
+    -fx-font-size: 11px;
     -fx-font-weight: 700;
     -fx-text-fill: rgba(103, 167, 235, 0.95);
     -fx-background-color: rgba(103, 167, 235, 0.10);
     -fx-border-color: rgba(103, 167, 235, 0.35);
-    -fx-border-width: 1;
-    -fx-border-radius: 999;
-    -fx-background-radius: 999;
-    -fx-min-width: 16;
-    -fx-min-height: 16;
+    -fx-border-width: 1px;
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
     -fx-alignment: center;
-    -fx-label-padding: 0;
-    -fx-padding: 0;
+    -fx-label-padding: 0px;
+    -fx-padding: 0px;
     -fx-translate-x: -2;
 }
 
@@ -358,11 +358,11 @@
 
 .settings-performance-help-text {
     -fx-text-fill: rgba(158, 198, 229, 0.86);
-    -fx-font-size: 12;
-    -fx-line-spacing: 1.5;
-    -fx-padding: 2 0 2 10;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 1.5px;
+    -fx-padding: 2px 0px 2px 10px;
     -fx-border-color: transparent transparent transparent rgba(103, 167, 235, 0.45);
-    -fx-border-width: 0 0 0 2;
+    -fx-border-width: 0px 0px 0px 2px;
 }
 
 /* ── Reset to Defaults button ─────────────────────────────────────────────── */
@@ -370,13 +370,13 @@
 .settings-reset-btn {
     -fx-background-color: transparent;
     -fx-text-fill: rgba(74, 104, 153, 0.80);
-    -fx-font-size: 12;
-    -fx-background-radius: 20;
+    -fx-font-size: 12px;
+    -fx-background-radius: 20px;
     -fx-border-color: rgba(30, 64, 128, 0.40);
-    -fx-border-width: 1;
-    -fx-border-radius: 20;
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
     -fx-cursor: hand;
-    -fx-padding: 5 16 5 16;
+    -fx-padding: 5px 16px 5px 16px;
 }
 
 .settings-reset-btn:hover {
@@ -390,10 +390,10 @@
 .save-card {
     -fx-background-color: rgba(7, 9, 31, 0.75);
     -fx-border-color: #1e3a6e;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0, 0, 3);
-    -fx-max-width: 700;
+    -fx-max-width: 700px;
 }
 
 /* Autosave: same card, just a slightly greener tint on the left border */
@@ -408,61 +408,61 @@
 
 .save-card-title {
     -fx-font-family: "Sans Serif";
-    -fx-font-size: 22;
+    -fx-font-size: 22px;
     -fx-text-fill: #f5a201;
 }
 
 .save-card-title-harlow {
     -fx-font-family: "Harlow Solid Italic";
-    -fx-font-size: 34;
+    -fx-font-size: 34px;
     -fx-text-fill: #f0f7ff;
 }
 
 .save-card-avatar {
-    -fx-font-size: 50;
-    -fx-min-width: 84;
-    -fx-pref-width: 84;
-    -fx-max-width: 84;
+    -fx-font-size: 50px;
+    -fx-min-width: 84px;
+    -fx-pref-width: 84px;
+    -fx-max-width: 84px;
     -fx-alignment: center;
     -fx-background-color: rgba(255, 255, 255, 0.05);
     -fx-border-color: rgba(140, 185, 236, 0.42);
-    -fx-border-radius: 14;
-    -fx-background-radius: 14;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
 }
 
 .save-card-edit-hint {
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-text-fill: rgba(245, 162, 1, 0.55);
     -fx-font-weight: 700;
 }
 
 .save-card-name-field {
     -fx-font-family: "Harlow Solid Italic";
-    -fx-font-size: 34;
+    -fx-font-size: 34px;
     -fx-text-fill: #f0f7ff;
     -fx-control-inner-background: transparent;
     -fx-background-color: transparent;
-    -fx-padding: 0;
-    -fx-border-width: 0;
+    -fx-padding: 0px;
+    -fx-border-width: 0px;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 }
 
 .save-card-name-field:focused {
     -fx-background-color: rgba(30, 50, 80, 0.4);
-    -fx-border-width: 1;
+    -fx-border-width: 1px;
     -fx-border-color: rgba(150, 180, 220, 0.3);
-    -fx-border-radius: 4;
-    -fx-padding: 2;
+    -fx-border-radius: 4px;
+    -fx-padding: 2px;
 }
 
 /* Status badge pill */
 .save-card-status {
-    -fx-font-size: 10;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-padding: 2 8 2 8;
-    -fx-background-radius: 20;
-    -fx-border-radius: 20;
+    -fx-padding: 2px 8px 2px 8px;
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
     -fx-translate-y: 4;
 }
 
@@ -485,28 +485,28 @@
 }
 
 .save-card-detail {
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-text-fill: #c8d8f0;
 }
 
 .save-card-networth {
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-text-fill: #4ecb71;
 }
 
 .save-card-date {
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-text-fill: #6080b0;
 }
 
 .save-load-button {
     -fx-background-color: #1a6e2e;
     -fx-text-fill: white;
-    -fx-font-size: 13;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-background-radius: 6;
-    -fx-padding: 9 18 9 18;
+    -fx-background-radius: 6px;
+    -fx-padding: 9px 18px 9px 18px;
     -fx-cursor: hand;
 }
 
@@ -517,12 +517,12 @@
 .save-delete-button {
     -fx-background-color: transparent;
     -fx-text-fill: #e05a5a;
-    -fx-font-size: 13;
-    -fx-background-radius: 6;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
     -fx-border-color: #6e1a1a;
-    -fx-border-radius: 6;
-    -fx-border-width: 1.5;
-    -fx-padding: 8 16 8 16;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
     -fx-cursor: hand;
 }
 
@@ -535,12 +535,12 @@
 .save-rename-button {
     -fx-background-color: transparent;
     -fx-text-fill: #8ab4d8;
-    -fx-font-size: 13;
-    -fx-background-radius: 6;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
     -fx-border-color: #2a4a7e;
-    -fx-border-radius: 6;
-    -fx-border-width: 1.5;
-    -fx-padding: 8 16 8 16;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
     -fx-cursor: hand;
 }
 
@@ -551,23 +551,23 @@
 }
 
 .new-game-button {
-    -fx-font-size: 16;
-    -fx-padding: 14 32 14 32;
+    -fx-font-size: 16px;
+    -fx-padding: 14px 32px 14px 32px;
 }
 
 /* Autosave toast pill */
 .toast-card {
     -fx-background-color: rgba(10, 30, 15, 0.92);
     -fx-border-color: #2a5a3e;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 8 18 8 18;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px 18px 8px 18px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 6, 0, 0, 2);
 }
 
 .toast-message {
     -fx-text-fill: #4ecb71;
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
@@ -577,10 +577,10 @@
     -fx-text-fill: #c8d8ee;
     -fx-prompt-text-fill: #4a6899;
     -fx-border-color: #1e3a6e;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-padding: 7 10 7 10;
-    -fx-font-size: 13;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 7px 10px 7px 10px;
+    -fx-font-size: 13px;
 }
 
 .save-rename-field:focused {
@@ -592,32 +592,32 @@
 .dialog-pane {
     -fx-background-color: #07091f;
     -fx-border-color: #1e3a6e;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
 }
 
 .dialog-pane > .header-panel {
     -fx-background-color: rgba(5, 10, 28, 0.98);
     -fx-border-color: rgba(30, 64, 128, 0.35);
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 16 22 14 22;
+    -fx-border-width: 0px 0px 1px 0px;
+    -fx-padding: 16px 22px 14px 22px;
 }
 
 .dialog-pane > .header-panel > .label {
     -fx-text-fill: #c8d8ee;
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
 }
 
 .dialog-pane > .content {
     -fx-background-color: #07091f;
-    -fx-padding: 16 22 8 22;
+    -fx-padding: 16px 22px 8px 22px;
 }
 
 .dialog-pane > .content.label {
     -fx-text-fill: #c8d8ee;
-    -fx-font-size: 13;
+    -fx-font-size: 13px;
 }
 
 .dialog-pane .text-field {
@@ -625,9 +625,9 @@
     -fx-text-fill: #c8d8ee;
     -fx-prompt-text-fill: #4a6899;
     -fx-border-color: #1e3a6e;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-padding: 6 10 6 10;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 6px 10px 6px 10px;
 }
 
 .dialog-pane .text-field:focused {
@@ -636,21 +636,21 @@
 
 .dialog-pane .button-bar {
     -fx-background-color: rgba(5, 7, 20, 0.98);
-    -fx-padding: 10 18 10 18;
+    -fx-padding: 10px 18px 10px 18px;
     -fx-border-color: rgba(30, 64, 128, 0.20) transparent transparent transparent;
-    -fx-border-width: 1 0 0 0;
+    -fx-border-width: 1px 0px 0px 0px;
 }
 
 .dialog-pane .button-bar .button {
     -fx-background-color: #0f2d5e;
     -fx-text-fill: #f5a201;
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-background-radius: 6;
+    -fx-background-radius: 6px;
     -fx-border-color: #1e4080;
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-padding: 6 18 6 18;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 6px 18px 6px 18px;
     -fx-cursor: hand;
 }
 
