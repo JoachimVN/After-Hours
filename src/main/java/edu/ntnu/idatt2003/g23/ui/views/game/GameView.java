@@ -896,6 +896,18 @@ public final class GameView implements GameViewInterface {
         e.consume();
         return;
       }
+      if (isTutorialVisible() && !inTextField) {
+        if (e.getCode() == javafx.scene.input.KeyCode.LEFT) {
+          tutorialGoPrevious();
+          e.consume();
+          return;
+        }
+        if (e.getCode() == javafx.scene.input.KeyCode.RIGHT) {
+          tutorialGoNext();
+          e.consume();
+          return;
+        }
+      }
       // Base children: root + spikePopupList + devPanel. Any extra layer means a modal popup is open.
       boolean dialogOpen = overlay.getChildren().size() > 3;
       if (dialogOpen) {
@@ -1103,31 +1115,15 @@ public final class GameView implements GameViewInterface {
       }
     });
 
-    tutorialBackBtn = new Button("Back");
-    tutorialBackBtn.getStyleClass().add("game-tutorial-btn");
-    tutorialBackBtn.setOnAction(e -> {
-      if (tutorialStepIndex > 0) {
-        tutorialStepIndex--;
-        updateTutorialStep();
-      }
-    });
+    tutorialBackBtn = new Button("\u2039");
+    tutorialBackBtn.getStyleClass().add("game-tutorial-arrow-btn");
+    tutorialBackBtn.setOnAction(e -> tutorialGoPrevious());
 
-    tutorialNextBtn = new Button("Next");
-    tutorialNextBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-btn-primary");
-    tutorialNextBtn.setOnAction(e -> {
-      if (!isTutorialStepComplete(tutorialStepIndex)) {
-        return;
-      }
-      int last = tutorialStepCount() - 1;
-      if (tutorialStepIndex >= last) {
-        closeTutorial();
-        return;
-      }
-      tutorialStepIndex++;
-      updateTutorialStep();
-    });
+    tutorialNextBtn = new Button("\u203a");
+    tutorialNextBtn.getStyleClass().add("game-tutorial-arrow-btn");
+    tutorialNextBtn.setOnAction(e -> tutorialGoNext());
 
-    tutorialCloseBtn = new Button("X");
+    tutorialCloseBtn = new Button("\u2715");
     tutorialCloseBtn.getStyleClass().add("game-tutorial-close");
     tutorialCloseBtn.setOnAction(e -> closeTutorial());
 
@@ -1152,9 +1148,12 @@ public final class GameView implements GameViewInterface {
     tutorialHeaderRow.setAlignment(Pos.CENTER_LEFT);
     tutorialHeaderRow.getStyleClass().add("game-tutorial-header-row");
 
-    tutorialNavRow = new HBox(8, tutorialBackBtn, tutorialNextBtn);
+    Region tutorialNavSpacer = new Region();
+    HBox.setHgrow(tutorialNavSpacer, Priority.ALWAYS);
+    tutorialNavRow = new HBox(8, tutorialBackBtn, tutorialNavSpacer, tutorialNextBtn);
     tutorialNavRow.setAlignment(Pos.CENTER_LEFT);
     tutorialNavRow.getStyleClass().add("game-tutorial-nav-row");
+    tutorialNavRow.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(tutorialBackBtn, Priority.NEVER);
     HBox.setHgrow(tutorialNextBtn, Priority.NEVER);
 
@@ -1297,6 +1296,27 @@ public final class GameView implements GameViewInterface {
     return 8;
   }
 
+  private void tutorialGoPrevious() {
+    if (tutorialStepIndex <= 0) {
+      return;
+    }
+    tutorialStepIndex--;
+    updateTutorialStep();
+  }
+
+  private void tutorialGoNext() {
+    if (!isTutorialStepComplete(tutorialStepIndex)) {
+      return;
+    }
+    int last = tutorialStepCount() - 1;
+    if (tutorialStepIndex >= last) {
+      closeTutorial();
+      return;
+    }
+    tutorialStepIndex++;
+    updateTutorialStep();
+  }
+
   private void updateTutorialStep() {
     if (tutorialOverlay == null) {
       return;
@@ -1314,7 +1334,6 @@ public final class GameView implements GameViewInterface {
     int humanStep = step + 1;
     tutorialStepLbl.setText(humanStep + " / " + tutorialStepCount());
     tutorialBackBtn.setDisable(step == 0);
-    tutorialNextBtn.setText(step == tutorialStepCount() - 1 ? "Finish" : "Next");
     tutorialNextBtn.setDisable(!isTutorialStepComplete(step));
 
     boolean onLast = step == tutorialStepCount() - 1;
@@ -1336,7 +1355,7 @@ public final class GameView implements GameViewInterface {
       case 0 -> {
         setTutorialTitleText("After Hours Demo");
         bodyText =
-            "This guide is interactive and you can close it anytime. \nIf you don't want to see it again, just check the box below.";
+            "This guide is interactive and you can close it anytime. \nUse arrow keys or the arrow buttons below to navigate.\n\nIf you don't want to see the tutorial again, just check the box below.";
       }
       case 1 -> {
         setTutorialTitleText("Find Stocks");
@@ -1883,7 +1902,7 @@ public final class GameView implements GameViewInterface {
     HBox trend = new HBox(5, pctLabel, arrowLabel);
     trend.setAlignment(Pos.CENTER_RIGHT);
 
-    Button closeBtn = new Button("x");
+    Button closeBtn = new Button("\u2715");
     closeBtn.getStyleClass().add("game-spike-close-btn");
 
     Region spacer = new Region();
@@ -4764,7 +4783,7 @@ public final class GameView implements GameViewInterface {
     panel.setMaxWidth(220);
     panel.setMaxHeight(Region.USE_PREF_SIZE);
 
-    Button closeBtn = new Button("x");
+    Button closeBtn = new Button("\u2715");
     closeBtn.getStyleClass().add("game-spike-close-btn");
     closeBtn.setOnAction(e -> {
       AppConfig.DEV_MODE.unbind();
