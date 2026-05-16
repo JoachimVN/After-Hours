@@ -15,48 +15,54 @@
 }
 
 .error-dialog-root {
-    -fx-background-color: #130810;
-    -fx-border-color: #c0293a;
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(34, 10, 16, 0.985),
+        rgba(24, 8, 13, 0.985));
+    -fx-border-color: rgba(205, 45, 45, 0.22);
     -fx-border-width: 2px;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
-    -fx-effect: dropshadow(gaussian, rgba(192, 41, 59, 0.5), 14, 0.2, 0, 0);
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-background-insets: 0px;
+    -fx-border-insets: 0px;
+    -fx-effect: null;
 }
 
 .error-dialog-header {
-    -fx-background-color: rgba(90, 12, 20, 0.85);
-    -fx-padding: 18 22 14 22;
-    -fx-border-color: rgba(192, 41, 59, 0.50);
-    -fx-border-width: 0 0 1 0;
+    -fx-background-color: rgba(45, 11, 11, 0.92);
+    -fx-padding: 18px 22px 14px 22px;
+
+    -fx-border-color: transparent;
+    -fx-background-radius: 14px 14px 0px 0px;
 }
 
 .error-dialog-icon {
-    -fx-font-size: 22px;
-    -fx-text-fill: #ff4d5e;
+    -fx-font-size: 21px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffb05f;
 }
 
 .error-dialog-title {
-    -fx-font-size: 13px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
-    -fx-text-fill: #ff8a94;
+    -fx-text-fill: #ffd2aa;
 }
 
 .error-dialog-body {
-    -fx-background-color: #0f060a;
-    -fx-padding: 16 22 16 22;
+    -fx-background-color: rgba(18, 6, 10, 0.98);
+    -fx-padding: 20px 22px 18px 22px;
 }
 
 .error-dialog-message {
-    -fx-font-size: 13px;
-    -fx-text-fill: #e8c8cc;
+    -fx-font-size: 14px;
+    -fx-text-fill: #f2d1c0;
     -fx-wrap-text: true;
+    -fx-line-spacing: 1.5px;
 }
 
 .dialog-header {
     -fx-background-color: rgba(5, 10, 28, 0.98);
-    -fx-padding: 18 22 14 22;
-    -fx-border-color: rgba(30, 64, 128, 0.30);
-    -fx-border-width: 0 0 1 0;
+    -fx-padding: 18px 22px 14px 22px;
+    -fx-border-color: transparent;
 }
 
 .dialog-title {
@@ -86,9 +92,8 @@
 }
 
 .dialog-row {
-    -fx-padding: 8 22 8 22;
-    -fx-border-color: transparent transparent rgba(30, 64, 128, 0.12) transparent;
-    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8px 22px 8px 22px;
+    -fx-border-color: transparent;
 }
 
 .dialog-row-key {
@@ -109,9 +114,9 @@
 
 .dialog-total-section {
     -fx-background-color: rgba(10, 16, 42, 0.96);
-    -fx-padding: 14 22 14 22;
+    -fx-padding: 14px 22px 14px 22px;
     -fx-border-color: rgba(245, 162, 1, 0.18) transparent;
-    -fx-border-width: 1 0 1 0;
+    -fx-border-width: 1px 0px 1px 0px;
 }
 
 .dialog-total-key {
@@ -133,27 +138,15 @@
 }
 
 .dialog-btn-row {
-    -fx-background-color: rgba(5, 7, 20, 0.98);
-    -fx-padding: 12 18 12 18;
-    -fx-border-color: rgba(30, 64, 128, 0.20) transparent transparent transparent;
-    -fx-border-width: 1 0 0 0;
+    -fx-background-color: rgba(22, 7, 12, 0.98);
+    -fx-padding: 12px 18px 12px 18px;
+    -fx-border-color: rgba(201, 84, 57, 0.30) transparent transparent transparent;
+    -fx-border-width: 1px 0px 0px 0px;
 }
 
-.dialog-cancel-btn {
-    -fx-background-color: transparent;
-    -fx-text-fill: #4a6899;
-    -fx-font-size: 12px;
-    -fx-border-color: rgba(30, 64, 128, 0.40);
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-padding: 6 14 6 14;
-    -fx-cursor: hand;
-}
-
-.dialog-cancel-btn:hover {
-    -fx-text-fill: #b8cce8;
-    -fx-border-color: rgba(30, 64, 128, 0.65);
+.error-dialog-root > .dialog-btn-row {
+    -fx-background-radius: 0px 0px 14px 14px;
+    -fx-padding: 14px 18px 14px 18px;
 }
 
 .dialog-confirm-buy-btn {
@@ -162,10 +155,10 @@
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-border-color: rgba(46, 184, 92, 0.50);
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-padding: 6 18 6 18;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 6px 18px 6px 18px;
     -fx-cursor: hand;
 }
 
@@ -174,20 +167,54 @@
 }
 
 .dialog-confirm-sell-btn {
-    -fx-background-color: linear-gradient(to bottom, #7a1c1c, #5e1414);
+    -fx-background-color: linear-gradient(to bottom, #cf4f2c, #a93a20);
     -fx-text-fill: white;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-border-color: rgba(180, 40, 40, 0.50);
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-padding: 6 18 6 18;
+    -fx-border-color: rgba(255, 157, 114, 0.56);
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 8px 20px 8px 20px;
     -fx-cursor: hand;
 }
 
 .dialog-confirm-sell-btn:hover {
-    -fx-background-color: linear-gradient(to bottom, #9e2222, #7a1c1c);
+    -fx-background-color: linear-gradient(to bottom, #e1633f, #c24929);
+}
+
+.dialog-confirm-error-btn {
+    -fx-background-color: transparent;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
+    -fx-cursor: hand; 
+    -fx-text-fill: #e05a5a;
+    -fx-border-color: #6e1a1a;
+}
+
+.dialog-confirm-error-btn:hover {
+    -fx-text-fill: #f07070;
+    -fx-border-color: #963f3f;
+}
+
+.dialog-cancel-btn {
+    -fx-background-color: transparent;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
+    -fx-cursor: hand;
+    -fx-text-fill: #e0805a;
+    -fx-border-color: #6e3c1a;
+}
+
+.dialog-cancel-btn:hover {
+    -fx-text-fill: #f0a170;
+    -fx-border-color: #8c4c21;
 }
 
 /* ── App-level notification overlays (Game Saved / CSV errors) ───────────── */
@@ -203,9 +230,9 @@
 
 .app-success-header {
     -fx-background-color: rgba(8, 28, 16, 0.98);
-    -fx-padding: 18 22 14 22;
+    -fx-padding: 18px 22px 14px 22px;
     -fx-border-color: rgba(46, 184, 92, 0.30);
-    -fx-border-width: 0 0 1 0;
+    -fx-border-width: 0px 0px 1px 0px;
 }
 
 .app-success-title {
@@ -216,7 +243,7 @@
 
 .app-success-body {
     -fx-background-color: #060c08;
-    -fx-padding: 16 22 16 22;
+    -fx-padding: 16px 22px 16px 22px;
 }
 
 .app-success-message {

@@ -258,9 +258,9 @@ public final class SaveSelectView {
 
   private void handleDelete(SaveMeta meta, VBox cardList) {
     // ── Header ────────────────────────────────────────────────────────────
-    Label iconLbl = new Label("🗑");
+    Label iconLbl = new Label("\u2715");
     iconLbl.getStyleClass().add("error-dialog-icon");
-    Label titleLbl = new Label("DELETE SAVE");
+    Label titleLbl = new Label("Delete Save");
     titleLbl.getStyleClass().add("error-dialog-title");
     HBox header = new HBox(10, iconLbl, titleLbl);
     header.getStyleClass().add("error-dialog-header");
@@ -277,8 +277,8 @@ public final class SaveSelectView {
     // ── Buttons ───────────────────────────────────────────────────────────
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("dialog-cancel-btn");
-    Button deleteBtn = new Button("Delete");
-    deleteBtn.getStyleClass().add("dialog-confirm-delete-btn");
+    Button deleteBtn = new Button("\u2715 Delete");
+    deleteBtn.getStyleClass().add("dialog-confirm-error-btn");
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -291,7 +291,7 @@ public final class SaveSelectView {
     card.setMaxHeight(Region.USE_PREF_SIZE);
 
     Region backdrop = new Region();
-    backdrop.getStyleClass().add("error-dialog-backdrop");
+    backdrop.getStyleClass().add("dialog-backdrop");
 
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
