@@ -1127,14 +1127,14 @@ public final class GameView implements GameViewInterface {
     tutorialCloseBtn.getStyleClass().add("game-tutorial-close");
     tutorialCloseBtn.setOnAction(e -> closeTutorial());
 
-    tutorialKeepProgressBtn = new Button("Continue This Run");
-    tutorialKeepProgressBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-btn-primary");
+    tutorialKeepProgressBtn = new Button("\u25B6 Keep Progress");
+    tutorialKeepProgressBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-continue");
     tutorialKeepProgressBtn.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(tutorialKeepProgressBtn, Priority.ALWAYS);
     tutorialKeepProgressBtn.setOnAction(e -> closeTutorial());
 
-    tutorialStartFreshBtn = new Button("Reset Session");
-    tutorialStartFreshBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-btn-danger", "game-tutorial-reset");
+    tutorialStartFreshBtn = new Button("\u21BA Start Fresh");
+    tutorialStartFreshBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-reset");
     tutorialStartFreshBtn.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(tutorialStartFreshBtn, Priority.ALWAYS);
     tutorialStartFreshBtn.setOnAction(e -> {
@@ -1466,6 +1466,9 @@ public final class GameView implements GameViewInterface {
   }
 
   private boolean isTutorialStepComplete(int step) {
+    if (AppConfig.DEV_MODE.get()) {
+      return true;
+    }
     return switch (step) {
       case 0, 4, 7 -> true;
       case 1 -> tutorialDidSelectStock;

@@ -1708,48 +1708,46 @@
 }
 
 .game-tutorial-btn {
-    -fx-background-color: linear-gradient(to bottom,
-        rgba(30, 61, 118, 0.96),
-        rgba(18, 40, 84, 0.96));
-    -fx-text-fill: #e4efff;
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-font-weight: 700;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
-    -fx-border-color: rgba(122, 183, 255, 0.75);
-    -fx-border-width: 1;
-    -fx-padding: 7 13 7 13;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-width: 2;
+    -fx-padding: 10 14 10 14;
     -fx-min-width: 90;
     -fx-cursor: hand;
 }
 
-.game-tutorial-btn-primary {
+.game-tutorial-continue {
     -fx-background-color: linear-gradient(to bottom,
-        rgba(45, 94, 176, 0.98),
-        rgba(26, 56, 112, 0.98));
-    -fx-border-color: rgba(143, 198, 255, 0.92);
+        rgba(29, 60, 114, 0.8),
+        rgba(15, 31, 64, 0.8));
+    -fx-border-color: rgba(40, 82, 154, 0.5);
+    -fx-text-fill: #ecf4ff;
 }
 
-.game-tutorial-btn-secondary {
+.game-tutorial-reset {
     -fx-background-color: linear-gradient(to bottom,
-        rgba(20, 40, 78, 0.96),
-        rgba(12, 24, 54, 0.96));
-    -fx-border-color: rgba(114, 144, 190, 0.72);
-    -fx-text-fill: #c9d9f2;
-}
-
-.game-tutorial-btn-danger {
-    -fx-background-color: linear-gradient(to bottom,
-        rgba(120, 34, 46, 0.96),
-        rgba(78, 20, 30, 0.96));
-    -fx-border-color: rgba(255, 135, 135, 0.84);
+        rgba(120, 34, 46, 0.8),
+        rgba(78, 20, 30, 0.8));
+    -fx-border-color: rgba(151, 42, 57, 0.5);
     -fx-text-fill: #ffe1e1;
 }
 
-.game-tutorial-btn:hover {
-    -fx-border-color: rgba(255, 198, 79, 0.9);
-    -fx-text-fill: #ffe4ad;
-    -fx-effect: dropshadow(gaussian, rgba(255, 187, 74, 0.28), 18, 0.12, 0, 0);
+.game-tutorial-continue:hover {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(40, 82, 154, 0.88),
+        rgba(20, 44, 92, 0.88));
+    -fx-border-color: rgba(40, 82, 154, 0.8);
+    -fx-text-fill: #fff0cb;
+}
+
+.game-tutorial-reset:hover {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(146, 42, 56, 0.9),
+        rgba(94, 24, 36, 0.9));
+    -fx-border-color: rgba(151, 42, 57, 0.8);
+    -fx-text-fill: #ffe4e4;
 }
 
 .game-tutorial-nav-row {
@@ -1793,14 +1791,10 @@
     -fx-spacing: 10;
 }
 
-.game-tutorial-reset {
-    -fx-border-color: rgba(231, 96, 96, 0.8);
-    -fx-text-fill: #ffd2d2;
-}
-
-.game-tutorial-reset:hover {
-    -fx-text-fill: #ffb5b5;
-    -fx-border-color: rgba(240, 118, 118, 0.9);
+.game-tutorial-finish-row .game-tutorial-btn {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-padding: 10 16 10 16;
 }
 
 .tutorial-highlighted {
