@@ -21,6 +21,10 @@ public class Sale extends Transaction {
     super(share, week, new SaleCalculator(share));
   }
 
+  public Sale(Share share, int week, BigDecimal taxRate) {
+    super(share, week, new SaleCalculator(share, taxRate));
+  }
+
   /**
    * Handles logic for completing the transaction
    *

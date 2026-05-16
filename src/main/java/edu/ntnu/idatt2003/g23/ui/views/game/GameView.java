@@ -27,6 +27,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -37,6 +38,7 @@ import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -85,6 +87,10 @@ import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
+  private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.mp3";
+  private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.mp3";
+  private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.mp3";
+  private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.mp3";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -95,6 +101,10 @@ public final class GameView implements GameViewInterface {
   private static final Duration INLINE_ERROR_FADE = Duration.millis(600);
   private static final Duration POPUP_ERROR_VISIBLE = Duration.seconds(3.0);
   private static final Duration POPUP_ERROR_FADE = Duration.millis(300);
+  private static final Duration SPIKE_POPUP_VISIBLE = Duration.seconds(8.0);
+  private static final Duration SPIKE_POPUP_FADE = Duration.millis(220);
+  private static final BigDecimal MIN_UPWARD_SPIKE_POPUP_PCT = new BigDecimal("20.00");
+  private static final BigDecimal MIN_DOWNWARD_SPIKE_POPUP_PCT = new BigDecimal("-16.67");
   private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
@@ -110,6 +120,7 @@ public final class GameView implements GameViewInterface {
   private final HBox profileIdentityContent;
   private final StackPane profileNameBox;
   private final Text profileNameText;
+  private final Runnable onProfile;
   private final Runnable onPanelOpen;
   private final Runnable onStockSelectionChanged;
 
@@ -134,13 +145,25 @@ public final class GameView implements GameViewInterface {
   private AnimationTimer highlightFadeTimer = null;
 
   private final VBox detailArea;
+  private final VBox spikePopupList;
+  private final List<PauseTransition> spikePopupTimers;
   private Label currentTradeErrorLabel;
   private Label currentSellAllErrorLabel;
 
   private StackPane overlayRef = null;
   private Node rootRef = null;
   private SplitPane hSplitRef = null;
-  private double portfolioDividerRatio = 0.85;
+  private double portfolioDividerRatio = 0.78;
+  private PlayerStatus lastKnownStatus = null;
+  private AudioClip levelUpClip = null;
+  private DoubleSupplier sfxVolumeSupplierField = null;
+  private Runnable musicFilterOn = null;
+  private Runnable musicFilterOff = null;
+
+  public void setMusicFilterCallbacks(Runnable onFilter, Runnable offFilter) {
+    this.musicFilterOn = onFilter;
+    this.musicFilterOff = offFilter;
+  }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
@@ -161,6 +184,9 @@ public final class GameView implements GameViewInterface {
                   GameUiState initialState) {
     this.gameController = gameController;
     this.gameController.setView(this);
+    this.sfxVolumeSupplierField = sfxVolumeSupplier;
+    this.levelUpClip = loadAudioClip(LEVEL_UP_SOUND);
+    this.lastKnownStatus = gameController.getPlayerStatus();
 
     this.statusVal = new Label();
     this.cashVal = new Label();
@@ -179,6 +205,7 @@ public final class GameView implements GameViewInterface {
     this.profileNameBox.setAlignment(Pos.CENTER);
     this.profileIdentityContent = new HBox(12, this.profileNameBox);
     this.profileIdentityContent.setAlignment(Pos.CENTER_LEFT);
+    this.onProfile = onProfile;
     this.onPanelOpen = onPanelOpen;
     this.onStockSelectionChanged = onStockSelectionChanged;
 
@@ -226,6 +253,11 @@ public final class GameView implements GameViewInterface {
     detailClip.widthProperty().bind(detailArea.widthProperty());
     detailClip.heightProperty().bind(detailArea.heightProperty());
     detailArea.setClip(detailClip);
+    this.spikePopupList = new VBox(8);
+    this.spikePopupList.getStyleClass().add("game-spike-popup-list");
+    this.spikePopupList.setAlignment(Pos.TOP_RIGHT);
+    this.spikePopupList.setPickOnBounds(false);
+    this.spikePopupTimers = new ArrayList<>();
 
     // ── Stock list (left panel) — standard or virtualized (performance mode)
     this.stockListBox = new VBox(4);
@@ -435,6 +467,14 @@ public final class GameView implements GameViewInterface {
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
     portTitle.getStyleClass().add("game-panel-title");
+    Label portSummaryHint = new Label("View summary");
+    portSummaryHint.getStyleClass().add("game-portfolio-summary-hint");
+    Region portHeaderSpacer = new Region();
+    HBox.setHgrow(portHeaderSpacer, Priority.ALWAYS);
+    HBox portHeader = new HBox(8, portTitle, portHeaderSpacer, portSummaryHint);
+    portHeader.getStyleClass().add("game-portfolio-header");
+    portHeader.setAlignment(Pos.CENTER_LEFT);
+    portHeader.setOnMouseClicked(e -> showPortfolioSummary());
 
     portfolioTable =
         buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
@@ -460,27 +500,43 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setMinHeight(160);
+    portfolioTable.setMinHeight(400);
+        portfolioTable.setPlaceholder(new Region());
+        portfolioTable.visibleProperty().bind(Bindings.isNotEmpty(portfolioItems));
+        portfolioTable.managedProperty().bind(Bindings.isNotEmpty(portfolioItems));
     VBox.setVgrow(portfolioTable, Priority.ALWAYS);
 
-    VBox portfolioSection = new VBox(0, portTitle, portfolioTable);
+      Label emptyPortfolioLbl = new Label("No shares owned yet");
+      emptyPortfolioLbl.getStyleClass().add("game-portfolio-empty");
+      StackPane emptyPortfolioOverlay = new StackPane(emptyPortfolioLbl);
+      emptyPortfolioOverlay.getStyleClass().add("game-portfolio-empty-overlay");
+      emptyPortfolioOverlay.setMouseTransparent(true);
+      emptyPortfolioOverlay.setPickOnBounds(false);
+      emptyPortfolioOverlay.setAlignment(Pos.CENTER);
+    emptyPortfolioOverlay.visibleProperty().bind(Bindings.isEmpty(portfolioItems));
+    emptyPortfolioOverlay.managedProperty().bind(Bindings.isEmpty(portfolioItems));
+
+      StackPane portfolioContent = new StackPane(portfolioTable, emptyPortfolioOverlay);
+      StackPane.setAlignment(portfolioTable, Pos.CENTER);
+      StackPane.setAlignment(emptyPortfolioOverlay, Pos.CENTER);
+      VBox.setVgrow(portfolioContent, Priority.ALWAYS);
+
+      VBox portfolioSection = new VBox(0, portHeader, portfolioContent);
     portfolioSection.getStyleClass().add("game-portfolio-pane");
-    portfolioSection.setMinHeight(96);
+    portfolioSection.setMinHeight(400);
+    portfolioSection.setPrefHeight(400);
     portfolioSection.setMaxHeight(Region.USE_PREF_SIZE);
 
     // ── Right panel: explicit vertical layout with dedicated drag handle ──
     Region portfolioResizeHandle = new Region();
     portfolioResizeHandle.getStyleClass().add("game-portfolio-resize-handle");
-    portfolioResizeHandle.setMinHeight(4);
-    portfolioResizeHandle.setPrefHeight(4);
-    portfolioResizeHandle.setMaxHeight(4);
 
     VBox rightPanel = new VBox(detailArea, portfolioResizeHandle, portfolioSection);
     rightPanel.getStyleClass().add("game-right-panel");
     HBox.setHgrow(rightPanel, Priority.ALWAYS);
     VBox.setVgrow(rightPanel, Priority.ALWAYS);
     double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
-      ? initialState.portfolioDivider() : 0.85;
+      ? initialState.portfolioDivider() : 0.78;
     installPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle, initPortDivider);
 
     // ── Body: horizontal split (sidebar | right panel) ────────────────────
@@ -582,8 +638,14 @@ public final class GameView implements GameViewInterface {
       showTransactionHistory();
     });
 
-    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, historyBtn,
-        marketMoversBtn);
+    HBox marketActionRow = new HBox(10, historyBtn, marketMoversBtn);
+    marketActionRow.setAlignment(Pos.CENTER_RIGHT);
+
+    VBox marketActionBox = new VBox(8, marketActionRow);
+    marketActionBox.getStyleClass().add("game-market-action-box");
+    marketActionBox.setAlignment(Pos.TOP_RIGHT);
+
+    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, marketActionBox);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
 
@@ -609,7 +671,7 @@ public final class GameView implements GameViewInterface {
     updateProfileIdentityButton();
     profileBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
     profileBtn.getStyleClass().add("profile-identity-button");
-    profileBtn.setOnAction(e -> onProfile.run());
+    profileBtn.setOnAction(e -> this.onProfile.run());
 
     settingsBtn.setText("⚙");
     settingsBtn.getStyleClass().add("game-icon-button");
@@ -648,12 +710,14 @@ public final class GameView implements GameViewInterface {
     root.setCenter(hSplit);
 
     // ── Dev panel ─────────────────────────────────────────────────────────
-    VBox devPanel = buildDevPanel();
+    StackPane devPanel = buildDevPanel();
     devPanel.visibleProperty().bind(AppConfig.DEV_MODE);
     devPanel.managedProperty().bind(AppConfig.DEV_MODE);
     StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
 
-    StackPane overlay = new StackPane(root, devPanel);
+    StackPane overlay = new StackPane(root, spikePopupList, devPanel);
+    StackPane.setAlignment(spikePopupList, Pos.TOP_RIGHT);
+    StackPane.setMargin(spikePopupList, new Insets(150, 12, 0, 0));
     overlayRef = overlay;
 
     // Restore selected stock from saved UI state
@@ -671,8 +735,8 @@ public final class GameView implements GameViewInterface {
     // Escape → clear search, then go back to landing page
     overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
       boolean inTextField = e.getTarget() instanceof TextInputControl;
-      // If a dialog popup is layered on top, ignore game shortcuts (Escape is handled per-popup)
-      boolean dialogOpen = overlay.getChildren().size() > 2;
+      // Base children: root + spikePopupList + devPanel. Any extra layer means a modal popup is open.
+      boolean dialogOpen = overlay.getChildren().size() > 3;
       if (dialogOpen) {
         return;
       }
@@ -785,9 +849,150 @@ public final class GameView implements GameViewInterface {
     rebuildDetail();
   }
 
+  private void maybeShowSpikePopups() {
+    List<String> spikedSymbols = gameController.consumeLastSpikeSymbols();
+    if (spikedSymbols.isEmpty()) {
+      return;
+    }
+
+    boolean hasUp = false;
+    boolean hasDown = false;
+
+    for (String symbol : spikedSymbols) {
+      Stock stock = allStocks.stream()
+          .filter(s -> s.getSymbol().equals(symbol))
+          .findFirst()
+          .orElse(null);
+      if (stock == null) {
+        continue;
+      }
+      boolean owned = gameController.isOwned(symbol);
+      boolean watchlisted = favorites.contains(symbol);
+      if (!owned && !watchlisted) {
+        continue;
+      }
+
+      BigDecimal changePct = stock.percentageChange().setScale(2, RoundingMode.HALF_UP);
+      boolean qualifiesUpwardSpike = changePct.compareTo(MIN_UPWARD_SPIKE_POPUP_PCT) >= 0;
+      boolean qualifiesDownwardSpike = changePct.compareTo(MIN_DOWNWARD_SPIKE_POPUP_PCT) <= 0;
+      if (!qualifiesUpwardSpike && !qualifiesDownwardSpike) {
+        continue;
+      }
+      if (qualifiesUpwardSpike) hasUp = true;
+      if (qualifiesDownwardSpike) hasDown = true;
+      addSpikePopup(stock, owned, changePct);
+    }
+
+    String soundPath = (hasUp && hasDown) ? SPIKE_BOTH_SOUND
+        : hasUp ? SPIKE_UP_SOUND
+        : hasDown ? SPIKE_DOWN_SOUND
+        : null;
+    if (soundPath != null) {
+      AudioClip spikeClip = loadAudioClip(soundPath);
+      playAudioClip(spikeClip, sfxVolumeSupplierField);
+    }
+  }
+
+  private void addSpikePopup(Stock stock, boolean owned, BigDecimal changePct) {
+    Label symbolBadge = new Label(stock.getSymbol());
+    symbolBadge.getStyleClass().add("profile-badge");
+
+    Label ownedWatchlist = new Label(owned ? "Owned" : "Watchlist");
+    ownedWatchlist.getStyleClass().add("profile-favorite-owned-chip");
+    if (owned) {
+      ownedWatchlist.getStyleClass().add("profile-favorite-owned-chip-owned");
+    }
+
+    Label company = new Label(stock.getCompany());
+    company.getStyleClass().add("profile-position-sub");
+
+    VBox identityBlock = new VBox(4, company, ownedWatchlist);
+    identityBlock.setAlignment(Pos.CENTER_LEFT);
+
+    boolean up = changePct.compareTo(BigDecimal.ZERO) >= 0;
+    String pctText = (up ? "+" : "") + changePct.toPlainString() + "%";
+    Label pctLabel = new Label(pctText);
+    pctLabel.getStyleClass().addAll("profile-position-pnl", up ? "profile-value-up" : "profile-value-down");
+
+    Label arrowLabel = new Label(up ? "↗" : "↘");
+    arrowLabel.getStyleClass().addAll("game-spike-arrow", up ? "profile-value-up" : "profile-value-down");
+
+    HBox trend = new HBox(5, pctLabel, arrowLabel);
+    trend.setAlignment(Pos.CENTER_RIGHT);
+
+    Button closeBtn = new Button("x");
+    closeBtn.getStyleClass().add("game-spike-close-btn");
+
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    HBox content = new HBox(10, symbolBadge, identityBlock, spacer, trend);
+    content.setAlignment(Pos.CENTER_LEFT);
+    content.setMaxWidth(Double.MAX_VALUE);
+    content.setPadding(new Insets(10, 42, 10, 11));
+
+    StackPane popup = new StackPane(content, closeBtn);
+    popup.getStyleClass().addAll("game-spike-popup", "game-spike-popup-clickable");
+    popup.setMaxWidth(Double.MAX_VALUE);
+    StackPane.setAlignment(content, Pos.CENTER_LEFT);
+    StackPane.setAlignment(closeBtn, Pos.TOP_RIGHT);
+    StackPane.setMargin(closeBtn, new Insets(4, 6, 0, 0));
+
+    PauseTransition ttl = new PauseTransition(SPIKE_POPUP_VISIBLE);
+    ttl.setOnFinished(e -> fadeOutSpikePopup(popup, ttl));
+    closeBtn.setOnAction(e -> {
+      e.consume();
+      fadeOutSpikePopup(popup, ttl);
+    });
+    popup.setOnMouseClicked(e -> {
+      selectStockBySymbol(stock.getSymbol());
+      fadeOutSpikePopup(popup, ttl);
+    });
+
+    spikePopupList.getChildren().add(popup);
+    spikePopupTimers.add(ttl);
+    ttl.play();
+  }
+
+  private void fadeOutSpikePopup(Node popup, PauseTransition ttl) {
+    if (popup == null || !spikePopupList.getChildren().contains(popup)) {
+      return;
+    }
+    if (Boolean.TRUE.equals(popup.getProperties().get("spikePopupFading"))) {
+      return;
+    }
+    popup.getProperties().put("spikePopupFading", true);
+    if (ttl != null) {
+      ttl.stop();
+      spikePopupTimers.remove(ttl);
+    }
+
+    FadeTransition fade = new FadeTransition(SPIKE_POPUP_FADE, popup);
+    fade.setFromValue(popup.getOpacity());
+    fade.setToValue(0.0);
+    fade.setOnFinished(e -> {
+      popup.getProperties().remove("spikePopupFading");
+      popup.setOpacity(1.0);
+      spikePopupList.getChildren().remove(popup);
+    });
+    fade.play();
+  }
+
+  private void showTestSpikePopup() {
+    Stock target = selectedStock.get();
+    if (target == null && !allStocks.isEmpty()) {
+      target = allStocks.get(0);
+    }
+    if (target == null) {
+      return;
+    }
+    boolean owned = gameController.isOwned(target.getSymbol());
+    addSpikePopup(target, owned, new BigDecimal("42.00"));
+  }
+
   private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
                                       Region portfolioResizeHandle, double initialRatio) {
-    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.85;
+    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.78;
 
     final double[] dragStartY = {0};
     final double[] dragStartRatio = {portfolioDividerRatio};
@@ -821,7 +1026,7 @@ public final class GameView implements GameViewInterface {
       return;
     }
 
-    double minDetailHeight = Math.max(180, detailArea.minHeight(-1));
+    double minDetailHeight = Math.max(340, detailArea.minHeight(-1));
     double minPortfolioHeight = 96;
     double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
     double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
@@ -858,6 +1063,10 @@ public final class GameView implements GameViewInterface {
     ShareSelectionKey selectedShareKey = capturePortfolioSelection();
 
     PlayerStatus status = gameController.getPlayerStatus();
+    if (lastKnownStatus != null && status.ordinal() > lastKnownStatus.ordinal()) {
+      showLevelUpPopup(status);
+    }
+    lastKnownStatus = status;
     BigDecimal overallProgress = gameController.getPlayerStatusProgress();
     BigDecimal weeksProgress = gameController.getPlayerWeeksProgress();
     BigDecimal growthProgress = gameController.getPlayerNetWorthProgress();
@@ -885,6 +1094,7 @@ public final class GameView implements GameViewInterface {
     portfolioTable.refresh();
     applyFilter();
     rebuildDetail();
+    maybeShowSpikePopups();
   }
 
   private ShareSelectionKey capturePortfolioSelection() {
@@ -1384,8 +1594,18 @@ public final class GameView implements GameViewInterface {
       updateSellAmount.run();
     };
 
-    maxBuyBtn.setOnAction(e -> applyMaxForBuy.run());
-    maxSellBtn.setOnAction(e -> applyMaxForSell.run());
+    maxBuyBtn.setOnAction(e -> {
+      applyMaxForBuy.run();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
+    });
+    maxSellBtn.setOnAction(e -> {
+      applyMaxForSell.run();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
+    });
 
     Label tradeErrorLbl = new Label();
     tradeErrorLbl.getStyleClass().add("trade-error-label");
@@ -1496,6 +1716,10 @@ public final class GameView implements GameViewInterface {
       clearTradeError.run();
       BigDecimal quantity = BigDecimal.valueOf(parsedquantity);
       gameController.handleBuy(stock, quantity);
+      amountField.clear();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
     });
 
     // ── SELL button (secondary — fixed width) ──────────────────────────────
@@ -1541,6 +1765,10 @@ public final class GameView implements GameViewInterface {
       List<BigDecimal> preview = gameController.previewSell(stock, sellquantity);
       showTradeConfirm("SELL", stock, sellquantity, preview.get(0), preview.get(1), preview.get(2),
           preview.get(3));
+      amountField.clear();
+      if (rootRef != null) {
+        rootRef.requestFocus();
+      }
     });
 
     VBox selectorColumn = new VBox(4, stepper, amountField, tradeErrorBox);
@@ -1593,78 +1821,68 @@ public final class GameView implements GameViewInterface {
 
     TableColumn<Share, String> symCol = col("Symbol", c ->
         c.getStock().getSymbol(), 70, 85);
-    TableColumn<Share, String> quantityCol = col("Quantity", c ->
-        c.getQuantity().stripTrailingZeros().toPlainString(), 45, 65);
-    TableColumn<Share, String> boughtCol = col("Bought", c ->
-        CurrencyFormatter.format(c.getPurchasePrice().multiply(c.getQuantity())), 85, 110);
-    TableColumn<Share, String> nowCol = col("Now", c ->
-        CurrencyFormatter.format(c.getStock().getSalesPrice().multiply(c.getQuantity())), 85, 110);
+    TableColumn<Share, BigDecimal> quantityCol = numericCol("Quantity", Share::getQuantity, 45, 65,
+        value -> value.stripTrailingZeros().toPlainString());
+    TableColumn<Share, BigDecimal> boughtCol = numericCol("Bought",
+        c -> c.getPurchasePrice().multiply(c.getQuantity()), 85, 110, CurrencyFormatter::format);
+    TableColumn<Share, BigDecimal> nowCol = numericCol("Now",
+        c -> c.getStock().getSalesPrice().multiply(c.getQuantity()), 85, 110, CurrencyFormatter::format);
 
-    TableColumn<Share, String> plCol = new TableColumn<>("P&L");
+    TableColumn<Share, BigDecimal> plCol = new TableColumn<>("P&L");
     plCol.setMinWidth(90);
     plCol.setMaxWidth(120);
-    plCol.setCellValueFactory(c -> {
-      Share sh = c.getValue();
-      BigDecimal pl = sh.getStock().getSalesPrice().subtract(sh.getPurchasePrice())
-          .multiply(sh.getQuantity());
-      if (pl.compareTo(BigDecimal.ZERO) == 0) {
-        return new SimpleStringProperty("\u2014");
-      }
-      String sign = pl.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-      return new SimpleStringProperty(sign + CurrencyFormatter.format(pl));
-    });
+    plCol.setCellValueFactory(c -> new SimpleObjectProperty<>(
+        c.getValue().getStock().getSalesPrice().subtract(c.getValue().getPurchasePrice())
+            .multiply(c.getValue().getQuantity())));
     plCol.setCellFactory(col -> new TableCell<>() {
       @Override
-      protected void updateItem(String item, boolean empty) {
+      protected void updateItem(BigDecimal item, boolean empty) {
         super.updateItem(item, empty);
         if (empty || item == null) {
           setText(null);
           setStyle("");
           return;
         }
-        setText(item);
-        if ("\u2014".equals(item)) {
+        if (item.compareTo(BigDecimal.ZERO) == 0) {
+          setText("\u2014");
           setStyle("-fx-text-fill: #4a6899;");
         } else {
-          boolean up = item.startsWith("+");
+          boolean up = item.compareTo(BigDecimal.ZERO) > 0;
+          setText((up ? "+" : "") + CurrencyFormatter.format(item));
           setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
         }
       }
     });
 
-    TableColumn<Share, String> pctCol = new TableColumn<>("%");
+    TableColumn<Share, BigDecimal> pctCol = new TableColumn<>("%");
     pctCol.setMinWidth(72);
     pctCol.setMaxWidth(90);
     pctCol.setCellValueFactory(c -> {
       Share sh = c.getValue();
       BigDecimal cost = sh.getPurchasePrice();
       if (cost.compareTo(BigDecimal.ZERO) == 0) {
-        return new SimpleStringProperty("\u2014");
+        return new SimpleObjectProperty<>(BigDecimal.ZERO);
       }
-      BigDecimal pct = sh.getStock().getSalesPrice().subtract(cost)
+      return new SimpleObjectProperty<>(sh.getStock().getSalesPrice().subtract(cost)
           .divide(cost, 4, RoundingMode.HALF_UP)
           .multiply(BigDecimal.valueOf(100))
-          .setScale(2, RoundingMode.HALF_UP);
-      if (pct.compareTo(BigDecimal.ZERO) == 0) {
-        return new SimpleStringProperty("\u2014");
-      }
-      String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-      return new SimpleStringProperty(sign + pct.toPlainString() + "%");
+          .setScale(2, RoundingMode.HALF_UP));
     });
     pctCol.setCellFactory(col -> new TableCell<>() {
       @Override
-      protected void updateItem(String item, boolean empty) {
+      protected void updateItem(BigDecimal item, boolean empty) {
         super.updateItem(item, empty);
         if (empty || item == null) {
           setText(null);
           setStyle("");
           return;
         }
-        setText(item);
-        if ("\u2014".equals(item)) {
+        if (item.compareTo(BigDecimal.ZERO) == 0) {
+          setText("\u2014");
           setStyle("-fx-text-fill: #4a6899;");
         } else {
-          boolean up = item.startsWith("+");
+          boolean up = item.compareTo(BigDecimal.ZERO) > 0;
+          setText((up ? "+" : "") + item.toPlainString() + "%");
           setStyle(up ? "-fx-text-fill: #4ecb71;" : "-fx-text-fill: #e05a5a;");
         }
       }
@@ -2095,6 +2313,242 @@ public final class GameView implements GameViewInterface {
     });
 
     overlayRef.getChildren().add(popup);
+  }
+
+  private void showLevelUpPopup(PlayerStatus newStatus) {
+    if (overlayRef == null) {
+      return;
+    }
+
+    // Play Level_Up.mp3 immediately — audio has built-in fade-in then strong hit at ~1.5s
+    if (levelUpClip != null && sfxVolumeSupplierField != null) {
+      double vol = Math.min(sfxVolumeSupplierField.getAsDouble() * 1.3, 1.0);
+      levelUpClip.play(vol);
+    }
+
+    GaussianBlur blur = new GaussianBlur(0);
+    rootRef.setEffect(blur);
+
+    Region dimBackdrop = new Region();
+    dimBackdrop.getStyleClass().add("level-up-backdrop");
+    dimBackdrop.setOpacity(0);
+
+    // ── Title & flavor text ─────────────────────────────────────────────
+    String statusName = switch (newStatus) {
+      case INVESTOR -> "INVESTOR";
+      case SPECULATOR -> "SPECULATOR";
+      default -> newStatus.name();
+    };
+    String tagline = switch (newStatus) {
+      case INVESTOR -> "How late did you stay up to get here?.";
+      case SPECULATOR -> "It's officially past your bedtime.\nWell done.";
+      default -> "Don't stay up too late!.";
+    };
+
+    Label titleLbl = new Label("LEVEL UP");
+    titleLbl.getStyleClass().add("level-up-title");
+
+    Label statusNameLbl = new Label(statusName);
+    statusNameLbl.getStyleClass().add("level-up-status-name");
+
+    Label taglineLbl = new Label(tagline);
+    taglineLbl.getStyleClass().add("level-up-tagline");
+
+    VBox titleBlock = new VBox(6, titleLbl, statusNameLbl, taglineLbl);
+    titleBlock.setAlignment(Pos.CENTER);
+
+    Region divider = new Region();
+    divider.getStyleClass().add("level-up-divider");
+
+    // ── Benefits list ───────────────────────────────────────────────────
+    List<String[]> benefits = switch (newStatus) {
+      case INVESTOR -> List.of(
+          new String[]{"\uD83D\uDCB0", "Tax Rate", "25%  (was 30%)"},
+          new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D71.5 max shares per stock"},
+          new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
+      );
+      case SPECULATOR -> List.of(
+          new String[]{"\uD83D\uDCB0", "Tax Rate", "20%  (was 25%)"},
+          new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D72.0 max shares per stock"},
+          new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
+      );
+      default -> List.of();
+    };
+
+    final List<HBox> newAvatarsRows = new ArrayList<>();
+    VBox benefitsBox = new VBox(8);
+    benefitsBox.getStyleClass().add("level-up-benefits-box");
+    for (String[] b : benefits) {
+      Label emojLbl = new Label(b[0]);
+      emojLbl.getStyleClass().add("level-up-benefit-icon");
+      Label nameLbl = new Label(b[1]);
+      nameLbl.getStyleClass().add("level-up-benefit-name");
+      Label valLbl = new Label(b[2]);
+      valLbl.getStyleClass().add("level-up-benefit-value");
+      Region rowSpacer = new Region();
+      HBox.setHgrow(rowSpacer, Priority.ALWAYS);
+      HBox row = new HBox(10, emojLbl, nameLbl, rowSpacer, valLbl);
+      row.getStyleClass().add("level-up-benefit-row");
+      if ("New Avatars".equals(b[1])) {
+        row.getStyleClass().add("level-up-benefit-row-clickable");
+        newAvatarsRows.add(row);
+      }
+      row.setAlignment(Pos.CENTER_LEFT);
+      benefitsBox.getChildren().add(row);
+    }
+
+    // ── Unlocked avatars ────────────────────────────────────────────────
+    List<String> unlockedAvatars = switch (newStatus) {
+      case INVESTOR -> List.of("man-office-worker", "woman-office-worker");
+      case SPECULATOR -> List.of("man-in-tuxedo", "woman-in-tuxedo");
+      default -> List.of();
+    };
+
+    HBox avatarRow = new HBox(14);
+    avatarRow.setAlignment(Pos.CENTER);
+    avatarRow.getStyleClass().add("level-up-avatar-row");
+    String previousAvatar = gameController.getSelectedPlayerAvatar();
+    final String[] selectedPopupAvatar = { null };
+    for (String stem : unlockedAvatars) {
+      ImageView iv = AvatarUtil.createImageView(stem, 48);
+      StackPane avatarFrame = new StackPane(iv);
+      avatarFrame.getStyleClass().addAll("level-up-avatar-frame", "level-up-avatar-frame-clickable");
+      avatarFrame.setOnMouseClicked(e -> {
+        if (stem.equals(selectedPopupAvatar[0])) {
+          selectedPopupAvatar[0] = null;
+          gameController.setPlayerAvatar(previousAvatar);
+          avatarRow.getChildren().forEach(node -> node.getStyleClass().remove("level-up-avatar-frame-selected"));
+          updateProfileIdentityButton();
+          return;
+        }
+        selectedPopupAvatar[0] = stem;
+        gameController.setPlayerAvatar(stem);
+        avatarRow.getChildren().forEach(node -> node.getStyleClass().remove("level-up-avatar-frame-selected"));
+        avatarFrame.getStyleClass().add("level-up-avatar-frame-selected");
+        updateProfileIdentityButton();
+      });
+      avatarRow.getChildren().add(avatarFrame);
+    }
+
+    Button continueBtn = new Button("Continue");
+    continueBtn.getStyleClass().add("level-up-continue-btn");
+
+    VBox headerArea = new VBox(0, titleBlock);
+    headerArea.getStyleClass().add("level-up-header-area");
+    headerArea.setAlignment(Pos.CENTER);
+
+    VBox bodyArea = new VBox(14, benefitsBox, avatarRow);
+    bodyArea.getStyleClass().add("level-up-body-area");
+    bodyArea.setAlignment(Pos.CENTER);
+
+    VBox footerArea = new VBox(continueBtn);
+    footerArea.getStyleClass().add("level-up-footer-area");
+    footerArea.setAlignment(Pos.CENTER);
+
+    VBox card = new VBox(0, headerArea, divider, bodyArea, footerArea);
+    card.getStyleClass().add("level-up-card");
+    card.setMaxWidth(440);
+    card.setMaxHeight(Region.USE_PREF_SIZE);
+    card.setAlignment(Pos.CENTER);
+    card.setOpacity(0);
+    card.setScaleX(0.88);
+    card.setScaleY(0.88);
+
+    StackPane popup = new StackPane(dimBackdrop, card);
+    StackPane.setAlignment(card, Pos.CENTER);
+    overlayRef.getChildren().add(popup);
+
+    // ── Backdrop fades in immediately ───────────────────────────────────
+    Timeline blurIn = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(600),
+            new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT))
+    );
+    FadeTransition dimIn = new FadeTransition(Duration.millis(500), dimBackdrop);
+    dimIn.setFromValue(0);
+    dimIn.setToValue(1);
+    blurIn.play();
+    dimIn.play();
+    if (musicFilterOn != null) musicFilterOn.run();
+    PauseTransition cardDelay = new PauseTransition(Duration.millis(1500));
+    cardDelay.setOnFinished(ev -> {
+      FadeTransition cardIn = new FadeTransition(Duration.millis(340), card);
+      cardIn.setFromValue(0);
+      cardIn.setToValue(1);
+      Timeline scaleIn = new Timeline(
+          new KeyFrame(Duration.ZERO,
+              new KeyValue(card.scaleXProperty(), 0.88, Interpolator.EASE_OUT),
+              new KeyValue(card.scaleYProperty(), 0.88, Interpolator.EASE_OUT)),
+          new KeyFrame(Duration.millis(380),
+              new KeyValue(card.scaleXProperty(), 1.0, Interpolator.EASE_OUT),
+              new KeyValue(card.scaleYProperty(), 1.0, Interpolator.EASE_OUT))
+      );
+      cardIn.play();
+      scaleIn.play();
+
+      // ── Grow pulse 2.4s after card appears ────────────────────────────
+      PauseTransition pulseDelay = new PauseTransition(Duration.millis(900));
+      pulseDelay.setOnFinished(pev -> {
+        Timeline pulse = new Timeline(
+            new KeyFrame(Duration.ZERO,
+                new KeyValue(card.scaleXProperty(), 1.0),
+                new KeyValue(card.scaleYProperty(), 1.0)),
+            new KeyFrame(Duration.millis(150),
+                new KeyValue(card.scaleXProperty(), 1.06, Interpolator.EASE_OUT),
+                new KeyValue(card.scaleYProperty(), 1.06, Interpolator.EASE_OUT)),
+            new KeyFrame(Duration.millis(320),
+                new KeyValue(card.scaleXProperty(), 1.0, Interpolator.EASE_IN),
+                new KeyValue(card.scaleYProperty(), 1.0, Interpolator.EASE_IN))
+        );
+        pulse.play();
+      });
+      pulseDelay.play();
+    });
+    cardDelay.play();
+
+    // ── Dismiss ─────────────────────────────────────────────────────────
+    Runnable dismiss = () -> {
+      cardDelay.stop();
+      Timeline blurOut = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), blur.getRadius())),
+          new KeyFrame(Duration.millis(250),
+              new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
+      );
+      FadeTransition dimOut = new FadeTransition(Duration.millis(220), dimBackdrop);
+      dimOut.setFromValue(dimBackdrop.getOpacity());
+      dimOut.setToValue(0);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+      cardOut.setFromValue(card.getOpacity());
+      cardOut.setToValue(0);
+      blurOut.play();
+      dimOut.play();
+      cardOut.play();
+      blurOut.setOnFinished(fev -> {
+        overlayRef.getChildren().remove(popup);
+        rootRef.setEffect(null);
+        if (musicFilterOff != null) musicFilterOff.run();
+      });
+    };
+
+    for (HBox newAvatarsRow : newAvatarsRows) {
+      newAvatarsRow.setOnMouseClicked(ev -> {
+        dismiss.run();
+        this.onProfile.run();
+      });
+    }
+
+    continueBtn.setOnAction(ev -> dismiss.run());
+    dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE
+          || ev.getCode() == javafx.scene.input.KeyCode.ENTER
+          || ev.getCode() == javafx.scene.input.KeyCode.SPACE) {
+        dismiss.run();
+        ev.consume();
+      }
+    });
+    popup.setFocusTraversable(true);
+    Platform.runLater(popup::requestFocus);
   }
 
   private void showMarketMovers() {
@@ -2682,6 +3136,153 @@ public final class GameView implements GameViewInterface {
     popup.requestFocus();
   }
 
+  private void showPortfolioSummary() {
+    Runnable[] dismissRef = {null};
+
+    // ── Summary stats ─────────────────────────────────────────────────────
+    BigDecimal totalInvested = portfolioItems.stream()
+        .map(s -> s.getPurchasePrice().multiply(s.getQuantity()))
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal totalValue = gameController.getPortfolioNetWorth();
+    BigDecimal totalPnl = totalValue.subtract(totalInvested);
+    int holdingsCount = portfolioItems.size();
+
+    Label holdingsVal = new Label(holdingsCount + (holdingsCount == 1 ? " stock" : " stocks"));
+    holdingsVal.getStyleClass().add("portfolio-summary-stat-value");
+    Label holdingsLbl = new Label("Holdings");
+    holdingsLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox holdingsBox = new VBox(2, holdingsLbl, holdingsVal);
+    holdingsBox.setAlignment(Pos.CENTER_LEFT);
+
+    Label investedVal = new Label(CurrencyFormatter.format(totalInvested));
+    investedVal.getStyleClass().add("portfolio-summary-stat-value");
+    Label investedLbl = new Label("Invested");
+    investedLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox investedBox = new VBox(2, investedLbl, investedVal);
+    investedBox.setAlignment(Pos.CENTER_LEFT);
+
+    Label valueVal = new Label(CurrencyFormatter.format(totalValue));
+    valueVal.getStyleClass().add("portfolio-summary-stat-value");
+    Label valueLbl = new Label("Current Value");
+    valueLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox valueBox = new VBox(2, valueLbl, valueVal);
+    valueBox.setAlignment(Pos.CENTER_LEFT);
+
+    boolean pnlZero = totalPnl.compareTo(BigDecimal.ZERO) == 0;
+    boolean pnlUp = totalPnl.compareTo(BigDecimal.ZERO) > 0;
+    BigDecimal pnlPct = totalInvested.compareTo(BigDecimal.ZERO) == 0
+        ? BigDecimal.ZERO
+        : totalPnl.divide(totalInvested, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
+    String pnlText = pnlZero
+      ? "\u2014"
+      : (pnlUp ? "+" : "") + CurrencyFormatter.format(totalPnl)
+        + " (" + (pnlUp ? "+" : "") + pnlPct.toPlainString() + "%)";
+    Label pnlVal = new Label(pnlText);
+    if (pnlZero) {
+      pnlVal.getStyleClass().add("portfolio-summary-stat-value");
+    } else {
+      pnlVal.getStyleClass().addAll("portfolio-summary-stat-value",
+        pnlUp ? "portfolio-summary-pnl-up" : "portfolio-summary-pnl-down");
+    }
+    Label pnlLbl = new Label("Total P&L");
+    pnlLbl.getStyleClass().add("portfolio-summary-stat-key");
+    VBox pnlBox = new VBox(2, pnlLbl, pnlVal);
+    pnlBox.setAlignment(Pos.CENTER_LEFT);
+
+    Region sp1 = new Region(); HBox.setHgrow(sp1, Priority.ALWAYS);
+    Region sp2 = new Region(); HBox.setHgrow(sp2, Priority.ALWAYS);
+    Region sp3 = new Region(); HBox.setHgrow(sp3, Priority.ALWAYS);
+    HBox statsStrip = new HBox(0, holdingsBox, sp1, investedBox, sp2, valueBox, sp3, pnlBox);
+    statsStrip.getStyleClass().add("portfolio-summary-stats-strip");
+    statsStrip.setAlignment(Pos.CENTER_LEFT);
+
+    // ── Portfolio table ───────────────────────────────────────────────────
+    TableView<Share> table = buildPortfolioTable(portfolioItems, stock -> {
+      if (dismissRef[0] != null) dismissRef[0].run();
+      allStocks.stream().filter(s -> s.getSymbol().equals(stock.getSymbol()))
+          .findFirst().ifPresent(target -> {
+            if (target == selectedStock.get()) {
+              rebuildDetail();
+            } else {
+              notifyStockSelectionChanged();
+              selectedStock.set(target);
+            }
+            focusStockCardInList(stock.getSymbol());
+          });
+    });
+    table.getStyleClass().add("history-table");
+    table.setMinHeight(58);
+    table.setMaxHeight(Double.MAX_VALUE);
+
+    // ── Layout ────────────────────────────────────────────────────────────
+    Label titleLbl = new Label("\uD83D\uDCC8  Portfolio Summary");
+    titleLbl.getStyleClass().add("market-movers-title");
+    Button closeBtn = new Button("\u2715");
+    closeBtn.getStyleClass().add("market-movers-close-btn");
+    Region titleSpacer = new Region();
+    HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+    HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+    titleRow.getStyleClass().add("market-movers-header");
+    titleRow.setAlignment(Pos.CENTER_LEFT);
+
+    VBox card = new VBox(0, titleRow, statsStrip, table);
+    card.getStyleClass().add("history-card");
+    card.setMaxWidth(880);
+    card.setPrefHeight(520);
+    card.setMaxHeight(520);
+    card.setOpacity(0);
+    VBox.setVgrow(table, Priority.ALWAYS);
+
+    GaussianBlur blur = new GaussianBlur(0);
+    rootRef.setEffect(blur);
+
+    Region dimBackdrop = new Region();
+    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.setOpacity(0);
+
+    StackPane popup = new StackPane(dimBackdrop, card);
+    StackPane.setAlignment(card, Pos.CENTER);
+    overlayRef.getChildren().add(popup);
+
+    Timeline blurIn = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(300),
+            new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT)));
+    FadeTransition dimIn = new FadeTransition(Duration.millis(300), dimBackdrop);
+    dimIn.setFromValue(0); dimIn.setToValue(1);
+    FadeTransition cardIn = new FadeTransition(Duration.millis(220), card);
+    cardIn.setFromValue(0); cardIn.setToValue(1);
+    cardIn.setDelay(Duration.millis(80));
+    blurIn.play(); dimIn.play(); cardIn.play();
+
+    Runnable dismiss = () -> {
+      Timeline blurOut = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 8)),
+          new KeyFrame(Duration.millis(250),
+              new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN)));
+      FadeTransition dimOut = new FadeTransition(Duration.millis(250), dimBackdrop);
+      dimOut.setFromValue(1); dimOut.setToValue(0);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+      cardOut.setFromValue(1); cardOut.setToValue(0);
+      blurOut.play(); dimOut.play(); cardOut.play();
+      blurOut.setOnFinished(ev -> {
+        overlayRef.getChildren().remove(popup);
+        rootRef.setEffect(null);
+      });
+    };
+    dismissRef[0] = dismiss;
+    closeBtn.setOnAction(ev -> dismiss.run());
+    dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+        dismiss.run();
+        ev.consume();
+      }
+    });
+    popup.requestFocus();
+  }
+
   private static Node moneyPill(Label cashLabel, Label portfolioLabel,
                                 Label netWorthLabel, String toneClass) {
     Node cashSegment = moneySegment("Cash", cashLabel, "money-segment-cash");
@@ -2832,7 +3433,7 @@ public final class GameView implements GameViewInterface {
     return row;
   }
 
-  private VBox buildDevPanel() {
+  private StackPane buildDevPanel() {
     Label title = new Label("🛠  DEV MODE");
     title.getStyleClass().add("dev-panel-title");
 
@@ -2942,6 +3543,7 @@ public final class GameView implements GameViewInterface {
     Button statusInvestorBtn = devBtn("INVESTOR");
     Button statusSpeculatorBtn = devBtn("SPECULATOR");
     Button statusAutoBtn = devBtn("Auto Status");
+    Button testSpikeBtn = devBtn("Test Spike Notif");
 
     Runnable refreshStatusDisplay = () ->
         statusDisplay.setText("Status: " + formatStatus(gameController.getPlayerStatus()));
@@ -2966,6 +3568,7 @@ public final class GameView implements GameViewInterface {
       refreshStatusDisplay.run();
       updateData();
     });
+    testSpikeBtn.setOnAction(e -> showTestSpikePopup());
     HBox statusRow = new HBox(4, statusNoviceBtn, statusInvestorBtn, statusSpeculatorBtn);
     statusRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -2989,12 +3592,92 @@ public final class GameView implements GameViewInterface {
         statusDisplay,
         statusRow,
         statusAutoBtn,
+        testSpikeBtn,
         freezeBtn
     );
     panel.getStyleClass().add("dev-panel");
     panel.setMaxWidth(220);
     panel.setMaxHeight(Region.USE_PREF_SIZE);
-    return panel;
+
+    Button closeBtn = new Button("x");
+    closeBtn.getStyleClass().add("game-spike-close-btn");
+    closeBtn.setOnAction(e -> {
+      AppConfig.DEV_MODE.unbind();
+      AppConfig.DEV_MODE.set(false);
+    });
+    StackPane.setAlignment(closeBtn, Pos.TOP_RIGHT);
+
+    StackPane wrapper = new StackPane(panel, closeBtn);
+    wrapper.setMaxWidth(220);
+    wrapper.setMaxHeight(Region.USE_PREF_SIZE);
+    wrapper.setPickOnBounds(false);
+
+    // Drag the panel from most non-interactive areas.
+    final double[] dragStartSceneX = {0};
+    final double[] dragStartSceneY = {0};
+    final double[] dragStartTranslateX = {0};
+    final double[] dragStartTranslateY = {0};
+    final boolean[] isDraggingPanel = {false};
+    java.util.function.Predicate<Node> dragBlockedTarget =
+        n -> n instanceof Button || n instanceof TextInputControl;
+
+    java.util.function.Consumer<javafx.scene.input.MouseEvent> startDrag = e -> {
+      if (e.getTarget() instanceof Node target && dragBlockedTarget.test(target)) {
+        return;
+      }
+      dragStartSceneX[0] = e.getSceneX();
+      dragStartSceneY[0] = e.getSceneY();
+      dragStartTranslateX[0] = wrapper.getTranslateX();
+      dragStartTranslateY[0] = wrapper.getTranslateY();
+      isDraggingPanel[0] = true;
+      wrapper.setCursor(Cursor.CLOSED_HAND);
+      e.consume();
+    };
+
+    java.util.function.Consumer<javafx.scene.input.MouseEvent> dragPanel = e -> {
+      if (e.getTarget() instanceof Node target && dragBlockedTarget.test(target)) {
+        return;
+      }
+      double dx = e.getSceneX() - dragStartSceneX[0];
+      double dy = e.getSceneY() - dragStartSceneY[0];
+      wrapper.setTranslateX(dragStartTranslateX[0] + dx);
+      wrapper.setTranslateY(dragStartTranslateY[0] + dy);
+      e.consume();
+    };
+
+    java.util.function.Consumer<javafx.scene.input.MouseEvent> endDrag = e -> {
+      if (!isDraggingPanel[0]) {
+        return;
+      }
+      isDraggingPanel[0] = false;
+      if (e.getTarget() instanceof Node target && !dragBlockedTarget.test(target)) {
+        wrapper.setCursor(Cursor.OPEN_HAND);
+      } else {
+        wrapper.setCursor(Cursor.DEFAULT);
+      }
+      e.consume();
+    };
+
+    panel.setOnMouseMoved(e -> {
+      if (isDraggingPanel[0]) {
+        return;
+      }
+      if (e.getTarget() instanceof Node target && !dragBlockedTarget.test(target)) {
+        wrapper.setCursor(Cursor.OPEN_HAND);
+      } else {
+        wrapper.setCursor(Cursor.DEFAULT);
+      }
+    });
+    panel.setOnMouseExited(e -> {
+      if (!isDraggingPanel[0]) {
+        wrapper.setCursor(Cursor.DEFAULT);
+      }
+    });
+
+    panel.setOnMousePressed(e -> startDrag.accept(e));
+    panel.setOnMouseDragged(e -> dragPanel.accept(e));
+    panel.setOnMouseReleased(e -> endDrag.accept(e));
+    return wrapper;
   }
 
   private static Button devBtn(String text) {
@@ -3621,6 +4304,25 @@ public final class GameView implements GameViewInterface {
                                                 double min, double max) {
     TableColumn<Share, String> c = new TableColumn<>(title);
     c.setCellValueFactory(cell -> new SimpleStringProperty(fn.apply(cell.getValue())));
+    c.setMinWidth(min);
+    c.setMaxWidth(max);
+    return c;
+  }
+
+  private static TableColumn<Share, BigDecimal> numericCol(String title,
+                                                            java.util.function.Function<Share, BigDecimal> fn,
+                                                            double min,
+                                                            double max,
+                                                            java.util.function.Function<BigDecimal, String> formatter) {
+    TableColumn<Share, BigDecimal> c = new TableColumn<>(title);
+    c.setCellValueFactory(cell -> new SimpleObjectProperty<>(fn.apply(cell.getValue())));
+    c.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(BigDecimal item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty || item == null ? null : formatter.apply(item));
+      }
+    });
     c.setMinWidth(min);
     c.setMaxWidth(max);
     return c;

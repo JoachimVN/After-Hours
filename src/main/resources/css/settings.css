@@ -131,6 +131,18 @@
     -fx-background-radius: 100;
     -fx-pref-width: 18;
     -fx-pref-height: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 8, 0, 0, 2);
+    -fx-cursor: open-hand;
+}
+
+.settings-slider .thumb:hover {
+    -fx-background-color: #eaba5a;
+    -fx-cursor: open-hand;
+}
+
+.settings-slider .thumb:pressed {
+    -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.75), 8, 0, 0, 2);
+    -fx-cursor: closed-hand;
 }
 
 /* ── Resolution controls ─────────────────────────────────────────────────── */
