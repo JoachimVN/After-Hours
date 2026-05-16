@@ -113,6 +113,7 @@ public class App extends Application {
   private boolean devModeEnabled = false;
   private boolean autosaveEnabled = false;
   private boolean autosaveToast = true;
+  private boolean showTutorialEnabled = GlobalSettingsManager.DEFAULT_SHOW_TUTORIAL;
   private boolean performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
   private int maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
   private String currentAutosaveId = null; // unique per game instance
@@ -150,6 +151,7 @@ public class App extends Application {
     devModeEnabled = gs.devMode();
     autosaveEnabled = gs.autosave();
     autosaveToast = gs.autosaveToast();
+    showTutorialEnabled = gs.showTutorial();
     performanceModeEnabled = gs.performanceMode();
     maxHistoryWeeks = gs.maxHistoryWeeks();
     fullscreenEnabled = gs.fullscreen();
@@ -276,7 +278,7 @@ public class App extends Application {
     Exchange exchange = (Exchange) data[1];
     java.nio.file.Path savePath = (java.nio.file.Path) data[2];
     GameUiState uiState = data.length > 3 ? (GameUiState) data[3] : null;
-    buildAndStartGameFromSave(player, exchange, savePath, uiState);
+    buildAndStartGameFromSave(player, exchange, savePath, uiState, false);
   }
 
   private void goToSetup() {
@@ -646,7 +648,8 @@ public class App extends Application {
     }
 
     GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : currentUiState;
-    buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState);
+    buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState,
+      false);
     if (exportFile != null) {
       overlayService.showNotification("Saved", "Stock data exported to:\n" + exportFile.getName(), true);
     }
@@ -715,11 +718,11 @@ public class App extends Application {
         BigDecimal.valueOf(cash));
     player.setProfileAvatar(currentProfileAvatar);
     Exchange exchange = new Exchange(exchangeName, stocks);
-    buildAndStartGameFromSave(player, exchange, null, null);
+    buildAndStartGameFromSave(player, exchange, null, null, true);
   }
 
   private void buildAndStartGameFromSave(Player player, Exchange exchange,
-      java.nio.file.Path savePath, GameUiState uiState) {
+      java.nio.file.Path savePath, GameUiState uiState, boolean fromFreshGameFlow) {
     if (exchange.getStocks().isEmpty()) {
       showNoGamePage(false);
       return;
@@ -769,6 +772,7 @@ public class App extends Application {
           this::performSave));
     };
     onGameSettingsRef[0] = () -> {
+      sfxController.play(SfxController.SETTINGS);
       boolean perfModeAtOpen = performanceModeEnabled;
       int maxHistoryAtOpen = maxHistoryWeeks;
       navigateKeepMusic(buildSettingsView(
@@ -792,7 +796,13 @@ public class App extends Application {
             () -> sfxController.play(SfxController.SELECT),
             () -> sfxController.play(SfxController.SELECT),
             sfxController::getVolume,
-            null)
+            null,
+            fromFreshGameFlow && showTutorialEnabled,
+            enabled -> {
+              showTutorialEnabled = enabled;
+              saveSettings();
+            },
+            this::restartCurrentGameInPlace)
         : new GameView(
             gameController,
             withBack(this::goHome),
@@ -801,7 +811,13 @@ public class App extends Application {
             () -> sfxController.play(SfxController.SELECT),
             () -> sfxController.play(SfxController.SELECT),
             sfxController::getVolume,
-            uiState);
+            uiState,
+            fromFreshGameFlow && showTutorialEnabled,
+            enabled -> {
+              showTutorialEnabled = enabled;
+              saveSettings();
+            },
+            this::restartCurrentGameInPlace);
     currentGameController = gameController;
     currentGameView = gameview;
     gameview.setMusicFilterCallbacks(
@@ -813,6 +829,31 @@ public class App extends Application {
     if (autosaveEnabled) {
       startAutosaveTimer();
     }
+  }
+
+  private void restartCurrentGameInPlace() {
+    if (currentPlayer == null || currentExchange == null) {
+      return;
+    }
+
+    List<Stock> resetStocks = new ArrayList<>();
+    for (Stock stock : currentExchange.getStocks()) {
+      List<BigDecimal> history = stock.getHistoricalPrices();
+      BigDecimal openingPrice = history.isEmpty() ? stock.getSalesPrice() : history.get(0);
+      Stock resetStock = new Stock(
+          stock.getSymbol(),
+          stock.getCompany(),
+          new ArrayList<>(List.of(openingPrice)));
+      resetStock.setVolatility(stock.getVolatility());
+      resetStocks.add(resetStock);
+    }
+
+    Player resetPlayer = new Player(currentPlayer.getName(), currentPlayer.getStartingMoney());
+    resetPlayer.setProfileAvatar(currentPlayer.getProfileAvatar());
+    resetPlayer.setWeeksUsingChickAvatar(currentPlayer.getWeeksUsingChickAvatar());
+
+    Exchange resetExchange = new Exchange(currentExchange.getName(), resetStocks);
+    buildAndStartGameFromSave(resetPlayer, resetExchange, null, null, false);
   }
 
   private void rebuildCurrentGameViewForPerformance() {
@@ -849,7 +890,13 @@ public class App extends Application {
         () -> sfxController.play(SfxController.SELECT),
         () -> sfxController.play(SfxController.SELECT),
         sfxController::getVolume,
-        preservedUiState);
+        preservedUiState,
+        false,
+        enabled -> {
+          showTutorialEnabled = enabled;
+          saveSettings();
+        },
+        this::restartCurrentGameInPlace);
     currentGameView = refreshed;
     refreshed.setMusicFilterCallbacks(
         homePageMusicController::applyLowPassFilter,
@@ -1007,6 +1054,12 @@ public class App extends Application {
       autosaveToast = enabled;
       saveSettings();
     };
+    ctrl.showTutorial = showTutorialEnabled;
+    ctrl.onShowTutorialChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      showTutorialEnabled = enabled;
+      saveSettings();
+    };
     ctrl.performanceModeEnabled = performanceModeEnabled;
     ctrl.onPerformanceModeChange = enabled -> {
       playSettingsToggleSfx(enabled);
@@ -1033,6 +1086,7 @@ public class App extends Application {
       devModeEnabled = GlobalSettingsManager.DEFAULT_DEV_MODE;
       autosaveEnabled = GlobalSettingsManager.DEFAULT_AUTOSAVE;
       autosaveToast = GlobalSettingsManager.DEFAULT_AUTOSAVE_TOAST;
+      showTutorialEnabled = GlobalSettingsManager.DEFAULT_SHOW_TUTORIAL;
       performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
       maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
       fullscreenEnabled = GlobalSettingsManager.DEFAULT_FULLSCREEN;
@@ -1169,6 +1223,7 @@ public class App extends Application {
         sfxMuted,
         autosaveEnabled,
         autosaveToast,
+        showTutorialEnabled,
         fullscreenEnabled,
         devModeEnabled,
           performanceModeEnabled,

@@ -110,6 +110,10 @@ public final class GameController {
     invalidateReplaySeries();
   }
 
+  public void scheduleTutorialMomentumNudge() {
+    exchange.scheduleTutorialMomentumNudge();
+  }
+
   public void executeSellAll() {
     Map<String, BigDecimal> quantityBySymbol = new LinkedHashMap<>();
     Map<String, Stock> stockBySymbol = new LinkedHashMap<>();

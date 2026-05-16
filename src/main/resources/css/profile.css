@@ -124,6 +124,21 @@
   -fx-border-color: #94d9ff;
 }
 
+.profile-avatar-locked-tooltip {
+  -fx-background-color: rgba(7, 22, 52, 0.97);
+  -fx-background-radius: 8;
+  -fx-border-color: rgba(120, 173, 235, 0.45);
+  -fx-border-width: 1;
+  -fx-border-radius: 8;
+  -fx-padding: 6 10 6 10;
+}
+
+.profile-avatar-locked-tooltip .label {
+  -fx-text-fill: #cfe7ff;
+  -fx-font-size: 11px;
+  -fx-font-weight: 600;
+}
+
 .profile-avatar-placeholder {
   -fx-background-color: transparent;
   -fx-border-color: transparent;

@@ -21,6 +21,7 @@ import java.nio.file.Path;
  * - sfxMuted
  * - autosave
  * - autosaveToast
+ * - showTutorial
  * - fullscreen
  * - devMode
  */
@@ -40,6 +41,7 @@ public final class GlobalSettingsManager {
   public static final boolean DEFAULT_DEV_MODE = false;
   public static final boolean DEFAULT_AUTOSAVE = false;
   public static final boolean DEFAULT_AUTOSAVE_TOAST = true;
+  public static final boolean DEFAULT_SHOW_TUTORIAL = true;
   public static final boolean DEFAULT_FULLSCREEN = false;
   public static final boolean DEFAULT_PERFORMANCE_MODE = false;
   public static final int DEFAULT_MAX_HISTORY_WEEKS = 500;
@@ -60,6 +62,7 @@ public final class GlobalSettingsManager {
       boolean sfxMuted,
       boolean autosave,
       boolean autosaveToast,
+      boolean showTutorial,
       boolean fullscreen,
       boolean devMode,
         boolean performanceMode,
@@ -92,6 +95,7 @@ public final class GlobalSettingsManager {
       boolean sfxMuted = obj.has("sfxMuted") && obj.get("sfxMuted").getAsBoolean();
       boolean autosave = obj.has("autosave") && obj.get("autosave").getAsBoolean();
       boolean autosaveToast = !obj.has("autosaveToast") || obj.get("autosaveToast").getAsBoolean();
+      boolean showTutorial = !obj.has("showTutorial") || obj.get("showTutorial").getAsBoolean();
       boolean fullscreen = obj.has("fullscreen") && obj.get("fullscreen").getAsBoolean();
       boolean devMode = obj.has("devMode") && obj.get("devMode").getAsBoolean();
         boolean performanceMode =
@@ -108,6 +112,7 @@ public final class GlobalSettingsManager {
           sfxMuted,
           autosave,
           autosaveToast,
+          showTutorial,
           fullscreen,
           devMode,
             performanceMode,
@@ -136,6 +141,7 @@ public final class GlobalSettingsManager {
       obj.addProperty("sfxMuted", s.sfxMuted());
       obj.addProperty("autosave", s.autosave());
       obj.addProperty("autosaveToast", s.autosaveToast());
+      obj.addProperty("showTutorial", s.showTutorial());
       obj.addProperty("fullscreen", s.fullscreen());
       obj.addProperty("devMode", s.devMode());
       obj.addProperty("performanceMode", s.performanceMode());
@@ -160,6 +166,7 @@ public final class GlobalSettingsManager {
         DEFAULT_SFX_MUTED,
         DEFAULT_AUTOSAVE,
         DEFAULT_AUTOSAVE_TOAST,
+        DEFAULT_SHOW_TUTORIAL,
         DEFAULT_FULLSCREEN,
         DEFAULT_DEV_MODE,
         DEFAULT_PERFORMANCE_MODE,

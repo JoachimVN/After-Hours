@@ -259,8 +259,39 @@
     -fx-background-color: linear-gradient(to bottom right, #0d26467a, #0a204280);
     -fx-background-radius: 10;
     -fx-border-radius: 10;
-    -fx-padding: 6 16 6 16;
-    -fx-min-width: 60px;
+    -fx-padding: 6 0 6 0;
+    -fx-min-width: 108px;
+}
+
+.week-card-divider {
+    -fx-min-width: 1px;
+    -fx-pref-width: 1px;
+    -fx-max-width: 1px;
+    -fx-min-height: 24px;
+    -fx-background-color: rgba(96, 141, 210, 0.22);
+    -fx-background-radius: 999;
+}
+
+.week-play-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: rgba(191, 212, 243, 0.75);
+    -fx-font-size: 30px;
+    -fx-font-family: "Sans Serif";
+    -fx-background-radius: 6;
+    -fx-padding: 4 0 4 0;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+    -fx-effect: null;
+}
+
+.week-play-btn:hover {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f5a201;
+}
+
+.week-play-btn:pressed {
+    -fx-text-fill: #ffffff;
+    -fx-background-color: transparent;
 }
 
 .week-number {
@@ -293,10 +324,17 @@
 }
 
 .calm-down-label {
-    -fx-text-fill: #f5a201;
-    -fx-font-size: 12px;
+    -fx-text-fill: #ffd88f;
+    -fx-font-size: 11px;
     -fx-font-style: italic;
-    -fx-padding: 0 4 0 0;
+    -fx-font-weight: 700;
+    -fx-padding: 2 8 2 8;
+    -fx-background-color: linear-gradient(to right, rgba(24, 34, 63, 0.95), rgba(18, 27, 54, 0.95));
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(245, 162, 1, 0.42);
+    -fx-border-width: 1;
+    -fx-border-radius: 999;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 8, 0.22, 0, 1);
 }
 
 /* Left panel */
@@ -489,7 +527,7 @@
 
 /* Stock cards */
 .stock-card {
-    -fx-background-color: rgba(12, 24, 52, 0.80);
+    -fx-background-color: linear-gradient(to right, rgba(12, 24, 52, 0.80), rgba(8, 16, 36, 0.80));
     -fx-background-radius: 10;
     -fx-border-color: rgba(30, 64, 128, 0.30);
     -fx-border-width: 1;
@@ -498,11 +536,11 @@
 }
 
 .stock-card:hover {
-    -fx-background-color: rgba(20, 38, 78, 0.90);
+    -fx-background-color: linear-gradient(to right, rgba(22, 43, 93, 0.95), rgba(8, 16, 36, 0.95));
 }
 
 .stock-card-selected {
-    -fx-background-color: rgba(25, 45, 95, 0.95);
+    -fx-background-color: linear-gradient(to right, rgba(25, 45, 95, 0.95), rgba(8, 16, 36, 0.95));
     -fx-border-color: rgba(245, 162, 1, 0.55);
 }
 
@@ -1062,12 +1100,23 @@
 }
 
 .sell-all-holdings-button {
-    -fx-background-color: linear-gradient(to right, #7a1c1c, #5e1414);
-    -fx-border-color: rgba(180, 40, 40, 0.50);
+    -fx-background-color: transparent;
+    -fx-text-fill: rgba(220, 100, 100, 0.72);
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 7 2 7;
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(190, 60, 60, 0.32);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
+    -fx-effect: null;
 }
 
 .sell-all-holdings-button:hover {
-    -fx-background-color: linear-gradient(to right, #9e2222, #7a1c1c);
+    -fx-background-color: rgba(160, 30, 30, 0.18);
+    -fx-text-fill: rgba(255, 130, 130, 0.92);
+    -fx-border-color: rgba(220, 80, 80, 0.50);
 }
 
 .trade-btn-label {
@@ -1090,8 +1139,9 @@
 
 /* ── Market Movers Panel ─────────────────────────────────────────────────── */
 
-.market-movers-button {
-    -fx-background-color: rgba(15, 45, 94, 0.70);
+.market-movers-button,
+.transaction-history-button {
+    -fx-background-color: linear-gradient(to right, rgba(15, 45, 94, 0.70), rgba(10, 31, 65, 0.7));
     -fx-text-fill: #7a9fc8;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
@@ -1103,13 +1153,14 @@
     -fx-cursor: hand;
 }
 
-.market-movers-button:hover {
-    -fx-background-color: rgba(245, 162, 1, 0.20);
+.market-movers-button:hover,
+.transaction-history-button:hover {
+    -fx-background-color: linear-gradient(to top right, rgba(245, 162, 1, 0.20), rgba(245, 162, 1, 0.10));
     -fx-text-fill: #f5a201;
     -fx-border-color: rgba(245, 162, 1, 0.35);
 }
 
-.market-movers-backdrop {
+.backdrop {
     -fx-background-color: rgba(2, 4, 14, 0.72);
 }
 
@@ -1286,6 +1337,28 @@
     -fx-border-color: rgba(30, 64, 128, 0.70);
 }
 
+.movers-tab:disabled {
+    -fx-background-color: rgba(10, 20, 50, 0.25);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
+.movers-tab-disabled {
+    -fx-background-color: rgba(10, 20, 50, 0.25);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
+.movers-tab-disabled:hover {
+    -fx-background-color: rgba(10, 20, 50, 0.25);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+}
+
 /* ── Stock filter / sort chips ──────────────────────────────────────────── */
 
 .stock-row-section-label {
@@ -1303,7 +1376,8 @@
     -fx-padding: 0 4 4 4;
 }
 
-.stock-filter-chip {
+.stock-filter-chip,
+.stock-sort-chip {
     -fx-background-color: rgba(10, 20, 50, 0.60);
     -fx-text-fill: #4a6899;
     -fx-font-size: 10px;
@@ -1316,45 +1390,57 @@
     -fx-cursor: hand;
 }
 
-.stock-filter-chip:hover {
+.stock-filter-chip:hover,
+.stock-sort-chip:hover {
     -fx-background-color: rgba(20, 38, 78, 0.80);
     -fx-text-fill: #7a9fc8;
 }
 
-.stock-filter-chip-active {
+.stock-filter-chip-active,
+.stock-sort-chip-active {
     -fx-background-color: rgba(30, 64, 128, 0.45);
     -fx-text-fill: #e8d8b0;
-    -fx-border-color: rgba(245, 162, 1, 0.40);
+    -fx-border-color: rgba(86, 132, 194, 0.62);
 }
 
-.stock-sort-chip {
-    -fx-background-color: rgba(10, 20, 50, 0.40);
-    -fx-text-fill: #344e72;
-    -fx-font-size: 9px;
-    -fx-font-weight: bold;
-    -fx-padding: 2 7 2 7;
-    -fx-background-radius: 10;
-    -fx-border-color: rgba(30, 64, 128, 0.22);
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-cursor: hand;
+.stock-filter-chip-clear {
+    -fx-background-color: rgba(10, 20, 50, 0.62);
+    -fx-text-fill: #5a78a6;
+    -fx-border-color: rgba(30, 64, 128, 0.38);
 }
 
-.stock-sort-chip:hover {
-    -fx-background-color: rgba(20, 38, 78, 0.65);
-    -fx-text-fill: #5a78a8;
+.stock-filter-chip-clear:hover {
+    -fx-background-color: rgba(20, 38, 78, 0.82);
+    -fx-text-fill: #86a8d2;
+    -fx-border-color: rgba(48, 86, 148, 0.46);
 }
 
-.stock-sort-chip-active {
-    -fx-background-color: rgba(25, 50, 100, 0.55);
-    -fx-text-fill: #7a9fc8;
-    -fx-border-color: rgba(30, 64, 128, 0.55);
+.stock-filter-chip-disabled,
+.stock-sort-chip-disabled {
+    -fx-background-color: rgba(10, 20, 50, 0.30);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+    -fx-opacity: 1;
+    -fx-cursor: default;
 }
 
-.stock-sort-chip-active {
-    -fx-background-color: rgba(25, 50, 100, 0.55);
-    -fx-text-fill: #7a9fc8;
-    -fx-border-color: rgba(30, 64, 128, 0.55);
+.stock-filter-chip-disabled:hover,
+.stock-sort-chip-disabled:hover {
+    -fx-background-color: rgba(10, 20, 50, 0.30);
+    -fx-text-fill: rgba(74, 104, 153, 0.45);
+    -fx-border-color: rgba(30, 64, 128, 0.18);
+}
+
+.game-filter-tooltip,
+.game-sort-tooltip {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #e9f2ff;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: rgba(4, 14, 32, 0.75);
 }
 
 /* ── Dev panel ───────────────────────────────────────────────────────────── */
@@ -1497,6 +1583,220 @@
     -fx-font-size: 9px;
     -fx-text-fill: #7ab8f5;
     -fx-font-style: italic;
+}
+
+/* ── Tutorial overlay ───────────────────────────────────────────────────── */
+
+.game-tutorial-overlay {
+    -fx-padding: 0;
+}
+
+.game-tutorial-shade-layer {
+    -fx-padding: 0;
+}
+
+.game-tutorial-shade {
+    -fx-background-color: rgba(2, 6, 18, 0.90);
+}
+
+.game-tutorial-spotlight-ring {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 201, 74, 1);
+    -fx-border-width: 3;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(255, 191, 73, 0.85), 42, 0.20, 0, 0);
+}
+
+.game-tutorial-card {
+    -fx-background-color:
+        radial-gradient(center 18% 0%, radius 140%, rgba(59, 103, 175, 0.34), transparent 70%),
+        linear-gradient(to bottom right, rgba(7, 16, 40, 0.98), rgba(8, 22, 52, 0.98));
+    -fx-border-color: linear-gradient(to right, rgba(255, 195, 73, 0.92), rgba(104, 173, 255, 0.7));
+    -fx-border-width: 1.4;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+    -fx-padding: 18 18 16 18;
+    -fx-spacing: 10;
+    -fx-effect:
+        dropshadow(gaussian, rgba(0, 0, 0, 0.50), 30, 0.20, 0, 6),
+        dropshadow(gaussian, rgba(74, 132, 219, 0.22), 16, 0.10, 0, 0);
+}
+
+.game-tutorial-step {
+    -fx-text-fill: #d9e8ff;
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+    -fx-letter-spacing: 0.5px;
+    -fx-background-color: rgba(44, 84, 141, 0.42);
+    -fx-border-color: rgba(123, 178, 255, 0.65);
+    -fx-border-width: 1;
+    -fx-border-radius: 999;
+    -fx-background-radius: 999;
+    -fx-padding: 4 10 4 10;
+    -fx-max-width: 132;
+}
+
+.game-tutorial-header-row {
+    -fx-alignment: center-left;
+}
+
+.game-tutorial-title {
+    -fx-text-fill: #ffd98f;
+    -fx-font-size: 32px;
+    -fx-font-family: "Harlow Solid Italic";
+}
+
+.game-tutorial-body {
+    -fx-text-fill: #d7e7ff;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 2px;
+}
+
+.game-tutorial-body-rich {
+    -fx-line-spacing: 2px;
+}
+
+.game-tutorial-body-text {
+    -fx-fill: #d7e7ff;
+    -fx-font-size: 13px;
+}
+
+.game-tutorial-body-cash {
+    -fx-fill: rgba(78, 203, 113, 1.0);
+    -fx-font-weight: 700;
+}
+
+.game-tutorial-body-portfolio {
+    -fx-fill: rgba(96, 165, 250, 1.0);
+    -fx-font-weight: 700;
+}
+
+.game-tutorial-body-networth {
+    -fx-fill: rgba(245, 162, 1, 1.0);
+    -fx-font-weight: 700;
+}
+
+.game-tutorial-body-frame {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(15, 32, 70, 0.78),
+        rgba(11, 24, 56, 0.78));
+    -fx-border-color: rgba(110, 166, 241, 0.42);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 12 12 10 12;
+}
+
+.game-tutorial-toggle {
+    -fx-text-fill: #d9e8ff;
+    -fx-font-size: 12px;
+}
+
+.game-tutorial-toggle .box {
+    -fx-background-color: rgba(20, 38, 76, 0.95);
+    -fx-border-color: rgba(92, 130, 191, 0.75);
+}
+
+.game-tutorial-toggle:hover .box {
+    -fx-background-color: rgba(20, 38, 76, 1.0);
+    -fx-border-color: rgba(122, 183, 255, 0.75);
+    -fx-cursor: hand;
+}
+
+.game-tutorial-toggle:selected .mark {
+    -fx-background-color: #f5a201;
+}
+
+.game-tutorial-btn {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(30, 61, 118, 0.96),
+        rgba(18, 40, 84, 0.96));
+    -fx-text-fill: #e4efff;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: rgba(122, 183, 255, 0.75);
+    -fx-border-width: 1;
+    -fx-padding: 7 13 7 13;
+    -fx-min-width: 90;
+    -fx-cursor: hand;
+}
+
+.game-tutorial-btn-primary {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(45, 94, 176, 0.98),
+        rgba(26, 56, 112, 0.98));
+    -fx-border-color: rgba(143, 198, 255, 0.92);
+}
+
+.game-tutorial-btn-secondary {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(20, 40, 78, 0.96),
+        rgba(12, 24, 54, 0.96));
+    -fx-border-color: rgba(114, 144, 190, 0.72);
+    -fx-text-fill: #c9d9f2;
+}
+
+.game-tutorial-btn-danger {
+    -fx-background-color: linear-gradient(to bottom,
+        rgba(120, 34, 46, 0.96),
+        rgba(78, 20, 30, 0.96));
+    -fx-border-color: rgba(255, 135, 135, 0.84);
+    -fx-text-fill: #ffe1e1;
+}
+
+.game-tutorial-btn:hover {
+    -fx-border-color: rgba(255, 198, 79, 0.9);
+    -fx-text-fill: #ffe4ad;
+    -fx-effect: dropshadow(gaussian, rgba(255, 187, 74, 0.28), 18, 0.12, 0, 0);
+}
+
+.game-tutorial-nav-row {
+    -fx-padding: 2 0 0 0;
+}
+
+.game-tutorial-finish-row {
+    -fx-padding: 8 0 0 0;
+    -fx-spacing: 10;
+}
+
+.game-tutorial-close {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-text-fill: #9fbfdc;
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-cursor: hand;
+    -fx-padding: 0 6 0 6;
+    -fx-background-radius: 6;
+    -fx-min-width: -1;
+    -fx-effect: null;
+}
+
+.game-tutorial-close:hover {
+    -fx-background-color: rgba(122, 159, 200, 0);
+    -fx-text-fill: #f2f8ff;
+}
+
+.game-tutorial-reset {
+    -fx-border-color: rgba(231, 96, 96, 0.8);
+    -fx-text-fill: #ffd2d2;
+}
+
+.game-tutorial-reset:hover {
+    -fx-text-fill: #ffb5b5;
+    -fx-border-color: rgba(240, 118, 118, 0.9);
+}
+
+.tutorial-highlighted {
+    -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.55), 16, 0.18, 0, 0);
+    -fx-border-color: rgba(245, 162, 1, 0.78);
+    -fx-border-width: 1.2;
+    -fx-border-radius: 10;
 }
 
 /* ── Filter chip drag indicator ─────────────────────────────────────────── */
@@ -1824,6 +2124,20 @@
     -fx-min-width: 330;
     -fx-pref-width: 390;
     -fx-alignment: top-right;
+}
+
+.game-spike-popup-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-fit-to-width: true;
+    -fx-max-width: 390;
+    -fx-min-width: 330;
+    -fx-pref-width: 390;
+}
+
+.game-spike-popup-scroll>.viewport {
+    -fx-background-color: transparent;
 }
 
 .game-spike-popup {

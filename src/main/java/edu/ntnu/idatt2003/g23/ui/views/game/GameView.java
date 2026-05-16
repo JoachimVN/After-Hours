@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
@@ -35,6 +36,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.geometry.Bounds;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -43,6 +46,7 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -62,9 +66,12 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -83,6 +90,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
@@ -123,6 +131,9 @@ public final class GameView implements GameViewInterface {
   private final Runnable onProfile;
   private final Runnable onPanelOpen;
   private final Runnable onStockSelectionChanged;
+  private final boolean showTutorialOnStart;
+  private final Consumer<Boolean> onShowTutorialPreferenceChange;
+  private final Runnable onStartFreshFromTutorial;
 
   private final ObservableList<Stock> allStocks;
   private final FilteredList<Stock> filteredStocks;
@@ -140,12 +151,16 @@ public final class GameView implements GameViewInterface {
   private final Set<String> activeFilters;
   private final List<String> filterChipOrder;
   private FlowPane filterChipsPane;
+  private Button sortNameChip;
+  private Button sortPriceChip;
+  private Button sortChangeChip;
   private String stockSort;
   private TxRow highlightedTx = null;
   private AnimationTimer highlightFadeTimer = null;
 
   private final VBox detailArea;
   private final VBox spikePopupList;
+  private final ScrollPane spikePopupScroll;
   private final List<PauseTransition> spikePopupTimers;
   private Label currentTradeErrorLabel;
   private Label currentSellAllErrorLabel;
@@ -153,10 +168,61 @@ public final class GameView implements GameViewInterface {
   private StackPane overlayRef = null;
   private Node rootRef = null;
   private SplitPane hSplitRef = null;
-  private double portfolioDividerRatio = 0.78;
+  private double portfolioDividerRatio = 1.0;
   private PlayerStatus lastKnownStatus = null;
   private AudioClip levelUpClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
+  private StackPane tutorialOverlay = null;
+  private Pane tutorialShadeLayer = null;
+  private Rectangle tutorialShadeTop = null;
+  private Rectangle tutorialShadeLeft = null;
+  private Rectangle tutorialShadeRight = null;
+  private Rectangle tutorialShadeBottom = null;
+  private Rectangle tutorialSpotlightRing = null;
+  private final GaussianBlur tutorialBackdropBlur = new GaussianBlur(22);
+  private VBox tutorialCard = null;
+  private HBox tutorialNavRow = null;
+  private HBox tutorialFinishRow = null;
+  private Label tutorialTitleLbl = null;
+  private Label tutorialBodyLbl = null;
+  private TextFlow tutorialBodyRichFlow = null;
+  private VBox tutorialBodyFrame = null;
+  private Label tutorialStepLbl = null;
+  private Button tutorialBackBtn = null;
+  private Button tutorialNextBtn = null;
+  private Button tutorialCloseBtn = null;
+  private Button tutorialKeepProgressBtn = null;
+  private Button tutorialStartFreshBtn = null;
+  private CheckBox tutorialDontShowAgainToggle = null;
+  private int tutorialCardDragStep = -1;
+  private boolean tutorialCardDragging = false;
+  private double tutorialCardDragStartSceneX = 0;
+  private double tutorialCardDragStartSceneY = 0;
+  private double tutorialCardDragStartTranslateX = 0;
+  private double tutorialCardDragStartTranslateY = 0;
+  private int tutorialStepIndex = 0;
+  private boolean tutorialDismissedThisSession = false;
+  private boolean tutorialDidSelectStock = false;
+  private boolean tutorialDidTrade = false;
+  private boolean tutorialDidAdvanceWeek = false;
+  private boolean tutorialOpenedMovers = false;
+  private boolean tutorialTouchedPortfolio = false;
+  private int tutorialSuspendDepth = 0;
+  private boolean tutorialWasVisibleBeforeSuspend = false;
+  private int tutorialStartWeek = 0;
+  private int tutorialStartTransactionCount = 0;
+  private Node tutorialStockAreaTarget = null;
+  private Node tutorialTradeAreaTarget = null;
+  private Node tutorialPortfolioAreaTarget = null;
+  private Region tutorialPortfolioResizeHandleTarget = null;
+  private Node tutorialFinanceOverviewTarget = null;
+  private Node tutorialMoversCardTarget = null;
+  private Node tutorialMoversTabBarTarget = null;
+  private Button tutorialNextWeekBtnTarget = null;
+  private Button tutorialMarketMoversBtnTarget = null;
+  private boolean tutorialSpikeScheduled = false;
+  private boolean tutorialUseMoversStep = true;
+  private boolean tutorialUseTwoStockMoversCopy = false;
   private Runnable musicFilterOn = null;
   private Runnable musicFilterOff = null;
 
@@ -167,13 +233,14 @@ public final class GameView implements GameViewInterface {
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier) {
-        this(gameController, onBack, onProfile, null, null, null, sfxVolumeSupplier, null);
+        this(gameController, onBack, onProfile, null, null, null, sfxVolumeSupplier, null,
+            false, null, null);
   }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
                     DoubleSupplier sfxVolumeSupplier, GameUiState initialState) {
         this(gameController, onBack, onProfile, null, null, null,
-      sfxVolumeSupplier, initialState);
+      sfxVolumeSupplier, initialState, false, null, null);
   }
 
   public GameView(GameController gameController, Runnable onBack, Runnable onProfile,
@@ -181,7 +248,10 @@ public final class GameView implements GameViewInterface {
         Runnable onPanelOpen,
         Runnable onStockSelectionChanged,
                   DoubleSupplier sfxVolumeSupplier,
-                  GameUiState initialState) {
+                  GameUiState initialState,
+                  boolean showTutorialOnStart,
+                  Consumer<Boolean> onShowTutorialPreferenceChange,
+                  Runnable onStartFreshFromTutorial) {
     this.gameController = gameController;
     this.gameController.setView(this);
     this.sfxVolumeSupplierField = sfxVolumeSupplier;
@@ -208,6 +278,9 @@ public final class GameView implements GameViewInterface {
     this.onProfile = onProfile;
     this.onPanelOpen = onPanelOpen;
     this.onStockSelectionChanged = onStockSelectionChanged;
+    this.showTutorialOnStart = showTutorialOnStart;
+    this.onShowTutorialPreferenceChange = onShowTutorialPreferenceChange;
+    this.onStartFreshFromTutorial = onStartFreshFromTutorial;
 
     this.profileNameBox.minHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
     this.profileNameBox.prefHeightProperty().bind(this.profileBtn.heightProperty().subtract(12));
@@ -257,6 +330,16 @@ public final class GameView implements GameViewInterface {
     this.spikePopupList.getStyleClass().add("game-spike-popup-list");
     this.spikePopupList.setAlignment(Pos.TOP_RIGHT);
     this.spikePopupList.setPickOnBounds(false);
+    this.spikePopupScroll = new ScrollPane(spikePopupList);
+    this.spikePopupScroll.getStyleClass().add("game-spike-popup-scroll");
+    this.spikePopupScroll.setFitToWidth(true);
+    this.spikePopupScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    this.spikePopupScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    this.spikePopupScroll.setPannable(true);
+    this.spikePopupScroll.setFocusTraversable(false);
+    this.spikePopupScroll.visibleProperty().bind(Bindings.isNotEmpty(this.spikePopupList.getChildren()));
+    this.spikePopupScroll.managedProperty().bind(this.spikePopupScroll.visibleProperty());
+    this.spikePopupScroll.mouseTransparentProperty().bind(Bindings.isEmpty(this.spikePopupList.getChildren()));
     this.spikePopupTimers = new ArrayList<>();
 
     // ── Stock list (left panel) — standard or virtualized (performance mode)
@@ -344,6 +427,10 @@ public final class GameView implements GameViewInterface {
 
     // Rebuild detail when selection changes; clear tx highlight when switching to a different stock
     selectedStock.addListener((obs, old, stock) -> {
+      if (stock != null) {
+        tutorialDidSelectStock = true;
+        refreshTutorialProgress();
+      }
       if (highlightedTx != null &&
           (stock == null || !highlightedTx.symbol().equals(stock.getSymbol()))) {
         highlightedTx = null;
@@ -389,6 +476,9 @@ public final class GameView implements GameViewInterface {
     Button sortName = new Button("A\u2013Z");
     Button sortPrice = new Button("Price \u25bc");
     Button sortChg = new Button("Change \u25bc");
+    this.sortNameChip = sortName;
+    this.sortPriceChip = sortPrice;
+    this.sortChangeChip = sortChg;
     sortName.getStyleClass().add("stock-sort-chip");
     sortPrice.getStyleClass().add("stock-sort-chip");
     sortChg.getStyleClass().add("stock-sort-chip");
@@ -408,6 +498,9 @@ public final class GameView implements GameViewInterface {
     sortChips.getChildren().addAll(sortName, sortPrice, sortChg);
 
     sortName.setOnAction(ev -> {
+      if (sortName.getStyleClass().contains("stock-sort-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       if (sortName.getStyleClass().contains("stock-sort-chip-active")) {
         stockSort = stockSort.equals("NAME_DESC") ? "NAME" : "NAME_DESC";
@@ -421,6 +514,9 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
     sortPrice.setOnAction(ev -> {
+      if (sortPrice.getStyleClass().contains("stock-sort-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       if (sortPrice.getStyleClass().contains("stock-sort-chip-active")) {
         // toggle direction
@@ -435,6 +531,9 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
     sortChg.setOnAction(ev -> {
+      if (sortChg.getStyleClass().contains("stock-sort-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       if (sortChg.getStyleClass().contains("stock-sort-chip-active")) {
         stockSort = stockSort.equals("CHG_DESC") ? "CHG_ASC" : "CHG_DESC";
@@ -447,6 +546,8 @@ public final class GameView implements GameViewInterface {
       sortChg.setText("Change " + (stockSort.equals("CHG_DESC") ? "\u25bc" : "\u25b2"));
       applyFilter();
     });
+
+    updateSortChipAvailability();
 
     Label sortLabel = new Label("SORT");
     sortLabel.getStyleClass().add("stock-row-section-label");
@@ -463,6 +564,9 @@ public final class GameView implements GameViewInterface {
     leftPanel.getStyleClass().add("game-left-panel");
     leftPanel.setMinWidth(300);
     leftPanel.setMaxWidth(600);
+    this.tutorialStockAreaTarget = leftPanel;
+    leftPanel.widthProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
+    leftPanel.heightProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
 
     // ── Portfolio table (bottom of right panel) ──────────────────────────
     Label portTitle = new Label("Portfolio");
@@ -471,6 +575,13 @@ public final class GameView implements GameViewInterface {
     portSummaryHint.getStyleClass().add("game-portfolio-summary-hint");
     Region portHeaderSpacer = new Region();
     HBox.setHgrow(portHeaderSpacer, Priority.ALWAYS);
+
+    Label sellAllErrorLbl = new Label();
+    sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
+    sellAllErrorLbl.setWrapText(true);
+    VBox sellAllErrorBox = createInlineErrorBox(sellAllErrorLbl);
+    currentSellAllErrorLabel = sellAllErrorLbl;
+
     HBox portHeader = new HBox(8, portTitle, portHeaderSpacer, portSummaryHint);
     portHeader.getStyleClass().add("game-portfolio-header");
     portHeader.setAlignment(Pos.CENTER_LEFT);
@@ -520,23 +631,35 @@ public final class GameView implements GameViewInterface {
       StackPane.setAlignment(portfolioTable, Pos.CENTER);
       StackPane.setAlignment(emptyPortfolioOverlay, Pos.CENTER);
       VBox.setVgrow(portfolioContent, Priority.ALWAYS);
+      portfolioContent.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+        tutorialTouchedPortfolio = true;
+        refreshTutorialProgress();
+      });
 
-      VBox portfolioSection = new VBox(0, portHeader, portfolioContent);
+      VBox portfolioSection = new VBox(0, portHeader, sellAllErrorBox, portfolioContent);
     portfolioSection.getStyleClass().add("game-portfolio-pane");
-    portfolioSection.setMinHeight(400);
-    portfolioSection.setPrefHeight(400);
+    portfolioSection.setMinHeight(200);
+    portfolioSection.setPrefHeight(200);
     portfolioSection.setMaxHeight(Region.USE_PREF_SIZE);
 
     // ── Right panel: explicit vertical layout with dedicated drag handle ──
     Region portfolioResizeHandle = new Region();
     portfolioResizeHandle.getStyleClass().add("game-portfolio-resize-handle");
+    portfolioResizeHandle.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+      tutorialTouchedPortfolio = true;
+      refreshTutorialProgress();
+    });
+    this.tutorialPortfolioResizeHandleTarget = portfolioResizeHandle;
+    this.tutorialPortfolioAreaTarget = portfolioResizeHandle;
 
     VBox rightPanel = new VBox(detailArea, portfolioResizeHandle, portfolioSection);
     rightPanel.getStyleClass().add("game-right-panel");
     HBox.setHgrow(rightPanel, Priority.ALWAYS);
     VBox.setVgrow(rightPanel, Priority.ALWAYS);
+    rightPanel.widthProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
+    rightPanel.heightProperty().addListener((obs, oldV, newV) -> refreshTutorialLayout());
     double initPortDivider = (initialState != null && initialState.portfolioDivider() > 0)
-      ? initialState.portfolioDivider() : 0.78;
+      ? initialState.portfolioDivider() : 1.0;
     installPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle, initPortDivider);
 
     // ── Body: horizontal split (sidebar | right panel) ────────────────────
@@ -547,22 +670,66 @@ public final class GameView implements GameViewInterface {
     double initSidebarDivider = (initialState != null && initialState.sidebarDivider() > 0)
       ? initialState.sidebarDivider() : 0.125;
     hSplit.setDividerPositions(initSidebarDivider);
+    if (!hSplit.getDividers().isEmpty()) {
+      hSplit.getDividers().get(0).positionProperty().addListener((obs, oldV, newV) ->
+          refreshTutorialLayout());
+    }
     this.hSplitRef = hSplit;
 
-    // ── Sub-bar: week + next-week ─────────────────────────────────────────
-    VBox weekCard = new VBox(2,
-        labelSmall("WEEK"),
-        weekNumLbl);
-    weekCard.getStyleClass().add("week-card");
-    weekCard.setAlignment(Pos.CENTER);
-
-    Button nextWeekBtn = new Button("\u25B6  Next Week");
-    nextWeekBtn.getStyleClass().add("next-week-button");
+    // ── Sub-bar: combined week card (info + play button) ────────────────────
+    VBox weekInfo = new VBox(2, labelSmall("WEEK"), weekNumLbl);
+    weekInfo.setAlignment(Pos.CENTER);
+    weekInfo.setPadding(new Insets(0, 8, 0, 8));
 
     Label calmDownLbl = new Label("\uD83D\uDE0C Calm down");
     calmDownLbl.getStyleClass().add("calm-down-label");
     calmDownLbl.setOpacity(0);
     calmDownLbl.setMouseTransparent(true);
+    calmDownLbl.setTranslateY(-2);
+
+    Button playBtn = new Button("\u25B6");
+    playBtn.getStyleClass().add("week-play-btn");
+    this.tutorialNextWeekBtnTarget = playBtn;
+
+    StackPane playStack = new StackPane(playBtn);
+    StackPane.setAlignment(playBtn, Pos.CENTER);
+    playBtn.setMaxWidth(Double.MAX_VALUE);
+    playBtn.setMaxHeight(Double.MAX_VALUE);
+
+    Region weekDivider = new Region();
+    weekDivider.getStyleClass().add("week-card-divider");
+
+    ColumnConstraints colInfo = new ColumnConstraints();
+    colInfo.setHgrow(javafx.scene.layout.Priority.ALWAYS);
+    ColumnConstraints colDivider = new ColumnConstraints();
+    colDivider.setMinWidth(1);
+    colDivider.setPrefWidth(1);
+    colDivider.setMaxWidth(1);
+    ColumnConstraints colPlay = new ColumnConstraints();
+    colPlay.setMinWidth(54);
+    colPlay.setPrefWidth(54);
+    colPlay.setMaxWidth(54);
+
+    GridPane weekCard = new GridPane();
+    weekCard.getStyleClass().add("week-card");
+    weekCard.getColumnConstraints().addAll(colInfo, colDivider, colPlay);
+    weekCard.setAlignment(Pos.CENTER);
+    GridPane.setHalignment(weekInfo, javafx.geometry.HPos.CENTER);
+    GridPane.setValignment(weekInfo, javafx.geometry.VPos.CENTER);
+    GridPane.setHalignment(playStack, javafx.geometry.HPos.CENTER);
+    GridPane.setValignment(playStack, javafx.geometry.VPos.CENTER);
+    GridPane.setFillWidth(weekInfo, true);
+    GridPane.setFillWidth(playStack, true);
+    GridPane.setFillHeight(weekInfo, true);
+    GridPane.setFillHeight(playStack, true);
+    weekCard.add(weekInfo, 0, 0);
+    weekCard.add(weekDivider, 1, 0);
+    weekCard.add(playStack, 2, 0);
+    weekCard.add(calmDownLbl, 0, 0);
+    GridPane.setColumnSpan(calmDownLbl, 3);
+    GridPane.setHalignment(calmDownLbl, javafx.geometry.HPos.CENTER);
+    GridPane.setValignment(calmDownLbl, javafx.geometry.VPos.TOP);
+    GridPane.setMargin(calmDownLbl, new Insets(2, 0, 0, 0));
 
     FadeTransition[] calmFade = {null};
 
@@ -572,13 +739,13 @@ public final class GameView implements GameViewInterface {
 
     AudioClip weekAdvanceClip = loadAudioClip(WEEK_ADVANCE_SOUND);
     boolean[] playedOnMousePress = {false};
-    nextWeekBtn.setOnMousePressed(e -> {
+    playBtn.setOnMousePressed(e -> {
       playedOnMousePress[0] = true;
       playAudioClip(weekAdvanceClip,
           () -> Math.min(sfxVolumeSupplier.getAsDouble() * 1.10, 1.0)); // 10% volume boost
     });
 
-    nextWeekBtn.setOnAction(e -> {
+    playBtn.setOnAction(e -> {
       if (!playedOnMousePress[0]) {
         playAudioClip(weekAdvanceClip, () -> Math.min(sfxVolumeSupplier.getAsDouble() * 1.10, 1.0));
       }
@@ -601,38 +768,25 @@ public final class GameView implements GameViewInterface {
       advanceTimes[advanceHead[0]] = now;
       advanceHead[0] = (advanceHead[0] + 1) % 6;
       gameController.handleNextWeek();
+      tutorialDidAdvanceWeek = true;
       updateData();
+      refreshTutorialProgress();
     });
-
-    Button sellAllHoldingsBtn = new Button("\u2198  Sell All Holdings");
-    sellAllHoldingsBtn.getStyleClass().addAll("next-week-button", "sell-all-holdings-button");
-    sellAllHoldingsBtn.setOnAction(e -> {
-      if (currentSellAllErrorLabel != null) {
-        hideInlineError(currentSellAllErrorLabel, true);
-      }
-      gameController.handleSellAll(overlayRef);
-    });
-    Label sellAllErrorLbl = new Label();
-    sellAllErrorLbl.getStyleClass().add("sell-all-error-label");
-    sellAllErrorLbl.setWrapText(true);
-    VBox sellAllErrorBox = createInlineErrorBox(sellAllErrorLbl);
-    currentSellAllErrorLabel = sellAllErrorLbl;
-    VBox sellAllStack = new VBox(2, sellAllErrorBox, sellAllHoldingsBtn);
-    sellAllStack.setAlignment(Pos.BOTTOM_CENTER);
 
     Button marketMoversBtn = new Button("\uD83D\uDCC8  Market Movers");
     marketMoversBtn.getStyleClass().add("market-movers-button");
+    this.tutorialMarketMoversBtnTarget = marketMoversBtn;
     marketMoversBtn.setOnAction(e -> {
+      tutorialOpenedMovers = true;
       notifyPanelOpen();
       showMarketMovers();
+      refreshTutorialProgress();
     });
-    VBox nextWeekStack = new VBox(2, calmDownLbl, nextWeekBtn);
-    nextWeekStack.setAlignment(Pos.BOTTOM_CENTER);
     Region subSpacer = new Region();
     HBox.setHgrow(subSpacer, Priority.ALWAYS);
 
     Button historyBtn = new Button("\uD83D\uDCCB  History");
-    historyBtn.getStyleClass().add("market-movers-button");
+    historyBtn.getStyleClass().add("transaction-history-button");
     historyBtn.setOnAction(e -> {
       notifyPanelOpen();
       showTransactionHistory();
@@ -645,7 +799,7 @@ public final class GameView implements GameViewInterface {
     marketActionBox.getStyleClass().add("game-market-action-box");
     marketActionBox.setAlignment(Pos.TOP_RIGHT);
 
-    HBox subBar = new HBox(16, weekCard, nextWeekStack, sellAllStack, subSpacer, marketActionBox);
+    HBox subBar = new HBox(16, weekCard, subSpacer, marketActionBox);
     subBar.getStyleClass().add("game-sub-bar");
     subBar.setAlignment(Pos.BOTTOM_LEFT);
 
@@ -667,6 +821,7 @@ public final class GameView implements GameViewInterface {
 
     Node statusPill = statusPill("Player Status", statusVal, statusProgressArc, statusTooltip);
     Node financePill = moneyPill(cashVal, portfolioVal, netWorthVal, "money-pill-overview");
+    this.tutorialFinanceOverviewTarget = financePill;
 
     updateProfileIdentityButton();
     profileBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -715,9 +870,10 @@ public final class GameView implements GameViewInterface {
     devPanel.managedProperty().bind(AppConfig.DEV_MODE);
     StackPane.setAlignment(devPanel, Pos.BOTTOM_RIGHT);
 
-    StackPane overlay = new StackPane(root, spikePopupList, devPanel);
-    StackPane.setAlignment(spikePopupList, Pos.TOP_RIGHT);
-    StackPane.setMargin(spikePopupList, new Insets(150, 12, 0, 0));
+    StackPane overlay = new StackPane(root, spikePopupScroll, devPanel);
+    StackPane.setAlignment(spikePopupScroll, Pos.TOP_RIGHT);
+    StackPane.setMargin(spikePopupScroll, new Insets(150, 12, 12, 0));
+    spikePopupScroll.maxHeightProperty().bind(Bindings.max(120, overlay.heightProperty().subtract(170)));
     overlayRef = overlay;
 
     // Restore selected stock from saved UI state
@@ -735,6 +891,11 @@ public final class GameView implements GameViewInterface {
     // Escape → clear search, then go back to landing page
     overlay.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
       boolean inTextField = e.getTarget() instanceof TextInputControl;
+      if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE && isTutorialVisible()) {
+        closeTutorial();
+        e.consume();
+        return;
+      }
       // Base children: root + spikePopupList + devPanel. Any extra layer means a modal popup is open.
       boolean dialogOpen = overlay.getChildren().size() > 3;
       if (dialogOpen) {
@@ -743,7 +904,7 @@ public final class GameView implements GameViewInterface {
       switch (e.getCode()) {
         case N, SPACE -> {
           if (!inTextField) {
-            nextWeekBtn.fire();
+            playBtn.fire();
             e.consume();
           }
         }
@@ -807,10 +968,812 @@ public final class GameView implements GameViewInterface {
     });
 
     updateData();
+    maybeShowTutorial();
   }
 
   public StackPane getRoot() {
     return overlayRef;
+  }
+
+  private void maybeShowTutorial() {
+    if (!showTutorialOnStart || tutorialDismissedThisSession) {
+      return;
+    }
+    int stockCount = Math.max(0, gameController.getStocks().size());
+    tutorialUseTwoStockMoversCopy = stockCount == 2;
+    tutorialUseMoversStep = stockCount >= 2;
+    tutorialDidSelectStock = false;
+    tutorialDidTrade = false;
+    tutorialDidAdvanceWeek = false;
+    tutorialOpenedMovers = false;
+    tutorialTouchedPortfolio = false;
+    tutorialStartWeek = gameController.getCurrentWeek();
+    tutorialStartTransactionCount = gameController.getTransactionCount();
+    tutorialStepIndex = 0;
+    openTutorial();
+  }
+
+  private void openTutorial() {
+    if (overlayRef == null) {
+      return;
+    }
+    if (tutorialOverlay == null) {
+      buildTutorialOverlay();
+    }
+    if (!overlayRef.getChildren().contains(tutorialOverlay)) {
+      overlayRef.getChildren().add(tutorialOverlay);
+    }
+    tutorialOverlay.toFront();
+    Platform.runLater(this::updateTutorialStep);
+  }
+
+  private void closeTutorial() {
+    tutorialDismissedThisSession = true;
+    clearTutorialHighlight();
+    if (overlayRef != null && tutorialOverlay != null) {
+      overlayRef.getChildren().remove(tutorialOverlay);
+    }
+    setTutorialBackdropBlur(false);
+  }
+
+  private boolean isTutorialVisible() {
+    return overlayRef != null && tutorialOverlay != null && overlayRef.getChildren().contains(tutorialOverlay);
+  }
+
+  private void buildTutorialOverlay() {
+    tutorialOverlay = new StackPane();
+    tutorialOverlay.getStyleClass().add("game-tutorial-overlay");
+    tutorialOverlay.setPickOnBounds(false);
+    tutorialOverlay.setMouseTransparent(false);
+
+    tutorialShadeLayer = new Pane();
+    tutorialShadeLayer.getStyleClass().add("game-tutorial-shade-layer");
+    tutorialShadeLayer.setPickOnBounds(false);
+    tutorialShadeLayer.setMouseTransparent(false);
+    tutorialShadeLayer.prefWidthProperty().bind(tutorialOverlay.widthProperty());
+    tutorialShadeLayer.prefHeightProperty().bind(tutorialOverlay.heightProperty());
+
+    tutorialShadeTop = new Rectangle();
+    tutorialShadeLeft = new Rectangle();
+    tutorialShadeRight = new Rectangle();
+    tutorialShadeBottom = new Rectangle();
+    tutorialSpotlightRing = new Rectangle();
+    tutorialShadeTop.getStyleClass().add("game-tutorial-shade");
+    tutorialShadeLeft.getStyleClass().add("game-tutorial-shade");
+    tutorialShadeRight.getStyleClass().add("game-tutorial-shade");
+    tutorialShadeBottom.getStyleClass().add("game-tutorial-shade");
+    tutorialSpotlightRing.getStyleClass().add("game-tutorial-spotlight-ring");
+    tutorialShadeTop.setManaged(false);
+    tutorialShadeLeft.setManaged(false);
+    tutorialShadeRight.setManaged(false);
+    tutorialShadeBottom.setManaged(false);
+    tutorialSpotlightRing.setManaged(false);
+    tutorialShadeTop.setFill(Color.rgb(2, 6, 18, 0.90));
+    tutorialShadeLeft.setFill(Color.rgb(2, 6, 18, 0.90));
+    tutorialShadeRight.setFill(Color.rgb(2, 6, 18, 0.90));
+    tutorialShadeBottom.setFill(Color.rgb(2, 6, 18, 0.90));
+    tutorialSpotlightRing.setFill(Color.TRANSPARENT);
+    tutorialSpotlightRing.setStroke(Color.rgb(255, 201, 74, 1.0));
+    tutorialSpotlightRing.setStrokeWidth(3);
+    tutorialSpotlightRing.setArcWidth(32);
+    tutorialSpotlightRing.setArcHeight(32);
+    tutorialSpotlightRing.setMouseTransparent(true);
+    for (Rectangle shade : new Rectangle[] {tutorialShadeTop, tutorialShadeLeft, tutorialShadeRight, tutorialShadeBottom}) {
+      shade.setOnMousePressed(MouseEvent::consume);
+      shade.setOnMouseDragged(MouseEvent::consume);
+      shade.setOnMouseReleased(MouseEvent::consume);
+      shade.setOnMouseClicked(MouseEvent::consume);
+    }
+    tutorialShadeLayer.getChildren().addAll(
+        tutorialShadeTop,
+        tutorialShadeLeft,
+        tutorialShadeRight,
+        tutorialShadeBottom,
+        tutorialSpotlightRing);
+
+    tutorialCard = new VBox(10);
+    tutorialCard.getStyleClass().add("game-tutorial-card");
+    tutorialCard.setMaxWidth(560);
+    tutorialCard.setMaxHeight(Region.USE_PREF_SIZE);
+    tutorialCard.setPrefWidth(520);
+    tutorialCard.setMouseTransparent(false);
+
+    tutorialStepLbl = new Label();
+    tutorialStepLbl.getStyleClass().add("game-tutorial-step");
+    Region tutorialHeaderSpacer = new Region();
+    HBox.setHgrow(tutorialHeaderSpacer, Priority.ALWAYS);
+    tutorialTitleLbl = new Label();
+    tutorialTitleLbl.getStyleClass().add("game-tutorial-title");
+    tutorialTitleLbl.setWrapText(true);
+    tutorialBodyLbl = new Label();
+    tutorialBodyLbl.getStyleClass().add("game-tutorial-body");
+    tutorialBodyLbl.setWrapText(true);
+    tutorialBodyRichFlow = new TextFlow();
+    tutorialBodyRichFlow.getStyleClass().add("game-tutorial-body-rich");
+    tutorialBodyRichFlow.setMaxWidth(Double.MAX_VALUE);
+    tutorialBodyFrame = new VBox(tutorialBodyLbl);
+    tutorialBodyFrame.getStyleClass().add("game-tutorial-body-frame");
+
+    tutorialDontShowAgainToggle = new CheckBox("Don't show tutorial next time");
+    tutorialDontShowAgainToggle.getStyleClass().add("game-tutorial-toggle");
+    tutorialDontShowAgainToggle.setSelected(false);
+    tutorialDontShowAgainToggle.selectedProperty().addListener((obs, oldV, selected) -> {
+      if (onShowTutorialPreferenceChange != null) {
+        onShowTutorialPreferenceChange.accept(!selected);
+      }
+    });
+
+    tutorialBackBtn = new Button("Back");
+    tutorialBackBtn.getStyleClass().add("game-tutorial-btn");
+    tutorialBackBtn.setOnAction(e -> {
+      if (tutorialStepIndex > 0) {
+        tutorialStepIndex--;
+        updateTutorialStep();
+      }
+    });
+
+    tutorialNextBtn = new Button("Next");
+    tutorialNextBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-btn-primary");
+    tutorialNextBtn.setOnAction(e -> {
+      if (!isTutorialStepComplete(tutorialStepIndex)) {
+        return;
+      }
+      int last = tutorialStepCount() - 1;
+      if (tutorialStepIndex >= last) {
+        closeTutorial();
+        return;
+      }
+      tutorialStepIndex++;
+      updateTutorialStep();
+    });
+
+    tutorialCloseBtn = new Button("X");
+    tutorialCloseBtn.getStyleClass().add("game-tutorial-close");
+    tutorialCloseBtn.setOnAction(e -> closeTutorial());
+
+    tutorialKeepProgressBtn = new Button("Continue This Run");
+    tutorialKeepProgressBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-btn-primary");
+    tutorialKeepProgressBtn.setMaxWidth(Double.MAX_VALUE);
+    HBox.setHgrow(tutorialKeepProgressBtn, Priority.ALWAYS);
+    tutorialKeepProgressBtn.setOnAction(e -> closeTutorial());
+
+    tutorialStartFreshBtn = new Button("Reset Session");
+    tutorialStartFreshBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-btn-danger", "game-tutorial-reset");
+    tutorialStartFreshBtn.setMaxWidth(Double.MAX_VALUE);
+    HBox.setHgrow(tutorialStartFreshBtn, Priority.ALWAYS);
+    tutorialStartFreshBtn.setOnAction(e -> {
+      closeTutorial();
+      if (onStartFreshFromTutorial != null) {
+        onStartFreshFromTutorial.run();
+      }
+    });
+
+    HBox tutorialHeaderRow = new HBox(10, tutorialStepLbl, tutorialHeaderSpacer, tutorialCloseBtn);
+    tutorialHeaderRow.setAlignment(Pos.CENTER_LEFT);
+    tutorialHeaderRow.getStyleClass().add("game-tutorial-header-row");
+
+    tutorialNavRow = new HBox(8, tutorialBackBtn, tutorialNextBtn);
+    tutorialNavRow.setAlignment(Pos.CENTER_LEFT);
+    tutorialNavRow.getStyleClass().add("game-tutorial-nav-row");
+    HBox.setHgrow(tutorialBackBtn, Priority.NEVER);
+    HBox.setHgrow(tutorialNextBtn, Priority.NEVER);
+
+    tutorialFinishRow = new HBox(10, tutorialKeepProgressBtn, tutorialStartFreshBtn);
+    tutorialFinishRow.setAlignment(Pos.CENTER_LEFT);
+    tutorialFinishRow.getStyleClass().addAll("game-tutorial-finish-row", "game-tutorial-nav-row");
+
+    tutorialCard.getChildren().addAll(
+      tutorialHeaderRow,
+        tutorialTitleLbl,
+        tutorialBodyFrame,
+        tutorialDontShowAgainToggle,
+        tutorialNavRow,
+        tutorialFinishRow);
+
+    java.util.function.Predicate<Node> tutorialDragBlockedTarget =
+        n -> n instanceof Button || n instanceof CheckBox || n instanceof TextInputControl;
+
+    java.util.function.Consumer<MouseEvent> startTutorialDrag = e -> {
+      if (e.getTarget() instanceof Node target && tutorialDragBlockedTarget.test(target)) {
+        return;
+      }
+      tutorialCardDragStartSceneX = e.getSceneX();
+      tutorialCardDragStartSceneY = e.getSceneY();
+      tutorialCardDragStartTranslateX = tutorialCard.getTranslateX();
+      tutorialCardDragStartTranslateY = tutorialCard.getTranslateY();
+      tutorialCardDragging = true;
+      tutorialCard.setCursor(Cursor.CLOSED_HAND);
+      e.consume();
+    };
+
+    java.util.function.Consumer<MouseEvent> dragTutorialCard = e -> {
+      if (!tutorialCardDragging) {
+        return;
+      }
+      if (e.getTarget() instanceof Node target && tutorialDragBlockedTarget.test(target)) {
+        return;
+      }
+      double dx = e.getSceneX() - tutorialCardDragStartSceneX;
+      double dy = e.getSceneY() - tutorialCardDragStartSceneY;
+      tutorialCard.setTranslateX(tutorialCardDragStartTranslateX + dx);
+      tutorialCard.setTranslateY(tutorialCardDragStartTranslateY + dy);
+      e.consume();
+    };
+
+    java.util.function.Consumer<MouseEvent> endTutorialDrag = e -> {
+      if (!tutorialCardDragging) {
+        return;
+      }
+      tutorialCardDragging = false;
+      if (e.getTarget() instanceof Node target && !tutorialDragBlockedTarget.test(target)) {
+        tutorialCard.setCursor(Cursor.OPEN_HAND);
+      } else {
+        tutorialCard.setCursor(Cursor.DEFAULT);
+      }
+      e.consume();
+    };
+
+    tutorialCard.setOnMouseMoved(e -> {
+      if (tutorialCardDragging) {
+        return;
+      }
+      if (e.getTarget() instanceof Node target && !tutorialDragBlockedTarget.test(target)) {
+        tutorialCard.setCursor(Cursor.OPEN_HAND);
+      } else {
+        tutorialCard.setCursor(Cursor.DEFAULT);
+      }
+    });
+    tutorialCard.setOnMouseExited(e -> {
+      if (!tutorialCardDragging) {
+        tutorialCard.setCursor(Cursor.DEFAULT);
+      }
+    });
+    tutorialCard.setOnMousePressed(e -> startTutorialDrag.accept(e));
+    tutorialCard.setOnMouseDragged(e -> dragTutorialCard.accept(e));
+    tutorialCard.setOnMouseReleased(e -> endTutorialDrag.accept(e));
+
+    StackPane.setAlignment(tutorialCard, Pos.TOP_CENTER);
+    StackPane.setMargin(tutorialCard, new Insets(96, 0, 0, 0));
+    tutorialOverlay.getChildren().addAll(tutorialShadeLayer, tutorialCard);
+
+    tutorialOverlay.widthProperty().addListener((obs, oldV, newV) -> {
+      if (isTutorialVisible()) {
+        updateTutorialStep();
+      }
+    });
+    tutorialOverlay.heightProperty().addListener((obs, oldV, newV) -> {
+      if (isTutorialVisible()) {
+        updateTutorialStep();
+      }
+    });
+  }
+
+  private void setTutorialBodyText(String text) {
+    if (tutorialBodyFrame == null || tutorialBodyLbl == null) {
+      return;
+    }
+    tutorialBodyFrame.getChildren().setAll(tutorialBodyLbl);
+    tutorialBodyLbl.setText(text != null ? text : "");
+  }
+
+  private void setTutorialTitleText(String title) {
+    if (tutorialTitleLbl == null) {
+      return;
+    }
+    tutorialTitleLbl.setGraphic(null);
+    tutorialTitleLbl.setContentDisplay(ContentDisplay.TEXT_ONLY);
+    tutorialTitleLbl.setStyle("");
+    tutorialTitleLbl.setText(title != null ? title : "");
+  }
+
+  private void setTutorialFinanceBody() {
+    if (tutorialBodyFrame == null || tutorialBodyRichFlow == null) {
+      return;
+    }
+    tutorialBodyRichFlow.getChildren().setAll(
+        tutorialBodyText("The money bar keeps your core numbers in view.\n"),
+        tutorialBodyAccent("Cash", "game-tutorial-body-cash"),
+        tutorialBodyText(" is what you can spend right now.\n"),
+        tutorialBodyAccent("Portfolio", "game-tutorial-body-portfolio"),
+        tutorialBodyText(" is the current market value of the shares you hold.\n"),
+        tutorialBodyAccent("Net Worth", "game-tutorial-body-networth"),
+        tutorialBodyText(" is the two combined."));
+    tutorialBodyFrame.getChildren().setAll(tutorialBodyRichFlow);
+  }
+
+  private Text tutorialBodyText(String value) {
+    Text text = new Text(value);
+    text.getStyleClass().add("game-tutorial-body-text");
+    return text;
+  }
+
+  private Text tutorialBodyAccent(String value, String styleClass) {
+    Text text = tutorialBodyText(value);
+    text.getStyleClass().add(styleClass);
+    return text;
+  }
+
+  private int tutorialStepCount() {
+    return 8;
+  }
+
+  private void updateTutorialStep() {
+    if (tutorialOverlay == null) {
+      return;
+    }
+    refreshTutorialProgressFlags();
+    int step = Math.max(0, Math.min(tutorialStepCount() - 1, tutorialStepIndex));
+    tutorialStepIndex = step;
+    if (tutorialCard != null && tutorialCardDragStep != step) {
+      tutorialCardDragStep = step;
+      tutorialCard.setTranslateX(0);
+      tutorialCard.setTranslateY(0);
+      tutorialCardDragging = false;
+      tutorialCard.setCursor(Cursor.DEFAULT);
+    }
+    int humanStep = step + 1;
+    tutorialStepLbl.setText(humanStep + " / " + tutorialStepCount());
+    tutorialBackBtn.setDisable(step == 0);
+    tutorialNextBtn.setText(step == tutorialStepCount() - 1 ? "Finish" : "Next");
+    tutorialNextBtn.setDisable(!isTutorialStepComplete(step));
+
+    boolean onLast = step == tutorialStepCount() - 1;
+    tutorialNavRow.setVisible(!onLast);
+    tutorialNavRow.setManaged(!onLast);
+    tutorialFinishRow.setVisible(onLast);
+    tutorialFinishRow.setManaged(onLast);
+    tutorialKeepProgressBtn.setVisible(onLast);
+    tutorialKeepProgressBtn.setManaged(onLast);
+    tutorialStartFreshBtn.setVisible(onLast);
+    tutorialStartFreshBtn.setManaged(onLast);
+
+    clearTutorialHighlight();
+    Node stepTarget = null;
+    String completionHint = "";
+    String bodyText = "";
+    boolean financeBody = false;
+    switch (step) {
+      case 0 -> {
+        setTutorialTitleText("After Hours Demo");
+        bodyText =
+            "This guide is interactive and you can close it anytime. \nIf you don't want to see it again, just check the box below.";
+      }
+      case 1 -> {
+        setTutorialTitleText("Find Stocks");
+        bodyText =
+            "Use search, filters, and sorting in the left panel. Click a stock to inspect it and open trading details.";
+        stepTarget = tutorialStockAreaTarget;
+        completionHint = "Select a stock you want to invest in to continue.";
+      }
+      case 2 -> {
+        setTutorialTitleText("First Trade");
+        bodyText =
+          "Use the highlighted trade panel to buy your first share(s). Start with the buy controls.";
+        stepTarget = tutorialTradeAreaTarget;
+        completionHint = "Complete one transaction to continue.";
+      }
+      case 3 -> {
+        setTutorialTitleText("Advance to Next Week");
+        bodyText =
+            "Click the \u25B6 Play button to advance to the next week and simulate market movement.";
+        stepTarget = tutorialNextWeekBtnTarget;
+        completionHint = "Advance at least one week to continue.";
+        if (!tutorialSpikeScheduled) {
+          gameController.scheduleTutorialMomentumNudge();
+          tutorialSpikeScheduled = true;
+        }
+      }
+      case 4 -> {
+        setTutorialTitleText("Read Your Totals");
+        financeBody = true;
+        stepTarget = tutorialFinanceOverviewTarget;
+      }
+      case 5 -> {
+        setTutorialTitleText("Portfolio");
+        bodyText =
+          "Hold + Drag the selected bar below to open up your portfolio.\nThis is where you can track your holdings and see their performance.\n\nYou can also open a full summary by clicking the header.";
+        stepTarget = tutorialPortfolioAreaTarget;
+        completionHint = tutorialTouchedPortfolio
+            ? "Inspect the portfolio, then continue."
+            : "Touch the resize bar to continue.";
+      }
+      case 6 -> {
+        if (tutorialUseMoversStep) {
+          setTutorialTitleText("Market Movers");
+          if (tutorialUseTwoStockMoversCopy) {
+            bodyText =
+            "With two stocks, the movers list is short. Use it to see the top mover this week and compare direction.";
+          } else {
+            bodyText =
+            "Open Market Movers to inspect top gainers and losers. This helps you spot momentum and analyze the market before trading.";
+          }
+          stepTarget = tutorialMarketMoversBtnTarget;
+          completionHint = "Open Market Movers to continue.";
+        } else {
+          setTutorialTitleText("Track Price Change");
+          bodyText =
+              "With a single-stock market, focus on week-to-week price change and how it affects your holdings.";
+          stepTarget = tutorialNextWeekBtnTarget;
+          completionHint = "Advance one week to continue.";
+        }
+      }
+      case 7 -> {
+        setTutorialTitleText("You're On Your Own Now");
+        bodyText =
+        "This was just a sample. Make your move. \nContinue this run, or reset the session to start fresh.";
+      }
+      default -> {
+      }
+    }
+    if (financeBody) {
+      setTutorialFinanceBody();
+    } else {
+      if (!completionHint.isEmpty() && !isTutorialStepComplete(step)) {
+        bodyText = bodyText + "\n\n" + completionHint;
+      }
+      setTutorialBodyText(bodyText);
+    }
+    setTutorialBackdropBlur(step == 0);
+    if (step == 0) {
+      showTutorialBackdropOnly();
+      centerTutorialCard();
+    } else if (step == 5 && tutorialTouchedPortfolio) {
+      clearTutorialHighlight();
+      positionTutorialCard(null);
+    } else if (step == 2 || step == 5) {
+      highlightTutorialNode(stepTarget);
+      positionTutorialCard(null);
+    } else {
+      highlightTutorialNode(stepTarget);
+      positionTutorialCard(stepTarget);
+    }
+    tutorialOverlay.toFront();
+  }
+
+  private void centerTutorialCard() {
+    if (tutorialCard == null) {
+      return;
+    }
+    StackPane.setAlignment(tutorialCard, Pos.CENTER);
+    StackPane.setMargin(tutorialCard, Insets.EMPTY);
+  }
+
+  private void refreshTutorialProgressFlags() {
+    tutorialDidSelectStock = tutorialDidSelectStock || selectedStock.get() != null;
+    tutorialDidTrade = tutorialDidTrade
+        || gameController.getTransactionCount() > tutorialStartTransactionCount;
+    tutorialDidAdvanceWeek = tutorialDidAdvanceWeek
+        || gameController.getCurrentWeek() > tutorialStartWeek;
+  }
+
+  private boolean isTutorialStepComplete(int step) {
+    return switch (step) {
+      case 0, 4, 7 -> true;
+      case 1 -> tutorialDidSelectStock;
+      case 2 -> tutorialDidTrade;
+      case 3 -> tutorialDidAdvanceWeek;
+      case 5 -> tutorialTouchedPortfolio;
+      case 6 -> tutorialUseMoversStep ? tutorialOpenedMovers : tutorialDidAdvanceWeek;
+      default -> true;
+    };
+  }
+
+  private void refreshTutorialProgress() {
+    if (!isTutorialVisible() || tutorialSuspendDepth > 0) {
+      return;
+    }
+    tutorialOverlay.toFront();
+    refreshTutorialProgressFlags();
+    maybeAdvanceTutorialAfterTrade();
+    updateTutorialStep();
+  }
+
+  private void refreshTutorialLayout() {
+    if (!isTutorialVisible() || tutorialSuspendDepth > 0) {
+      return;
+    }
+    tutorialOverlay.toFront();
+    updateTutorialStep();
+  }
+
+  private void maybeAdvanceTutorialAfterTrade() {
+    if (tutorialStepIndex == 2 && tutorialDidTrade) {
+      tutorialStepIndex = 3;
+    } else if (tutorialStepIndex == 3 && tutorialDidAdvanceWeek) {
+      tutorialStepIndex = 4;
+    }
+  }
+
+  private void suspendTutorialOverlay() {
+    if (tutorialOverlay == null || overlayRef == null) {
+      return;
+    }
+    if (tutorialSuspendDepth == 0) {
+      tutorialWasVisibleBeforeSuspend = isTutorialVisible();
+      if (tutorialWasVisibleBeforeSuspend) {
+        clearTutorialHighlight();
+        overlayRef.getChildren().remove(tutorialOverlay);
+      }
+      setTutorialBackdropBlur(false);
+    }
+    tutorialSuspendDepth++;
+  }
+
+  private void resumeTutorialOverlay() {
+    if (tutorialSuspendDepth <= 0) {
+      return;
+    }
+    tutorialSuspendDepth--;
+    if (tutorialSuspendDepth > 0 || !tutorialWasVisibleBeforeSuspend || overlayRef == null) {
+      return;
+    }
+    tutorialWasVisibleBeforeSuspend = false;
+    if (!overlayRef.getChildren().contains(tutorialOverlay)) {
+      overlayRef.getChildren().add(tutorialOverlay);
+    }
+    tutorialOverlay.toFront();
+    Platform.runLater(this::updateTutorialStep);
+  }
+
+  private void setTutorialBackdropBlur(boolean enabled) {
+    if (rootRef == null) {
+      return;
+    }
+    rootRef.setEffect(enabled ? tutorialBackdropBlur : null);
+  }
+
+  private void showTutorialBackdropOnly() {
+    if (overlayRef == null) {
+      return;
+    }
+    clearTutorialHighlight();
+    double overlayW = overlayRef.getWidth();
+    double overlayH = overlayRef.getHeight();
+    if (overlayW <= 1 || overlayH <= 1) {
+      return;
+    }
+    tutorialShadeTop.setVisible(true);
+    tutorialShadeTop.setX(0);
+    tutorialShadeTop.setY(0);
+    tutorialShadeTop.setWidth(overlayW);
+    tutorialShadeTop.setHeight(overlayH);
+  }
+
+  private Bounds getTutorialTargetBounds(Node target) {
+    if (overlayRef == null || target == null) {
+      return null;
+    }
+    if (tutorialStepIndex == 5) {
+      Bounds portfolioBounds = getPortfolioTutorialBounds();
+      if (portfolioBounds != null) {
+        return portfolioBounds;
+      }
+    }
+    return toOverlayBounds(target);
+  }
+
+  private Bounds getPortfolioTutorialBounds() {
+    if (tutorialTouchedPortfolio) {
+      return null;
+    }
+
+    Bounds handleBounds = toOverlayBounds(tutorialPortfolioResizeHandleTarget);
+    if (handleBounds == null) {
+      return null;
+    }
+
+    double x = handleBounds.getMinX() + 28;
+    double width = Math.max(24, handleBounds.getWidth() - 56);
+    double baseHighlightHeight = Math.max(8, Math.min(14, handleBounds.getHeight()));
+    double highlightHeight = baseHighlightHeight * 1.5;
+    double centerY = handleBounds.getMinY() + handleBounds.getHeight() * 0.5;
+    double y = centerY - highlightHeight * 0.5;
+    return new BoundingBox(x, y, width, highlightHeight);
+  }
+
+  private Bounds toOverlayBounds(Node target) {
+    if (overlayRef == null || target == null) {
+      return null;
+    }
+    Bounds sceneBounds = target.localToScene(target.getBoundsInLocal());
+    return sceneBounds == null ? null : overlayRef.sceneToLocal(sceneBounds);
+  }
+
+  private void highlightTutorialNode(Node target) {
+    clearTutorialHighlight();
+    Bounds overlayBounds = getTutorialTargetBounds(target);
+    if (overlayBounds == null) {
+      return;
+    }
+
+    double overlayW = overlayRef.getWidth();
+    double overlayH = overlayRef.getHeight();
+    if (overlayW <= 1 || overlayH <= 1) {
+      return;
+    }
+
+    double pad = tutorialStepIndex == 5 ? 2 : 10;
+    double x = Math.max(0, overlayBounds.getMinX() - pad);
+    double y = Math.max(0, overlayBounds.getMinY() - pad);
+    double w = Math.min(overlayW - x, overlayBounds.getWidth() + pad * 2);
+    double h = Math.min(overlayH - y, overlayBounds.getHeight() + pad * 2);
+
+    double minW = tutorialStepIndex == 5 ? 24 : (target == tutorialNextWeekBtnTarget ? 74 : 120);
+    double minH = tutorialStepIndex == 5 ? 10 : 56;
+    if (w < minW) {
+      double centerX = x + w * 0.5;
+      x = Math.max(0, Math.min(overlayW - minW, centerX - minW * 0.5));
+      w = Math.min(minW, overlayW - x);
+    }
+    if (h < minH) {
+      double centerY = y + h * 0.5;
+      y = Math.max(0, Math.min(overlayH - minH, centerY - minH * 0.5));
+      h = Math.min(minH, overlayH - y);
+    }
+
+    tutorialShadeTop.setVisible(true);
+    tutorialShadeLeft.setVisible(true);
+    tutorialShadeRight.setVisible(true);
+    tutorialShadeBottom.setVisible(true);
+    tutorialSpotlightRing.setVisible(true);
+
+    tutorialShadeTop.setX(0);
+    tutorialShadeTop.setY(0);
+    tutorialShadeTop.setWidth(overlayW);
+    tutorialShadeTop.setHeight(y);
+
+    tutorialShadeLeft.setX(0);
+    tutorialShadeLeft.setY(y);
+    tutorialShadeLeft.setWidth(x);
+    tutorialShadeLeft.setHeight(h);
+
+    tutorialShadeRight.setX(x + w);
+    tutorialShadeRight.setY(y);
+    tutorialShadeRight.setWidth(Math.max(0, overlayW - (x + w)));
+    tutorialShadeRight.setHeight(h);
+
+    tutorialShadeBottom.setX(0);
+    tutorialShadeBottom.setY(y + h);
+    tutorialShadeBottom.setWidth(overlayW);
+    tutorialShadeBottom.setHeight(Math.max(0, overlayH - (y + h)));
+
+    tutorialSpotlightRing.setX(x);
+    tutorialSpotlightRing.setY(y);
+    tutorialSpotlightRing.setWidth(w);
+    tutorialSpotlightRing.setHeight(h);
+
+  }
+
+  private void positionTutorialCard(Node target) {
+    if (tutorialCard == null || overlayRef == null) {
+      return;
+    }
+    if (target == null) {
+      StackPane.setAlignment(tutorialCard, Pos.TOP_CENTER);
+      StackPane.setMargin(tutorialCard, new Insets(96, 0, 0, 0));
+      return;
+    }
+    Bounds b = getTutorialTargetBounds(target);
+    if (b == null) {
+      return;
+    }
+
+    double overlayW = overlayRef.getWidth();
+    double overlayH = overlayRef.getHeight();
+    if (overlayW <= 1 || overlayH <= 1) {
+      return;
+    }
+
+    double cardW = tutorialCard.prefWidth(-1);
+    if (cardW <= 0 || Double.isNaN(cardW)) {
+      cardW = 520;
+    }
+    if (target == tutorialMoversTabBarTarget || target == tutorialMoversCardTarget) {
+      cardW = Math.min(cardW, 380);
+    }
+    double cardH = tutorialCard.prefHeight(cardW);
+    if (cardH <= 0 || Double.isNaN(cardH)) {
+      cardH = 260;
+    }
+
+    double centerX = b.getMinX() + (b.getWidth() - cardW) * 0.5;
+    boolean wideTarget = b.getWidth() >= Math.min(360, overlayW * 0.34);
+    boolean lowTarget = b.getMaxY() >= overlayH * 0.62;
+    boolean highTarget = b.getMinY() <= overlayH * 0.25;
+    boolean tradeStep = tutorialStepIndex == 2;
+    boolean portfolioStep = tutorialStepIndex == 5;
+
+    if (tradeStep) {
+      double chosenX = clamp(centerX, 16, Math.max(16, overlayW - cardW - 16));
+      double alignedY = clamp(b.getMinY() - cardH - 18, 20, Math.max(20, overlayH - cardH - 16));
+      StackPane.setAlignment(tutorialCard, Pos.TOP_LEFT);
+      StackPane.setMargin(tutorialCard, new Insets(alignedY, 0, 0, chosenX));
+      return;
+    }
+
+    if (portfolioStep) {
+      double chosenX = clamp(centerX, 16, Math.max(16, overlayW - cardW - 16));
+      double alignedY = clamp(b.getMinY() - cardH - 14, 20, Math.max(20, overlayH - cardH - 16));
+      StackPane.setAlignment(tutorialCard, Pos.TOP_LEFT);
+      StackPane.setMargin(tutorialCard, new Insets(alignedY, 0, 0, chosenX));
+      return;
+    }
+
+    double[][] candidates;
+    if (target == tutorialMoversTabBarTarget || target == tutorialMoversCardTarget) {
+      candidates = new double[][] {
+          {b.getMaxX() + 22, b.getMinY() - 8},
+          {b.getMinX() - cardW - 22, b.getMinY() - 8},
+          {centerX, b.getMaxY() + 22},
+          {centerX, b.getMinY() - cardH - 22}
+      };
+    } else if (wideTarget || lowTarget) {
+      candidates = new double[][] {
+          {centerX, b.getMinY() - cardH - 22},
+          {centerX, b.getMaxY() + 22},
+          {b.getMinX() - cardW - 22, b.getMinY()},
+          {b.getMaxX() + 22, b.getMinY()}
+      };
+    } else if (highTarget) {
+      candidates = new double[][] {
+          {b.getMaxX() + 18, b.getMinY()},
+          {b.getMinX() - cardW - 18, b.getMinY()},
+          {centerX, b.getMaxY() + 18},
+          {centerX, b.getMinY() - cardH - 18}
+      };
+    } else {
+      candidates = new double[][] {
+          {b.getMaxX() + 18, b.getMinY()},
+          {b.getMinX() - cardW - 18, b.getMinY()},
+          {centerX, b.getMinY() - cardH - 18},
+          {centerX, b.getMaxY() + 18}
+      };
+    }
+
+    double chosenX = Math.max(16, (overlayW - cardW) * 0.5);
+    double chosenY = 96;
+    boolean found = false;
+    for (double[] candidate : candidates) {
+      double cx = clamp(candidate[0], 16, Math.max(16, overlayW - cardW - 16));
+      double cy = clamp(candidate[1], 20, Math.max(20, overlayH - cardH - 16));
+      Bounds cardBounds = new BoundingBox(cx, cy, cardW, cardH);
+      boolean overlapsTarget = cardBounds.intersects(
+          b.getMinX() - 10,
+          b.getMinY() - 10,
+          b.getWidth() + 20,
+          b.getHeight() + 20);
+      if (!overlapsTarget) {
+        chosenX = cx;
+        chosenY = cy;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      chosenX = clamp(centerX, 16, Math.max(16, overlayW - cardW - 16));
+      if (lowTarget) {
+        chosenY = clamp(b.getMinY() - cardH - 18, 20, Math.max(20, overlayH - cardH - 16));
+      } else {
+        chosenY = clamp(b.getMaxY() + 16, 20, Math.max(20, overlayH - cardH - 16));
+      }
+    }
+
+    if (tutorialStepIndex == 6) {
+      chosenX = clamp(chosenX - 200, 16, Math.max(16, overlayW - cardW - 16));
+    }
+
+    StackPane.setAlignment(tutorialCard, Pos.TOP_LEFT);
+    StackPane.setMargin(tutorialCard, new Insets(chosenY, 0, 0, chosenX));
+  }
+
+  private void clearTutorialHighlight() {
+    if (tutorialShadeTop != null) {
+      tutorialShadeTop.setVisible(false);
+      tutorialShadeLeft.setVisible(false);
+      tutorialShadeRight.setVisible(false);
+      tutorialShadeBottom.setVisible(false);
+      tutorialSpotlightRing.setVisible(false);
+    }
   }
 
   public GameUiState getUiState() {
@@ -949,7 +1912,8 @@ public final class GameView implements GameViewInterface {
       fadeOutSpikePopup(popup, ttl);
     });
 
-    spikePopupList.getChildren().add(popup);
+    spikePopupList.getChildren().add(0, popup);
+    spikePopupScroll.setVvalue(0.0);
     spikePopupTimers.add(ttl);
     ttl.play();
   }
@@ -992,7 +1956,7 @@ public final class GameView implements GameViewInterface {
 
   private void installPortfolioResize(VBox rightPanel, VBox portfolioSection,
                                       Region portfolioResizeHandle, double initialRatio) {
-    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 0.78;
+    this.portfolioDividerRatio = initialRatio > 0 ? initialRatio : 1.0;
 
     final double[] dragStartY = {0};
     final double[] dragStartRatio = {portfolioDividerRatio};
@@ -1053,6 +2017,10 @@ public final class GameView implements GameViewInterface {
     portfolioSection.setMinHeight(minPortfolioHeight);
     portfolioSection.setPrefHeight(portfolioHeight);
     portfolioSection.setMaxHeight(portfolioHeight);
+
+    if (isTutorialVisible() && tutorialStepIndex == 5) {
+      updateTutorialStep();
+    }
   }
 
   private static double snapToPixel(double value) {
@@ -1095,6 +2063,7 @@ public final class GameView implements GameViewInterface {
     applyFilter();
     rebuildDetail();
     maybeShowSpikePopups();
+    refreshTutorialProgress();
   }
 
   private ShareSelectionKey capturePortfolioSelection() {
@@ -1175,13 +2144,20 @@ public final class GameView implements GameViewInterface {
   private void rebuildFilterChips() {
     filterChipsPane.getChildren().clear();
 
-    // ── "All" chip always first (clears active filters) ──────────────────
-    Button allChip = new Button("All");
+    // ── "Clear" chip always first (clears active filters) ────────────────
+    Button allChip = new Button("Clear");
     allChip.getStyleClass().add("stock-filter-chip");
+    allChip.getStyleClass().add("stock-filter-chip-clear");
     if (activeFilters.isEmpty()) {
       allChip.getStyleClass().add("stock-filter-chip-active");
     }
+    boolean allDisabled = activeFilters.isEmpty();
+    setVisualDisabled(allChip, allDisabled, "stock-filter-chip-disabled");
+    allChip.setTooltip(null);
     allChip.setOnAction(ev -> {
+      if (allChip.getStyleClass().contains("stock-filter-chip-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       activeFilters.clear();
       rebuildFilterChips();
@@ -1204,7 +2180,19 @@ public final class GameView implements GameViewInterface {
         chip.getStyleClass().add("stock-filter-chip-active");
       }
 
+      boolean applicable = canApplyFilterChip(key);
+      if (!applicable && !activeFilters.contains(key)) {
+        setVisualDisabled(chip, true, "stock-filter-chip-disabled");
+        chip.setTooltip(buildFilterHintTooltip(filterDisabledReason(key)));
+      } else {
+        setVisualDisabled(chip, false, "stock-filter-chip-disabled");
+        chip.setTooltip(null);
+      }
+
       chip.setOnAction(ev -> {
+        if (chip.getStyleClass().contains("stock-filter-chip-disabled")) {
+          return;
+        }
         notifyPanelOpen();
         if (activeFilters.contains(key)) {
           activeFilters.remove(key);
@@ -1217,6 +2205,9 @@ public final class GameView implements GameViewInterface {
 
       // ── Drag to reorder ───────────────────────────────────────────────
       chip.setOnDragDetected(ev -> {
+        if (chip.getStyleClass().contains("stock-filter-chip-disabled")) {
+          return;
+        }
         Dragboard db = chip.startDragAndDrop(TransferMode.MOVE);
         ClipboardContent cc = new ClipboardContent();
         cc.putString(key);
@@ -1303,6 +2294,94 @@ public final class GameView implements GameViewInterface {
     }
 
     rebuildStockList(sortCmp);
+    updateSortChipAvailability();
+    rebuildFilterChips();
+  }
+
+  private boolean canApplyFilterChip(String key) {
+    String lower = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
+    return allStocks.stream().anyMatch(s -> {
+      boolean textMatch = lower.isEmpty()
+          || s.getSymbol().toLowerCase().contains(lower)
+          || s.getCompany().toLowerCase().contains(lower);
+      return textMatch && matchesFilter(s, key);
+    });
+  }
+
+  private String filterDisabledReason(String key) {
+    return switch (key) {
+      case "FAVORITES" -> "No favorites in the current search";
+      case "OWNED" -> "No owned stocks in the current search";
+      case "UP" -> "No rising stocks in the current search";
+      case "DOWN" -> "No falling stocks in the current search";
+      default -> "Nothing to filter here";
+    };
+  }
+
+  private Tooltip buildLockedHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("profile-avatar-locked-tooltip");
+    return tooltip;
+  }
+
+  private Tooltip buildFilterHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("game-filter-tooltip");
+    return tooltip;
+  }
+
+  private Tooltip buildSortHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("game-sort-tooltip");
+    return tooltip;
+  }
+
+  private void updateSortChipAvailability() {
+    if (sortNameChip == null || sortPriceChip == null || sortChangeChip == null) {
+      return;
+    }
+
+    int visibleCount = filteredStocks.size();
+    boolean hasMultiple = visibleCount > 1;
+
+    setVisualDisabled(sortNameChip, !hasMultiple, "stock-sort-chip-disabled");
+    sortNameChip.setTooltip(!hasMultiple
+      ? buildSortHintTooltip("Need at least 2 visible stocks to sort")
+      : null);
+
+    boolean hasDifferentPrices = hasMultiple
+        && filteredStocks.stream().map(Stock::getSalesPrice).distinct().limit(2).count() > 1;
+    setVisualDisabled(sortPriceChip, !hasDifferentPrices, "stock-sort-chip-disabled");
+    sortPriceChip.setTooltip(!hasDifferentPrices
+      ? buildSortHintTooltip(hasMultiple
+        ? "All stocks have the same price"
+        : "Need at least 2 visible stocks to sort")
+      : null);
+
+    boolean hasDifferentChanges = hasMultiple
+        && filteredStocks.stream().map(Stock::percentageChange).distinct().limit(2).count() > 1;
+    setVisualDisabled(sortChangeChip, !hasDifferentChanges, "stock-sort-chip-disabled");
+    sortChangeChip.setTooltip(!hasDifferentChanges
+      ? buildSortHintTooltip(hasMultiple
+        ? "All stocks have the same change"
+        : "Need at least 2 visible stocks to sort")
+      : null);
+  }
+
+  private void setVisualDisabled(Button button, boolean disabled, String styleClass) {
+    if (disabled) {
+      if (!button.getStyleClass().contains(styleClass)) {
+        button.getStyleClass().add(styleClass);
+      }
+    } else {
+      button.getStyleClass().remove(styleClass);
+    }
   }
 
   private boolean matchesFilter(Stock s, String filter) {
@@ -1787,10 +2866,10 @@ public final class GameView implements GameViewInterface {
 
     HBox tradeRow = new HBox(8, buyColumn, selectorColumn, sellColumn);
     tradeRow.setAlignment(Pos.CENTER);
-
     VBox tradePanel = new VBox(0, tradeRow);
     tradePanel.getStyleClass().add("trade-panel");
     tradePanel.setAlignment(Pos.CENTER);
+    this.tutorialTradeAreaTarget = tradePanel;
 
     // ── Graph + header ────────────────────────────────────────────────────
     Pane graphPlaceholder = buildPriceChart(stock);
@@ -2110,6 +3189,7 @@ public final class GameView implements GameViewInterface {
 
   public void showBulkTradeConfirm(String action, BigDecimal quantity, BigDecimal gross,
                                    BigDecimal fee, BigDecimal tax, BigDecimal total) {
+    suspendTutorialOverlay();
     Label iconLbl = new Label("\u2198");
     iconLbl.getStyleClass().add("dialog-action-icon-sell");
     Label titleLbl = new Label("ORDER SUMMARY");
@@ -2156,7 +3236,15 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> overlayRef.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      overlayRef.getChildren().remove(popup);
+      resumeTutorialOverlay();
+      refreshTutorialProgressFlags();
+      maybeAdvanceTutorialAfterTrade();
+      if (isTutorialVisible()) {
+        updateTutorialStep();
+      }
+    };
     cancelBtn.setOnAction(ev -> dismiss.run());
     confirmBtn.setOnAction(ev -> {
       dismiss.run();
@@ -2176,6 +3264,7 @@ public final class GameView implements GameViewInterface {
 
   public void showBulkReceipt(String action, BigDecimal quantity, BigDecimal total, BigDecimal fee,
                               BigDecimal tax, BigDecimal newCash) {
+    suspendTutorialOverlay();
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
     Label titleLbl = new Label("ORDER COMPLETE");
@@ -2212,7 +3301,14 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> overlayRef.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      overlayRef.getChildren().remove(popup);
+      resumeTutorialOverlay();
+      if (isTutorialVisible() && tutorialStepIndex == 2 && isTutorialStepComplete(2)) {
+        tutorialStepIndex = 3;
+        updateTutorialStep();
+      }
+    };
     doneBtn.setOnAction(ev -> dismiss.run());
     backdrop.setOnMouseClicked(ev -> dismiss.run());
     popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
@@ -2243,6 +3339,7 @@ public final class GameView implements GameViewInterface {
 
   public void showTradeConfirm(String action, Stock stock, BigDecimal quantity,
                                BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total) {
+    suspendTutorialOverlay();
     boolean isBuy = action != null && action.startsWith("BUY");
 
     Label iconLbl = new Label(isBuy ? "\u2197" : "\u2198");
@@ -2294,7 +3391,15 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> overlayRef.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      overlayRef.getChildren().remove(popup);
+      resumeTutorialOverlay();
+      refreshTutorialProgressFlags();
+      maybeAdvanceTutorialAfterTrade();
+      if (isTutorialVisible()) {
+        updateTutorialStep();
+      }
+    };
     cancelBtn.setOnAction(ev -> dismiss.run());
     confirmBtn.setOnAction(ev -> {
       dismiss.run();
@@ -2363,12 +3468,12 @@ public final class GameView implements GameViewInterface {
     // ── Benefits list ───────────────────────────────────────────────────
     List<String[]> benefits = switch (newStatus) {
       case INVESTOR -> List.of(
-          new String[]{"\uD83D\uDCB0", "Tax Rate", "25%  (was 30%)"},
+          new String[]{"\uD83D\uDCB0", "Income Tax Rate", "25%  (was 30%)"},
           new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D71.5 max shares per stock"},
           new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
       );
       case SPECULATOR -> List.of(
-          new String[]{"\uD83D\uDCB0", "Tax Rate", "20%  (was 25%)"},
+          new String[]{"\uD83D\uDCB0", "Income Tax Rate", "20%  (was 25%)"},
           new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D72.0 max shares per stock"},
           new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
       );
@@ -2552,11 +3657,12 @@ public final class GameView implements GameViewInterface {
   }
 
   private void showMarketMovers() {
+    suspendTutorialOverlay();
     GaussianBlur blur = new GaussianBlur(0);
     rootRef.setEffect(blur);
 
     Region dimBackdrop = new Region();
-    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.getStyleClass().add("backdrop");
     dimBackdrop.setOpacity(0);
 
     Label titleLbl = new Label("\uD83D\uDCC8  Market Movers");
@@ -2578,7 +3684,41 @@ public final class GameView implements GameViewInterface {
     for (Button t : new Button[] {tab1w, tab4w, tab10w, tabAll}) {
       t.getStyleClass().add("movers-tab");
     }
-    tab1w.getStyleClass().add("movers-tab-active");
+
+    int weeksAdvanced = Math.max(0, gameController.getCurrentWeek() - 1);
+    boolean lock1w = weeksAdvanced < 1;
+    boolean lock4w = weeksAdvanced < 4;
+    boolean lock10w = weeksAdvanced < 10;
+    boolean lockAll = weeksAdvanced < 2;
+
+    setVisualDisabled(tab1w, lock1w, "movers-tab-disabled");
+    setVisualDisabled(tab4w, lock4w, "movers-tab-disabled");
+    setVisualDisabled(tab10w, lock10w, "movers-tab-disabled");
+    setVisualDisabled(tabAll, lockAll, "movers-tab-disabled");
+
+    tab1w.setTooltip(lock1w
+      ? buildLockedHintTooltip("Need at least 1 completed week")
+      : null);
+    tab4w.setTooltip(lock4w
+      ? buildLockedHintTooltip("Need at least 4 completed weeks")
+      : null);
+    tab10w.setTooltip(lock10w
+      ? buildLockedHintTooltip("Need at least 10 completed weeks")
+      : null);
+    tabAll.setTooltip(lockAll
+      ? buildLockedHintTooltip("Need at least 2 completed weeks")
+      : null);
+
+    Runnable clearActiveTabs = () -> {
+      tab1w.getStyleClass().remove("movers-tab-active");
+      tab4w.getStyleClass().remove("movers-tab-active");
+      tab10w.getStyleClass().remove("movers-tab-active");
+      tabAll.getStyleClass().remove("movers-tab-active");
+    };
+
+    if (!lock1w) {
+      tab1w.getStyleClass().add("movers-tab-active");
+    }
     HBox tabBar = new HBox(4, tab1w, tab4w, tab10w, tabAll);
     tabBar.getStyleClass().add("movers-tab-bar");
 
@@ -2612,39 +3752,48 @@ public final class GameView implements GameViewInterface {
     rebuildRef[0].run();
 
     tab1w.setOnAction(ev -> {
+      if (tab1w.getStyleClass().contains("movers-tab-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "1W";
+      clearActiveTabs.run();
       tab1w.getStyleClass().add("movers-tab-active");
-      tab4w.getStyleClass().remove("movers-tab-active");
-      tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
+      refreshTutorialProgress();
     });
     tab4w.setOnAction(ev -> {
+      if (tab4w.getStyleClass().contains("movers-tab-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "4W";
+      clearActiveTabs.run();
       tab4w.getStyleClass().add("movers-tab-active");
-      tab1w.getStyleClass().remove("movers-tab-active");
-      tab10w.getStyleClass().remove("movers-tab-active");
-      tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
+      refreshTutorialProgress();
     });
     tab10w.setOnAction(ev -> {
+      if (tab10w.getStyleClass().contains("movers-tab-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "10W";
+      clearActiveTabs.run();
       tab10w.getStyleClass().add("movers-tab-active");
-      tab1w.getStyleClass().remove("movers-tab-active");
-      tab4w.getStyleClass().remove("movers-tab-active");
-      tabAll.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
+      refreshTutorialProgress();
     });
     tabAll.setOnAction(ev -> {
+      if (tabAll.getStyleClass().contains("movers-tab-disabled")) {
+        return;
+      }
       notifyPanelOpen();
       tabRef[0] = "All";
+      clearActiveTabs.run();
       tabAll.getStyleClass().add("movers-tab-active");
-      tab1w.getStyleClass().remove("movers-tab-active");
-      tab4w.getStyleClass().remove("movers-tab-active");
-      tab10w.getStyleClass().remove("movers-tab-active");
       rebuildRef[0].run();
+      refreshTutorialProgress();
     });
 
     VBox card = new VBox(0, titleRow, tabBar, columns);
@@ -2656,6 +3805,9 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(dimBackdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
     overlayRef.getChildren().add(popup);
+    tutorialMoversCardTarget = card;
+    tutorialMoversTabBarTarget = tabBar;
+    refreshTutorialProgress();
 
     Timeline blurIn = new Timeline(
         new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
@@ -2691,6 +3843,13 @@ public final class GameView implements GameViewInterface {
       blurOut.setOnFinished(ev -> {
         overlayRef.getChildren().remove(popup);
         rootRef.setEffect(null);
+        tutorialMoversCardTarget = null;
+        tutorialMoversTabBarTarget = null;
+        if (tutorialUseMoversStep && tutorialStepIndex == 6) {
+          tutorialStepIndex = 7;
+        }
+        resumeTutorialOverlay();
+        refreshTutorialProgress();
       });
     };
     dismissRef[0] = dismiss;
@@ -3065,7 +4224,7 @@ public final class GameView implements GameViewInterface {
     rootRef.setEffect(blur);
 
     Region dimBackdrop = new Region();
-    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.getStyleClass().add("backdrop");
     dimBackdrop.setOpacity(0);
 
     StackPane popup = new StackPane(dimBackdrop, card);
@@ -3222,7 +4381,13 @@ public final class GameView implements GameViewInterface {
     closeBtn.getStyleClass().add("market-movers-close-btn");
     Region titleSpacer = new Region();
     HBox.setHgrow(titleSpacer, Priority.ALWAYS);
-    HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+    Button popupSellAllBtn = new Button("\u2198 Sell All");
+    popupSellAllBtn.getStyleClass().add("sell-all-holdings-button");
+    popupSellAllBtn.setOnAction(ev -> {
+      if (dismissRef[0] != null) dismissRef[0].run();
+      gameController.handleSellAll(overlayRef);
+    });
+    HBox titleRow = new HBox(12, titleLbl, titleSpacer, popupSellAllBtn, closeBtn);
     titleRow.getStyleClass().add("market-movers-header");
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -3238,7 +4403,7 @@ public final class GameView implements GameViewInterface {
     rootRef.setEffect(blur);
 
     Region dimBackdrop = new Region();
-    dimBackdrop.getStyleClass().add("market-movers-backdrop");
+    dimBackdrop.getStyleClass().add("backdrop");
     dimBackdrop.setOpacity(0);
 
     StackPane popup = new StackPane(dimBackdrop, card);
@@ -3801,6 +4966,7 @@ public final class GameView implements GameViewInterface {
 
   public void showReceipt(String action, Stock stock, BigDecimal quantity,
                           BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
+    suspendTutorialOverlay();
     boolean isBuy = action != null && action.startsWith("BUY");
 
     Label checkLbl = new Label("\u2713");
@@ -3841,7 +5007,15 @@ public final class GameView implements GameViewInterface {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> overlayRef.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      overlayRef.getChildren().remove(popup);
+      resumeTutorialOverlay();
+      refreshTutorialProgressFlags();
+      maybeAdvanceTutorialAfterTrade();
+      if (isTutorialVisible()) {
+        updateTutorialStep();
+      }
+    };
     doneBtn.setOnAction(ev -> dismiss.run());
     backdrop.setOnMouseClicked(ev -> dismiss.run());
 
