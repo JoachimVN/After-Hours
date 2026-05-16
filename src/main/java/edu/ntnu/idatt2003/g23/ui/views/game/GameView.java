@@ -1127,13 +1127,13 @@ public final class GameView implements GameViewInterface {
     tutorialCloseBtn.getStyleClass().add("game-tutorial-close");
     tutorialCloseBtn.setOnAction(e -> closeTutorial());
 
-    tutorialKeepProgressBtn = new Button("\u25B6 Keep Progress");
+    tutorialKeepProgressBtn = new Button("\u25B6 Continue");
     tutorialKeepProgressBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-continue");
     tutorialKeepProgressBtn.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(tutorialKeepProgressBtn, Priority.ALWAYS);
     tutorialKeepProgressBtn.setOnAction(e -> closeTutorial());
 
-    tutorialStartFreshBtn = new Button("\u21BA Start Fresh");
+    tutorialStartFreshBtn = new Button("\u21BA Reset");
     tutorialStartFreshBtn.getStyleClass().addAll("game-tutorial-btn", "game-tutorial-reset");
     tutorialStartFreshBtn.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(tutorialStartFreshBtn, Priority.ALWAYS);
@@ -1419,7 +1419,7 @@ public final class GameView implements GameViewInterface {
       case 7 -> {
         setTutorialTitleText("You're On Your Own Now");
         bodyText =
-        "This was just a sample. Make your move. \nContinue this run, or reset the session to start fresh.";
+        "This was just a sample, so make your move. \n\nContinue this run, or reset the session to start fresh.";
       }
       default -> {
       }
