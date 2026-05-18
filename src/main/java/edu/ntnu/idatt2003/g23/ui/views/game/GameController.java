@@ -34,6 +34,7 @@ public final class GameController {
   private boolean replaySeriesDirty = true;
   private GameViewInterface view;
   private PlayerStatus statusOverride;
+  private boolean devModeMutationsUsed = false;
 
   public GameController(Player player, Exchange exchange) {
     this.player = player;
@@ -391,6 +392,7 @@ public final class GameController {
 
   public void setPlayerStatusOverride(PlayerStatus status) {
     statusOverride = status;
+    devModeMutationsUsed = true;
   }
 
   public void clearPlayerStatusOverride() {
@@ -442,6 +444,7 @@ public final class GameController {
 
   public void addCash(BigDecimal amount) {
     player.addMoney(amount);
+    devModeMutationsUsed = true;
   }
 
   public void setCash(BigDecimal amount) {
@@ -451,6 +454,7 @@ public final class GameController {
     } else {
       player.withdrawMoney(current.subtract(amount));
     }
+    devModeMutationsUsed = true;
   }
 
   public void advanceWeeks(int n) {
@@ -460,10 +464,16 @@ public final class GameController {
       player.updateChickAvatarProgression();
     }
     invalidateReplaySeries();
+    devModeMutationsUsed = true;
   }
 
   public void setFrozen(boolean frozen) {
     exchange.setFrozen(frozen);
+    devModeMutationsUsed = true;
+  }
+
+  public boolean hasDevModeMutationsUsed() {
+    return devModeMutationsUsed;
   }
 
   // ── Chart trade-point data ────────────────────────────────────────────────

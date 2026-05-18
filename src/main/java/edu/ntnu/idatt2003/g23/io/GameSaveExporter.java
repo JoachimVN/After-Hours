@@ -2,6 +2,7 @@ package edu.ntnu.idatt2003.g23.io;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
@@ -83,7 +84,8 @@ public final class GameSaveExporter {
       List<TransactionDto> transactions,
       List<WeeklySnapshotDto> weeklySnapshots,
       UiStateJson uiState,
-      Integer weeksUsingChickAvatar) {
+      Integer weeksUsingChickAvatar,
+      boolean flagged) {
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -102,6 +104,12 @@ public final class GameSaveExporter {
 
   public static Path save(Player player, Exchange exchange, GameUiState uiState)
       throws IOException {
+    return save(player, exchange, uiState, false);
+  }
+
+  public static Path save(Player player, Exchange exchange, GameUiState uiState,
+                          boolean flagged)
+      throws IOException {
     LocalDateTime now = LocalDateTime.now();
     String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
     String folderName = safeName + "_" + now.format(FOLDER_FMT);
@@ -109,7 +117,7 @@ public final class GameSaveExporter {
     Path saveDir = SAVES_DIR.resolve(folderName);
     Files.createDirectories(saveDir);
 
-    writeJson(saveDir, player, exchange, now, uiState, false);
+    writeJson(saveDir, player, exchange, now, uiState, false, flagged);
     StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"),
         exchange.getStocks());
 
@@ -126,12 +134,17 @@ public final class GameSaveExporter {
    */
   public static Path autosave(Player player, Exchange exchange, GameUiState uiState,
                               String slotId) throws IOException {
+    return autosave(player, exchange, uiState, slotId, false);
+  }
+
+  public static Path autosave(Player player, Exchange exchange, GameUiState uiState,
+                              String slotId, boolean flagged) throws IOException {
     String safeSlot = normalizeAutosaveSlotId(slotId);
     String folderName = "autosave_" + safeSlot;
     Path saveDir = AUTOSAVE_DIR.resolve(folderName);
     cleanupDuplicateAutosaveSlots(safeSlot, saveDir);
     Files.createDirectories(saveDir);
-    writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, true);
+    writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, true, flagged);
     StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"), exchange.getStocks());
     return saveDir;
   }
@@ -152,10 +165,31 @@ public final class GameSaveExporter {
 
   public static void overwrite(Path saveDir, Player player, Exchange exchange,
                                GameUiState uiState) throws IOException {
+    overwrite(saveDir, player, exchange, uiState, false);
+  }
+
+  public static void overwrite(Path saveDir, Player player, Exchange exchange,
+                               GameUiState uiState, boolean flagged) throws IOException {
     Files.createDirectories(saveDir);
-    writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, false);
+    writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, false, flagged);
     StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"),
         exchange.getStocks());
+  }
+
+  /**
+   * Marks a save as edited via the CSV editor (manual market-data mutation).
+   */
+  public static void markSaveAsFlagged(Path saveDir) throws IOException {
+    Path jsonPath = saveDir.resolve("save.json");
+    if (!Files.exists(jsonPath)) {
+      throw new IOException("Missing save.json in selected save");
+    }
+    JsonObject obj = GSON.fromJson(Files.readString(jsonPath, StandardCharsets.UTF_8),
+        JsonObject.class);
+    obj.addProperty("flagged", true);
+    obj.remove("flaggedDevMode");
+    obj.remove("flaggedCsvEdited");
+    Files.writeString(jsonPath, GSON.toJson(obj), StandardCharsets.UTF_8);
   }
 
   /**
@@ -209,7 +243,7 @@ public final class GameSaveExporter {
 
   private static void writeJson(Path saveDir, Player player, Exchange exchange,
                                 LocalDateTime savedAt, GameUiState uiState,
-                                boolean isAutosave) throws IOException {
+                                boolean isAutosave, boolean flagged) throws IOException {
     List<ShareDto> portfolio = new ArrayList<>();
     for (Share share : player.getPortfolio().getShares()) {
       portfolio.add(new ShareDto(
@@ -264,7 +298,8 @@ public final class GameSaveExporter {
         transactions,
         weeklySnapshots,
         uiStateJson,
-        player.getWeeksUsingChickAvatar());
+        player.getWeeksUsingChickAvatar(),
+        flagged);
 
     Path jsonFile = saveDir.resolve("save.json");
     Files.writeString(jsonFile, GSON.toJson(json), StandardCharsets.UTF_8);

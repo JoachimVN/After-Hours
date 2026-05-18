@@ -996,6 +996,7 @@ public final class ProfileView {
         ? String.valueOf((int) initialSpeedX)
         : String.format(Locale.US, "%.2f", initialSpeedX).replaceAll("0+$", "")
             .replaceAll("\\.$", "");
+    Button speedBtn = new Button("⏩  " + initialSpeedLabel + "x");
     speedBtn.getStyleClass().add("profile-secondary-btn");
     speedBtn.setOnAction(e -> {
       if (onReplayControlSelect != null) {

@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer.LoadStats;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.CsvRow;
@@ -132,6 +133,7 @@ public class App extends Application {
   private GameController currentGameController;
   private GameUiState currentUiState;
   private String currentProfileAvatar = "bust-in-silhouette";
+  private boolean currentFlagged = false;
   private boolean gameAudioContext = false;
 
   @Override
@@ -268,14 +270,16 @@ public class App extends Application {
         this::loadFromSave,
         meta -> {
           if (saveSelectPageRef[0] != null) {
-            openCsvEditorFromSaveMetaStandalone(meta,
+            openCsvEditorFromSaveMetaForContinue(meta,
                 () -> navigateKeepMusic(saveSelectPageRef[0]));
           }
         },
         currentPlayer,
         currentExchange,
         currentSavePath,
-        currentUiState);
+        currentUiState,
+        currentFlagged,
+        devModeEnabled);
     Parent saveSelectPage = new SaveSelectView(ctrl).getRoot();
     saveSelectPageRef[0] = saveSelectPage;
     navigateKeepMusic(saveSelectPage);
@@ -287,6 +291,7 @@ public class App extends Application {
     Exchange exchange = (Exchange) data[1];
     java.nio.file.Path savePath = (java.nio.file.Path) data[2];
     GameUiState uiState = data.length > 3 ? (GameUiState) data[3] : null;
+    currentFlagged = data.length > 4 && Boolean.TRUE.equals(data[4]);
     buildAndStartGameFromSave(player, exchange, savePath, uiState, false);
   }
 
@@ -297,6 +302,7 @@ public class App extends Application {
     currentSavePath = null;
     currentGameController = null;
     currentUiState = null;
+    currentFlagged = false;
     currentProfileAvatar = "bust-in-silhouette";
     currentSetupPage = new SetupView(
         withBack(this::goToSaveSelect),
@@ -481,6 +487,11 @@ public class App extends Application {
 
   private void openCsvEditorStandalone(CsvParseResult result, Runnable onBack,
       Runnable onReset) {
+    openCsvEditorStandalone(result, onBack, onReset, null);
+  }
+
+  private void openCsvEditorStandalone(CsvParseResult result, Runnable onBack,
+      Runnable onReset, Runnable onSuccessfulSave) {
     LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
     Runnable doOpen = () -> {
       Parent editorPage = CsvEditorView.buildStandalone(
@@ -489,6 +500,9 @@ public class App extends Application {
           (editedRows, file) -> {
             try {
               StockCsvExporter.writeCsvRows(file.toPath(), editedRows);
+              if (onSuccessfulSave != null) {
+                onSuccessfulSave.run();
+              }
               overlayService.showNotification("Saved", "Stock data exported to:\n" + file.getName(), true);
               onBack.run();
             } catch (IOException e) {
@@ -507,6 +521,11 @@ public class App extends Application {
   }
 
   private void openCsvEditorFromImportStandalone(File csvFile, Runnable onBack) {
+    openCsvEditorFromImportStandalone(csvFile, onBack, null);
+  }
+
+  private void openCsvEditorFromImportStandalone(File csvFile, Runnable onBack,
+      Runnable onSuccessfulSave) {
     runWithLoadingOverlay(
         "Opening CSV Editor",
         "Parsing CSV data...",
@@ -518,7 +537,8 @@ public class App extends Application {
           }
         },
         result -> openCsvEditorStandalone(result, onBack,
-            () -> openCsvEditorFromImportStandalone(csvFile, onBack)),
+            () -> openCsvEditorFromImportStandalone(csvFile, onBack, onSuccessfulSave),
+            onSuccessfulSave),
         error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
@@ -547,7 +567,89 @@ public class App extends Application {
       overlayService.showNotification("Save Error", "Could not locate stocks.csv for that save.", false);
       return;
     }
-    openCsvEditorFromImportStandalone(saveStocksFile, onBack);
+    openCsvEditorFromImportStandalone(saveStocksFile, onBack, () -> {
+      try {
+        GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
+      } catch (IOException e) {
+        overlayService.showNotification("Save Flag Warning",
+            "CSV was saved, but flag metadata could not be updated:\n" + e.getMessage(), false);
+      }
+    });
+  }
+
+  private void openCsvEditorFromSaveMetaForContinue(SaveMeta selectedSave, Runnable onBack) {
+    if (selectedSave == null || selectedSave.saveDir() == null) {
+      overlayService.showNotification("Save Error", "Could not locate that save.", false);
+      return;
+    }
+
+    Object[] loaded;
+    try {
+      loaded = GameSaveLoader.load(selectedSave.saveDir());
+    } catch (IOException | IllegalStateException e) {
+      overlayService.showNotification("Save Error", "Could not load save:\n" + e.getMessage(), false);
+      return;
+    }
+
+    Player loadedPlayer = (Player) loaded[0];
+    Exchange loadedExchange = (Exchange) loaded[1];
+    GameUiState loadedUiState = loaded.length > 2 ? (GameUiState) loaded[2] : null;
+    CsvParseResult result = exchangeAsParseResult(loadedExchange);
+    LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
+    Runnable doOpen = () -> {
+      Parent editorPage = CsvEditorView.build(
+          result,
+          withBack(onBack),
+          rows -> {
+            Exchange updatedExchange = new Exchange(loadedExchange.getName(), StockCsvLoader.toStocks(rows));
+            updatedExchange.setWeek(loadedExchange.getWeek());
+            Player updatedPlayer;
+            try {
+              updatedPlayer = rebuildPlayerForEditedExchange(loadedPlayer, updatedExchange);
+            } catch (IllegalStateException e) {
+              overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+              return;
+            }
+            try {
+              GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
+            } catch (IOException e) {
+              overlayService.showNotification("Save Flag Warning",
+                  "CSV was edited, but flag metadata could not be updated:\n" + e.getMessage(), false);
+            }
+            currentFlagged = true;
+            buildAndStartGameFromSave(updatedPlayer, updatedExchange, selectedSave.saveDir(),
+                loadedUiState, false);
+          },
+          (rows, file) -> {
+            try {
+              StockCsvExporter.writeCsvRows(file.toPath(), rows);
+              GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
+            } catch (IOException e) {
+              overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+              return;
+            }
+            Exchange updatedExchange = new Exchange(loadedExchange.getName(), StockCsvLoader.toStocks(rows));
+            updatedExchange.setWeek(loadedExchange.getWeek());
+            Player updatedPlayer;
+            try {
+              updatedPlayer = rebuildPlayerForEditedExchange(loadedPlayer, updatedExchange);
+            } catch (IllegalStateException e) {
+              overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+              return;
+            }
+            currentFlagged = true;
+            buildAndStartGameFromSave(updatedPlayer, updatedExchange, selectedSave.saveDir(),
+                loadedUiState, false);
+          },
+          () -> openCsvEditorFromSaveMetaForContinue(selectedSave, onBack));
+      navigateKeepMusic(editorPage);
+      fadeInPage(editorPage);
+    };
+    if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+      overlayService.showLargeFileWarning(stats, doOpen);
+    } else {
+      doOpen.run();
+    }
   }
 
   private void openCurrentMarketCsvEditorForGame(Runnable onBack) {
@@ -592,9 +694,13 @@ public class App extends Application {
   }
 
   private CsvParseResult currentExchangeAsParseResult() {
+    return exchangeAsParseResult(currentExchange);
+  }
+
+  private CsvParseResult exchangeAsParseResult(Exchange exchange) {
     List<CsvRow> rows = new ArrayList<>();
     int lineNum = 1;
-    for (Stock stock : currentExchange.getStocks()) {
+    for (Stock stock : exchange.getStocks()) {
       rows.add(new CsvRow(lineNum++, stock.getSymbol(), stock.getCompany(),
           formatStockPricesForCsv(stock), ""));
     }
@@ -659,6 +765,7 @@ public class App extends Application {
     GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : currentUiState;
     buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState,
       false);
+    currentFlagged = true;
     if (exportFile != null) {
       overlayService.showNotification("Saved", "Stock data exported to:\n" + exportFile.getName(), true);
     }
@@ -756,6 +863,7 @@ public class App extends Application {
       if (resumingSameInMemorySession) {
         currentAutosaveId = previousAutosaveId;
       } else {
+        currentFlagged = false;
         String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
         currentAutosaveId = safeName + "_"
             + java.time.LocalDateTime.now().format(
@@ -918,12 +1026,17 @@ public class App extends Application {
       return;
     }
     GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
+    boolean flagged = currentFlagged
+        || (currentGameController != null && currentGameController.hasDevModeMutationsUsed());
     try {
       if (currentSavePath != null) {
-        GameSaveExporter.overwrite(currentSavePath, currentPlayer, currentExchange, uiState);
+        GameSaveExporter.overwrite(currentSavePath, currentPlayer, currentExchange, uiState,
+            flagged);
       } else {
-        currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState);
+        currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState,
+            flagged);
       }
+      currentFlagged = flagged;
       overlayService.showNotification("Game Saved", "Your progress has been saved.", true);
     } catch (IOException e) {
       overlayService.showNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
@@ -935,8 +1048,12 @@ public class App extends Application {
       return;
     }
     GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
+    boolean flagged = currentFlagged
+        || (currentGameController != null && currentGameController.hasDevModeMutationsUsed());
     try {
-      GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId);
+      GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId,
+          flagged);
+      currentFlagged = flagged;
       if (autosaveToast) {
         overlayService.showTimedNotification("Autosaved", "Progress autosaved.", true);
       }

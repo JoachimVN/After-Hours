@@ -113,6 +113,13 @@
     -fx-text-fill: #6080b0;
 }
 
+.save-card-flag {
+    -fx-font-size: 10px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #8fa2bd;
+    -fx-background-color: transparent
+}
+
 /* ── Action buttons ──────────────────────────────────────────────────────── */
 
 .save-load-button {

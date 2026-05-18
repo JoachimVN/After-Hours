@@ -46,8 +46,7 @@ public final class SaveSelectView {
 
     // ── Top bar ───────────────────────────────────────────────────────────
     Button backBtn = new Button("\u2190 Back");
-    backBtn.getStyleClass().add("back-button");
-    backBtn.setTooltip(buildButtonTooltip("Back to previous screen  [Esc]"));
+    backBtn.getStyleClass().add("back-button");;
     backBtn.setOnAction(e -> controller.handleBack());
 
     Button newGameBtn = new Button("+ New Game");
@@ -174,7 +173,15 @@ public final class SaveSelectView {
     Label dateLabel = new Label((meta.autosave() ? "Autosaved:  " : "Saved: ") + meta.savedAt());
     dateLabel.getStyleClass().add("save-card-date");
 
-    VBox info = new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel);
+    Label flaggedLabel = null;
+    if (meta.flagged()) {
+      flaggedLabel = new Label("Modified");
+      flaggedLabel.getStyleClass().add("save-card-flag");
+    }
+
+    VBox info = flaggedLabel == null
+        ? new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel)
+        : new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel, flaggedLabel);
     info.setAlignment(Pos.CENTER_LEFT);
     HBox.setHgrow(info, Priority.ALWAYS);
 
@@ -194,6 +201,11 @@ public final class SaveSelectView {
     editBtn.setMaxWidth(Double.MAX_VALUE);
     editBtn.setTooltip(buildButtonTooltip("Edit market data for this save"));
     editBtn.setOnAction(e -> controller.handleEditSave(meta));
+
+    if (!controller.isDevModeEnabled()) {
+      editBtn.setVisible(false);
+      editBtn.setManaged(false);
+    }
 
     Button deleteBtn = new Button("\u2715  Delete");
     deleteBtn.getStyleClass().addAll("save-delete-button");
@@ -227,7 +239,6 @@ public final class SaveSelectView {
     Button newBtn = new Button("+ Start a New Game");
     newBtn.getStyleClass().addAll("start-button", "new-game-button");
     newBtn.setMaxWidth(700);
-    newBtn.setTooltip(buildButtonTooltip("Start a fresh game"));
     newBtn.setOnAction(e -> controller.handleNewGame());
 
     VBox wrapper = new VBox(newBtn);
@@ -249,7 +260,6 @@ public final class SaveSelectView {
 
     Button resumeBtn = new Button("\u25b6  Resume");
     resumeBtn.getStyleClass().addAll("setup-start-button", "save-load-button");
-    resumeBtn.setTooltip(buildButtonTooltip("Resume your current session"));
     resumeBtn.setOnAction(e -> controller.resumeSession());
 
     HBox card = new HBox(20, info, resumeBtn);
