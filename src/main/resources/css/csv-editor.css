@@ -376,6 +376,13 @@
     -fx-text-fill: #3a5a80;
 }
 
+.prices-dialog-row {
+    -fx-background-color: rgba(12, 12, 44, 0.98);
+    -fx-padding: 12px 18px 12px 18px;
+    -fx-border-color: rgba(59, 57, 201, 0.3) transparent transparent transparent;
+    -fx-border-width: 1px 0px 0px 0px;
+}
+
 .prices-dialog-quick-row {
     -fx-padding: 4 0 2 0;
 }
@@ -412,5 +419,22 @@
 .prices-dialog-delete-btn:hover {
     -fx-background-color: derive(#2e0c0c, 25%);
     -fx-text-fill: white;
+}
+
+.prices-dialog-confirm-btn {
+    -fx-background-color: transparent;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
+    -fx-cursor: hand;
+    -fx-text-fill: #61e05a;
+    -fx-border-color: #1a6e24;
+}
+
+.prices-dialog-confirm-btn:hover {
+    -fx-text-fill: #70f07d;
+    -fx-border-color: #218c2a;
 }
 

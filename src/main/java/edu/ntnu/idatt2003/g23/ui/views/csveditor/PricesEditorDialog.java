@@ -201,14 +201,14 @@ public final class PricesEditorDialog {
     cancelBtn.getStyleClass().add("dialog-cancel-btn");
 
     Button okBtn = new Button("\u2714  OK");
-    okBtn.getStyleClass().add("dialog-confirm-buy-btn");
+    okBtn.getStyleClass().add("prices-dialog-confirm-btn");
 
     Region footerSpacer = new Region();
     HBox.setHgrow(footerSpacer, Priority.ALWAYS);
 
     HBox footer = new HBox(8, cancelBtn, footerSpacer, okBtn);
     footer.setAlignment(Pos.CENTER_RIGHT);
-    footer.getStyleClass().add("dialog-btn-row");
+    footer.getStyleClass().add("prices-dialog-row");
 
     // ── Card ──────────────────────────────────────────────────────────────
     VBox card = new VBox(0, headerBox, body, footer);

@@ -192,14 +192,20 @@ public final class CsvEditorView {
     pricesCol.setCellValueFactory(c -> c.getValue().pricesProperty());
     pricesCol.setPrefWidth(220);
     pricesCol.setSortable(false);
-    pricesCol.setEditable(false);
+    pricesCol.setEditable(true);
+    pricesCol.setOnEditCommit(e -> {
+      e.getRowValue().setPrices(e.getNewValue());
+      StockCsvLoader.validateRow(e.getRowValue());
+      table.refresh();
+      refreshState.run();
+    });
     pricesCol.setCellFactory(col -> new TableCell<>() {
       private final Label summaryLbl = new Label();
       private final Button editBtn = new Button("\u270e");
       private final Region spacer = new Region();
       private final HBox box = new HBox(6, summaryLbl, spacer, editBtn);
-      private final TextField inlineField = new TextField();
-      private boolean inlineEditing = false;
+      private final TextField editField = new TextField();
+      private boolean editingPrices = false;
 
       private int countPrices(String raw) {
         if (raw == null || raw.isBlank()) return 0;
@@ -210,6 +216,31 @@ public final class CsvEditorView {
         return n;
       }
 
+      private boolean canInlineEdit() {
+        return countPrices(getItem()) <= 1;
+      }
+
+      private void beginInlineEdit() {
+        editingPrices = true;
+        editField.setText(getItem() == null ? "" : getItem().trim());
+        setText(null);
+        setGraphic(editField);
+        editField.requestFocus();
+        editField.selectAll();
+      }
+
+      private void finishInlineEdit(boolean commit) {
+        if (!editingPrices) {
+          return;
+        }
+        editingPrices = false;
+        if (commit) {
+          commitEdit(editField.getText() == null ? "" : editField.getText().trim());
+        } else {
+          cancelEdit();
+        }
+      }
+
       private void openPricesEditor() {
         int idx = getIndex();
         if (idx < 0 || idx >= getTableView().getItems().size()) {
@@ -217,38 +248,15 @@ public final class CsvEditorView {
         }
         CsvRow row = getTableView().getItems().get(idx);
         if (countPrices(row.getPrices()) <= 1) {
-          startInlineEdit(row);
+          table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+          table.getSelectionModel().clearAndSelect(idx, getTableColumn());
+          table.edit(idx, getTableColumn());
         } else {
           PricesEditorDialog.open(overlayRoot, row, () -> {
             table.refresh();
             refreshState.run();
           });
         }
-      }
-
-      private void startInlineEdit(CsvRow row) {
-        String raw = row.getPrices();
-        String current = (raw == null || raw.isBlank()) ? "" : raw.split(";")[0].trim();
-        inlineField.setText(current);
-        inlineEditing = true;
-        setGraphic(inlineField);
-        Platform.runLater(() -> { inlineField.requestFocus(); inlineField.selectAll(); });
-      }
-
-      private void commitInlineEdit() {
-        if (!inlineEditing) return;
-        int idx = getIndex();
-        if (idx < 0 || idx >= getTableView().getItems().size()) {
-          inlineEditing = false;
-          return;
-        }
-        inlineEditing = false;
-        CsvRow row = getTableView().getItems().get(idx);
-        String val = inlineField.getText().trim();
-        row.setPrices(val);
-        StockCsvLoader.validateRow(row);
-        table.refresh();
-        refreshState.run();
       }
 
       {
@@ -259,30 +267,65 @@ public final class CsvEditorView {
         editBtn.setTooltip(new Tooltip("Edit price history"));
         editBtn.setOnAction(e -> openPricesEditor());
 
-        inlineField.getStyleClass().add("csv-jump-field");
-        inlineField.setOnAction(e -> commitInlineEdit());
-        inlineField.setOnKeyPressed(ev -> {
+        editField.getStyleClass().add("csv-jump-field");
+        editField.setOnAction(e -> finishInlineEdit(true));
+        editField.setOnKeyPressed(ev -> {
           if (ev.getCode() == KeyCode.ESCAPE) {
-            inlineEditing = false;
-            table.refresh();
+            finishInlineEdit(false);
             ev.consume();
           }
         });
-        inlineField.focusedProperty().addListener((obs, was, is) -> {
-          if (!is && inlineEditing) commitInlineEdit();
+        editField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+          if (!isFocused && editingPrices) {
+            finishInlineEdit(true);
+          }
         });
       }
 
       @Override
-      protected void updateItem(String item, boolean empty) {
+      public void startEdit() {
+        if (!canInlineEdit()) {
+          return;
+        }
+        Object allowed = table.getProperties().remove(EDIT_ALLOWED_KEY);
+        if (allowed != Boolean.TRUE) {
+          return;
+        }
+        super.startEdit();
+        beginInlineEdit();
+      }
+
+      @Override
+      public void commitEdit(String newValue) {
+        String trimmed = newValue == null ? "" : newValue.trim();
+        super.commitEdit(trimmed);
+        editingPrices = false;
+        setGraphic(null);
+      }
+
+      @Override
+      public void cancelEdit() {
+        super.cancelEdit();
+        editingPrices = false;
+      }
+
+      @Override
+      public void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
-        if (inlineEditing) return;
         if (empty || item == null) {
           setGraphic(null);
+          setText(null);
           setOnMouseClicked(null);
           return;
         }
+        if (isEditing()) {
+          setText(null);
+          setGraphic(editField);
+          return;
+        }
+        editingPrices = false;
         summaryLbl.setText(buildPriceSummary(item));
+        setText(null);
         setGraphic(box);
         setOnMouseClicked(event -> {
           if (event.getClickCount() == 2) {
