@@ -285,6 +285,8 @@ public final class CsvEditorView {
       @Override
       public void startEdit() {
         if (!canInlineEdit()) {
+          // Multiple prices: open the dialog instead
+          openPricesEditor();
           return;
         }
         Object allowed = table.getProperties().remove(EDIT_ALLOWED_KEY);
@@ -337,8 +339,7 @@ public final class CsvEditorView {
     });
 
     // Ordered list of editable columns — used by smartCell for Tab/Enter navigation.
-    // Prices are excluded: they are edited via the sub-editor dialog, not inline.
-    List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol);
+    List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol, pricesCol);
     symbolCol.setCellFactory(tc -> smartCell("symbol", table, editableCols));
     companyCol.setCellFactory(tc -> smartCell("company", table, editableCols));
 
@@ -374,16 +375,22 @@ public final class CsvEditorView {
         event.consume();
       } else if (event.getCode() == KeyCode.ENTER) {
         int currentEditableColIndex = editableCols.indexOf(pos.getTableColumn());
-        TableColumn<CsvRow, ?> col = currentEditableColIndex >= 0
-            ? editableCols.get(currentEditableColIndex) : editableCols.get(0);
-        if (event.isShiftDown()) {
-          if (ri > 0) {
-            selectCell(table, ri - 1, col);
+        if (currentEditableColIndex >= 0) {
+          // Enter on an editable cell → start editing it (Google Sheets style)
+          TableColumn<CsvRow, String> col = editableCols.get(currentEditableColIndex);
+          if (col == pricesCol) {
+            // Prices: open dialog or inline edit via the cell's own logic
+            table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+            table.getSelectionModel().clearAndSelect(ri, col);
+            table.edit(ri, col);
+          } else {
+            table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+            table.edit(ri, col);
           }
-        } else {
-          if (ri < rc - 1) {
-            selectCell(table, ri + 1, col);
-          }
+        } else if (!event.isShiftDown() && ri < rc - 1) {
+          selectCell(table, ri + 1, editableCols.get(0));
+        } else if (event.isShiftDown() && ri > 0) {
+          selectCell(table, ri - 1, editableCols.get(0));
         }
         event.consume();
       }
@@ -499,7 +506,7 @@ public final class CsvEditorView {
 
     // ── Bottom bar ────────────────────────────────────────────────────────
     Label hintLabel = new Label(
-        "Double-click Symbol / Company to edit \u2014 click \u201cEdit\u2026\u201d in the Prices column to manage price points.");
+        "Double-click Symbol / Company / Price(s) to edit.");
     hintLabel.getStyleClass().add("sub-tagline");
 
     // Add Row button
@@ -666,6 +673,14 @@ public final class CsvEditorView {
         });
       }
 
+      /** Commit current edit then select the specified cell (without entering edit mode). */
+      private void navigateToSelect(int row, TableColumn<CsvRow, String> col) {
+        Platform.runLater(() -> {
+          table.getSelectionModel().clearAndSelect(row, col);
+          scrollIntoViewIfNeeded(table, row);
+        });
+      }
+
       @Override
       public void startEdit() {
         // Block the default single-click auto-start; only proceed when explicitly allowed
@@ -723,11 +738,11 @@ public final class CsvEditorView {
             commitEdit(text);
             if (event.isShiftDown()) {
               if (ri > 0) {
-                navigateToEdit(ri - 1, col);
+                navigateToSelect(ri - 1, col);
               }
             } else {
               if (ri < table.getItems().size() - 1) {
-                navigateToEdit(ri + 1, col);
+                navigateToSelect(ri + 1, col);
               }
             }
             event.consume();
@@ -785,7 +800,38 @@ public final class CsvEditorView {
    */
   private static void selectCell(TableView<CsvRow> table, int row, TableColumn<CsvRow, ?> col) {
     table.getSelectionModel().clearAndSelect(row, col);
-    table.scrollTo(row);
+    scrollIntoViewIfNeeded(table, row);
+  }
+
+  /**
+   * Scrolls only if {@code row} is outside the currently visible rows.
+   * Unlike {@link TableView#scrollTo}, this does not reposition rows that are already visible.
+   */
+  private static void scrollIntoViewIfNeeded(TableView<?> table, int row) {
+    javafx.scene.control.ScrollBar vbar = null;
+    for (javafx.scene.Node node : table.lookupAll(".scroll-bar")) {
+      if (node instanceof javafx.scene.control.ScrollBar sb
+          && sb.getOrientation() == javafx.geometry.Orientation.VERTICAL) {
+        vbar = sb;
+        break;
+      }
+    }
+    if (vbar == null) {
+      table.scrollTo(row);
+      return;
+    }
+    int total = table.getItems().size();
+    if (total == 0) return;
+    double visibleRows = table.getHeight() / Math.max(1, table.getFixedCellSize() > 0
+        ? table.getFixedCellSize() : 28);
+    double topRow = vbar.getValue() * (total - visibleRows);
+    double bottomRow = topRow + visibleRows - 1;
+    if (row < topRow) {
+      table.scrollTo(row);
+    } else if (row > bottomRow) {
+      table.scrollTo((int) Math.max(0, row - visibleRows + 1));
+    }
+    // else: already visible — do nothing
   }
 
   /**

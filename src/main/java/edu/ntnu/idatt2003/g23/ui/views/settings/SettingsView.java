@@ -707,9 +707,14 @@ public final class SettingsView {
             {"Esc", "Go back"},
         }),
         keybindGroup("CSV Editor", new String[][] {
-            {"Tab", "Move to next cell"},
-            {"Enter", "Commit cell edit"},
+            {"↑ / ↓", "Move to row above / below"},
+            {"← / →", "Move to column left / right"},
+            {"Tab / Shift+Tab", "Move to next / previous editable cell"},
+            {"Enter", "Start editing selected cell"},
+            {"Enter (editing)", "Commit edit and move down"},
+            {"Shift+Enter (editing)", "Commit edit and move up"},
             {"Esc", "Cancel edit"},
+            {"Double-click", "Edit Symbol / Company / Prices"},
         }),
         keybindGroup("In-Game", new String[][] {
             {"N / Space", "Advance to next week"},
@@ -719,9 +724,11 @@ public final class SettingsView {
             {"Ctrl + F", "Focus stock search"},
             {"M", "Open Market Movers"},
             {"H", "Open Transaction History"},
-            {"Esc", "Clear search / go back"},
+            {"← / →", "Previous / next tutorial step"},
+            {"Esc", "Clear search / close tutorial / go back"},
         }),
         keybindGroup("Profile", new String[][] {
+          {"S", "Open Settings"},
           {"Esc", "Back to market"},
         })
     );

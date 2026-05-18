@@ -1098,6 +1098,14 @@ public final class ProfileView {
         }
         onBackToGame.run();
         e.consume();
+      } else if (e.getCode() == KeyCode.S) {
+        if (nameChanged[0]) {
+          commitPendingName.run();
+        }
+        if (onOpenSettings != null) {
+          onOpenSettings.run();
+          e.consume();
+        }
       }
     });
     return wrapper;
