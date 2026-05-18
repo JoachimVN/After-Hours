@@ -681,7 +681,7 @@ public final class GameView implements GameViewInterface {
     weekInfo.setAlignment(Pos.CENTER);
     weekInfo.setPadding(new Insets(0, 8, 0, 8));
 
-    Label calmDownLbl = new Label("\uD83D\uDE0C Calm down");
+    Label calmDownLbl = new Label("Calm down there\uD83E\uDD70");
     calmDownLbl.getStyleClass().add("calm-down-label");
     calmDownLbl.setOpacity(0);
     calmDownLbl.setMouseTransparent(true);
@@ -3474,7 +3474,7 @@ public final class GameView implements GameViewInterface {
       default -> newStatus.name();
     };
     String tagline = switch (newStatus) {
-      case INVESTOR -> "How late did you stay up to get here?.";
+      case INVESTOR -> "How late did you stay up to get here?";
       case SPECULATOR -> "It's officially past your bedtime.\nWell done.";
       default -> "Don't stay up too late!.";
     };
