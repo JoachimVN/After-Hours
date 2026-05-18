@@ -334,6 +334,14 @@
     -fx-background-color: rgba(10, 25, 55, 0.40);
 }
 
+.prices-dialog-list .list-cell:hover {
+    -fx-background-color: rgba(20, 50, 110, 0.55);
+}
+
+.prices-dialog-list .list-cell:odd:hover {
+    -fx-background-color: rgba(25, 58, 120, 0.60);
+}
+
 .prices-dialog-list .list-cell:selected {
     -fx-background-color: #132d5e;
     -fx-text-fill: #e8f2ff;
@@ -420,6 +428,12 @@
     -fx-pref-height: 20;
     -fx-min-width: 20;
     -fx-pref-width: 20;
+    -fx-opacity: 0;
+    -fx-cursor: hand;
+}
+
+.prices-dialog-list .list-cell:hover .prices-dialog-delete-btn {
+    -fx-opacity: 1;
 }
 
 .prices-dialog-delete-btn:hover {
