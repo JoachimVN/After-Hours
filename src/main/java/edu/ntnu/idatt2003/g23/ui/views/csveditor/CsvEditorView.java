@@ -198,6 +198,17 @@ public final class CsvEditorView {
       private final Button editBtn = new Button("\u270e");
       private final Region spacer = new Region();
       private final HBox box = new HBox(6, summaryLbl, spacer, editBtn);
+      private final TextField inlineField = new TextField();
+      private boolean inlineEditing = false;
+
+      private int countPrices(String raw) {
+        if (raw == null || raw.isBlank()) return 0;
+        int n = 0;
+        for (String p : raw.split(";")) {
+          if (!p.trim().isEmpty()) n++;
+        }
+        return n;
+      }
 
       private void openPricesEditor() {
         int idx = getIndex();
@@ -205,10 +216,39 @@ public final class CsvEditorView {
           return;
         }
         CsvRow row = getTableView().getItems().get(idx);
-        PricesEditorDialog.open(overlayRoot, row, () -> {
-          table.refresh();
-          refreshState.run();
-        });
+        if (countPrices(row.getPrices()) <= 1) {
+          startInlineEdit(row);
+        } else {
+          PricesEditorDialog.open(overlayRoot, row, () -> {
+            table.refresh();
+            refreshState.run();
+          });
+        }
+      }
+
+      private void startInlineEdit(CsvRow row) {
+        String raw = row.getPrices();
+        String current = (raw == null || raw.isBlank()) ? "" : raw.split(";")[0].trim();
+        inlineField.setText(current);
+        inlineEditing = true;
+        setGraphic(inlineField);
+        Platform.runLater(() -> { inlineField.requestFocus(); inlineField.selectAll(); });
+      }
+
+      private void commitInlineEdit() {
+        if (!inlineEditing) return;
+        int idx = getIndex();
+        if (idx < 0 || idx >= getTableView().getItems().size()) {
+          inlineEditing = false;
+          return;
+        }
+        inlineEditing = false;
+        CsvRow row = getTableView().getItems().get(idx);
+        String val = inlineField.getText().trim();
+        row.setPrices(val);
+        StockCsvLoader.validateRow(row);
+        table.refresh();
+        refreshState.run();
       }
 
       {
@@ -218,11 +258,25 @@ public final class CsvEditorView {
         editBtn.getStyleClass().addAll("csv-inline-icon-btn", "csv-inline-edit-btn");
         editBtn.setTooltip(new Tooltip("Edit price history"));
         editBtn.setOnAction(e -> openPricesEditor());
+
+        inlineField.getStyleClass().add("csv-jump-field");
+        inlineField.setOnAction(e -> commitInlineEdit());
+        inlineField.setOnKeyPressed(ev -> {
+          if (ev.getCode() == KeyCode.ESCAPE) {
+            inlineEditing = false;
+            table.refresh();
+            ev.consume();
+          }
+        });
+        inlineField.focusedProperty().addListener((obs, was, is) -> {
+          if (!is && inlineEditing) commitInlineEdit();
+        });
       }
 
       @Override
       protected void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
+        if (inlineEditing) return;
         if (empty || item == null) {
           setGraphic(null);
           setOnMouseClicked(null);
@@ -412,6 +466,7 @@ public final class CsvEditorView {
     addRowBtn.setOnAction(e -> {
       int nextLine = rows.size() + 1;
       CsvRow newRow = new CsvRow(nextLine, "", "", "", "");
+      StockCsvLoader.validateRow(newRow);
       rows.add(newRow);
       table.getSelectionModel().select(newRow);
       table.scrollTo(newRow);
