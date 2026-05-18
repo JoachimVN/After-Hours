@@ -209,7 +209,8 @@ public class App extends Application {
         getClass().getResource("/css/csv-editor.css").toExternalForm(),
         getClass().getResource("/css/no-stocks.css").toExternalForm(),
         getClass().getResource("/css/profile.css").toExternalForm(),
-        getClass().getResource("/css/scrollbar.css").toExternalForm());
+        getClass().getResource("/css/scrollbar.css").toExternalForm(),
+        getClass().getResource("/css/saveselect.css").toExternalForm());
 
     configureStage(stage, scene);
     // Respect fullscreen setting; otherwise keep forced maximized startup.

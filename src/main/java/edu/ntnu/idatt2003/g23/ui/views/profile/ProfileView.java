@@ -947,7 +947,7 @@ public final class ProfileView {
         replayTimelineRef[0].stop();
         playing[0] = false;
         if (playBtnRef[0] != null) {
-          playBtnRef[0].setText("Play");
+          playBtnRef[0].setText("▶  Play");
         }
       } else {
         replaySlider.setValue(next);
@@ -956,7 +956,7 @@ public final class ProfileView {
     replayTimelineRef[0] = replayTimeline;
     replayTimeline.setCycleCount(Timeline.INDEFINITE);
 
-    Button playBtn = new Button("Play");
+    Button playBtn = new Button("▶  Play");
     playBtnRef[0] = playBtn;
     playBtn.getStyleClass().add("profile-action-btn");
     playBtn.setOnAction(e -> {
@@ -968,18 +968,18 @@ public final class ProfileView {
       }
       if (playing[0]) {
         replayTimeline.stop();
-        playBtn.setText("Play");
+        playBtn.setText("▶  Play");
       } else {
         if (replaySlider.getValue() >= replaySlider.getMax()) {
           replaySlider.setValue(replaySlider.getMin());
         }
         replayTimeline.play();
-        playBtn.setText("Pause");
+        playBtn.setText("⏸  Pause");
       }
       playing[0] = !playing[0];
     });
 
-    Button restartBtn = new Button("Restart");
+    Button restartBtn = new Button("↺  Restart");
     restartBtn.getStyleClass().add("profile-secondary-btn");
     restartBtn.setOnAction(e -> {
       if (onReplayControlSelect != null) {
@@ -987,7 +987,7 @@ public final class ProfileView {
       }
       replayTimeline.stop();
       playing[0] = false;
-      playBtn.setText("Play");
+      playBtn.setText("▶  Play");
       replaySlider.setValue(minWeek);
     });
 
@@ -996,7 +996,6 @@ public final class ProfileView {
         ? String.valueOf((int) initialSpeedX)
         : String.format(Locale.US, "%.2f", initialSpeedX).replaceAll("0+$", "")
             .replaceAll("\\.$", "");
-    Button speedBtn = new Button("Speed: " + initialSpeedLabel + "x");
     speedBtn.getStyleClass().add("profile-secondary-btn");
     speedBtn.setOnAction(e -> {
       if (onReplayControlSelect != null) {
@@ -1009,7 +1008,7 @@ public final class ProfileView {
           ? String.valueOf((int) speedX)
           : String.format(Locale.US, "%.2f", speedX).replaceAll("0+$", "")
             .replaceAll("\\.$", "");
-      speedBtn.setText("Speed: " + speedLabel + "x");
+      speedBtn.setText("⏩  " + speedLabel + "x");
     });
 
     if (noReplayHistoryYet || replayPoints.isEmpty()) {
@@ -1021,7 +1020,7 @@ public final class ProfileView {
 
     replayTimeline.setOnFinished(e -> {
       playing[0] = false;
-      playBtn.setText("Play");
+      playBtn.setText("▶  Play");
     });
 
     replayChart.setOnMousePressed(e -> applyReplayLineGradient.run());
