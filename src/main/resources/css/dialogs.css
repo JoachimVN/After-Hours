@@ -144,6 +144,11 @@
     -fx-border-width: 1px 0px 0px 0px;
 }
 
+.trade-dialog-root > .dialog-btn-row {
+    -fx-background-color: rgba(5, 10, 28, 0.98);
+    -fx-border-color: rgba(30, 64, 128, 0.32) transparent transparent transparent;
+}
+
 .error-dialog-root > .dialog-btn-row {
     -fx-background-radius: 0px 0px 14px 14px;
     -fx-padding: 14px 18px 14px 18px;
@@ -181,6 +186,55 @@
 
 .dialog-confirm-sell-btn:hover {
     -fx-background-color: linear-gradient(to bottom, #e1633f, #c24929);
+}
+
+.dialog-confirm-trade-btn {
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.dialog-confirm-trade-buy-btn {
+    -fx-text-fill: #d7f2e2;
+    -fx-background-color: linear-gradient(to bottom, #1e9e4a, #157838);
+    -fx-border-color: rgba(92, 177, 128, 0.58);
+    -fx-effect: dropshadow(gaussian, rgba(28, 120, 72, 0.20), 10, 0.18, 0, 1);
+}
+
+.dialog-confirm-trade-sell-btn {
+    -fx-text-fill: #f3d9d6;
+    -fx-background-color: linear-gradient(to bottom, #7a1c1c, #5e1414);
+    -fx-border-color: rgba(180, 40, 40, 0.50);
+    -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.30), 6, 0, 0, 2);
+    -fx-cursor: hand;
+}
+
+.dialog-confirm-trade-buy-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, #25b855, #1e9e4a);
+    -fx-border-color: rgba(46, 184, 92, 0.80);
+    -fx-effect: dropshadow(gaussian, rgba(30, 158, 74, 0.65), 12, 0, 0, 3);
+}
+
+.dialog-confirm-trade-buy-btn:pressed {
+    -fx-background-color: linear-gradient(to bottom, #157838, #0f5a2a);
+    -fx-effect: dropshadow(gaussian, rgba(30, 158, 74, 0.20), 4, 0, 0, 1);
+    -fx-translate-y: 0.4px;
+}
+
+.dialog-confirm-trade-sell-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, #9e2222, #7a1c1c);
+    -fx-border-color: rgba(180, 40, 40, 0.75);
+    -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.55), 10, 0, 0, 3);
+}
+
+.dialog-confirm-trade-sell-btn:pressed {
+    -fx-background-color: linear-gradient(to bottom, #5e1414, #440e0e);
+    -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.15), 3, 0, 0, 1);
+    -fx-translate-y: 0.4px;
 }
 
 .dialog-confirm-error-btn {

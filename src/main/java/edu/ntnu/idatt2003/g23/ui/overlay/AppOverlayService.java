@@ -52,7 +52,7 @@ public final class AppOverlayService {
     body.getStyleClass().add(success ? "app-success-body" : "error-dialog-body");
 
     Button okBtn = new Button("OK");
-    okBtn.getStyleClass().add(success ? "dialog-confirm-buy-btn" : "dialog-cancel-btn");
+    okBtn.getStyleClass().add(success ? "dialog-confirm-buy-btn" : "dialog-confirm-error-btn");
     HBox btnRow = new HBox(okBtn);
     btnRow.setAlignment(Pos.CENTER_RIGHT);
     btnRow.getStyleClass().add("dialog-btn-row");

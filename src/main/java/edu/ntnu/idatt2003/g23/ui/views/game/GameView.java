@@ -3240,7 +3240,7 @@ public final class GameView implements GameViewInterface {
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("dialog-cancel-btn");
     Button confirmBtn = new Button("Confirm Sell All");
-    confirmBtn.getStyleClass().add("dialog-confirm-sell-btn");
+    confirmBtn.getStyleClass().add("dialog-confirm-trade-sell-btn");
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -3287,9 +3287,10 @@ public final class GameView implements GameViewInterface {
   public void showBulkReceipt(String action, BigDecimal quantity, BigDecimal total, BigDecimal fee,
                               BigDecimal tax, BigDecimal newCash) {
     suspendTutorialOverlay();
+    boolean isBuy = action != null && action.startsWith("BUY");
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
-    Label titleLbl = new Label("ORDER COMPLETE");
+    Label titleLbl = new Label("PURCHASE COMPLETE");
     titleLbl.getStyleClass().add("dialog-title");
     HBox header = new HBox(10, checkLbl, titleLbl);
     header.getStyleClass().add("dialog-header");
@@ -3307,7 +3308,10 @@ public final class GameView implements GameViewInterface {
     rows.getStyleClass().add("dialog-rows");
 
     Button doneBtn = new Button("Done");
-    doneBtn.getStyleClass().add("dialog-confirm-buy-btn");
+    doneBtn.getStyleClass().add("dialog-confirm-trade-btn");
+    doneBtn.getStyleClass().add(isBuy
+      ? "dialog-confirm-trade-buy-btn"
+      : "dialog-confirm-trade-sell-btn");
     HBox btnRow = new HBox(doneBtn);
     btnRow.setAlignment(Pos.CENTER_RIGHT);
     btnRow.getStyleClass().add("dialog-btn-row");
@@ -3395,7 +3399,10 @@ public final class GameView implements GameViewInterface {
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("dialog-cancel-btn");
     Button confirmBtn = new Button(isBuy ? "Confirm Buy" : "Confirm Sell");
-    confirmBtn.getStyleClass().add(isBuy ? "dialog-confirm-buy-btn" : "dialog-confirm-sell-btn");
+    confirmBtn.getStyleClass().add("dialog-confirm-trade-btn");
+    confirmBtn.getStyleClass().add(isBuy
+      ? "dialog-confirm-trade-buy-btn"
+      : "dialog-confirm-trade-sell-btn");
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -4993,7 +5000,7 @@ public final class GameView implements GameViewInterface {
 
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
-    Label titleLbl = new Label("ORDER COMPLETE");
+    Label titleLbl = new Label("PURCHASE COMPLETE");
     titleLbl.getStyleClass().add("dialog-title");
     HBox header = new HBox(10, checkLbl, titleLbl);
     header.getStyleClass().add("dialog-header");
@@ -5013,7 +5020,10 @@ public final class GameView implements GameViewInterface {
     rows.getStyleClass().add("dialog-rows");
 
     Button doneBtn = new Button("Done");
-    doneBtn.getStyleClass().add("dialog-confirm-buy-btn");
+    doneBtn.getStyleClass().add("dialog-confirm-trade-btn");
+    doneBtn.getStyleClass().add(isBuy
+      ? "dialog-confirm-trade-buy-btn"
+      : "dialog-confirm-trade-sell-btn");
     HBox btnRow = new HBox(doneBtn);
     btnRow.setAlignment(Pos.CENTER_RIGHT);
     btnRow.getStyleClass().add("dialog-btn-row");
