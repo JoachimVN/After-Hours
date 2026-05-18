@@ -36,6 +36,7 @@ public final class PricesEditorDialog {
 
   /** Warn the user when the list exceeds this many entries. */
   private static final int LARGE_LIST_THRESHOLD = 10_000;
+  private static final String OPEN_FLAG_KEY = "csv.pricesDialogOpen";
 
   private PricesEditorDialog() {
   }
@@ -48,6 +49,11 @@ public final class PricesEditorDialog {
    * @param onCommit  called after the user clicks OK and the row has been updated
    */
   public static void open(StackPane container, CsvRow row, Runnable onCommit) {
+    if (Boolean.TRUE.equals(container.getProperties().get(OPEN_FLAG_KEY))) {
+      return;
+    }
+    container.getProperties().put(OPEN_FLAG_KEY, Boolean.TRUE);
+
     // Parse existing prices into a mutable observable list — one string per entry
     String raw = row.getPrices();
     List<String> initial = (raw == null || raw.isBlank())
@@ -107,13 +113,37 @@ public final class PricesEditorDialog {
     listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
     listView.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
       private final TextField textField = new TextField();
+      private final Label valueLabel = new Label();
+      private final Button removeBtn = new Button("x");
+      private final Region rowSpacer = new Region();
+      private final HBox row = new HBox(8, valueLabel, rowSpacer, removeBtn);
       {
         textField.getStyleClass().add("csv-jump-field");
         textField.setOnAction(ev -> {
           if (isEditing()) commitEdit(textField.getText().trim().isEmpty() ? "0.00" : textField.getText().trim());
         });
+        textField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+          if (!isFocused && isEditing()) {
+            String value = textField.getText() == null ? "" : textField.getText().trim();
+            commitEdit(value.isEmpty() ? "0.00" : value);
+          }
+        });
         textField.setOnKeyPressed(ev -> {
           if (ev.getCode() == KeyCode.ESCAPE) { cancelEdit(); ev.consume(); }
+        });
+
+        valueLabel.getStyleClass().add("csv-prices-summary");
+        HBox.setHgrow(rowSpacer, Priority.ALWAYS);
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        removeBtn.getStyleClass().addAll("prices-dialog-tool-btn", "prices-dialog-delete-btn");
+        removeBtn.setOnAction(ev -> {
+          int idx = getIndex();
+          if (idx >= 0 && idx < items.size()) {
+            items.remove(idx);
+            updateLabels.run();
+          }
+          ev.consume();
         });
       }
       @Override public void startEdit() {
@@ -132,13 +162,17 @@ public final class PricesEditorDialog {
         super.updateItem(item, empty);
         if (empty || item == null) { setText(null); setGraphic(null); return; }
         if (isEditing()) { textField.setText(item); setGraphic(textField); setText(null); }
-        else { setGraphic(null); setText("Week " + (getIndex() + 1) + "  \u00b7  " + item); }
+        else {
+          valueLabel.setText("Week " + (getIndex() + 1) + "  \u00b7  " + item);
+          setText(null);
+          setGraphic(row);
+        }
       }
     });
     listView.getStyleClass().add("prices-dialog-list");
     VBox.setVgrow(listView, Priority.ALWAYS);
 
-    // ── Toolbar: count + add + delete ─────────────────────────────────────
+    // ── Toolbar: count + add ──────────────────────────────────────────────
     Button addBtn = new Button("+ Add");
     addBtn.getStyleClass().add("prices-dialog-tool-btn");
     addBtn.setOnAction(e -> {
@@ -149,22 +183,10 @@ public final class PricesEditorDialog {
       updateLabels.run();
     });
 
-    Button deleteBtn = new Button("\u2715 Delete");
-    deleteBtn.getStyleClass().addAll("prices-dialog-tool-btn", "prices-dialog-delete-btn");
-    deleteBtn.disableProperty().bind(
-        listView.getSelectionModel().selectedItemProperty().isNull());
-    deleteBtn.setOnAction(e -> {
-      int idx = listView.getSelectionModel().getSelectedIndex();
-      if (idx >= 0) {
-        items.remove(idx);
-        updateLabels.run();
-      }
-    });
-
     Region toolSpacer = new Region();
     HBox.setHgrow(toolSpacer, Priority.ALWAYS);
 
-    HBox toolbar = new HBox(8, countLabel, toolSpacer, addBtn, deleteBtn);
+    HBox toolbar = new HBox(8, countLabel, toolSpacer, addBtn);
     toolbar.setAlignment(Pos.CENTER_LEFT);
     toolbar.getStyleClass().add("prices-dialog-toolbar");
 
@@ -224,17 +246,30 @@ public final class PricesEditorDialog {
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
 
-    Runnable dismiss = () -> container.getChildren().remove(popup);
+    Runnable dismiss = () -> {
+      container.getChildren().remove(popup);
+      container.getProperties().put(OPEN_FLAG_KEY, Boolean.FALSE);
+    };
 
-    cancelBtn.setOnAction(ev -> dismiss.run());
-    backdrop.setOnMouseClicked(ev -> dismiss.run());
+    cancelBtn.setOnAction(ev -> {
+      ev.consume();
+      dismiss.run();
+    });
+    backdrop.setOnMouseClicked(ev -> {
+      ev.consume();
+      dismiss.run();
+    });
 
     okBtn.setOnAction(ev -> {
-      String joined = String.join(";", items);
-      row.setPrices(joined);
-      StockCsvLoader.validateRow(row);
-      onCommit.run();
-      dismiss.run();
+      ev.consume();
+      try {
+        String joined = String.join(";", items);
+        row.setPrices(joined);
+        StockCsvLoader.validateRow(row);
+        onCommit.run();
+      } finally {
+        dismiss.run();
+      }
     });
 
     popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {

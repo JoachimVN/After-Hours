@@ -253,6 +253,7 @@ public final class CsvEditorView {
           table.edit(idx, getTableColumn());
         } else {
           PricesEditorDialog.open(overlayRoot, row, () -> {
+            table.edit(-1, null); // clear phantom editing state before refresh
             table.refresh();
             refreshState.run();
           });
@@ -302,13 +303,24 @@ public final class CsvEditorView {
         String trimmed = newValue == null ? "" : newValue.trim();
         super.commitEdit(trimmed);
         editingPrices = false;
-        setGraphic(null);
+        summaryLbl.setText(buildPriceSummary(trimmed));
+        setText(null);
+        setGraphic(box);
       }
 
       @Override
       public void cancelEdit() {
         super.cancelEdit();
         editingPrices = false;
+        String current = getItem();
+        if (current == null) {
+          setText(null);
+          setGraphic(null);
+        } else {
+          summaryLbl.setText(buildPriceSummary(current));
+          setText(null);
+          setGraphic(box);
+        }
       }
 
       @Override

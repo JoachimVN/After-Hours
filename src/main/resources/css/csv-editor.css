@@ -411,13 +411,20 @@
 }
 
 .prices-dialog-delete-btn {
-    -fx-background-color: #2e0c0c;
-    -fx-border-color: #8d304870;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
     -fx-text-fill: #f1c6cf;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 0 6;
+    -fx-pref-height: 20;
+    -fx-min-width: 20;
+    -fx-pref-width: 20;
 }
 
 .prices-dialog-delete-btn:hover {
-    -fx-background-color: derive(#2e0c0c, 25%);
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
     -fx-text-fill: white;
 }
 
