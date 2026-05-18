@@ -3449,7 +3449,7 @@ public final class GameView implements GameViewInterface {
 
     // Play Level_Up.mp3 immediately — audio has built-in fade-in then strong hit at ~1.5s
     if (levelUpClip != null && sfxVolumeSupplierField != null) {
-      double vol = Math.min(sfxVolumeSupplierField.getAsDouble() * 1.3, 1.0);
+      double vol = Math.min(sfxVolumeSupplierField.getAsDouble() * 1.5, 1.0);
       levelUpClip.play(vol);
     }
 
