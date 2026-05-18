@@ -303,6 +303,7 @@ public final class CsvEditorView {
         String trimmed = newValue == null ? "" : newValue.trim();
         super.commitEdit(trimmed);
         editingPrices = false;
+        applyPriceLabelStyle(summaryLbl, trimmed);
         summaryLbl.setText(buildPriceSummary(trimmed));
         setText(null);
         setGraphic(box);
@@ -317,6 +318,7 @@ public final class CsvEditorView {
           setText(null);
           setGraphic(null);
         } else {
+          applyPriceLabelStyle(summaryLbl, current);
           summaryLbl.setText(buildPriceSummary(current));
           setText(null);
           setGraphic(box);
@@ -338,6 +340,7 @@ public final class CsvEditorView {
           return;
         }
         editingPrices = false;
+        applyPriceLabelStyle(summaryLbl, item);
         summaryLbl.setText(buildPriceSummary(item));
         setText(null);
         setGraphic(box);
@@ -347,6 +350,20 @@ public final class CsvEditorView {
             event.consume();
           }
         });
+      }
+
+      private void applyPriceLabelStyle(Label label, String raw) {
+        if (countPrices(raw) <= 1) {
+          label.getStyleClass().remove("csv-prices-summary");
+          if (!label.getStyleClass().contains("csv-prices-single")) {
+            label.getStyleClass().add("csv-prices-single");
+          }
+        } else if (!label.getStyleClass().contains("csv-prices-summary")) {
+          label.getStyleClass().remove("csv-prices-single");
+          label.getStyleClass().add("csv-prices-summary");
+        } else {
+          label.getStyleClass().remove("csv-prices-single");
+        }
       }
     });
 
@@ -903,7 +920,7 @@ public final class CsvEditorView {
       }
     }
     if (count == 0) return "0 prices";
-    if (count == 1) return "Week 1 \u00B7 " + first;
+    if (count == 1) return first;
     return "Week " + String.format("%,d", count) + " \u00B7 "
       + first + " \u2192 " + last;
   }

@@ -232,6 +232,12 @@
     -fx-font-style: italic;
 }
 
+.csv-prices-single {
+    -fx-font-size: 12px;
+    -fx-text-fill: #d8e8f8;
+    -fx-font-style: normal;
+}
+
 .csv-inline-icon-btn {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
@@ -345,6 +351,27 @@
 .prices-dialog-list .list-cell:selected {
     -fx-background-color: #132d5e;
     -fx-text-fill: #e8f2ff;
+}
+
+.prices-dialog-list .list-cell.prices-dialog-cell-error {
+    -fx-background-color: rgba(130, 28, 28, 0.35);
+    -fx-border-color: rgba(255, 90, 90, 0.45);
+    -fx-border-width: 0 0 1 0;
+}
+
+.prices-dialog-list .list-cell.prices-dialog-cell-error:hover {
+    -fx-background-color: rgba(150, 32, 32, 0.40);
+}
+
+.prices-dialog-error {
+    -fx-font-size: 11px;
+    -fx-text-fill: #ffb4b4;
+    -fx-background-color: rgba(110, 18, 18, 0.45);
+    -fx-border-color: rgba(220, 70, 70, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 5 8;
 }
 
 .prices-dialog-list .list-cell .text-field {

@@ -22,6 +22,7 @@ import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +65,11 @@ public final class PricesEditorDialog {
             .collect(Collectors.toCollection(ArrayList::new));
 
     ObservableList<String> items = FXCollections.observableArrayList(initial);
+
+    Label pricesErrorLabel = new Label();
+    pricesErrorLabel.getStyleClass().add("prices-dialog-error");
+    pricesErrorLabel.managedProperty().bind(pricesErrorLabel.visibleProperty());
+    pricesErrorLabel.setVisible(false);
 
     // ── Header ────────────────────────────────────────────────────────────
     Label titleLbl = new Label("Edit Prices");
@@ -160,10 +166,19 @@ public final class PricesEditorDialog {
       }
       @Override protected void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
+        getStyleClass().remove("prices-dialog-cell-error");
         if (empty || item == null) { setText(null); setGraphic(null); return; }
         if (isEditing()) { textField.setText(item); setGraphic(textField); setText(null); }
         else {
-          valueLabel.setText("Week " + (getIndex() + 1) + "  \u00b7  " + item);
+          int week = getIndex() + 1;
+          if (week <= 1) {
+            valueLabel.setText("Price  \u00b7  " + item);
+          } else {
+            valueLabel.setText("Week " + week + "  \u00b7  " + item);
+          }
+          if (isInvalidPriceValue(item)) {
+            getStyleClass().add("prices-dialog-cell-error");
+          }
           setText(null);
           setGraphic(row);
         }
@@ -171,6 +186,35 @@ public final class PricesEditorDialog {
     });
     listView.getStyleClass().add("prices-dialog-list");
     VBox.setVgrow(listView, Priority.ALWAYS);
+
+    Button jumpErrorBtn = new Button("Jump To Error");
+    jumpErrorBtn.getStyleClass().add("prices-dialog-tool-btn");
+
+    Runnable refreshValidationUi = () -> {
+      int badIndex = findFirstInvalidPriceIndex(items);
+      if (badIndex >= 0) {
+        jumpErrorBtn.setDisable(false);
+        pricesErrorLabel.setVisible(true);
+        pricesErrorLabel.setText(buildPriceEditorErrorText(badIndex, items.get(badIndex)));
+      } else if (items.isEmpty()) {
+        jumpErrorBtn.setDisable(true);
+        pricesErrorLabel.setVisible(true);
+        pricesErrorLabel.setText("No price set — add at least one price.");
+      } else {
+        jumpErrorBtn.setDisable(true);
+        pricesErrorLabel.setVisible(false);
+        pricesErrorLabel.setText("");
+      }
+      listView.refresh();
+    };
+
+    Runnable jumpToFirstError = () -> {
+      int badIndex = findFirstInvalidPriceIndex(items);
+      if (badIndex >= 0) {
+        listView.scrollTo(badIndex);
+        listView.getSelectionModel().clearAndSelect(badIndex);
+      }
+    };
 
     // ── Toolbar: count + add ──────────────────────────────────────────────
     Button addBtn = new Button("+ Add");
@@ -181,12 +225,15 @@ public final class PricesEditorDialog {
       listView.scrollTo(last);
       listView.getSelectionModel().select(last);
       updateLabels.run();
+      refreshValidationUi.run();
     });
+
+    jumpErrorBtn.setOnAction(e -> jumpToFirstError.run());
 
     Region toolSpacer = new Region();
     HBox.setHgrow(toolSpacer, Priority.ALWAYS);
 
-    HBox toolbar = new HBox(8, countLabel, toolSpacer, addBtn);
+    HBox toolbar = new HBox(8, countLabel, toolSpacer, jumpErrorBtn, addBtn);
     toolbar.setAlignment(Pos.CENTER_LEFT);
     toolbar.getStyleClass().add("prices-dialog-toolbar");
 
@@ -203,6 +250,7 @@ public final class PricesEditorDialog {
         listView.scrollTo(last);
         listView.getSelectionModel().select(last);
         updateLabels.run();
+        refreshValidationUi.run();
         quickAddField.clear();
       }
     });
@@ -214,7 +262,7 @@ public final class PricesEditorDialog {
     Label hintLabel = new Label("Double-click a price to edit inline.");
     hintLabel.getStyleClass().add("prices-dialog-hint");
 
-  VBox body = new VBox(8, warningLabel, listView, hintLabel, quickRow, toolbar);
+  VBox body = new VBox(8, warningLabel, pricesErrorLabel, listView, hintLabel, quickRow, toolbar);
   body.getStyleClass().add("prices-dialog-body");
   VBox.setVgrow(listView, Priority.ALWAYS);
 
@@ -262,6 +310,18 @@ public final class PricesEditorDialog {
 
     okBtn.setOnAction(ev -> {
       ev.consume();
+
+      refreshValidationUi.run();
+      if (items.isEmpty()) {
+        return;
+      }
+
+      int badIndex = findFirstInvalidPriceIndex(items);
+      if (badIndex >= 0) {
+        jumpToFirstError.run();
+        return;
+      }
+
       try {
         String joined = String.join(";", items);
         row.setPrices(joined);
@@ -279,7 +339,53 @@ public final class PricesEditorDialog {
       }
     });
 
+    refreshValidationUi.run();
     container.getChildren().add(popup);
     popup.requestFocus();
+  }
+
+  private static int findFirstInvalidPriceIndex(List<String> items) {
+    for (int i = 0; i < items.size(); i++) {
+      if (isInvalidPriceValue(items.get(i))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private static boolean isInvalidPriceValue(String raw) {
+    String value = raw == null ? "" : raw.trim();
+    if (value.isEmpty()) {
+      return true;
+    }
+    try {
+      BigDecimal bd = new BigDecimal(value);
+      return bd.compareTo(BigDecimal.ZERO) <= 0;
+    } catch (NumberFormatException ex) {
+      return true;
+    }
+  }
+
+  private static String buildPriceEditorErrorText(int index, String rawValue) {
+    String value = rawValue == null ? "" : rawValue.trim();
+    String detail;
+    if (value.isEmpty()) {
+      detail = "value is empty";
+    } else {
+      try {
+        BigDecimal bd = new BigDecimal(value);
+        detail = bd.compareTo(BigDecimal.ZERO) <= 0
+            ? "must be greater than zero"
+            : "is invalid";
+      } catch (NumberFormatException ex) {
+        detail = "isn't a valid number";
+      }
+    }
+    String prefix = "Price \"" + (value.isEmpty() ? "(empty)" : value) + "\" " + detail;
+    int week = index + 1;
+    if (week <= 1) {
+      return prefix;
+    }
+    return "Week " + week + " — " + prefix;
   }
 }
