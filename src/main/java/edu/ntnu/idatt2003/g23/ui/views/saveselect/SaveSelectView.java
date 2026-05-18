@@ -188,12 +188,17 @@ public final class SaveSelectView {
       }
     });
 
+    Button editBtn = new Button("Edit");
+    editBtn.getStyleClass().addAll("setup-start-button", "save-load-button");
+    editBtn.setMaxWidth(Double.MAX_VALUE);
+    editBtn.setOnAction(e -> controller.handleEditSave(meta));
+
     Button deleteBtn = new Button("Delete");
     deleteBtn.getStyleClass().addAll("save-delete-button");
     deleteBtn.setMaxWidth(Double.MAX_VALUE);
     deleteBtn.setOnAction(e -> handleDelete(meta, cardList));
 
-    VBox buttons = new VBox(6, loadBtn, deleteBtn);
+    VBox buttons = new VBox(6, loadBtn, editBtn, deleteBtn);
     buttons.setAlignment(Pos.CENTER);
     buttons.setFillWidth(true);
 

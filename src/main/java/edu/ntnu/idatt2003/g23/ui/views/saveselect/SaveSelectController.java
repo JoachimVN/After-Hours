@@ -36,6 +36,10 @@ public final class SaveSelectController {
    */
   private final Consumer<Object[]> onLoad; // [Player, Exchange, Path|null]
   /**
+   * Called when the user wants to edit a save's market CSV in the CSV editor.
+   */
+  private final Consumer<SaveMeta> onEdit;
+  /**
    * In-memory game session from the previous play (not persisted to disk).
    * {@code null} when there is no active session to resume.
    */
@@ -46,12 +50,14 @@ public final class SaveSelectController {
 
   public SaveSelectController(Runnable onNewGame, Runnable onBack,
                               Consumer<Object[]> onLoad,
+                              Consumer<SaveMeta> onEdit,
                               Player sessionPlayer, Exchange sessionExchange,
                               java.nio.file.Path sessionSavePath,
                               GameUiState sessionUiState) {
     this.onNewGame = onNewGame;
     this.onBack = onBack;
     this.onLoad = onLoad;
+    this.onEdit = onEdit;
     this.sessionPlayer = sessionPlayer;
     this.sessionExchange = sessionExchange;
     this.sessionSavePath = sessionSavePath;
@@ -66,6 +72,12 @@ public final class SaveSelectController {
 
   public void handleNewGame() {
     onNewGame.run();
+  }
+
+  public void handleEditSave(SaveMeta meta) {
+    if (onEdit != null && meta != null) {
+      onEdit.accept(meta);
+    }
   }
 
   /**

@@ -257,6 +257,7 @@ public class App extends Application {
   }
 
   private void goToSaveSelect() {
+    final Parent[] saveSelectPageRef = new Parent[1];
     SaveSelectController ctrl = new SaveSelectController(
         () -> {
           sfxController.play(SfxController.PLAY2, Math.min(sfxController.getVolume() * 1.5, 1.0));
@@ -264,11 +265,18 @@ public class App extends Application {
         },
         withBack(this::goHomeKeepMusic),
         this::loadFromSave,
+        meta -> {
+          if (saveSelectPageRef[0] != null) {
+            openCsvEditorFromSaveMetaStandalone(meta,
+                () -> navigateKeepMusic(saveSelectPageRef[0]));
+          }
+        },
         currentPlayer,
         currentExchange,
         currentSavePath,
         currentUiState);
     Parent saveSelectPage = new SaveSelectView(ctrl).getRoot();
+    saveSelectPageRef[0] = saveSelectPage;
     navigateKeepMusic(saveSelectPage);
     fadeInPage(saveSelectPage);
   }
