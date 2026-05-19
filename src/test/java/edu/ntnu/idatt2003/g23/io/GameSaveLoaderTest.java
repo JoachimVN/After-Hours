@@ -41,13 +41,15 @@ class GameSaveLoaderTest {
   // ─── load ─────────────────────────────────────────────────────────────────
 
   @Test
-  @DisplayName("load returns an array with a Player and Exchange")
+  @DisplayName("load returns player, exchange, ui state, and flagged state")
   void loadReturnsPlayerAndExchange() throws IOException {
     Object[] result = GameSaveLoader.load(saveDir);
     assertNotNull(result);
-    assertEquals(3, result.length);
+    assertEquals(4, result.length);
     assertInstanceOf(Player.class, result[0]);
     assertInstanceOf(Exchange.class, result[1]);
+    assertNull(result[2]);
+    assertEquals(Boolean.FALSE, result[3]);
   }
 
   @Test
