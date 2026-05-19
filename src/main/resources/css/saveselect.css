@@ -25,12 +25,6 @@
     -fx-text-fill: #f5a201;
 }
 
-.save-card-title-harlow {
-    -fx-font-family: "Harlow Solid Italic";
-    -fx-font-size: 34px;
-    -fx-text-fill: #f0f7ff;
-}
-
 .save-card-avatar {
     -fx-font-size: 50px;
     -fx-min-width: 84px;
@@ -41,12 +35,6 @@
     -fx-border-color: rgba(140, 185, 236, 0.42);
     -fx-border-radius: 14px;
     -fx-background-radius: 14px;
-}
-
-.save-card-edit-hint {
-    -fx-font-size: 12px;
-    -fx-text-fill: rgba(245, 162, 1, 0.55);
-    -fx-font-weight: 700;
 }
 
 .save-card-name-field {
@@ -67,34 +55,6 @@
 .save-card-name-field:focused {
     -fx-background-color: rgba(30, 50, 80, 0.4);
     -fx-border-color: rgba(150, 180, 220, 0.3);
-}
-
-/* Status badge pill */
-.save-card-status {
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-padding: 2px 8px 2px 8px;
-    -fx-background-radius: 20px;
-    -fx-border-radius: 20px;
-    -fx-translate-y: 4;
-}
-
-.save-card-status-novice {
-    -fx-background-color: rgba(74, 104, 153, 0.25);
-    -fx-border-color: #4a6899;
-    -fx-text-fill: #7a9fc8;
-}
-
-.save-card-status-investor {
-    -fx-background-color: rgba(245, 162, 1, 0.15);
-    -fx-border-color: #b07800;
-    -fx-text-fill: #f5a201;
-}
-
-.save-card-status-speculator {
-    -fx-background-color: rgba(180, 90, 220, 0.15);
-    -fx-border-color: #9040b0;
-    -fx-text-fill: #c070e0;
 }
 
 .save-card-detail {

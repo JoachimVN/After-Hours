@@ -240,12 +240,6 @@
   -fx-text-fill: #9bb6cd;
 }
 
-.profile-status-target {
-  -fx-font-family: "Sans Serif";
-  -fx-font-size: 12px;
-  -fx-text-fill: #b6cde0;
-}
-
 .profile-status-progress {
   -fx-pref-height: 10px;
   -fx-background-insets: 0px;
@@ -273,28 +267,6 @@
   -fx-font-size: 12px;
   -fx-text-fill: #d6e8f7;
   -fx-wrap-text: true;
-}
-
-.profile-status-requirement-box {
-  -fx-background-color: rgba(10, 24, 46, 0.56);
-  -fx-border-color: rgba(129, 187, 238, 0.30);
-  -fx-border-width: 1px;
-  -fx-border-radius: 12px;
-  -fx-background-radius: 12px;
-  -fx-padding: 10px;
-}
-
-.profile-status-requirement-title {
-  -fx-font-family: "Sans Serif";
-  -fx-font-size: 12px;
-  -fx-font-weight: 800;
-  -fx-text-fill: #f5c26a;
-}
-
-.profile-status-requirement-body {
-  -fx-font-family: "Sans Serif";
-  -fx-font-size: 12px;
-  -fx-text-fill: #d6e8f7;
 }
 
 .profile-status-metrics {
@@ -468,12 +440,6 @@
   -fx-stroke: rgba(30, 64, 128, 0.5);
   -fx-stroke-width: 1px;
   -fx-stroke-dash-array: 5 4;
-}
-
-.profile-crosshair-point {
-  -fx-fill: #f4fbff;
-  -fx-stroke: rgba(8, 18, 32, 0.82);
-  -fx-stroke-width: 1.2px;
 }
 
 .profile-crosshair-label {

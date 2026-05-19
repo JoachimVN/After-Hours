@@ -10,13 +10,6 @@
     -fx-border-width: 0px 0px 1px 0px;
 }
 
-.game-app-title {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #f5a201;
-    -fx-padding: 0px 0px 0px 8px;
-}
-
 .game-icon-button {
     -fx-background-color: linear-gradient(to bottom,
         rgba(18, 36, 74, 0.92),
@@ -232,21 +225,6 @@
     -fx-padding: 8px 10px 8px 10px;
 }
 
-.status-tooltip-progress {
-    -fx-pref-height: 6px;
-    -fx-background-insets: 0px;
-}
-
-.status-tooltip-progress>.track {
-    -fx-background-color: rgba(30, 64, 128, 0.45);
-    -fx-background-radius: 999px;
-}
-
-.status-tooltip-progress>.bar {
-    -fx-background-color: linear-gradient(to right, #f5a201, #4ecb71);
-    -fx-background-radius: 999px;
-}
-
 /* Sub-bar (week + next week) */
 .game-sub-bar {
     -fx-background-color: rgba(7, 9, 31, 0.80);
@@ -298,29 +276,6 @@
     -fx-font-size: 28px;
     -fx-font-weight: bold;
     -fx-text-fill: #f5a201;
-}
-
-.game-week-label {
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #ffba42;
-}
-
-.next-week-button {
-    -fx-background-color: linear-gradient(to right, #1a8c40, #22a34e);
-    -fx-text-fill: white;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
-    -fx-padding: 9px 28px 9px 28px;
-    -fx-background-radius: 8px;
-    -fx-border-color: rgba(34, 163, 78, 0.5);
-    -fx-border-width: 1px;
-    -fx-border-radius: 8px;
-    -fx-cursor: hand;
-}
-
-.next-week-button:hover {
-    -fx-background-color: linear-gradient(to right, #22a34e, #29c45f);
 }
 
 .calm-down-label {
@@ -454,31 +409,6 @@
 
 .split-pane.game-right-split>.split-pane-divider:pressed {
     -fx-background-color: rgba(26, 58, 120, 0.52);
-}
-
-.game-right-split>.split-pane-divider>.horizontal-grabber {
-    -fx-background-color: rgba(88, 223, 226, 0.85);
-    -fx-background-radius: 999px;
-    -fx-min-width: 34px;
-    -fx-pref-width: 34px;
-    -fx-max-width: 34px;
-    -fx-min-height: 4px;
-    -fx-pref-height: 4px;
-    -fx-max-height: 4px;
-}
-
-.game-right-split>.split-pane-divider:hover>.horizontal-grabber {
-    -fx-background-color: rgba(140, 240, 244, 1.0);
-    -fx-min-width: 44px;
-    -fx-pref-width: 44px;
-    -fx-max-width: 44px;
-}
-
-.game-right-split>.split-pane-divider:pressed>.horizontal-grabber {
-    -fx-background-color: #ffffff;
-    -fx-min-width: 50px;
-    -fx-pref-width: 50px;
-    -fx-max-width: 50px;
 }
 
 .game-portfolio-pane {
@@ -632,18 +562,6 @@
     -fx-background-color: rgba(30, 158, 74, 0.18);
     -fx-background-radius: 4px;
     -fx-border-color: rgba(46, 184, 92, 0.35);
-    -fx-border-width: 1px;
-    -fx-border-radius: 4px;
-    -fx-padding: 1px 6px 1px 6px;
-}
-
-.stock-cap-label {
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #7a9fc8;
-    -fx-background-color: rgba(30, 64, 128, 0.18);
-    -fx-background-radius: 4px;
-    -fx-border-color: rgba(30, 64, 128, 0.35);
     -fx-border-width: 1px;
     -fx-border-radius: 4px;
     -fx-padding: 1px 6px 1px 6px;
@@ -985,38 +903,6 @@
     -fx-border-color: transparent transparent rgba(245, 162, 1, 0.75) transparent;
 }
 
-/* Buy / Sell buttons */
-.buy-button {
-    -fx-background-color: linear-gradient(to bottom, #19813cb9, #15703380);
-    -fx-text-fill: white;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 6px 18px 6px 18px;
-    -fx-background-radius: 6px;
-    -fx-cursor: hand;
-}
-
-.buy-button:hover {
-    -fx-background-color: linear-gradient(to bottom, #19813c, #15703380);
-}
-
-.sell-button {
-    -fx-background-color: linear-gradient(to bottom, #8a1c1cd5, #7a181880);
-    -fx-text-fill: white;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 6px 18px 6px 18px;
-    -fx-background-radius: 6px;
-    -fx-border-color: rgba(200, 40, 40, 0.45);
-    -fx-border-width: 1px;
-    -fx-border-radius: 6px;
-    -fx-cursor: hand;
-}
-
-.sell-button:hover {
-    -fx-background-color: linear-gradient(to bottom, #8a1c1c, #7a1818);
-}
-
 /* Portfolio table */
 .game-table {
     -fx-background-color: transparent, transparent;
@@ -1163,10 +1049,6 @@
 .trade-sell-button:pressed {
     -fx-background-color: linear-gradient(to bottom, #5e1414, #440e0e);
     -fx-effect: dropshadow(gaussian, rgba(160, 30, 30, 0.15), 3, 0, 0, 1);
-}
-
-.trade-sell-all-button {
-    -fx-pref-width: 140px;
 }
 
 .sell-all-holdings-button {
@@ -1579,16 +1461,6 @@
     -fx-padding: 3px 6px 3px 6px;
 }
 
-.settings-dev-button {
-    -fx-border-color: rgba(255, 140, 0, 0.50);
-}
-
-.settings-dev-button:selected {
-    -fx-background-color: rgba(180, 80, 0, 0.55);
-    -fx-text-fill: #f5a200;
-    -fx-border-color: rgba(255, 140, 0, 0.70);
-}
-
 /* ── Favorite star button ────────────────────────────────────────────────── */
 
 .stock-fav-btn {
@@ -1865,13 +1737,6 @@
     -fx-font-size: 13px;
     -fx-font-weight: 700;
     -fx-padding: 10px 16px 10px 16px;
-}
-
-.tutorial-highlighted {
-    -fx-effect: dropshadow(gaussian, rgba(245, 162, 1, 0.55), 16, 0.18, 0, 0);
-    -fx-border-color: rgba(245, 162, 1, 0.78);
-    -fx-border-width: 1.2px;
-    -fx-border-radius: 10px;
 }
 
 /* ── Filter chip drag indicator ─────────────────────────────────────────── */
