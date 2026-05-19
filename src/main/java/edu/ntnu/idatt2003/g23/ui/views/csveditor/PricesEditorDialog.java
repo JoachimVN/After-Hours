@@ -5,14 +5,17 @@ import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -171,11 +174,7 @@ public final class PricesEditorDialog {
         if (isEditing()) { textField.setText(item); setGraphic(textField); setText(null); }
         else {
           int week = getIndex() + 1;
-          if (week <= 1) {
-            valueLabel.setText("Price  \u00b7  " + item);
-          } else {
-            valueLabel.setText("Week " + week + "  \u00b7  " + item);
-          }
+          valueLabel.setText("Week " + week + "  \u00b7  " + item);
           if (isInvalidPriceValue(item)) {
             getStyleClass().add("prices-dialog-cell-error");
           }
@@ -185,7 +184,72 @@ public final class PricesEditorDialog {
       }
     });
     listView.getStyleClass().add("prices-dialog-list");
-    VBox.setVgrow(listView, Priority.ALWAYS);
+
+    // Custom overlay scrollbar — ScrollBarSkin.resize() bypasses CSS/programmatic
+    // min-height, so the native thumb is sub-pixel at 10k+ entries. We collapse the
+    // native bar to zero width and draw our own overlay next to the ListView.
+    Region overlayTrack = new Region();
+    overlayTrack.getStyleClass().add("prices-overlay-track");
+    overlayTrack.setMaxWidth(Double.MAX_VALUE);
+    overlayTrack.setMaxHeight(Double.MAX_VALUE);
+
+    Region overlayThumb = new Region();
+    overlayThumb.getStyleClass().add("prices-overlay-thumb");
+    overlayThumb.setMaxHeight(Region.USE_PREF_SIZE);
+
+    StackPane scrollOverlay = new StackPane(overlayTrack, overlayThumb);
+    scrollOverlay.setPrefWidth(10);
+    scrollOverlay.setMinWidth(10);
+    scrollOverlay.setMaxWidth(10);
+    StackPane.setAlignment(overlayThumb, Pos.TOP_CENTER);
+
+    BorderPane listRow = new BorderPane(listView);
+    listRow.setRight(scrollOverlay);
+    VBox.setVgrow(listRow, Priority.ALWAYS);
+
+    listView.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+      if (newSkin == null) return;
+      Platform.runLater(() -> {
+        ScrollBar vbar = (ScrollBar) listView.lookup(".scroll-bar:vertical");
+        if (vbar == null) return;
+        Runnable update = () -> {
+          double trackH = overlayTrack.getHeight();
+          if (trackH <= 0) return;
+          double va = vbar.getVisibleAmount();
+          double total = vbar.getMax() + va;
+          double thumbH = total > 0 ? Math.max(20, (va / total) * trackH) : 20;
+          double range = vbar.getMax() - vbar.getMin();
+          double pos = range > 0 ? (vbar.getValue() - vbar.getMin()) / range : 0;
+          double thumbY = Math.max(0, Math.min(trackH - thumbH, pos * (trackH - thumbH)));
+          overlayThumb.setPrefHeight(thumbH);
+          StackPane.setMargin(overlayThumb, new Insets(thumbY, 0, 0, 0));
+        };
+        vbar.valueProperty().addListener((o, ov, nv) -> update.run());
+        vbar.visibleAmountProperty().addListener((o, ov, nv) -> update.run());
+        overlayTrack.heightProperty().addListener((o, ov, nv) -> update.run());
+        update.run();
+        double[] drag = {0, 0};
+        overlayThumb.setOnMousePressed(e -> {
+          drag[0] = e.getSceneY();
+          drag[1] = vbar.getValue();
+          e.consume();
+        });
+        overlayThumb.setOnMouseDragged(e -> {
+          double dy = e.getSceneY() - drag[0];
+          double usable = overlayTrack.getHeight() - overlayThumb.getPrefHeight();
+          if (usable > 0) {
+            double range2 = vbar.getMax() - vbar.getMin();
+            vbar.setValue(Math.max(vbar.getMin(), Math.min(vbar.getMax(),
+                drag[1] + (dy / usable) * range2)));
+          }
+          e.consume();
+        });
+        scrollOverlay.setOnScroll(e -> {
+          listView.fireEvent(e.copyFor(listView, listView));
+          e.consume();
+        });
+      });
+    });
 
     Button jumpErrorBtn = new Button("Jump To Error");
     jumpErrorBtn.getStyleClass().add("prices-dialog-tool-btn");
@@ -262,9 +326,8 @@ public final class PricesEditorDialog {
     Label hintLabel = new Label("Double-click a price to edit inline.");
     hintLabel.getStyleClass().add("prices-dialog-hint");
 
-  VBox body = new VBox(8, warningLabel, pricesErrorLabel, listView, hintLabel, quickRow, toolbar);
+  VBox body = new VBox(8, warningLabel, pricesErrorLabel, listRow, hintLabel, quickRow, toolbar);
   body.getStyleClass().add("prices-dialog-body");
-  VBox.setVgrow(listView, Priority.ALWAYS);
 
     // ── Footer ────────────────────────────────────────────────────────────
     Button cancelBtn = new Button("Cancel");

@@ -327,6 +327,62 @@
     -fx-font-size: 12px;
 }
 
+/* CSV editor table scrollbar — orange/gold toned to match in-game style */
+.csv-editor-table .scroll-bar:vertical .thumb {
+    -fx-min-height: 30px;
+}
+
+.csv-editor-table .scroll-bar:horizontal .thumb {
+    -fx-min-width: 30px;
+}
+
+.csv-editor-table .scroll-bar .thumb:hover {
+    -fx-background-color: rgba(80, 140, 210, 0.60);
+}
+
+.csv-editor-table .scroll-bar .thumb:pressed {
+    -fx-background-color: rgba(110, 170, 235, 0.75);
+}
+
+/* Native VirtualFlow scrollbar collapsed — replaced by custom overlay */
+.prices-dialog-list .virtual-flow > .scroll-bar:vertical {
+    -fx-pref-width: 0;
+    -fx-min-width: 0;
+    -fx-max-width: 0;
+}
+
+.prices-dialog-list .virtual-flow > .scroll-bar:horizontal {
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+}
+
+/* Custom overlay scroll indicator */
+.prices-overlay-track {
+    -fx-background-color: rgba(18, 36, 76, 0.7);
+    -fx-background-radius: 5;
+}
+
+.prices-overlay-thumb {
+    -fx-background-color: rgba(40, 90, 160, 0.65);
+    -fx-background-radius: 5;
+    -fx-pref-width: 8px;
+    -fx-max-width: 8px;
+    -fx-cursor: hand;
+}
+
+.prices-overlay-thumb:hover {
+    -fx-background-color: rgba(80, 140, 210, 0.80);
+}
+
+.prices-overlay-thumb:pressed {
+    -fx-background-color: rgba(110, 170, 235, 0.92);
+}
+
+.prices-overlay-thumb:pressed {
+    -fx-background-color: rgba(200, 248, 255, 1.0);
+}
+
 .prices-dialog-list .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #c8d8f0;

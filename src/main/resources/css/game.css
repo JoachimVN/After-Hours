@@ -364,6 +364,14 @@
     -fx-cursor: h-resize;
 }
 
+.game-body-split>.split-pane-divider:hover {
+    -fx-background-color: rgba(18, 40, 90, 0.36);
+}
+
+.game-body-split>.split-pane-divider:pressed {
+    -fx-background-color: rgba(26, 58, 120, 0.52);
+}
+
 .game-body-split>.split-pane-divider>.vertical-grabber {
     -fx-background-color: rgba(88, 223, 226, 0.85);
     -fx-background-radius: 999px;
@@ -373,6 +381,20 @@
     -fx-min-height: 34px;
     -fx-pref-height: 34px;
     -fx-max-height: 34px;
+}
+
+.game-body-split>.split-pane-divider:hover>.vertical-grabber {
+    -fx-background-color: rgba(140, 240, 244, 1.0);
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+    -fx-max-height: 44px;
+}
+
+.game-body-split>.split-pane-divider:pressed>.vertical-grabber {
+    -fx-background-color: #ffffff;
+    -fx-min-height: 50px;
+    -fx-pref-height: 50px;
+    -fx-max-height: 50px;
 }
 
 .game-portfolio-resize-handle {
@@ -390,8 +412,7 @@
     -fx-cursor: v-resize;
 }
 
-.game-portfolio-resize-handle:hover,
-.game-portfolio-resize-handle:pressed {
+.game-portfolio-resize-handle:hover {
     -fx-background-color: linear-gradient(to right,
             rgba(30, 64, 128, 0.0) 0%,
             rgba(51, 84, 130, 0.2) 24%,
@@ -400,6 +421,23 @@
             rgba(41, 75, 121, 0.5) 60%,
             rgba(51, 84, 130, 0.2) 76%,
             rgba(30, 64, 128, 0.0) 100%);
+    -fx-min-height: 7px;
+    -fx-pref-height: 7px;
+    -fx-max-height: 7px;
+}
+
+.game-portfolio-resize-handle:pressed {
+    -fx-background-color: linear-gradient(to right,
+            rgba(30, 64, 128, 0.0) 0%,
+            rgba(50, 90, 150, 0.3) 24%,
+            rgba(60, 105, 175, 0.6) 40%,
+            rgba(70, 120, 195, 0.75) 50%,
+            rgba(60, 105, 175, 0.6) 60%,
+            rgba(50, 90, 150, 0.3) 76%,
+            rgba(30, 64, 128, 0.0) 100%);
+    -fx-min-height: 8px;
+    -fx-pref-height: 8px;
+    -fx-max-height: 8px;
 }
 
 
@@ -408,6 +446,14 @@
     -fx-background-color: rgba(10, 20, 50, 0.22);
     -fx-padding: 2px 0px 3px 0px;
     -fx-cursor: v-resize;
+}
+
+.split-pane.game-right-split>.split-pane-divider:hover {
+    -fx-background-color: rgba(18, 40, 90, 0.36);
+}
+
+.split-pane.game-right-split>.split-pane-divider:pressed {
+    -fx-background-color: rgba(26, 58, 120, 0.52);
 }
 
 .game-right-split>.split-pane-divider>.horizontal-grabber {
@@ -419,6 +465,20 @@
     -fx-min-height: 4px;
     -fx-pref-height: 4px;
     -fx-max-height: 4px;
+}
+
+.game-right-split>.split-pane-divider:hover>.horizontal-grabber {
+    -fx-background-color: rgba(140, 240, 244, 1.0);
+    -fx-min-width: 44px;
+    -fx-pref-width: 44px;
+    -fx-max-width: 44px;
+}
+
+.game-right-split>.split-pane-divider:pressed>.horizontal-grabber {
+    -fx-background-color: #ffffff;
+    -fx-min-width: 50px;
+    -fx-pref-width: 50px;
+    -fx-max-width: 50px;
 }
 
 .game-portfolio-pane {
@@ -482,7 +542,7 @@
 
 .game-scroll .scroll-bar:vertical {
     -fx-background-color: transparent;
-    -fx-pref-width: 6px;
+    -fx-pref-width: 8px;
 }
 
 .game-scroll .scroll-bar:vertical .track,
@@ -494,6 +554,16 @@
 .game-scroll .scroll-bar:vertical .thumb {
     -fx-background-color: rgba(30, 64, 128, 0.5);
     -fx-background-radius: 3px;
+    -fx-min-height: 28px;
+    -fx-cursor: hand;
+}
+
+.game-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(80, 140, 210, 0.60);
+}
+
+.game-scroll .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: rgba(110, 170, 235, 0.75);
 }
 
 .game-stock-list {
@@ -541,7 +611,7 @@
 
 .stock-card-selected {
     -fx-background-color: linear-gradient(to right, rgba(25, 45, 95, 0.95), rgba(8, 16, 36, 0.95));
-    -fx-border-color: rgba(245, 162, 1, 0.55);
+    -fx-border-color: rgba(80, 140, 210, 0.40);
 }
 
 .stock-card-symbol {
@@ -1955,10 +2025,16 @@
 .history-table .scroll-bar:vertical .thumb {
     -fx-background-color: rgba(30, 64, 128, 0.55);
     -fx-background-radius: 4px;
+    -fx-min-height: 26px;
+    -fx-cursor: hand;
 }
 
 .history-table .scroll-bar:vertical .thumb:hover {
-    -fx-background-color: rgba(30, 64, 128, 0.85);
+    -fx-background-color: rgba(245, 162, 1, 0.82);
+}
+
+.history-table .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: rgba(245, 162, 1, 0.95);
 }
 
 .history-table .scroll-bar .increment-button,

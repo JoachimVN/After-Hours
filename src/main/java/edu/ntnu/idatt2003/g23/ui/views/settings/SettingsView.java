@@ -104,8 +104,8 @@ public final class SettingsView {
         onAutosaveChange, autosaveEnabled,
         onAutosaveToastChange, autosaveToastEnabled,
         onShowTutorialChange, showTutorialEnabled,
-          onPerformanceModeChange, performanceModeEnabled,
-          onMaxHistoryWeeksChange, maxHistoryWeeks,
+        onPerformanceModeChange, performanceModeEnabled,
+        onMaxHistoryWeeksChange, maxHistoryWeeks,
         null, null, null, null, null, null, null);
   }
 
@@ -141,7 +141,10 @@ public final class SettingsView {
       Consumer<String> onNameChanged,
       /** Opens the CSV tools page (null-safe). */
       Runnable onOpenCsvTools,
-      /** Opens the current market directly in the CSV editor (in-game only, null-safe). */
+      /**
+       * Opens the current market directly in the CSV editor (in-game only,
+       * null-safe).
+       */
       Runnable onEditCurrentMarketData) {
 
     StackPane overlay = new StackPane();
@@ -151,7 +154,7 @@ public final class SettingsView {
     root.getStyleClass().addAll("home-page", "background-overlay");
 
     // ── Top bar ───────────────────────────────────────────────────────────
-    Button backButton = new Button("\u2190  Back");
+    Button backButton = new Button("\u2190 Back");
     backButton.getStyleClass().add("back-button");
     backButton.setOnAction(e -> onBack.run());
 
@@ -185,7 +188,7 @@ public final class SettingsView {
     audioSection.getStyleClass().add("settings-section-card-top");
 
     VBox displaySection = buildDisplaySection(
-      stage,
+        stage,
         animationsEnabled, onAnimationsChange,
         initialFullscreen, onFullscreenChange,
         onResolutionChange, onMaximize);
@@ -193,17 +196,17 @@ public final class SettingsView {
     VBox gameSection = buildGameSection(
         autosaveEnabled, onAutosaveChange,
         autosaveToastEnabled, onAutosaveToastChange,
-      showTutorialEnabled, onShowTutorialChange,
+        showTutorialEnabled, onShowTutorialChange,
         onSave);
     VBox performanceSection = buildPerformanceSection(
-      performanceModeEnabled,
-      onPerformanceModeChange,
-      maxHistoryWeeks,
-      onMaxHistoryWeeksChange);
+        performanceModeEnabled,
+        onPerformanceModeChange,
+        maxHistoryWeeks,
+        onMaxHistoryWeeksChange);
 
     VBox dataSection = buildDataSection(stage, currentSavePath, onExport);
     VBox csvEditorSection = buildCsvEditorSection(
-      onOpenCsvTools, onEditCurrentMarketData, devModeProperty);
+        onOpenCsvTools, onEditCurrentMarketData, devModeProperty);
     VBox keybindsSection = buildKeybindsSection(overlay);
     VBox devSection = buildDevSection(devModeEnabled, onDevModeChange, devModeProperty);
 
@@ -238,7 +241,8 @@ public final class SettingsView {
 
     root.setCenter(scroll);
 
-    // ── Key bindings ────────────────────────────────────────────────────────────────
+    // ── Key bindings
+    // ────────────────────────────────────────────────────────────────
     StackPane rootPane = new StackPane(root, overlay);
     rootPane.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
       if (e.getCode() == KeyCode.ESCAPE) {
@@ -260,7 +264,7 @@ public final class SettingsView {
   // ──────────────────────────────────────────────────────────────────────────
 
   private static VBox buildProfileSection(String currentPlayerName,
-                                          Consumer<String> onNameChanged) {
+      Consumer<String> onNameChanged) {
     TextField nameField = new TextField(currentPlayerName);
     nameField.getStyleClass().addAll("settings-text-field", "settings-profile-name-field");
     nameField.setMaxWidth(Double.MAX_VALUE);
@@ -311,20 +315,18 @@ public final class SettingsView {
       boolean initialFullscreen, Consumer<Boolean> onFullscreenChange,
       Consumer<int[]> onResolutionChange, Runnable onMaximize) {
 
-    VBox animRow =
-        toggleRow("Background Animations", animationsEnabled, false, true, onAnimationsChange);
-    final boolean[] syncingFullscreenToggle = {false};
+    VBox animRow = toggleRow("Background Animations", animationsEnabled, false, true, onAnimationsChange);
+    final boolean[] syncingFullscreenToggle = { false };
     Consumer<Boolean> wrappedFullscreenChange = onFullscreenChange == null ? null : enabled -> {
       if (!syncingFullscreenToggle[0]) {
         onFullscreenChange.accept(enabled);
       }
     };
-    // The view only notifies the controller; the controller applies the change to the stage.
-    VBox fullscreenRow =
-        toggleRow("Fullscreen", initialFullscreen, false, false, wrappedFullscreenChange);
+    // The view only notifies the controller; the controller applies the change to
+    // the stage.
+    VBox fullscreenRow = toggleRow("Fullscreen", initialFullscreen, false, false, wrappedFullscreenChange);
     // Extract the toggle button so resolution/maximize can sync it to OFF.
-    ToggleButton fullscreenToggle =
-        (ToggleButton) ((HBox) fullscreenRow.getChildren().get(0)).getChildren().get(1);
+    ToggleButton fullscreenToggle = (ToggleButton) ((HBox) fullscreenRow.getChildren().get(0)).getChildren().get(1);
 
     syncingFullscreenToggle[0] = true;
     fullscreenToggle.setSelected(stage != null ? stage.isFullScreen() : initialFullscreen);
@@ -355,16 +357,15 @@ public final class SettingsView {
   }
 
   private static VBox buildResolutionBlock(Consumer<int[]> onResolutionChange,
-                                           Runnable onMaximize,
-                                           ToggleButton fullscreenToggle) {
+      Runnable onMaximize,
+      ToggleButton fullscreenToggle) {
     Label label = new Label("Window Size");
     label.getStyleClass().add("settings-label");
 
-    String[] presetLabels =
-        {"1280 \u00d7 720", "1600 \u00d7 900", "1920 \u00d7 1080", "2560 \u00d7 1440",
-            "Custom\u2026"};
-    int[] presetW = {1280, 1600, 1920, 2560, 0};
-    int[] presetH = {720, 900, 1080, 1440, 0};
+    String[] presetLabels = { "1280 \u00d7 720", "1600 \u00d7 900", "1920 \u00d7 1080", "2560 \u00d7 1440",
+        "Custom\u2026" };
+    int[] presetW = { 1280, 1600, 1920, 2560, 0 };
+    int[] presetH = { 720, 900, 1080, 1440, 0 };
 
     ComboBox<String> presetBox = new ComboBox<>();
     presetBox.getItems().addAll(presetLabels);
@@ -406,7 +407,7 @@ public final class SettingsView {
       customRow.setVisible(isCustom);
       customRow.setManaged(isCustom);
       if (!isCustom && onResolutionChange != null) {
-        onResolutionChange.accept(new int[] {presetW[i], presetH[i]});
+        onResolutionChange.accept(new int[] { presetW[i], presetH[i] });
       }
     });
 
@@ -416,7 +417,7 @@ public final class SettingsView {
         int h = Integer.parseInt(hField.getText().trim());
         if (w >= (int) AppConfig.MIN_WIDTH && h >= (int) AppConfig.MIN_HEIGHT
             && onResolutionChange != null) {
-          onResolutionChange.accept(new int[] {w, h});
+          onResolutionChange.accept(new int[] { w, h });
         }
       } catch (NumberFormatException ignored) {
       }
@@ -450,8 +451,7 @@ public final class SettingsView {
       boolean showTutorialEnabled, Consumer<Boolean> onShowTutorialChange,
       Runnable onSave) {
 
-    VBox autosaveRow =
-        toggleRow("Autosave (every minute)", autosaveEnabled, false, false, onAutosaveChange);
+    VBox autosaveRow = toggleRow("Autosave (every minute)", autosaveEnabled, false, false, onAutosaveChange);
     VBox toastRow = toggleRow("Show Autosave Notification", autosaveToastEnabled, false, true,
         onAutosaveToastChange);
     VBox tutorialRow = toggleRow("Show Tutorial", showTutorialEnabled, false, true,
@@ -469,8 +469,8 @@ public final class SettingsView {
   }
 
   private static VBox buildCsvEditorSection(Runnable onOpenCsvTools,
-                                            Runnable onEditCurrentMarketData,
-                                            BooleanProperty devModeEnabled) {
+      Runnable onEditCurrentMarketData,
+      BooleanProperty devModeEnabled) {
     Label subLabel = new Label(
         "Open the CSV editor tools to build, import, or edit stock datasets without starting a new game.");
     subLabel.getStyleClass().add("settings-sublabel");
@@ -494,7 +494,7 @@ public final class SettingsView {
       actions.getChildren().add(editCurrentBtn);
     }
 
-    return sectionCard("🧾  CSV Editor", new VBox(8, subLabel, actions));
+    return sectionCard("\uD83D\uDCDD  CSV Editor", new VBox(8, subLabel, actions));
   }
 
   private static VBox buildPerformanceSection(
@@ -514,9 +514,9 @@ public final class SettingsView {
     helpLabel.getStyleClass().addAll("settings-default-tag", "settings-performance-help");
 
     Label performanceHelpText = new Label(
-      "Performance mode helps the game stay smooth on larger saves. It loads the stock list "
-        + "more efficiently and keeps less history in memory. Turn it on for faster scrolling "
-        + "and lower lag, or raise Max History Weeks if you want more historical detail.");
+        "Performance mode helps the game stay smooth on larger saves. It loads the stock list "
+            + "more efficiently and keeps less history in memory. Turn it on for faster scrolling "
+            + "and lower lag, or raise Max History Weeks if you want more historical detail.");
     performanceHelpText.getStyleClass().addAll("settings-sublabel", "settings-performance-help-text");
     performanceHelpText.setWrapText(true);
     performanceHelpText.setMaxWidth(520);
@@ -692,46 +692,45 @@ public final class SettingsView {
 
     VBox content = new VBox(20,
         keybindGroup("Main Menu", new String[][] {
-            {"Enter", "Start / Continue game"},
-            {"S", "Open Settings"},
+            { "Enter", "Start / Continue game" },
+            { "S", "Open Settings" },
         }),
         keybindGroup("Navigation (All Pages)", new String[][] {
-            {"Esc", "Go back / close popup"},
-            {"F11", "Toggle fullscreen"},
+            { "Esc", "Go back / close popup" },
+            { "F11", "Toggle fullscreen" },
         }),
         keybindGroup("New Game Setup", new String[][] {
-            {"Enter", "Confirm / advance step"},
+            { "Enter", "Confirm / advance step" },
         }),
         keybindGroup("Custom Stocks / Save Select", new String[][] {
-            {"Enter / Space", "Confirm selection"},
-            {"Esc", "Go back"},
+            { "Enter / Space", "Confirm selection" },
+            { "Esc", "Go back" },
         }),
         keybindGroup("CSV Editor", new String[][] {
-            {"↑ / ↓", "Move to row above / below"},
-            {"← / →", "Move to column left / right"},
-            {"Tab / Shift+Tab", "Move to next / previous editable cell"},
-            {"Enter", "Start editing selected cell"},
-            {"Enter (editing)", "Commit edit and move down"},
-            {"Shift+Enter (editing)", "Commit edit and move up"},
-            {"Esc", "Cancel edit"},
-            {"Double-click", "Edit Symbol / Company / Prices"},
+            { "↑ / ↓", "Move to row above / below" },
+            { "← / →", "Move to column left / right" },
+            { "Tab / Shift+Tab", "Move to next / previous editable cell" },
+            { "Enter", "Start editing selected cell" },
+            { "Enter (editing)", "Commit edit and move down" },
+            { "Shift+Enter (editing)", "Commit edit and move up" },
+            { "Esc", "Cancel edit" },
+            { "Double-click", "Edit Symbol / Company / Prices" },
         }),
         keybindGroup("In-Game", new String[][] {
-            {"N / Space", "Advance to next week"},
-            {"S", "Open Settings"},
-            {"P", "Open Profile"},
-            {"/", "Focus stock search"},
-            {"Ctrl + F", "Focus stock search"},
-            {"M", "Open Market Movers"},
-            {"H", "Open Transaction History"},
-            {"← / →", "Previous / next tutorial step"},
-            {"Esc", "Clear search / close tutorial / go back"},
+            { "N / Space", "Advance to next week" },
+            { "S", "Open Settings" },
+            { "P", "Open Profile" },
+            { "/", "Focus stock search" },
+            { "Ctrl + F", "Focus stock search" },
+            { "M", "Open Market Movers" },
+            { "H", "Open Transaction History" },
+            { "← / →", "Previous / next tutorial step" },
+            { "Esc", "Clear search / close tutorial / go back" },
         }),
         keybindGroup("Profile", new String[][] {
-            {"S", "Open Settings"},
-            {"Esc", "Back to market"},
-        })
-    );
+            { "S", "Open Settings" },
+            { "Esc", "Back to market" },
+        }));
     content.setPadding(new Insets(4, 0, 4, 0));
 
     ScrollPane scroll = new ScrollPane(content);
@@ -781,8 +780,8 @@ public final class SettingsView {
   }
 
   private static VBox buildDevSection(boolean devModeEnabled,
-                                      Consumer<Boolean> onDevModeChange,
-                                      BooleanProperty devModeProperty) {
+      Consumer<Boolean> onDevModeChange,
+      BooleanProperty devModeProperty) {
     VBox devRow = toggleRow("Developer Mode", devModeEnabled, true, false, isOn -> {
       devModeProperty.set(isOn);
       AppConfig.DEV_MODE.set(isOn);
@@ -816,8 +815,8 @@ public final class SettingsView {
   }
 
   private static VBox toggleRow(String labelText, boolean initialOn,
-                                boolean isDanger, boolean defaultOn,
-                                Consumer<Boolean> onChange) {
+      boolean isDanger, boolean defaultOn,
+      Consumer<Boolean> onChange) {
     Label label = new Label(labelText);
     label.getStyleClass().add("settings-label");
 
@@ -846,9 +845,9 @@ public final class SettingsView {
   }
 
   private static VBox volumeBlock(String labelText, double initialValue,
-                                  boolean initialMuted,
-                                  DoubleConsumer onVolumeChange,
-                                  Consumer<Boolean> onMuteChange) {
+      boolean initialMuted,
+      DoubleConsumer onVolumeChange,
+      Consumer<Boolean> onMuteChange) {
     Label label = new Label(labelText);
     label.getStyleClass().add("settings-label");
 
