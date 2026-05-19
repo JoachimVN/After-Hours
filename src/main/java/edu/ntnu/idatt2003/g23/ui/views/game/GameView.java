@@ -113,6 +113,9 @@ public final class GameView implements GameViewInterface {
   private static final Duration SPIKE_POPUP_FADE = Duration.millis(220);
   private static final BigDecimal MIN_UPWARD_SPIKE_POPUP_PCT = new BigDecimal("20.00");
   private static final BigDecimal MIN_DOWNWARD_SPIKE_POPUP_PCT = new BigDecimal("-16.67");
+  private static final double PORTFOLIO_RESIZE_MIN_DETAIL_HEIGHT = 340;
+  private static final double PORTFOLIO_RESIZE_MIN_PORTFOLIO_HEIGHT = 96;
+  private static final double PORTFOLIO_RESIZE_HEIGHT_EPSILON = 1.0;
   private static final int PROFILE_NAME_MAX_CHARS = 13;
 
   private final GameController gameController;
@@ -169,6 +172,10 @@ public final class GameView implements GameViewInterface {
   private Node rootRef = null;
   private SplitPane hSplitRef = null;
   private double portfolioDividerRatio = 1.0;
+  private boolean portfolioResizeDragging = false;
+  private boolean suspendPortfolioAutoResize = false;
+  private boolean applyingPortfolioResize = false;
+  private int lastDetailRebuildWeek = Integer.MIN_VALUE;
   private PlayerStatus lastKnownStatus = null;
   private AudioClip levelUpClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
@@ -440,6 +447,7 @@ public final class GameView implements GameViewInterface {
         }
       }
       rebuildDetail();
+        lastDetailRebuildWeek = gameController.getCurrentWeek();
       if (performanceMode) {
         Stock selectedInList = stockListView.getSelectionModel().getSelectedItem();
         if (stock == null) {
@@ -455,6 +463,7 @@ public final class GameView implements GameViewInterface {
 
     // Show detail immediately for first stock
     rebuildDetail();
+    lastDetailRebuildWeek = gameController.getCurrentWeek();
 
     // ── Search field listener (debounced 150ms) ───────────────────────────
     PauseTransition searchDebounce = new PauseTransition(javafx.util.Duration.millis(150));
@@ -681,7 +690,7 @@ public final class GameView implements GameViewInterface {
     weekInfo.setAlignment(Pos.CENTER);
     weekInfo.setPadding(new Insets(0, 8, 0, 8));
 
-    Label calmDownLbl = new Label("Calm down there\uD83E\uDD70");
+    Label calmDownLbl = new Label("Calm down there!");
     calmDownLbl.getStyleClass().add("calm-down-label");
     calmDownLbl.setOpacity(0);
     calmDownLbl.setMouseTransparent(true);
@@ -1984,12 +1993,27 @@ public final class GameView implements GameViewInterface {
     final double[] dragStartRatio = {portfolioDividerRatio};
 
     portfolioResizeHandle.setOnMousePressed(event -> {
+      portfolioResizeDragging = true;
       dragStartY[0] = event.getSceneY();
       dragStartRatio[0] = portfolioDividerRatio;
       event.consume();
     });
 
+    portfolioResizeHandle.setOnMouseReleased(event -> {
+      portfolioResizeDragging = false;
+      event.consume();
+    });
+
+    portfolioResizeHandle.setOnMouseExited(event -> {
+      if (!event.isPrimaryButtonDown()) {
+        portfolioResizeDragging = false;
+      }
+    });
+
     portfolioResizeHandle.setOnMouseDragged(event -> {
+      if (!portfolioResizeDragging || !event.isPrimaryButtonDown()) {
+        return;
+      }
       double usableHeight = rightPanel.getHeight() - portfolioResizeHandle.getHeight();
       if (usableHeight <= 0) {
         return;
@@ -2000,20 +2024,34 @@ public final class GameView implements GameViewInterface {
       event.consume();
     });
 
-    rightPanel.heightProperty().addListener((obs, oldHeight, newHeight) ->
-        applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle));
+    rightPanel.heightProperty().addListener((obs, oldHeight, newHeight) -> {
+      if (suspendPortfolioAutoResize) {
+        return;
+      }
+      if (oldHeight == null || newHeight == null
+          || Math.abs(newHeight.doubleValue() - oldHeight.doubleValue()) < PORTFOLIO_RESIZE_HEIGHT_EPSILON) {
+        return;
+      }
+      applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle);
+    });
     Platform.runLater(() -> applyPortfolioResize(rightPanel, portfolioSection, portfolioResizeHandle));
   }
 
   private void applyPortfolioResize(VBox rightPanel, VBox portfolioSection,
                                     Region portfolioResizeHandle) {
+    if (applyingPortfolioResize) {
+      return;
+    }
+    applyingPortfolioResize = true;
+    try {
     double usableHeight = rightPanel.getHeight() - portfolioResizeHandle.getHeight();
     if (usableHeight <= 0) {
       return;
     }
 
-    double minDetailHeight = Math.max(340, detailArea.minHeight(-1));
-    double minPortfolioHeight = 96;
+    double baseMinDetailHeight = PORTFOLIO_RESIZE_MIN_DETAIL_HEIGHT;
+    double minPortfolioHeight = Math.min(PORTFOLIO_RESIZE_MIN_PORTFOLIO_HEIGHT, usableHeight);
+    double minDetailHeight = Math.max(0, Math.min(baseMinDetailHeight, usableHeight - minPortfolioHeight));
     double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
     double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
 
@@ -2033,20 +2071,32 @@ public final class GameView implements GameViewInterface {
       portfolioHeight = Math.max(minPortfolioHeight, portfolioHeight + (snappedUsable - totalHeight));
     }
 
-    detailArea.setMinHeight(minDetailHeight);
-    detailArea.setPrefHeight(detailHeight);
-    detailArea.setMaxHeight(detailHeight);
-    portfolioSection.setMinHeight(minPortfolioHeight);
-    portfolioSection.setPrefHeight(portfolioHeight);
-    portfolioSection.setMaxHeight(portfolioHeight);
+    setRegionHeightIfChanged(detailArea, minDetailHeight, detailHeight, detailHeight);
+    setRegionHeightIfChanged(portfolioSection, minPortfolioHeight, portfolioHeight, portfolioHeight);
 
     if (isTutorialVisible() && tutorialStepIndex == 5) {
       updateTutorialStep();
+    }
+    } finally {
+      applyingPortfolioResize = false;
     }
   }
 
   private static double snapToPixel(double value) {
     return Math.max(0, Math.rint(value));
+  }
+
+  private void setRegionHeightIfChanged(Region region, double minHeight,
+                                        double prefHeight, double maxHeight) {
+    if (Math.abs(region.getMinHeight() - minHeight) > 0.5) {
+      region.setMinHeight(minHeight);
+    }
+    if (Math.abs(region.getPrefHeight() - prefHeight) > 0.5) {
+      region.setPrefHeight(prefHeight);
+    }
+    if (Math.abs(region.getMaxHeight() - maxHeight) > 0.5) {
+      region.setMaxHeight(maxHeight);
+    }
   }
 
   public void updateData() {
@@ -2071,7 +2121,8 @@ public final class GameView implements GameViewInterface {
     statusTooltip.setGraphic(buildStatusTooltipContent(status, overallProgress, weeksTraded,
       targetWeeks, weeksProgress, growthRatio, growthTarget, growthProgress));
 
-    weekNumLbl.setText(String.valueOf(gameController.getCurrentWeek()));
+    int currentWeek = gameController.getCurrentWeek();
+    weekNumLbl.setText(String.valueOf(currentWeek));
     cashVal.setText(CurrencyFormatter.format(gameController.getPlayerCash()));
     portfolioVal.setText(CurrencyFormatter.format(gameController.getPortfolioNetWorth()));
     netWorthVal.setText(CurrencyFormatter.format(gameController.getPlayerNetWorth()));
@@ -2083,7 +2134,10 @@ public final class GameView implements GameViewInterface {
     restorePortfolioSelection(selectedShareKey);
     portfolioTable.refresh();
     applyFilter();
-    rebuildDetail();
+    if (currentWeek != lastDetailRebuildWeek) {
+      rebuildDetail();
+      lastDetailRebuildWeek = currentWeek;
+    }
     maybeShowSpikePopups();
     refreshTutorialProgress();
   }
@@ -2476,6 +2530,8 @@ public final class GameView implements GameViewInterface {
   }
 
   private void rebuildDetail() {
+    suspendPortfolioAutoResize = true;
+    try {
     detailArea.getChildren().clear();
     Stock stock = selectedStock.get();
     if (stock == null) {
@@ -2902,6 +2958,9 @@ public final class GameView implements GameViewInterface {
 
     detailArea.getChildren().add(header);
     VBox.setVgrow(header, Priority.ALWAYS);
+    } finally {
+      suspendPortfolioAutoResize = false;
+    }
   }
 
   private static TableView<Share> buildPortfolioTable(ObservableList<Share> items,
@@ -5059,6 +5118,9 @@ public final class GameView implements GameViewInterface {
     Pane pane = new Pane(canvas);
     pane.getStyleClass().add("price-chart-placeholder");
 
+    // Prevent parent<->child preferred-size feedback loops by keeping draw surfaces unmanaged.
+    canvas.setManaged(false);
+
     canvas.widthProperty().bind(pane.widthProperty());
     canvas.heightProperty().bind(pane.heightProperty());
 
@@ -5087,6 +5149,7 @@ public final class GameView implements GameViewInterface {
     VBox tooltip = new VBox(3);
     tooltip.getStyleClass().add("chart-tooltip");
     tooltip.setVisible(false);
+    tooltip.setManaged(false);
     tooltip.setMouseTransparent(true);
     pane.getChildren().add(tooltip);
 
