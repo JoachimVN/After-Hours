@@ -69,10 +69,6 @@
 }
 
 /* Shared overlay tint */
-.settings-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.75);
-}
-
 /* Shared buttons */
 .start-button {
     -fx-font-size: 20px;

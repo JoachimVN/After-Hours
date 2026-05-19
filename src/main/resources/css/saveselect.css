@@ -1,0 +1,173 @@
+/* ── Save-select screen ──────────────────────────────────────────────────── */
+
+.save-card {
+    -fx-background-color: rgba(7, 9, 31, 0.75);
+    -fx-border-color: #1e3a6e;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0, 0, 3);
+    -fx-max-width: 700px;
+}
+
+/* Autosave: same card, just a slightly greener tint on the left border */
+.save-card-autosave {
+    -fx-border-color: #2a5a3e;
+}
+
+.resume-card {
+    -fx-border-color: #f5a201;
+    -fx-background-color: rgba(30, 20, 5, 0.85);
+}
+
+.save-card-title {
+    -fx-font-family: "Sans Serif";
+    -fx-font-size: 22px;
+    -fx-text-fill: #f5a201;
+}
+
+.save-card-avatar {
+    -fx-font-size: 50px;
+    -fx-min-width: 84px;
+    -fx-pref-width: 84px;
+    -fx-max-width: 84px;
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: rgba(140, 185, 236, 0.42);
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+}
+
+.save-card-name-field {
+    -fx-font-family: "Harlow Solid Italic";
+    -fx-font-size: 34px;
+    -fx-text-fill: #f0f7ff;
+    -fx-control-inner-background: transparent;
+    -fx-background-color: transparent;
+    /* Padding + border always match the focused size so the card never resizes */
+    -fx-padding: 2px;
+    -fx-border-width: 1px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 4px;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.save-card-name-field:focused {
+    -fx-background-color: rgba(30, 50, 80, 0.4);
+    -fx-border-color: rgba(150, 180, 220, 0.3);
+}
+
+.save-card-detail {
+    -fx-font-size: 14px;
+    -fx-text-fill: #c8d8f0;
+}
+
+.save-card-networth {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4ecb71;
+}
+
+.save-card-date {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6080b0;
+}
+
+.save-card-flag {
+    -fx-font-size: 10px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #8fa2bd;
+    -fx-background-color: transparent
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+
+.save-load-button {
+    -fx-background-color: #1a6e2e;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-min-width: 96px;
+    -fx-min-height: 38px;
+    -fx-padding: 10px 14px 10px 14px;
+    -fx-cursor: hand;
+}
+
+.save-load-button:hover {
+    -fx-background-color: #25963f;
+}
+
+.save-delete-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e05a5a;
+    -fx-font-size: 14px;
+    -fx-background-radius: 6px;
+    -fx-border-color: #6e1a1a;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-min-width: 96px;
+    -fx-min-height: 38px;
+    -fx-padding: 10px 14px 10px 14px;
+    -fx-cursor: hand;
+}
+
+.save-delete-button:hover {
+    -fx-background-color: rgba(110, 26, 26, 0.35);
+    -fx-border-color: #963f3f;
+    -fx-text-fill: #f07070;
+}
+
+.save-rename-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8ab4d8;
+    -fx-font-size: 14px;
+    -fx-background-radius: 6px;
+    -fx-border-color: #2a4a7e;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-min-width: 96px;
+    -fx-min-height: 38px;
+    -fx-padding: 10px 14px 10px 14px;
+    -fx-cursor: hand;
+}
+
+.save-rename-button:hover {
+    -fx-background-color: rgba(42, 74, 126, 0.35);
+    -fx-border-color: #4a7aae;
+    -fx-text-fill: #b0d0f0;
+}
+
+.new-game-button {
+    -fx-font-size: 16px;
+    -fx-padding: 14px 32px 14px 32px;
+}
+
+/* ── Autosave toast pill ─────────────────────────────────────────────────── */
+
+.save-card-tooltip {
+    -fx-background-color: rgba(7, 22, 52, 0.97);
+    -fx-background-radius: 8px;
+    -fx-padding: 6px 10px 6px 10px;
+}
+
+.save-card-tooltip .label {
+    -fx-text-fill: #cfe7ff;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+
+.toast-card {
+    -fx-background-color: rgba(10, 30, 15, 0.92);
+    -fx-border-color: #2a5a3e;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px 18px 8px 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 6, 0, 0, 2);
+}
+
+.toast-message {
+    -fx-text-fill: #4ecb71;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}

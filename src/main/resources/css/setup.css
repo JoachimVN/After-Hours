@@ -131,10 +131,3 @@
     -fx-text-fill: #4a6899;
 }
 
-.market-description-label {
-    -fx-font-size: 12px;
-    -fx-text-fill: #4a6899;
-    -fx-font-style: italic;
-    -fx-padding: 2px 0px 0px 2px;
-}
-

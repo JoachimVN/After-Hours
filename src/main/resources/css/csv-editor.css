@@ -232,6 +232,12 @@
     -fx-font-style: italic;
 }
 
+.csv-prices-single {
+    -fx-font-size: 12px;
+    -fx-text-fill: #d8e8f8;
+    -fx-font-style: normal;
+}
+
 .csv-inline-icon-btn {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
@@ -321,6 +327,62 @@
     -fx-font-size: 12px;
 }
 
+/* CSV editor table scrollbar — orange/gold toned to match in-game style */
+.csv-editor-table .scroll-bar:vertical .thumb {
+    -fx-min-height: 30px;
+}
+
+.csv-editor-table .scroll-bar:horizontal .thumb {
+    -fx-min-width: 30px;
+}
+
+.csv-editor-table .scroll-bar .thumb:hover {
+    -fx-background-color: rgba(80, 140, 210, 0.60);
+}
+
+.csv-editor-table .scroll-bar .thumb:pressed {
+    -fx-background-color: rgba(110, 170, 235, 0.75);
+}
+
+/* Native VirtualFlow scrollbar collapsed — replaced by custom overlay */
+.prices-dialog-list .virtual-flow > .scroll-bar:vertical {
+    -fx-pref-width: 0;
+    -fx-min-width: 0;
+    -fx-max-width: 0;
+}
+
+.prices-dialog-list .virtual-flow > .scroll-bar:horizontal {
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+}
+
+/* Custom overlay scroll indicator */
+.prices-overlay-track {
+    -fx-background-color: rgba(18, 36, 76, 0.7);
+    -fx-background-radius: 5;
+}
+
+.prices-overlay-thumb {
+    -fx-background-color: rgba(40, 90, 160, 0.65);
+    -fx-background-radius: 5;
+    -fx-pref-width: 8px;
+    -fx-max-width: 8px;
+    -fx-cursor: hand;
+}
+
+.prices-overlay-thumb:hover {
+    -fx-background-color: rgba(80, 140, 210, 0.80);
+}
+
+.prices-overlay-thumb:pressed {
+    -fx-background-color: rgba(110, 170, 235, 0.92);
+}
+
+.prices-overlay-thumb:pressed {
+    -fx-background-color: rgba(200, 248, 255, 1.0);
+}
+
 .prices-dialog-list .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #c8d8f0;
@@ -334,9 +396,38 @@
     -fx-background-color: rgba(10, 25, 55, 0.40);
 }
 
+.prices-dialog-list .list-cell:hover {
+    -fx-background-color: rgba(20, 50, 110, 0.55);
+}
+
+.prices-dialog-list .list-cell:odd:hover {
+    -fx-background-color: rgba(25, 58, 120, 0.60);
+}
+
 .prices-dialog-list .list-cell:selected {
     -fx-background-color: #132d5e;
     -fx-text-fill: #e8f2ff;
+}
+
+.prices-dialog-list .list-cell.prices-dialog-cell-error {
+    -fx-background-color: rgba(130, 28, 28, 0.35);
+    -fx-border-color: rgba(255, 90, 90, 0.45);
+    -fx-border-width: 0 0 1 0;
+}
+
+.prices-dialog-list .list-cell.prices-dialog-cell-error:hover {
+    -fx-background-color: rgba(150, 32, 32, 0.40);
+}
+
+.prices-dialog-error {
+    -fx-font-size: 11px;
+    -fx-text-fill: #ffb4b4;
+    -fx-background-color: rgba(110, 18, 18, 0.45);
+    -fx-border-color: rgba(220, 70, 70, 0.50);
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 5 8;
 }
 
 .prices-dialog-list .list-cell .text-field {
@@ -376,6 +467,13 @@
     -fx-text-fill: #3a5a80;
 }
 
+.prices-dialog-row {
+    -fx-background-color: rgba(12, 12, 44, 0.98);
+    -fx-padding: 12px 18px 12px 18px;
+    -fx-border-color: rgba(59, 57, 201, 0.3) transparent transparent transparent;
+    -fx-border-width: 1px 0px 0px 0px;
+}
+
 .prices-dialog-quick-row {
     -fx-padding: 4 0 2 0;
 }
@@ -404,13 +502,43 @@
 }
 
 .prices-dialog-delete-btn {
-    -fx-background-color: #2e0c0c;
-    -fx-border-color: #8d304870;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
     -fx-text-fill: #f1c6cf;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 0 6;
+    -fx-pref-height: 20;
+    -fx-min-width: 20;
+    -fx-pref-width: 20;
+    -fx-opacity: 0;
+    -fx-cursor: hand;
+}
+
+.prices-dialog-list .list-cell:hover .prices-dialog-delete-btn {
+    -fx-opacity: 1;
 }
 
 .prices-dialog-delete-btn:hover {
-    -fx-background-color: derive(#2e0c0c, 25%);
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
     -fx-text-fill: white;
+}
+
+.prices-dialog-confirm-btn {
+    -fx-background-color: transparent;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 16px 8px 16px;
+    -fx-cursor: hand;
+    -fx-text-fill: #61e05a;
+    -fx-border-color: #1a6e24;
+}
+
+.prices-dialog-confirm-btn:hover {
+    -fx-text-fill: #70f07d;
+    -fx-border-color: #218c2a;
 }
 

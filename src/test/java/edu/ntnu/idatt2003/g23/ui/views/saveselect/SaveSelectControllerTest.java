@@ -68,7 +68,7 @@ class SaveSelectControllerTest {
     SaveSelectController ctrl = new SaveSelectController(
         () -> {
         }, () -> {
-    }, captured::set, p, e, null, null);
+    }, captured::set, null, p, e, null, null, false, false);
     ctrl.resumeSession();
     assertNotNull(captured.get());
     assertSame(p, captured.get()[0]);
@@ -113,13 +113,13 @@ class SaveSelectControllerTest {
 
   private static SaveSelectController noSessionController(Runnable onBack, Runnable onNewGame) {
     return new SaveSelectController(onNewGame, onBack, arr -> {
-    }, null, null, null, null);
+    }, null, null, null, null, null, false, false);
   }
 
   private static SaveSelectController withSessionController(Player player, Exchange exchange) {
     return new SaveSelectController(() -> {
     }, () -> {
     }, arr -> {
-    }, player, exchange, null, null);
+    }, null, player, exchange, null, null, false, false);
   }
 }

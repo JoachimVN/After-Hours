@@ -192,12 +192,54 @@ public final class CsvEditorView {
     pricesCol.setCellValueFactory(c -> c.getValue().pricesProperty());
     pricesCol.setPrefWidth(220);
     pricesCol.setSortable(false);
-    pricesCol.setEditable(false);
+    pricesCol.setEditable(true);
+    pricesCol.setOnEditCommit(e -> {
+      e.getRowValue().setPrices(e.getNewValue());
+      StockCsvLoader.validateRow(e.getRowValue());
+      table.refresh();
+      refreshState.run();
+    });
     pricesCol.setCellFactory(col -> new TableCell<>() {
       private final Label summaryLbl = new Label();
       private final Button editBtn = new Button("\u270e");
       private final Region spacer = new Region();
       private final HBox box = new HBox(6, summaryLbl, spacer, editBtn);
+      private final TextField editField = new TextField();
+      private boolean editingPrices = false;
+
+      private int countPrices(String raw) {
+        if (raw == null || raw.isBlank()) return 0;
+        int n = 0;
+        for (String p : raw.split(";")) {
+          if (!p.trim().isEmpty()) n++;
+        }
+        return n;
+      }
+
+      private boolean canInlineEdit() {
+        return countPrices(getItem()) <= 1;
+      }
+
+      private void beginInlineEdit() {
+        editingPrices = true;
+        editField.setText(getItem() == null ? "" : getItem().trim());
+        setText(null);
+        setGraphic(editField);
+        editField.requestFocus();
+        editField.selectAll();
+      }
+
+      private void finishInlineEdit(boolean commit) {
+        if (!editingPrices) {
+          return;
+        }
+        editingPrices = false;
+        if (commit) {
+          commitEdit(editField.getText() == null ? "" : editField.getText().trim());
+        } else {
+          cancelEdit();
+        }
+      }
 
       private void openPricesEditor() {
         int idx = getIndex();
@@ -205,10 +247,17 @@ public final class CsvEditorView {
           return;
         }
         CsvRow row = getTableView().getItems().get(idx);
-        PricesEditorDialog.open(overlayRoot, row, () -> {
-          table.refresh();
-          refreshState.run();
-        });
+        if (countPrices(row.getPrices()) <= 1) {
+          table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+          table.getSelectionModel().clearAndSelect(idx, getTableColumn());
+          table.edit(idx, getTableColumn());
+        } else {
+          PricesEditorDialog.open(overlayRoot, row, () -> {
+            table.edit(-1, null); // clear phantom editing state before refresh
+            table.refresh();
+            refreshState.run();
+          });
+        }
       }
 
       {
@@ -218,17 +267,82 @@ public final class CsvEditorView {
         editBtn.getStyleClass().addAll("csv-inline-icon-btn", "csv-inline-edit-btn");
         editBtn.setTooltip(new Tooltip("Edit price history"));
         editBtn.setOnAction(e -> openPricesEditor());
+
+        editField.getStyleClass().add("csv-jump-field");
+        editField.setOnAction(e -> finishInlineEdit(true));
+        editField.setOnKeyPressed(ev -> {
+          if (ev.getCode() == KeyCode.ESCAPE) {
+            finishInlineEdit(false);
+            ev.consume();
+          }
+        });
+        editField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+          if (!isFocused && editingPrices) {
+            finishInlineEdit(true);
+          }
+        });
       }
 
       @Override
-      protected void updateItem(String item, boolean empty) {
+      public void startEdit() {
+        if (!canInlineEdit()) {
+          // Multiple prices: open the dialog instead
+          openPricesEditor();
+          return;
+        }
+        Object allowed = table.getProperties().remove(EDIT_ALLOWED_KEY);
+        if (allowed != Boolean.TRUE) {
+          return;
+        }
+        super.startEdit();
+        beginInlineEdit();
+      }
+
+      @Override
+      public void commitEdit(String newValue) {
+        String trimmed = newValue == null ? "" : newValue.trim();
+        super.commitEdit(trimmed);
+        editingPrices = false;
+        applyPriceLabelStyle(summaryLbl, trimmed);
+        summaryLbl.setText(buildPriceSummary(trimmed));
+        setText(null);
+        setGraphic(box);
+      }
+
+      @Override
+      public void cancelEdit() {
+        super.cancelEdit();
+        editingPrices = false;
+        String current = getItem();
+        if (current == null) {
+          setText(null);
+          setGraphic(null);
+        } else {
+          applyPriceLabelStyle(summaryLbl, current);
+          summaryLbl.setText(buildPriceSummary(current));
+          setText(null);
+          setGraphic(box);
+        }
+      }
+
+      @Override
+      public void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
         if (empty || item == null) {
           setGraphic(null);
+          setText(null);
           setOnMouseClicked(null);
           return;
         }
+        if (isEditing()) {
+          setText(null);
+          setGraphic(editField);
+          return;
+        }
+        editingPrices = false;
+        applyPriceLabelStyle(summaryLbl, item);
         summaryLbl.setText(buildPriceSummary(item));
+        setText(null);
         setGraphic(box);
         setOnMouseClicked(event -> {
           if (event.getClickCount() == 2) {
@@ -237,11 +351,24 @@ public final class CsvEditorView {
           }
         });
       }
+
+      private void applyPriceLabelStyle(Label label, String raw) {
+        if (countPrices(raw) <= 1) {
+          label.getStyleClass().remove("csv-prices-summary");
+          if (!label.getStyleClass().contains("csv-prices-single")) {
+            label.getStyleClass().add("csv-prices-single");
+          }
+        } else if (!label.getStyleClass().contains("csv-prices-summary")) {
+          label.getStyleClass().remove("csv-prices-single");
+          label.getStyleClass().add("csv-prices-summary");
+        } else {
+          label.getStyleClass().remove("csv-prices-single");
+        }
+      }
     });
 
     // Ordered list of editable columns — used by smartCell for Tab/Enter navigation.
-    // Prices are excluded: they are edited via the sub-editor dialog, not inline.
-    List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol);
+    List<TableColumn<CsvRow, String>> editableCols = List.of(symbolCol, companyCol, pricesCol);
     symbolCol.setCellFactory(tc -> smartCell("symbol", table, editableCols));
     companyCol.setCellFactory(tc -> smartCell("company", table, editableCols));
 
@@ -277,16 +404,22 @@ public final class CsvEditorView {
         event.consume();
       } else if (event.getCode() == KeyCode.ENTER) {
         int currentEditableColIndex = editableCols.indexOf(pos.getTableColumn());
-        TableColumn<CsvRow, ?> col = currentEditableColIndex >= 0
-            ? editableCols.get(currentEditableColIndex) : editableCols.get(0);
-        if (event.isShiftDown()) {
-          if (ri > 0) {
-            selectCell(table, ri - 1, col);
+        if (currentEditableColIndex >= 0) {
+          // Enter on an editable cell → start editing it (Google Sheets style)
+          TableColumn<CsvRow, String> col = editableCols.get(currentEditableColIndex);
+          if (col == pricesCol) {
+            // Prices: open dialog or inline edit via the cell's own logic
+            table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+            table.getSelectionModel().clearAndSelect(ri, col);
+            table.edit(ri, col);
+          } else {
+            table.getProperties().put(EDIT_ALLOWED_KEY, Boolean.TRUE);
+            table.edit(ri, col);
           }
-        } else {
-          if (ri < rc - 1) {
-            selectCell(table, ri + 1, col);
-          }
+        } else if (!event.isShiftDown() && ri < rc - 1) {
+          selectCell(table, ri + 1, editableCols.get(0));
+        } else if (event.isShiftDown() && ri > 0) {
+          selectCell(table, ri - 1, editableCols.get(0));
         }
         event.consume();
       }
@@ -402,7 +535,7 @@ public final class CsvEditorView {
 
     // ── Bottom bar ────────────────────────────────────────────────────────
     Label hintLabel = new Label(
-        "Double-click Symbol / Company to edit \u2014 click \u201cEdit\u2026\u201d in the Prices column to manage price points.");
+        "Double-click Symbol / Company / Price(s) to edit.");
     hintLabel.getStyleClass().add("sub-tagline");
 
     // Add Row button
@@ -412,6 +545,7 @@ public final class CsvEditorView {
     addRowBtn.setOnAction(e -> {
       int nextLine = rows.size() + 1;
       CsvRow newRow = new CsvRow(nextLine, "", "", "", "");
+      StockCsvLoader.validateRow(newRow);
       rows.add(newRow);
       table.getSelectionModel().select(newRow);
       table.scrollTo(newRow);
@@ -568,6 +702,14 @@ public final class CsvEditorView {
         });
       }
 
+      /** Commit current edit then select the specified cell (without entering edit mode). */
+      private void navigateToSelect(int row, TableColumn<CsvRow, String> col) {
+        Platform.runLater(() -> {
+          table.getSelectionModel().clearAndSelect(row, col);
+          scrollIntoViewIfNeeded(table, row);
+        });
+      }
+
       @Override
       public void startEdit() {
         // Block the default single-click auto-start; only proceed when explicitly allowed
@@ -625,11 +767,11 @@ public final class CsvEditorView {
             commitEdit(text);
             if (event.isShiftDown()) {
               if (ri > 0) {
-                navigateToEdit(ri - 1, col);
+                navigateToSelect(ri - 1, col);
               }
             } else {
               if (ri < table.getItems().size() - 1) {
-                navigateToEdit(ri + 1, col);
+                navigateToSelect(ri + 1, col);
               }
             }
             event.consume();
@@ -687,7 +829,38 @@ public final class CsvEditorView {
    */
   private static void selectCell(TableView<CsvRow> table, int row, TableColumn<CsvRow, ?> col) {
     table.getSelectionModel().clearAndSelect(row, col);
-    table.scrollTo(row);
+    scrollIntoViewIfNeeded(table, row);
+  }
+
+  /**
+   * Scrolls only if {@code row} is outside the currently visible rows.
+   * Unlike {@link TableView#scrollTo}, this does not reposition rows that are already visible.
+   */
+  private static void scrollIntoViewIfNeeded(TableView<?> table, int row) {
+    javafx.scene.control.ScrollBar vbar = null;
+    for (javafx.scene.Node node : table.lookupAll(".scroll-bar")) {
+      if (node instanceof javafx.scene.control.ScrollBar sb
+          && sb.getOrientation() == javafx.geometry.Orientation.VERTICAL) {
+        vbar = sb;
+        break;
+      }
+    }
+    if (vbar == null) {
+      table.scrollTo(row);
+      return;
+    }
+    int total = table.getItems().size();
+    if (total == 0) return;
+    double visibleRows = table.getHeight() / Math.max(1, table.getFixedCellSize() > 0
+        ? table.getFixedCellSize() : 28);
+    double topRow = vbar.getValue() * (total - visibleRows);
+    double bottomRow = topRow + visibleRows - 1;
+    if (row < topRow) {
+      table.scrollTo(row);
+    } else if (row > bottomRow) {
+      table.scrollTo((int) Math.max(0, row - visibleRows + 1));
+    }
+    // else: already visible — do nothing
   }
 
   /**
@@ -747,7 +920,7 @@ public final class CsvEditorView {
       }
     }
     if (count == 0) return "0 prices";
-    if (count == 1) return "Week 1 \u00B7 " + first;
+    if (count == 1) return first;
     return "Week " + String.format("%,d", count) + " \u00B7 "
       + first + " \u2192 " + last;
   }
