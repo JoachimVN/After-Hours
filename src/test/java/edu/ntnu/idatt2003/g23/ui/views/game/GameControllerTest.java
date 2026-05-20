@@ -140,9 +140,7 @@ class GameControllerTest {
     BigDecimal cost = stock.getSalesPrice().multiply(new BigDecimal("1.005"));
     int byCash = player.getMoney()
         .divide(cost, 0, java.math.RoundingMode.DOWN).intValue();
-    int cap = controller.getStockOwnershipCap(stock).intValue();
-    int expected = Math.min(byCash, cap);
-    assertEquals(expected, controller.maxBuyQuantity(stock));
+    assertEquals(byCash, controller.maxBuyQuantity(stock));
   }
 
   @Test

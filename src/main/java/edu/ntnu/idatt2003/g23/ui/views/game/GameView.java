@@ -2593,7 +2593,6 @@ public final class GameView implements GameViewInterface {
 
     // ── Owned badge (right of price row) ─────────────────────────────────
     BigDecimal ownedQtyDetail = gameController.getOwnedQuantity(stock.getSymbol());
-    BigDecimal capQtyDetail = gameController.getStockOwnershipCap(stock);
     HBox priceRow = new HBox(12, price, pctBadge);
     priceRow.setAlignment(Pos.BASELINE_LEFT);
 
@@ -2609,11 +2608,8 @@ public final class GameView implements GameViewInterface {
     }});
 
     // Always include ownedBox so hlRow height stays constant regardless of ownership
-    Label ownedBadge = new Label("Owned: "
-      + ownedQtyDetail.stripTrailingZeros().toPlainString()
-      + " / "
-      + capQtyDetail.stripTrailingZeros().toPlainString()
-      + " max");
+    Label ownedBadge = new Label(
+      "Owned: " + ownedQtyDetail.stripTrailingZeros().toPlainString() + " shares");
     ownedBadge.getStyleClass().add("detail-owned-badge");
     VBox ownedBox = new VBox(2, labelSmall("HOLDING"), ownedBadge);
     ownedBox.setAlignment(Pos.BOTTOM_RIGHT);
@@ -3557,12 +3553,10 @@ public final class GameView implements GameViewInterface {
     List<String[]> benefits = switch (newStatus) {
       case INVESTOR -> List.of(
           new String[]{"\uD83D\uDCB0", "Income Tax Rate", "25%  (was 30%)"},
-          new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D71.5 max shares per stock"},
           new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
       );
       case SPECULATOR -> List.of(
           new String[]{"\uD83D\uDCB0", "Income Tax Rate", "20%  (was 25%)"},
-          new String[]{"\uD83D\uDCC8", "Ownership Cap", "Hold \u00D72.0 max shares per stock"},
           new String[]{"\uD83C\uDFA7", "New Avatars", "2 unlocked"}
       );
       default -> List.of();
@@ -4987,13 +4981,9 @@ public final class GameView implements GameViewInterface {
     }
 
     BigDecimal ownedQuantity = gameController.getOwnedQuantity(stock.getSymbol());
-    BigDecimal capQuantity = gameController.getStockOwnershipCap(stock);
     Label ownedMaxLbl = null;
     if (ownedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-      String ownedText = ownedQuantity.compareTo(capQuantity) >= 0
-          ? "Owned: MAX"
-          : "Owned: " + ownedQuantity.stripTrailingZeros().toPlainString()
-            + "/" + capQuantity.stripTrailingZeros().toPlainString();
+      String ownedText = "Owned: " + ownedQuantity.stripTrailingZeros().toPlainString();
       ownedMaxLbl = new Label(ownedText);
       ownedMaxLbl.getStyleClass().add("stock-owned-label");
     }
