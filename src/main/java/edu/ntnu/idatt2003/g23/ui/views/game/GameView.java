@@ -620,7 +620,7 @@ public final class GameView implements GameViewInterface {
           selectedStock.set(target);
           focusStockCardInList(symbol);
         });
-    portfolioTable.setMinHeight(400);
+    portfolioTable.setMinHeight(0);
         portfolioTable.setPlaceholder(new Region());
         portfolioTable.visibleProperty().bind(Bindings.isNotEmpty(portfolioItems));
         portfolioTable.managedProperty().bind(Bindings.isNotEmpty(portfolioItems));
