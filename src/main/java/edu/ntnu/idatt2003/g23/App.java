@@ -57,9 +57,12 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.effect.ColorAdjust;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
@@ -223,6 +226,11 @@ public class App extends Application {
     scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
       if (event.getCode() == KeyCode.F11) {
         toggleFullscreen();
+        event.consume();
+      }
+    });
+    scene.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, event -> {
+      if (isTextInputTarget(event.getTarget())) {
         event.consume();
       }
     });
@@ -1513,6 +1521,18 @@ public class App extends Application {
         ? LANDING_THEME_CONTEXT_MULTIPLIER
         : NON_LANDING_THEME_CONTEXT_MULTIPLIER;
     homePageMusicController.setContextVolumeMultiplier(contextMultiplier, smooth);
+  }
+
+  private static boolean isTextInputTarget(Object target) {
+    if (!(target instanceof Node node)) {
+      return false;
+    }
+    for (Node current = node; current != null; current = current.getParent()) {
+      if (current instanceof TextInputControl) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
