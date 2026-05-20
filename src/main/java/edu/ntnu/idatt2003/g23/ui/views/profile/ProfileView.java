@@ -194,10 +194,8 @@ public final class ProfileView {
             avatarGraphic.setEffect(grayscale);
             avatarGraphic.setOpacity(0.45);
             avatarBtn.getStyleClass().add("profile-avatar-btn-locked");
-            Tooltip tooltip = new Tooltip("Unlocks at " + formatStatusName(requiredStatus));
-            tooltip.setShowDelay(Duration.millis(120));
-            tooltip.setShowDuration(Duration.INDEFINITE);
-            avatarBtn.setTooltip(tooltip);
+            avatarBtn.setTooltip(buildLockedHintTooltip(
+                "Unlocks at " + formatStatusName(requiredStatus)));
           }
           if (avatar.equals(initialAvatar)) {
             avatarBtn.getStyleClass().add("profile-avatar-btn-active");
@@ -499,6 +497,7 @@ public final class ProfileView {
       }
     }
     final List<GameController.ReplayPoint> timelinePoints = replayPoints;
+    final boolean noReplayHistoryYet = controller.getCurrentWeek() <= 1;
     final List<GameController.ReplayPoint> chartPoints = new ArrayList<>();
     if (!timelinePoints.isEmpty()) {
       chartPoints.add(timelinePoints.get(0));
@@ -603,6 +602,21 @@ public final class ProfileView {
     StackPane replayChartLayer = new StackPane(replayChart, hoverValueChip);
     replayChartLayer.getStyleClass().add("profile-crosshair-layer");
 
+    if (noReplayHistoryYet) {
+      Region emptyDim = new Region();
+      emptyDim.getStyleClass().add("profile-replay-empty-dim");
+      emptyDim.setMouseTransparent(true);
+      StackPane.setAlignment(emptyDim, Pos.CENTER);
+
+      Label emptyState = new Label("No history yet.");
+      emptyState.setWrapText(true);
+      emptyState.getStyleClass().addAll("profile-empty", "profile-replay-empty-text");
+      emptyState.setStyle("-fx-text-alignment: center;");
+      StackPane.setAlignment(emptyState, Pos.CENTER);
+      replayChartLayer.getChildren().add(emptyDim);
+      replayChartLayer.getChildren().add(emptyState);
+    }
+
     XYChart.Series<Number, Number> replaySeries = new XYChart.Series<>();
     XYChart.Series<Number, Number> verticalMarkerSeries = new XYChart.Series<>();
     replayChart.getData().add(replaySeries);
@@ -662,6 +676,7 @@ public final class ProfileView {
     replaySlider.setMinorTickCount(0);
     replaySlider.setShowTickMarks(true);
     replaySlider.setShowTickLabels(true);
+    installSliderFill(replaySlider);
 
     Region replaySliderLeftPad = new Region();
     Region replaySliderRightPad = new Region();
@@ -725,7 +740,7 @@ public final class ProfileView {
     };
 
     Runnable refreshMarkerAndHover = () -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet) {
         verticalMarkerSeries.getData().clear();
         replayStatus.setText("No replay data available yet.");
         hoverValueChip.setVisible(false);
@@ -792,7 +807,7 @@ public final class ProfileView {
     };
 
     final Runnable refreshReplay = () -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet || timelinePoints.isEmpty()) {
         replaySeries.getData().clear();
         lastRenderedWeekRef[0] = -1;
         lastRenderedPointIndexRef[0] = -1;
@@ -857,7 +872,7 @@ public final class ProfileView {
         .addListener((obs, oldV, newV) -> alignReplaySliderToPlot.run());
 
     replayChart.setOnMouseMoved(e -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet || timelinePoints.isEmpty()) {
         return;
       }
       Node plotBackground = replayChart.lookup(".chart-plot-background");
@@ -932,7 +947,7 @@ public final class ProfileView {
         replayTimelineRef[0].stop();
         playing[0] = false;
         if (playBtnRef[0] != null) {
-          playBtnRef[0].setText("Play");
+          playBtnRef[0].setText("▶  Play");
         }
       } else {
         replaySlider.setValue(next);
@@ -941,11 +956,11 @@ public final class ProfileView {
     replayTimelineRef[0] = replayTimeline;
     replayTimeline.setCycleCount(Timeline.INDEFINITE);
 
-    Button playBtn = new Button("Play");
+    Button playBtn = new Button("▶  Play");
     playBtnRef[0] = playBtn;
     playBtn.getStyleClass().add("profile-action-btn");
     playBtn.setOnAction(e -> {
-      if (timelinePoints.isEmpty()) {
+      if (noReplayHistoryYet || timelinePoints.isEmpty()) {
         return;
       }
       if (onReplayControlSelect != null) {
@@ -953,18 +968,18 @@ public final class ProfileView {
       }
       if (playing[0]) {
         replayTimeline.stop();
-        playBtn.setText("Play");
+        playBtn.setText("▶  Play");
       } else {
         if (replaySlider.getValue() >= replaySlider.getMax()) {
           replaySlider.setValue(replaySlider.getMin());
         }
         replayTimeline.play();
-        playBtn.setText("Pause");
+        playBtn.setText("⏸  Pause");
       }
       playing[0] = !playing[0];
     });
 
-    Button restartBtn = new Button("Restart");
+    Button restartBtn = new Button("↺  Restart");
     restartBtn.getStyleClass().add("profile-secondary-btn");
     restartBtn.setOnAction(e -> {
       if (onReplayControlSelect != null) {
@@ -972,7 +987,7 @@ public final class ProfileView {
       }
       replayTimeline.stop();
       playing[0] = false;
-      playBtn.setText("Play");
+      playBtn.setText("▶  Play");
       replaySlider.setValue(minWeek);
     });
 
@@ -981,7 +996,7 @@ public final class ProfileView {
         ? String.valueOf((int) initialSpeedX)
         : String.format(Locale.US, "%.2f", initialSpeedX).replaceAll("0+$", "")
             .replaceAll("\\.$", "");
-    Button speedBtn = new Button("Speed: " + initialSpeedLabel + "x");
+    Button speedBtn = new Button("⏩  " + initialSpeedLabel + "x");
     speedBtn.getStyleClass().add("profile-secondary-btn");
     speedBtn.setOnAction(e -> {
       if (onReplayControlSelect != null) {
@@ -994,10 +1009,10 @@ public final class ProfileView {
           ? String.valueOf((int) speedX)
           : String.format(Locale.US, "%.2f", speedX).replaceAll("0+$", "")
             .replaceAll("\\.$", "");
-      speedBtn.setText("Speed: " + speedLabel + "x");
+      speedBtn.setText("⏩  " + speedLabel + "x");
     });
 
-    if (replayPoints.isEmpty()) {
+    if (noReplayHistoryYet || replayPoints.isEmpty()) {
       replaySlider.setDisable(true);
       playBtn.setDisable(true);
       restartBtn.setDisable(true);
@@ -1006,7 +1021,7 @@ public final class ProfileView {
 
     replayTimeline.setOnFinished(e -> {
       playing[0] = false;
-      playBtn.setText("Play");
+      playBtn.setText("▶  Play");
     });
 
     replayChart.setOnMousePressed(e -> applyReplayLineGradient.run());
@@ -1083,6 +1098,14 @@ public final class ProfileView {
         }
         onBackToGame.run();
         e.consume();
+      } else if (e.getCode() == KeyCode.S) {
+        if (nameChanged[0]) {
+          commitPendingName.run();
+        }
+        if (onOpenSettings != null) {
+          onOpenSettings.run();
+          e.consume();
+        }
       }
     });
     return wrapper;
@@ -1162,11 +1185,41 @@ public final class ProfileView {
     return requiredStatus == null || currentStatus.ordinal() >= requiredStatus.ordinal();
   }
 
+  private static Tooltip buildLockedHintTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(Duration.millis(120));
+    tooltip.setShowDuration(Duration.INDEFINITE);
+    tooltip.getStyleClass().add("profile-avatar-locked-tooltip");
+    return tooltip;
+  }
+
   private static String formatStatusName(PlayerStatus status) {
     if (status == null) {
       return "";
     }
     String lower = status.name().toLowerCase(Locale.ROOT);
     return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+  }
+
+  private static void installSliderFill(Slider slider) {
+    Runnable applyFill = () -> {
+      Node track = slider.lookup(".track");
+      if (!(track instanceof Region trackRegion)) {
+        return;
+      }
+
+      double min = slider.getMin();
+      double max = slider.getMax();
+      double pct = max <= min ? 0.0 : (slider.getValue() - min) / (max - min);
+      pct = Math.max(0.0, Math.min(1.0, pct));
+      double stop = pct * 100.0;
+      trackRegion.setStyle("-fx-background-color: linear-gradient(to right, "
+          + "#f5a201 " + stop + "%, "
+          + "#0f2d5e " + stop + "%);");
+    };
+
+    slider.skinProperty().addListener((obs, oldSkin, newSkin) -> Platform.runLater(applyFill));
+    slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
+    Platform.runLater(applyFill);
   }
 }

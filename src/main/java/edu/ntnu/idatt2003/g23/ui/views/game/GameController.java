@@ -34,6 +34,7 @@ public final class GameController {
   private boolean replaySeriesDirty = true;
   private GameViewInterface view;
   private PlayerStatus statusOverride;
+  private boolean devModeMutationsUsed = false;
 
   public GameController(Player player, Exchange exchange) {
     this.player = player;
@@ -57,7 +58,7 @@ public final class GameController {
 
       // Use SaleCalculator with a proportional slice of the lot
       Share partial = new Share(stock, sq, lot.getPurchasePrice());
-      SaleCalculator calc = new SaleCalculator(partial);
+      SaleCalculator calc = new SaleCalculator(partial, getPlayerTaxRate());
 
       tGross = tGross.add(calc.calculateGross());
       tFee = tFee.add(calc.calculateCommission());
@@ -77,7 +78,7 @@ public final class GameController {
     BigDecimal totalquantity = BigDecimal.ZERO;
 
     for (Share lot : player.getPortfolio().getShares()) {
-      SaleCalculator calc = new SaleCalculator(lot);
+      SaleCalculator calc = new SaleCalculator(lot, getPlayerTaxRate());
 
       tGross = tGross.add(calc.calculateGross());
       tFee = tFee.add(calc.calculateCommission());
@@ -108,6 +109,10 @@ public final class GameController {
     player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
     player.updateChickAvatarProgression();
     invalidateReplaySeries();
+  }
+
+  public void scheduleTutorialMomentumNudge() {
+    exchange.scheduleTutorialMomentumNudge();
   }
 
   public void executeSellAll() {
@@ -164,7 +169,7 @@ public final class GameController {
       } else {
         sellShare = lot;
       }
-      Transaction tx = exchange.sell(sellShare, player);
+      Transaction tx = exchange.sell(sellShare, player, getPlayerTaxRate());
       tx.commit(player);
       TransactionCalculator calculator = tx.getCalculator();
       tGross = tGross.add(calculator.calculateGross());
@@ -236,7 +241,7 @@ public final class GameController {
         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     if (totalOwnedquantity.compareTo(BigDecimal.ZERO) <= 0) {
-      view.showSellAllError("Your portfolio is empty - nothing to sell!");
+      view.showSellAllError("There is nothing to sell");
       return;
     }
 
@@ -254,6 +259,10 @@ public final class GameController {
 
   public List<Stock> getStocks() {
     return exchange.getStocks();
+  }
+
+  public List<String> consumeLastSpikeSymbols() {
+    return exchange.consumeLastSpikeSymbols();
   }
 
   public String getExchangeName() {
@@ -274,6 +283,10 @@ public final class GameController {
 
   public BigDecimal getPlayerNetWorth() {
     return player.getNetWorth();
+  }
+
+  public BigDecimal getPlayerTaxRate() {
+    return getPlayerStatus().getTaxRate();
   }
 
   public PlayerStatus getPlayerStatus() {
@@ -379,6 +392,7 @@ public final class GameController {
 
   public void setPlayerStatusOverride(PlayerStatus status) {
     statusOverride = status;
+    devModeMutationsUsed = true;
   }
 
   public void clearPlayerStatusOverride() {
@@ -430,6 +444,7 @@ public final class GameController {
 
   public void addCash(BigDecimal amount) {
     player.addMoney(amount);
+    devModeMutationsUsed = true;
   }
 
   public void setCash(BigDecimal amount) {
@@ -439,6 +454,7 @@ public final class GameController {
     } else {
       player.withdrawMoney(current.subtract(amount));
     }
+    devModeMutationsUsed = true;
   }
 
   public void advanceWeeks(int n) {
@@ -448,10 +464,16 @@ public final class GameController {
       player.updateChickAvatarProgression();
     }
     invalidateReplaySeries();
+    devModeMutationsUsed = true;
   }
 
   public void setFrozen(boolean frozen) {
     exchange.setFrozen(frozen);
+    devModeMutationsUsed = true;
+  }
+
+  public boolean hasDevModeMutationsUsed() {
+    return devModeMutationsUsed;
   }
 
   // ── Chart trade-point data ────────────────────────────────────────────────

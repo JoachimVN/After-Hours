@@ -236,20 +236,22 @@ public final class StockCsvLoader {
 
     String[] rawPrices = prices.split(";");
     boolean hasPrices = false;
+    int week = 0;
     for (String raw : rawPrices) {
       String p = raw.trim();
       if (!p.isEmpty()) {
+        week++;
         try {
           BigDecimal val = new BigDecimal(p);
           if (val.compareTo(BigDecimal.ZERO) <= 0) {
             setError(row, "prices",
-                "Price \"" + p + "\" must be greater than zero");
+                formatPriceError(p, week, "must be greater than zero"));
             return;
           }
           hasPrices = true;
         } catch (NumberFormatException e) {
           setError(row, "prices",
-              "\"" + p + "\" isn't a valid price — enter a number like 214.10");
+              formatPriceError(p, week, "isn't a valid price — enter a number like 214.10"));
           return;
         }
       }
@@ -300,6 +302,17 @@ public final class StockCsvLoader {
   }
 
   /**
+   * Builds a user-friendly price error with optional week context.
+   */
+  private static String formatPriceError(String value, int week, String details) {
+    String base = "Price \"" + value + "\" " + details;
+    if (week <= 1) {
+      return base;
+    }
+    return "Week " + week + " — " + base;
+  }
+
+  /**
    * Parses one line leniently, never throwing — errors go into the returned row.
    */
   private static CsvRow parseRowLenient(String line, int lineNumber) {
@@ -334,19 +347,21 @@ public final class StockCsvLoader {
 
     String[] rawPrices = prices.split(";");
     boolean hasPrices = false;
+    int week = 0;
     for (String raw : rawPrices) {
       String p = raw.trim();
       if (!p.isEmpty()) {
+        week++;
         try {
           BigDecimal val = new BigDecimal(p);
           if (val.compareTo(BigDecimal.ZERO) <= 0) {
             return rowWithError(lineNumber, symbol, company, prices, "prices",
-                "Price \"" + p + "\" must be greater than zero");
+                formatPriceError(p, week, "must be greater than zero"));
           }
           hasPrices = true;
         } catch (NumberFormatException e) {
           return rowWithError(lineNumber, symbol, company, prices, "prices",
-              "\"" + p + "\" isn't a valid price — enter a number like 214.10");
+              formatPriceError(p, week, "isn't a valid price — enter a number like 214.10"));
         }
       }
     }

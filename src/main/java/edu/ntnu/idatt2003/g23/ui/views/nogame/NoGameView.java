@@ -250,9 +250,7 @@ public final class NoGameView {
     }
 
     // ── Interactive path ────────────────────────────────────────────────
-    String noQuestion = MSG_NO_CASH.equals(contextMessage) ? "Was your cash really zero?"
-        : MSG_SKIPPED.equals(contextMessage) ? "Was your editor empty?"
-        : "Was your file empty?";
+    String noQuestion = "Are you lying?";
     Message contextMsg = msgs.get(contextIdx);
     List<Message> phase1Msgs = msgs.subList(0, contextIdx);
     List<Message> phase2Msgs = msgs.subList(contextIdx + 1, msgs.size());

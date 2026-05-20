@@ -46,7 +46,7 @@ public final class SaveSelectView {
 
     // ── Top bar ───────────────────────────────────────────────────────────
     Button backBtn = new Button("\u2190 Back");
-    backBtn.getStyleClass().add("back-button");
+    backBtn.getStyleClass().add("back-button");;
     backBtn.setOnAction(e -> controller.handleBack());
 
     Button newGameBtn = new Button("+ New Game");
@@ -58,11 +58,12 @@ public final class SaveSelectView {
     topBar.setPadding(new Insets(24, 32, 0, 32));
 
     // ── Title ─────────────────────────────────────────────────────────────
-    Label title = new Label("Continue Game");
+    List<SaveMeta> saves = controller.loadSaveList();
+    boolean hasSavesOrSession = !saves.isEmpty() || controller.hasSession();
+    Label title = new Label(hasSavesOrSession ? "Continue Game" : "New Game");
     title.getStyleClass().add("page-title");
 
     // ── Save list ─────────────────────────────────────────────────────────
-    List<SaveMeta> saves = controller.loadSaveList();
 
     VBox cardList = new VBox(16);
     cardList.setAlignment(Pos.TOP_CENTER);
@@ -172,12 +173,20 @@ public final class SaveSelectView {
     Label dateLabel = new Label((meta.autosave() ? "Autosaved:  " : "Saved: ") + meta.savedAt());
     dateLabel.getStyleClass().add("save-card-date");
 
-    VBox info = new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel);
+    Label flaggedLabel = null;
+    if (meta.flagged()) {
+      flaggedLabel = new Label("Modified");
+      flaggedLabel.getStyleClass().add("save-card-flag");
+    }
+
+    VBox info = flaggedLabel == null
+        ? new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel)
+        : new VBox(3, nameField, detailLabel, netWorthLabel, dateLabel, flaggedLabel);
     info.setAlignment(Pos.CENTER_LEFT);
     HBox.setHgrow(info, Priority.ALWAYS);
 
     // ── Action buttons ─────────────────────────────────────────────────
-    Button loadBtn = new Button("Load");
+    Button loadBtn = new Button("\u25b6  Load");
     loadBtn.getStyleClass().addAll("setup-start-button", "save-load-button");
     loadBtn.setMaxWidth(Double.MAX_VALUE);
     loadBtn.setOnAction(e -> {
@@ -187,12 +196,23 @@ public final class SaveSelectView {
       }
     });
 
-    Button deleteBtn = new Button("Delete");
+    Button editBtn = new Button("\u270e  Edit");
+    editBtn.getStyleClass().add("save-rename-button");
+    editBtn.setMaxWidth(Double.MAX_VALUE);
+    editBtn.setTooltip(buildButtonTooltip("Edit market data for this save"));
+    editBtn.setOnAction(e -> controller.handleEditSave(meta));
+
+    if (!controller.isDevModeEnabled()) {
+      editBtn.setVisible(false);
+      editBtn.setManaged(false);
+    }
+
+    Button deleteBtn = new Button("\u2715  Delete");
     deleteBtn.getStyleClass().addAll("save-delete-button");
     deleteBtn.setMaxWidth(Double.MAX_VALUE);
     deleteBtn.setOnAction(e -> handleDelete(meta, cardList));
 
-    VBox buttons = new VBox(6, loadBtn, deleteBtn);
+    VBox buttons = new VBox(6, loadBtn, editBtn, deleteBtn);
     buttons.setAlignment(Pos.CENTER);
     buttons.setFillWidth(true);
 
@@ -238,7 +258,7 @@ public final class SaveSelectView {
     info.setAlignment(Pos.CENTER_LEFT);
     HBox.setHgrow(info, Priority.ALWAYS);
 
-    Button resumeBtn = new Button("Resume");
+    Button resumeBtn = new Button("\u25b6  Resume");
     resumeBtn.getStyleClass().addAll("setup-start-button", "save-load-button");
     resumeBtn.setOnAction(e -> controller.resumeSession());
 
@@ -257,9 +277,9 @@ public final class SaveSelectView {
 
   private void handleDelete(SaveMeta meta, VBox cardList) {
     // ── Header ────────────────────────────────────────────────────────────
-    Label iconLbl = new Label("🗑");
+    Label iconLbl = new Label("\u2715");
     iconLbl.getStyleClass().add("error-dialog-icon");
-    Label titleLbl = new Label("DELETE SAVE");
+    Label titleLbl = new Label("Delete Save");
     titleLbl.getStyleClass().add("error-dialog-title");
     HBox header = new HBox(10, iconLbl, titleLbl);
     header.getStyleClass().add("error-dialog-header");
@@ -276,8 +296,8 @@ public final class SaveSelectView {
     // ── Buttons ───────────────────────────────────────────────────────────
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("dialog-cancel-btn");
-    Button deleteBtn = new Button("Delete");
-    deleteBtn.getStyleClass().add("dialog-confirm-delete-btn");
+    Button deleteBtn = new Button("\u2715 Delete");
+    deleteBtn.getStyleClass().add("dialog-confirm-error-btn");
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -290,7 +310,7 @@ public final class SaveSelectView {
     card.setMaxHeight(Region.USE_PREF_SIZE);
 
     Region backdrop = new Region();
-    backdrop.getStyleClass().add("error-dialog-backdrop");
+    backdrop.getStyleClass().add("dialog-backdrop");
 
     StackPane popup = new StackPane(backdrop, card);
     StackPane.setAlignment(card, Pos.CENTER);
@@ -393,5 +413,13 @@ public final class SaveSelectView {
     } catch (NumberFormatException e) {
       return raw;
     }
+  }
+
+  private static Tooltip buildButtonTooltip(String message) {
+    Tooltip tooltip = new Tooltip(message);
+    tooltip.setShowDelay(javafx.util.Duration.millis(120));
+    tooltip.setShowDuration(javafx.util.Duration.INDEFINITE);
+    tooltip.getStyleClass().add("save-card-tooltip");
+    return tooltip;
   }
 }

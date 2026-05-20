@@ -2,28 +2,28 @@
 
 .setup-card {
     -fx-background-color: #07152cc0;
-    -fx-background-radius: 18;
+    -fx-background-radius: 18px;
     -fx-border-color: #1e408055;
-    -fx-border-width: 1;
-    -fx-border-radius: 18;
+    -fx-border-width: 1px;
+    -fx-border-radius: 18px;
 }
 
 .setup-field-label {
-    -fx-font-size: 12;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-text-fill: #4a6899;
-    -fx-letter-spacing: 1;
+    -fx-letter-spacing: 1px;
 }
 
 .setup-text-field {
-    -fx-font-size: 15;
+    -fx-font-size: 15px;
     -fx-text-fill: #e8d8b0;
     -fx-background-color: #050d1a;
     -fx-border-color: #1e4080;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 10 14;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 14px;
     -fx-prompt-text-fill: #2c4a6a;
 }
 
@@ -32,15 +32,15 @@
 }
 
 .cash-preset-button {
-    -fx-font-size: 13;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-text-fill: #b8cce8;
     -fx-background-color: #0f2d5e;
-    -fx-background-radius: 8;
+    -fx-background-radius: 8px;
     -fx-border-color: #1e408050;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-pref-height: 38;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-pref-height: 38px;
     -fx-cursor: hand;
 }
 
@@ -56,15 +56,15 @@
 }
 
 .data-toggle-button {
-    -fx-font-size: 14;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-text-fill: #b8cce8;
     -fx-background-color: #0f2d5e;
-    -fx-background-radius: 10;
+    -fx-background-radius: 10px;
     -fx-border-color: #1e408060;
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-pref-height: 52;
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-pref-height: 52px;
     -fx-cursor: hand;
 }
 
@@ -85,23 +85,23 @@
     -fx-font-size: 14px;
     -fx-background-color: #050d1a;
     -fx-border-color: #1e4080;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
     -fx-cursor: hand;
-    -fx-pref-height: 44;
+    -fx-pref-height: 44px;
 }
 
 .market-combo-box .list-view {
     -fx-background-color: #07152c;
     -fx-border-color: #1e4080;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
 }
 
 .market-combo-box .list-cell {
     -fx-background-color: transparent;
-    -fx-padding: 8 12;
+    -fx-padding: 8px 12px;
 }
 
 .market-combo-box .list-cell:hover {
@@ -129,12 +129,5 @@
 .market-combo-desc {
     -fx-font-size: 11px;
     -fx-text-fill: #4a6899;
-}
-
-.market-description-label {
-    -fx-font-size: 12px;
-    -fx-text-fill: #4a6899;
-    -fx-font-style: italic;
-    -fx-padding: 2 0 0 2;
 }
 

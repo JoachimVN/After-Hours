@@ -28,7 +28,7 @@ public final class LandingPageView {
     title.getStyleClass().add("title");
 
     // Taglines
-    Label tagline = new Label("\u2726  Lorem Ipsum \u2022 Lorem Ipsum \u2022 Lorem Ipsum  \u2726");
+    Label tagline = new Label("\u2726  NTNU \u2022 IDATT2003 \u2022 Millions \u2022 Group 23  \u2726");
     tagline.getStyleClass().add("tagline");
     tagline.setPadding(new Insets(2, 14, 4, 14));
     Label subTagline = new Label("The market never sleeps. Neither do you.");

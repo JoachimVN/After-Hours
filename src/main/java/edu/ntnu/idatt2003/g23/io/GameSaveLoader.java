@@ -53,7 +53,8 @@ public final class GameSaveLoader {
       int portfolioSize,
       int totalShares,
       String status,
-      boolean autosave) {
+      boolean autosave,
+      boolean flagged) {
 
     public String id() {
       return saveDir.getFileName().toString();
@@ -328,7 +329,9 @@ public final class GameSaveLoader {
       uiState = new GameUiState(favs, filters, chips, sort, sel, sidebarDivider, portfolioDivider);
     }
 
-    return new Object[] {player, exchange, uiState};
+    boolean flagged = readFlagged(obj);
+
+    return new Object[] {player, exchange, uiState, flagged};
   }
 
   // ── Internal ──────────────────────────────────────────────────────────────
@@ -361,6 +364,7 @@ public final class GameSaveLoader {
     String netWorth = obj.has("netWorth") ? obj.get("netWorth").getAsString() : money;
     boolean isAutosave = obj.has("autosave") && obj.get("autosave").getAsBoolean();
     String status = obj.has("status") ? obj.get("status").getAsString() : "NOVICE";
+    boolean flagged = readFlagged(obj);
 
     JsonArray portfolio = obj.getAsJsonArray("portfolio");
     int portfolioSize = portfolio != null ? portfolio.size() : 0;
@@ -378,7 +382,19 @@ public final class GameSaveLoader {
     }
 
     return new SaveMeta(saveDir, displayName, profileAvatar, exchangeName, savedAt,
-        week, money, netWorth, portfolioSize, totalShares, status, isAutosave);
+      week, money, netWorth, portfolioSize, totalShares, status, isAutosave,
+      flagged);
+  }
+
+  private static boolean readFlagged(JsonObject obj) {
+    boolean flagged = obj.has("flagged") && obj.get("flagged").getAsBoolean();
+    if (flagged) {
+      return true;
+    }
+    // Backward compatibility for saves written before the single-flag migration.
+    boolean flaggedDevMode = obj.has("flaggedDevMode") && obj.get("flaggedDevMode").getAsBoolean();
+    boolean flaggedCsvEdited = obj.has("flaggedCsvEdited") && obj.get("flaggedCsvEdited").getAsBoolean();
+    return flaggedDevMode || flaggedCsvEdited;
   }
 
   private static String normalizeAutosaveSlot(String folderName) {

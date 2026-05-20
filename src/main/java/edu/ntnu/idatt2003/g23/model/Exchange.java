@@ -25,6 +25,10 @@ public class Exchange {
   private Map<String, Stock> stockMap;
   private Random random;
   private boolean frozen = false;
+  private final List<String> lastSpikeSymbols = new ArrayList<>();
+  private boolean tutorialMomentumNudgePending = false;
+  private String tutorialNudgeUpSymbol = null;
+  private String tutorialNudgeDownSymbol = null;
 
   /**
    * Transition weight matrix for volatility phases.
@@ -261,6 +265,17 @@ public class Exchange {
     return TransactionFactory.createSale(share, this.week);
   }
 
+  public Transaction sell(Share share, Player player, java.math.BigDecimal taxRate) {
+    if (share == null) {
+      throw new IllegalArgumentException("Share cannot be null");
+    }
+    if (player == null) {
+      throw new IllegalArgumentException("Player cannot be null");
+    }
+
+    return TransactionFactory.createSale(share, this.week, taxRate);
+  }
+
   /**
    * Freezes or unfreezes price simulation (dev mode).
    */
@@ -273,6 +288,7 @@ public class Exchange {
    */
   public void advance() {
     this.week++;
+    lastSpikeSymbols.clear();
     if (frozen) {
       return;
     }
@@ -280,7 +296,60 @@ public class Exchange {
     allStocks.forEach(this::advanceStockPrice);
     applyVolatilityTransitions();
     applyAllSpikes(allStocks);
+    applyTutorialMomentumNudge();
     enforceFloor(allStocks);
+  }
+
+  /**
+   * Schedules a one-shot momentum nudge for tutorial onboarding.
+   *
+   * <p>Behavior is adaptive by market size:</p>
+   * <ul>
+   *   <li>1 stock: one upward nudge (price-change walkthrough)</li>
+   *   <li>2 stocks: one upward + one mild downward nudge (ranking clarity)</li>
+   *   <li>3+ stocks: one upward nudge (movers walkthrough)</li>
+   * </ul>
+   */
+  public void scheduleTutorialMomentumNudge() {
+    List<Stock> stocks = new ArrayList<>(stockMap.values());
+    if (stocks.isEmpty()) {
+      return;
+    }
+    Collections.shuffle(stocks, random);
+    tutorialNudgeUpSymbol = stocks.get(0).getSymbol();
+    tutorialNudgeDownSymbol = stocks.size() == 2 ? stocks.get(1).getSymbol() : null;
+    tutorialMomentumNudgePending = true;
+  }
+
+  private void applyTutorialMomentumNudge() {
+    if (!tutorialMomentumNudgePending) {
+      return;
+    }
+    tutorialMomentumNudgePending = false;
+
+    if (tutorialNudgeUpSymbol != null && stockMap.containsKey(tutorialNudgeUpSymbol)) {
+      Stock upTarget = stockMap.get(tutorialNudgeUpSymbol);
+      BigDecimal upFactor = BigDecimal.valueOf(1.12).setScale(6, RoundingMode.HALF_UP);
+      BigDecimal upPrice = upTarget.getSalesPrice().multiply(upFactor).setScale(6, RoundingMode.HALF_UP);
+      upTarget.setLatestSalesPrice(upPrice);
+      if (!lastSpikeSymbols.contains(tutorialNudgeUpSymbol)) {
+        lastSpikeSymbols.add(tutorialNudgeUpSymbol);
+      }
+    }
+
+    if (tutorialNudgeDownSymbol != null && stockMap.containsKey(tutorialNudgeDownSymbol)) {
+      Stock downTarget = stockMap.get(tutorialNudgeDownSymbol);
+      BigDecimal downFactor = BigDecimal.valueOf(0.96).setScale(6, RoundingMode.HALF_UP);
+      BigDecimal downPrice = downTarget.getSalesPrice().multiply(downFactor)
+          .max(BigDecimal.valueOf(0.01)).setScale(6, RoundingMode.HALF_UP);
+      downTarget.setLatestSalesPrice(downPrice);
+      if (!lastSpikeSymbols.contains(tutorialNudgeDownSymbol)) {
+        lastSpikeSymbols.add(tutorialNudgeDownSymbol);
+      }
+    }
+
+    tutorialNudgeUpSymbol = null;
+    tutorialNudgeDownSymbol = null;
   }
 
   /** Simulates one week of price movement for a single stock. */
@@ -354,6 +423,8 @@ public class Exchange {
     applySpike(stocks, 0.10, 10, 50);
     applySpike(stocks, 0.05, 20, 70);
     applySpike(stocks, 0.02, 30, 90);
+    applySpike(stocks, 0.005, 75, 150);
+    applySpike(stocks, 0.001, 150, 300);
   }
 
   /** Re-applies the minimum price floor after spike events. */
@@ -391,8 +462,21 @@ public class Exchange {
         newPrice = target.getSalesPrice().divide(factor, 6, RoundingMode.HALF_UP);
       }
       target.setLatestSalesPrice(newPrice);
+      String symbol = target.getSymbol();
+      if (!lastSpikeSymbols.contains(symbol)) {
+        lastSpikeSymbols.add(symbol);
+      }
     }
 
+  }
+
+  /**
+   * Returns and clears symbols that were directly affected by this week's spike events.
+   */
+  public List<String> consumeLastSpikeSymbols() {
+    List<String> snapshot = List.copyOf(lastSpikeSymbols);
+    lastSpikeSymbols.clear();
+    return snapshot;
   }
 
   private Volatility pickNextVolatility(Volatility current) {

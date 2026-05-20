@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer.LoadStats;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.CsvRow;
@@ -113,6 +114,7 @@ public class App extends Application {
   private boolean devModeEnabled = false;
   private boolean autosaveEnabled = false;
   private boolean autosaveToast = true;
+  private boolean showTutorialEnabled = GlobalSettingsManager.DEFAULT_SHOW_TUTORIAL;
   private boolean performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
   private int maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
   private String currentAutosaveId = null; // unique per game instance
@@ -131,6 +133,7 @@ public class App extends Application {
   private GameController currentGameController;
   private GameUiState currentUiState;
   private String currentProfileAvatar = "bust-in-silhouette";
+  private boolean currentFlagged = false;
   private boolean gameAudioContext = false;
 
   @Override
@@ -150,6 +153,7 @@ public class App extends Application {
     devModeEnabled = gs.devMode();
     autosaveEnabled = gs.autosave();
     autosaveToast = gs.autosaveToast();
+    showTutorialEnabled = gs.showTutorial();
     performanceModeEnabled = gs.performanceMode();
     maxHistoryWeeks = gs.maxHistoryWeeks();
     fullscreenEnabled = gs.fullscreen();
@@ -157,6 +161,12 @@ public class App extends Application {
     windowHeight = gs.windowHeight();
 
     AppConfig.DEV_MODE.set(gs.devMode());
+    AppConfig.DEV_MODE.addListener((obs, oldVal, newVal) -> {
+      if (Boolean.compare(newVal, devModeEnabled) != 0) {
+        devModeEnabled = newVal;
+        saveSettings();
+      }
+    });
     AppConfig.PERFORMANCE_MODE.set(performanceModeEnabled);
     AppConfig.PERFORMANCE_MAX_HISTORY_WEEKS.set(maxHistoryWeeks);
     primaryStage = stage;
@@ -201,7 +211,8 @@ public class App extends Application {
         getClass().getResource("/css/csv-editor.css").toExternalForm(),
         getClass().getResource("/css/no-stocks.css").toExternalForm(),
         getClass().getResource("/css/profile.css").toExternalForm(),
-        getClass().getResource("/css/scrollbar.css").toExternalForm());
+        getClass().getResource("/css/scrollbar.css").toExternalForm(),
+        getClass().getResource("/css/saveselect.css").toExternalForm());
 
     configureStage(stage, scene);
     // Respect fullscreen setting; otherwise keep forced maximized startup.
@@ -249,6 +260,7 @@ public class App extends Application {
   }
 
   private void goToSaveSelect() {
+    final Parent[] saveSelectPageRef = new Parent[1];
     SaveSelectController ctrl = new SaveSelectController(
         () -> {
           sfxController.play(SfxController.PLAY2, Math.min(sfxController.getVolume() * 1.5, 1.0));
@@ -256,11 +268,20 @@ public class App extends Application {
         },
         withBack(this::goHomeKeepMusic),
         this::loadFromSave,
+        meta -> {
+          if (saveSelectPageRef[0] != null) {
+            openCsvEditorFromSaveMetaForContinue(meta,
+                () -> navigateKeepMusic(saveSelectPageRef[0]));
+          }
+        },
         currentPlayer,
         currentExchange,
         currentSavePath,
-        currentUiState);
+        currentUiState,
+        currentFlagged,
+        devModeEnabled);
     Parent saveSelectPage = new SaveSelectView(ctrl).getRoot();
+    saveSelectPageRef[0] = saveSelectPage;
     navigateKeepMusic(saveSelectPage);
     fadeInPage(saveSelectPage);
   }
@@ -270,7 +291,8 @@ public class App extends Application {
     Exchange exchange = (Exchange) data[1];
     java.nio.file.Path savePath = (java.nio.file.Path) data[2];
     GameUiState uiState = data.length > 3 ? (GameUiState) data[3] : null;
-    buildAndStartGameFromSave(player, exchange, savePath, uiState);
+    currentFlagged = data.length > 4 && Boolean.TRUE.equals(data[4]);
+    buildAndStartGameFromSave(player, exchange, savePath, uiState, false);
   }
 
   private void goToSetup() {
@@ -280,6 +302,7 @@ public class App extends Application {
     currentSavePath = null;
     currentGameController = null;
     currentUiState = null;
+    currentFlagged = false;
     currentProfileAvatar = "bust-in-silhouette";
     currentSetupPage = new SetupView(
         withBack(this::goToSaveSelect),
@@ -464,6 +487,11 @@ public class App extends Application {
 
   private void openCsvEditorStandalone(CsvParseResult result, Runnable onBack,
       Runnable onReset) {
+    openCsvEditorStandalone(result, onBack, onReset, null);
+  }
+
+  private void openCsvEditorStandalone(CsvParseResult result, Runnable onBack,
+      Runnable onReset, Runnable onSuccessfulSave) {
     LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
     Runnable doOpen = () -> {
       Parent editorPage = CsvEditorView.buildStandalone(
@@ -472,6 +500,9 @@ public class App extends Application {
           (editedRows, file) -> {
             try {
               StockCsvExporter.writeCsvRows(file.toPath(), editedRows);
+              if (onSuccessfulSave != null) {
+                onSuccessfulSave.run();
+              }
               overlayService.showNotification("Saved", "Stock data exported to:\n" + file.getName(), true);
               onBack.run();
             } catch (IOException e) {
@@ -490,6 +521,11 @@ public class App extends Application {
   }
 
   private void openCsvEditorFromImportStandalone(File csvFile, Runnable onBack) {
+    openCsvEditorFromImportStandalone(csvFile, onBack, null);
+  }
+
+  private void openCsvEditorFromImportStandalone(File csvFile, Runnable onBack,
+      Runnable onSuccessfulSave) {
     runWithLoadingOverlay(
         "Opening CSV Editor",
         "Parsing CSV data...",
@@ -501,7 +537,8 @@ public class App extends Application {
           }
         },
         result -> openCsvEditorStandalone(result, onBack,
-            () -> openCsvEditorFromImportStandalone(csvFile, onBack)),
+            () -> openCsvEditorFromImportStandalone(csvFile, onBack, onSuccessfulSave),
+            onSuccessfulSave),
         error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
   }
 
@@ -530,7 +567,89 @@ public class App extends Application {
       overlayService.showNotification("Save Error", "Could not locate stocks.csv for that save.", false);
       return;
     }
-    openCsvEditorFromImportStandalone(saveStocksFile, onBack);
+    openCsvEditorFromImportStandalone(saveStocksFile, onBack, () -> {
+      try {
+        GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
+      } catch (IOException e) {
+        overlayService.showNotification("Save Flag Warning",
+            "CSV was saved, but flag metadata could not be updated:\n" + e.getMessage(), false);
+      }
+    });
+  }
+
+  private void openCsvEditorFromSaveMetaForContinue(SaveMeta selectedSave, Runnable onBack) {
+    if (selectedSave == null || selectedSave.saveDir() == null) {
+      overlayService.showNotification("Save Error", "Could not locate that save.", false);
+      return;
+    }
+
+    Object[] loaded;
+    try {
+      loaded = GameSaveLoader.load(selectedSave.saveDir());
+    } catch (IOException | IllegalStateException e) {
+      overlayService.showNotification("Save Error", "Could not load save:\n" + e.getMessage(), false);
+      return;
+    }
+
+    Player loadedPlayer = (Player) loaded[0];
+    Exchange loadedExchange = (Exchange) loaded[1];
+    GameUiState loadedUiState = loaded.length > 2 ? (GameUiState) loaded[2] : null;
+    CsvParseResult result = exchangeAsParseResult(loadedExchange);
+    LoadStats stats = CsvEditorLoadAnalyzer.analyze(result);
+    Runnable doOpen = () -> {
+      Parent editorPage = CsvEditorView.build(
+          result,
+          withBack(onBack),
+          rows -> {
+            Exchange updatedExchange = new Exchange(loadedExchange.getName(), StockCsvLoader.toStocks(rows));
+            updatedExchange.setWeek(loadedExchange.getWeek());
+            Player updatedPlayer;
+            try {
+              updatedPlayer = rebuildPlayerForEditedExchange(loadedPlayer, updatedExchange);
+            } catch (IllegalStateException e) {
+              overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+              return;
+            }
+            try {
+              GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
+            } catch (IOException e) {
+              overlayService.showNotification("Save Flag Warning",
+                  "CSV was edited, but flag metadata could not be updated:\n" + e.getMessage(), false);
+            }
+            currentFlagged = true;
+            buildAndStartGameFromSave(updatedPlayer, updatedExchange, selectedSave.saveDir(),
+                loadedUiState, false);
+          },
+          (rows, file) -> {
+            try {
+              StockCsvExporter.writeCsvRows(file.toPath(), rows);
+              GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
+            } catch (IOException e) {
+              overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+              return;
+            }
+            Exchange updatedExchange = new Exchange(loadedExchange.getName(), StockCsvLoader.toStocks(rows));
+            updatedExchange.setWeek(loadedExchange.getWeek());
+            Player updatedPlayer;
+            try {
+              updatedPlayer = rebuildPlayerForEditedExchange(loadedPlayer, updatedExchange);
+            } catch (IllegalStateException e) {
+              overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+              return;
+            }
+            currentFlagged = true;
+            buildAndStartGameFromSave(updatedPlayer, updatedExchange, selectedSave.saveDir(),
+                loadedUiState, false);
+          },
+          () -> openCsvEditorFromSaveMetaForContinue(selectedSave, onBack));
+      navigateKeepMusic(editorPage);
+      fadeInPage(editorPage);
+    };
+    if (CsvEditorLoadAnalyzer.shouldWarn(stats)) {
+      overlayService.showLargeFileWarning(stats, doOpen);
+    } else {
+      doOpen.run();
+    }
   }
 
   private void openCurrentMarketCsvEditorForGame(Runnable onBack) {
@@ -575,9 +694,13 @@ public class App extends Application {
   }
 
   private CsvParseResult currentExchangeAsParseResult() {
+    return exchangeAsParseResult(currentExchange);
+  }
+
+  private CsvParseResult exchangeAsParseResult(Exchange exchange) {
     List<CsvRow> rows = new ArrayList<>();
     int lineNum = 1;
-    for (Stock stock : currentExchange.getStocks()) {
+    for (Stock stock : exchange.getStocks()) {
       rows.add(new CsvRow(lineNum++, stock.getSymbol(), stock.getCompany(),
           formatStockPricesForCsv(stock), ""));
     }
@@ -640,7 +763,9 @@ public class App extends Application {
     }
 
     GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : currentUiState;
-    buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState);
+    buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState,
+      false);
+    currentFlagged = true;
     if (exportFile != null) {
       overlayService.showNotification("Saved", "Stock data exported to:\n" + exportFile.getName(), true);
     }
@@ -709,11 +834,11 @@ public class App extends Application {
         BigDecimal.valueOf(cash));
     player.setProfileAvatar(currentProfileAvatar);
     Exchange exchange = new Exchange(exchangeName, stocks);
-    buildAndStartGameFromSave(player, exchange, null, null);
+    buildAndStartGameFromSave(player, exchange, null, null, true);
   }
 
   private void buildAndStartGameFromSave(Player player, Exchange exchange,
-      java.nio.file.Path savePath, GameUiState uiState) {
+      java.nio.file.Path savePath, GameUiState uiState, boolean fromFreshGameFlow) {
     if (exchange.getStocks().isEmpty()) {
       showNoGamePage(false);
       return;
@@ -738,6 +863,7 @@ public class App extends Application {
       if (resumingSameInMemorySession) {
         currentAutosaveId = previousAutosaveId;
       } else {
+        currentFlagged = false;
         String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
         currentAutosaveId = safeName + "_"
             + java.time.LocalDateTime.now().format(
@@ -750,6 +876,7 @@ public class App extends Application {
 
     onGameProfileRef[0] = () -> {
       sfxController.play(SfxController.PROFILE);
+      currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -762,6 +889,7 @@ public class App extends Application {
           this::performSave));
     };
     onGameSettingsRef[0] = () -> {
+      sfxController.play(SfxController.SETTINGS);
       boolean perfModeAtOpen = performanceModeEnabled;
       int maxHistoryAtOpen = maxHistoryWeeks;
       navigateKeepMusic(buildSettingsView(
@@ -785,7 +913,13 @@ public class App extends Application {
             () -> sfxController.play(SfxController.SELECT),
             () -> sfxController.play(SfxController.SELECT),
             sfxController::getVolume,
-            null)
+            null,
+            fromFreshGameFlow && showTutorialEnabled,
+            enabled -> {
+              showTutorialEnabled = enabled;
+              saveSettings();
+            },
+            this::restartCurrentGameInPlace)
         : new GameView(
             gameController,
             withBack(this::goHome),
@@ -794,15 +928,49 @@ public class App extends Application {
             () -> sfxController.play(SfxController.SELECT),
             () -> sfxController.play(SfxController.SELECT),
             sfxController::getVolume,
-            uiState);
+            uiState,
+            fromFreshGameFlow && showTutorialEnabled,
+            enabled -> {
+              showTutorialEnabled = enabled;
+              saveSettings();
+            },
+            this::restartCurrentGameInPlace);
     currentGameController = gameController;
     currentGameView = gameview;
+    gameview.setMusicFilterCallbacks(
+        homePageMusicController::applyLowPassFilter,
+        homePageMusicController::removeFilter);
     currentGamePage = gameview.getRoot();
     playGameEntryAudio();
     navigateToGame(currentGamePage);
     if (autosaveEnabled) {
       startAutosaveTimer();
     }
+  }
+
+  private void restartCurrentGameInPlace() {
+    if (currentPlayer == null || currentExchange == null) {
+      return;
+    }
+
+    List<Stock> resetStocks = new ArrayList<>();
+    for (Stock stock : currentExchange.getStocks()) {
+      List<BigDecimal> history = stock.getHistoricalPrices();
+      BigDecimal openingPrice = history.isEmpty() ? stock.getSalesPrice() : history.get(0);
+      Stock resetStock = new Stock(
+          stock.getSymbol(),
+          stock.getCompany(),
+          new ArrayList<>(List.of(openingPrice)));
+      resetStock.setVolatility(stock.getVolatility());
+      resetStocks.add(resetStock);
+    }
+
+    Player resetPlayer = new Player(currentPlayer.getName(), currentPlayer.getStartingMoney());
+    resetPlayer.setProfileAvatar(currentPlayer.getProfileAvatar());
+    resetPlayer.setWeeksUsingChickAvatar(currentPlayer.getWeeksUsingChickAvatar());
+
+    Exchange resetExchange = new Exchange(currentExchange.getName(), resetStocks);
+    buildAndStartGameFromSave(resetPlayer, resetExchange, null, null, false);
   }
 
   private void rebuildCurrentGameViewForPerformance() {
@@ -815,6 +983,7 @@ public class App extends Application {
     GameUiState preservedUiState = currentGameView != null ? currentGameView.getUiState() : null;
     Runnable onGameProfile = () -> {
       sfxController.play(SfxController.PROFILE);
+      currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -838,8 +1007,17 @@ public class App extends Application {
         () -> sfxController.play(SfxController.SELECT),
         () -> sfxController.play(SfxController.SELECT),
         sfxController::getVolume,
-        preservedUiState);
+        preservedUiState,
+        false,
+        enabled -> {
+          showTutorialEnabled = enabled;
+          saveSettings();
+        },
+        this::restartCurrentGameInPlace);
     currentGameView = refreshed;
+    refreshed.setMusicFilterCallbacks(
+        homePageMusicController::applyLowPassFilter,
+        homePageMusicController::removeFilter);
     currentGamePage = refreshed.getRoot();
   }
 
@@ -848,12 +1026,17 @@ public class App extends Application {
       return;
     }
     GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
+    boolean flagged = currentFlagged
+        || (currentGameController != null && currentGameController.hasDevModeMutationsUsed());
     try {
       if (currentSavePath != null) {
-        GameSaveExporter.overwrite(currentSavePath, currentPlayer, currentExchange, uiState);
+        GameSaveExporter.overwrite(currentSavePath, currentPlayer, currentExchange, uiState,
+            flagged);
       } else {
-        currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState);
+        currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState,
+            flagged);
       }
+      currentFlagged = flagged;
       overlayService.showNotification("Game Saved", "Your progress has been saved.", true);
     } catch (IOException e) {
       overlayService.showNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
@@ -865,8 +1048,12 @@ public class App extends Application {
       return;
     }
     GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
+    boolean flagged = currentFlagged
+        || (currentGameController != null && currentGameController.hasDevModeMutationsUsed());
     try {
-      GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId);
+      GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId,
+          flagged);
+      currentFlagged = flagged;
       if (autosaveToast) {
         overlayService.showTimedNotification("Autosaved", "Progress autosaved.", true);
       }
@@ -993,6 +1180,12 @@ public class App extends Application {
       autosaveToast = enabled;
       saveSettings();
     };
+    ctrl.showTutorial = showTutorialEnabled;
+    ctrl.onShowTutorialChange = enabled -> {
+      playSettingsToggleSfx(enabled);
+      showTutorialEnabled = enabled;
+      saveSettings();
+    };
     ctrl.performanceModeEnabled = performanceModeEnabled;
     ctrl.onPerformanceModeChange = enabled -> {
       playSettingsToggleSfx(enabled);
@@ -1019,6 +1212,7 @@ public class App extends Application {
       devModeEnabled = GlobalSettingsManager.DEFAULT_DEV_MODE;
       autosaveEnabled = GlobalSettingsManager.DEFAULT_AUTOSAVE;
       autosaveToast = GlobalSettingsManager.DEFAULT_AUTOSAVE_TOAST;
+      showTutorialEnabled = GlobalSettingsManager.DEFAULT_SHOW_TUTORIAL;
       performanceModeEnabled = GlobalSettingsManager.DEFAULT_PERFORMANCE_MODE;
       maxHistoryWeeks = GlobalSettingsManager.DEFAULT_MAX_HISTORY_WEEKS;
       fullscreenEnabled = GlobalSettingsManager.DEFAULT_FULLSCREEN;
@@ -1155,6 +1349,7 @@ public class App extends Application {
         sfxMuted,
         autosaveEnabled,
         autosaveToast,
+        showTutorialEnabled,
         fullscreenEnabled,
         devModeEnabled,
           performanceModeEnabled,

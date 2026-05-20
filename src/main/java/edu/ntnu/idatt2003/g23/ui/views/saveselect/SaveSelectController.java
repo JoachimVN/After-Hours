@@ -36,6 +36,10 @@ public final class SaveSelectController {
    */
   private final Consumer<Object[]> onLoad; // [Player, Exchange, Path|null]
   /**
+   * Called when the user wants to edit a save's market CSV in the CSV editor.
+   */
+  private final Consumer<SaveMeta> onEdit;
+  /**
    * In-memory game session from the previous play (not persisted to disk).
    * {@code null} when there is no active session to resume.
    */
@@ -43,19 +47,27 @@ public final class SaveSelectController {
   private final Exchange sessionExchange;
   private final java.nio.file.Path sessionSavePath;
   private final GameUiState sessionUiState;
+  private final boolean sessionFlagged;
+  private final boolean devModeEnabled;
 
   public SaveSelectController(Runnable onNewGame, Runnable onBack,
                               Consumer<Object[]> onLoad,
+                              Consumer<SaveMeta> onEdit,
                               Player sessionPlayer, Exchange sessionExchange,
                               java.nio.file.Path sessionSavePath,
-                              GameUiState sessionUiState) {
+                              GameUiState sessionUiState,
+                              boolean sessionFlagged,
+                              boolean devModeEnabled) {
     this.onNewGame = onNewGame;
     this.onBack = onBack;
     this.onLoad = onLoad;
+    this.onEdit = onEdit;
     this.sessionPlayer = sessionPlayer;
     this.sessionExchange = sessionExchange;
     this.sessionSavePath = sessionSavePath;
     this.sessionUiState = sessionUiState;
+    this.devModeEnabled = devModeEnabled;
+    this.sessionFlagged = sessionFlagged;
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -66,6 +78,16 @@ public final class SaveSelectController {
 
   public void handleNewGame() {
     onNewGame.run();
+  }
+
+  public void handleEditSave(SaveMeta meta) {
+    if (devModeEnabled && onEdit != null && meta != null) {
+      onEdit.accept(meta);
+    }
+  }
+
+  public boolean isDevModeEnabled() {
+    return devModeEnabled;
   }
 
   /**
@@ -87,7 +109,8 @@ public final class SaveSelectController {
    * Fires {@code onLoad} with the in-memory session (no disk I/O).
    */
   public void resumeSession() {
-    onLoad.accept(new Object[] {sessionPlayer, sessionExchange, sessionSavePath, sessionUiState});
+    onLoad.accept(new Object[] {sessionPlayer, sessionExchange, sessionSavePath, sessionUiState,
+      sessionFlagged});
   }
 
   /**
@@ -100,8 +123,8 @@ public final class SaveSelectController {
     try {
       Object[] result = GameSaveLoader.load(saveDir);
       // [0]=Player, [1]=Exchange, [2]=GameUiState (may be null)
-      // Reorder to [0]=Player, [1]=Exchange, [2]=Path, [3]=UiState
-      Object[] withPath = new Object[] {result[0], result[1], saveDir, result[2]};
+      // Reorder to [0]=Player, [1]=Exchange, [2]=Path, [3]=UiState, [4]=flagged
+      Object[] withPath = new Object[] {result[0], result[1], saveDir, result[2], result[3]};
       onLoad.accept(withPath);
       return null;
     } catch (IOException | IllegalStateException e) {
