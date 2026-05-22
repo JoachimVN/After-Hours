@@ -21,8 +21,8 @@ public class HomePageMusicController {
   private static final List<String> GAME_START_TRACKS = List.of(
       "/audio/sfx/game_start/Game_Start1.wav",
       "/audio/sfx/game_start/Game_Start2.wav",
-      "/audio/sfx/game_start/Game_Start4.wav"
       // "/audio/sfx/game_start/Game_Start3.wav",
+      "/audio/sfx/game_start/Game_Start4.wav"
       // "/audio/sfx/game_start/Game_Start5.wav"
   );
   private static final List<String> AMBIENCE_TRACKS = List.of(

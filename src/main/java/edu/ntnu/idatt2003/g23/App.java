@@ -175,7 +175,7 @@ public class App extends Application {
     primaryStage = stage;
     homePage = LandingPageView.build(
         () -> {
-          sfxController.play(SfxController.PLAY, Math.min(sfxController.getVolume() * 1.5, 1.0));
+          sfxController.play(SfxController.PLAY1, Math.min(sfxController.getVolume() * 1.5, 1.0));
           goToSaveSelect();
         },
         () -> {
