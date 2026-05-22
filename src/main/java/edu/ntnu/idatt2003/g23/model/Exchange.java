@@ -33,18 +33,20 @@ public class Exchange {
   /**
    * Transition weight matrix for volatility phases.
    * Rows/columns ordered by Volatility.ordinal():
-   * 0=STABLE, 1=FAST, 2=CHAOTIC, 3=SLOW_RISE, 4=SLOW_FALL, 5=NORMAL_RISE, 6=NORMAL_FALL
-   * Higher weight = more likely transition. Self-transitions are allowed for trending phases.
+   * 0=STABLE, 1=FAST, 2=CHAOTIC, 3=SLOW_RISE, 4=SLOW_FALL, 5=NORMAL_RISE,
+   * 6=NORMAL_FALL
+   * Higher weight = more likely transition. Self-transitions are allowed for
+   * trending phases.
    */
   private static final double[][] VOLATILITY_TRANSITIONS = {
-      //       ST    FA    CH    SR    SF    NR    NF
-      /* ST */ {0, 5, 2, 28, 28, 18, 18},
-      /* FA */ {8, 0, 10, 5, 5, 25, 25},
-      /* CH */ {5, 35, 0, 5, 5, 8, 8},
-      /* SR */ {15, 5, 2, 10, 20, 25, 12},  // SR can stay SR; less NR funnel
-      /* SF */ {15, 5, 2, 20, 10, 12, 25},  // symmetric with SR
-      /* NR */ {8, 12, 2, 18, 8, 20, 14},  // NR self-transition; less SR loop; more NF path
-      /* NF */ {8, 12, 2, 8, 18, 14, 20},  // NF self-transition; less SF cushion; symmetric
+      // ST FA CH SR SF NR NF
+      /* ST */ { 0, 5, 2, 28, 28, 18, 18 },
+      /* FA */ { 8, 0, 10, 5, 5, 25, 25 },
+      /* CH */ { 5, 35, 0, 5, 5, 8, 8 },
+      /* SR */ { 15, 5, 2, 10, 20, 25, 12 }, // SR can stay SR; less NR funnel
+      /* SF */ { 15, 5, 2, 20, 10, 12, 25 }, // symmetric with SR
+      /* NR */ { 8, 12, 2, 18, 8, 20, 14 }, // NR self-transition; less SR loop; more NF path
+      /* NF */ { 8, 12, 2, 8, 18, 14, 20 }, // NF self-transition; less SF cushion; symmetric
   };
 
   /**
@@ -70,11 +72,14 @@ public class Exchange {
   }
 
   /**
-   * Align all stocks to the same history length by backfilling missing early weeks.
+   * Align all stocks to the same history length by backfilling missing early
+   * weeks.
    *
-   * <p>Some CSV datasets provide fewer historical points for certain stocks.
+   * <p>
+   * Some CSV datasets provide fewer historical points for certain stocks.
    * Without normalization, those stocks stay offset forever even if the exchange
-   * advances all stocks together each week.</p>
+   * advances all stocks together each week.
+   * </p>
    */
   private static void normalizeStockHistoryLengths(List<Stock> stocks) {
     if (stocks.isEmpty()) {
@@ -203,7 +208,8 @@ public class Exchange {
   }
 
   /**
-   * Finds stocks on the exchange that match the given search term in their symbol or company name.
+   * Finds stocks on the exchange that match the given search term in their symbol
+   * or company name.
    *
    * @param searchTerm string to search for in stock symbols and company names
    * @return a list of stocks that match the search term
@@ -284,7 +290,8 @@ public class Exchange {
   }
 
   /**
-   * Advances the exchange to the next week, updating stock prices based on a random percentage change.
+   * Advances the exchange to the next week, updating stock prices based on a
+   * random percentage change.
    */
   public void advance() {
     this.week++;
@@ -303,11 +310,13 @@ public class Exchange {
   /**
    * Schedules a one-shot momentum nudge for tutorial onboarding.
    *
-   * <p>Behavior is adaptive by market size:</p>
+   * <p>
+   * Behavior is adaptive by market size:
+   * </p>
    * <ul>
-   *   <li>1 stock: one upward nudge (price-change walkthrough)</li>
-   *   <li>2 stocks: one upward + one mild downward nudge (ranking clarity)</li>
-   *   <li>3+ stocks: one upward nudge (movers walkthrough)</li>
+   * <li>1 stock: one upward nudge (price-change walkthrough)</li>
+   * <li>2 stocks: one upward + one mild downward nudge (ranking clarity)</li>
+   * <li>3+ stocks: one upward nudge (movers walkthrough)</li>
    * </ul>
    */
   public void scheduleTutorialMomentumNudge() {
@@ -380,18 +389,20 @@ public class Exchange {
   }
 
   /**
-   * Returns the [min, max] percentage-change range for the given volatility phase.
-   * Directional phases have a one-sided range; non-directional phases are centred near zero.
+   * Returns the [min, max] percentage-change range for the given volatility
+   * phase.
+   * Directional phases have a one-sided range; non-directional phases are centred
+   * near zero.
    */
   private static double[] volatilityRange(Volatility volatility) {
     return switch (volatility) {
-      case SLOW_RISE -> new double[]{0.0, 4.0};
-      case SLOW_FALL -> new double[]{-4.0, 0.0};
-      case NORMAL_RISE -> new double[]{2.0, 5.0};
-      case NORMAL_FALL -> new double[]{-5.0, -2.0};
-      case FAST -> new double[]{3.0, 10.0};
-      case CHAOTIC -> new double[]{7.0, 15.0};
-      default -> new double[]{0.0, 3.0};
+      case SLOW_RISE -> new double[] { 0.0, 4.0 };
+      case SLOW_FALL -> new double[] { -4.0, 0.0 };
+      case NORMAL_RISE -> new double[] { 2.0, 5.0 };
+      case NORMAL_FALL -> new double[] { -5.0, -2.0 };
+      case FAST -> new double[] { 3.0, 10.0 };
+      case CHAOTIC -> new double[] { 7.0, 15.0 };
+      default -> new double[] { 0.0, 3.0 };
     };
   }
 
@@ -471,7 +482,8 @@ public class Exchange {
   }
 
   /**
-   * Returns and clears symbols that were directly affected by this week's spike events.
+   * Returns and clears symbols that were directly affected by this week's spike
+   * events.
    */
   public List<String> consumeLastSpikeSymbols() {
     List<String> snapshot = List.copyOf(lastSpikeSymbols);
