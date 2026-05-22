@@ -94,11 +94,11 @@ import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
-  private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
-  private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.mp3";
-  private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.mp3";
-  private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.mp3";
-  private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.mp3";
+  private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Next_Week.wav";
+  private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.wav";
+  private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.wav";
+  private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.wav";
+  private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.wav";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -3509,7 +3509,7 @@ public final class GameView implements GameViewInterface {
       return;
     }
 
-    // Play Level_Up.mp3 immediately — audio has built-in fade-in then strong hit at ~1.5s
+    // Play Level_Up.wav immediately — audio has built-in fade-in then strong hit at ~1.5s
     if (levelUpClip != null && sfxVolumeSupplierField != null) {
       double vol = Math.min(sfxVolumeSupplierField.getAsDouble() * 1.5, 1.0);
       levelUpClip.play(vol);
@@ -3674,7 +3674,7 @@ public final class GameView implements GameViewInterface {
       scaleIn.play();
 
       // ── Grow pulse 2.4s after card appears ────────────────────────────
-      PauseTransition pulseDelay = new PauseTransition(Duration.millis(900));
+      PauseTransition pulseDelay = new PauseTransition(Duration.seconds(60 / 83.0)); // 1 beat at 83 BPM
       pulseDelay.setOnFinished(pev -> {
         Timeline pulse = new Timeline(
             new KeyFrame(Duration.ZERO,

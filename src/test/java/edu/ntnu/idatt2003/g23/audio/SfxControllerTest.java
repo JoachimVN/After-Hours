@@ -32,25 +32,25 @@ class SfxControllerTest {
   @Test
   @DisplayName("SETTINGS constant is correct path")
   void testSettingsConstant() {
-    assertEquals("/audio/sfx/Settings.mp3", SfxController.SETTINGS);
+    assertEquals("/audio/sfx/Settings.wav", SfxController.SETTINGS);
   }
 
   @Test
   @DisplayName("BACK constant is correct path")
   void testBackConstant() {
-    assertEquals("/audio/sfx/Back.mp3", SfxController.BACK);
+    assertEquals("/audio/sfx/Back.wav", SfxController.BACK);
   }
 
   @Test
   @DisplayName("play(String) with missing resource does not throw")
   void testPlayMissingResourceNoThrow() {
     // getResource returns null → NPE on .toExternalForm() → caught by catch(Exception)
-    assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3"));
+    assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.wav"));
   }
 
   @Test
   @DisplayName("play(String, double) with missing resource does not throw")
   void testPlayExplicitVolumeNoThrow() {
-    assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3", 0.3));
+    assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.wav", 0.3));
   }
 }
