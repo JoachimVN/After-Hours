@@ -252,8 +252,9 @@ public class App extends Application {
     if (musicMuted) {
       splashOverlayController.fadeAfterStartup();
     } else {
+      splashOverlayController.fadeAfterStartup();
       homePageMusicController.play(
-          splashOverlayController::fadeAfterStartup,
+          null,
           splashOverlayController::fadeAfterFailure);
     }
   }
