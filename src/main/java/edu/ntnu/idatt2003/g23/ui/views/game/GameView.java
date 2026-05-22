@@ -95,10 +95,10 @@ import javafx.util.Duration;
 
 public final class GameView implements GameViewInterface {
   private static final String WEEK_ADVANCE_SOUND = "/audio/sfx/Week_Advance.mp3";
-  private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.mp3";
-  private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.mp3";
-  private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.mp3";
-  private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.mp3";
+  private static final String LEVEL_UP_SOUND = "/audio/sfx/Level_Up.wav";
+  private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.wav";
+  private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.wav";
+  private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.wav";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
