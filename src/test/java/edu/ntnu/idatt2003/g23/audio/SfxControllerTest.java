@@ -44,7 +44,6 @@ class SfxControllerTest {
   @Test
   @DisplayName("play(String) with missing resource does not throw")
   void testPlayMissingResourceNoThrow() {
-    // getResource returns null → NPE on .toExternalForm() → caught by catch(Exception)
     assertDoesNotThrow(() -> sfx.play("/nonexistent/sound.mp3"));
   }
 

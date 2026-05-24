@@ -5,12 +5,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>edu.ntnu.idatt2003.g23</groupId>
-  <artifactId>app</artifactId>
+  <artifactId>after-hours</artifactId>
   <version>1.2.3</version>
 
-  <name>app</name>
-  <!-- FIXME change it to the project's website -->
-  <url>http://www.example.com</url>
+  <name>After Hours</name>
+  <url>https://git.ntnu.no/Gruppe-23/idatt2003_2026_23</url>
   
   <!-- Release process:
        1. Go to GitHub Releases

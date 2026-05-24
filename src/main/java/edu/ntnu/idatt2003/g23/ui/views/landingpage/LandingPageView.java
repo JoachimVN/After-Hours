@@ -19,6 +19,9 @@ import edu.ntnu.idatt2003.g23.AppVersion;
 
 public final class LandingPageView {
 
+  private LandingPageView() {
+  }
+
   public static BorderPane build(Runnable onPlay, Runnable onSettings, Runnable onQuit) {
     BorderPane root = new BorderPane();
     root.getStyleClass().add("home-page");
@@ -152,8 +155,7 @@ public final class LandingPageView {
           onSettings.run();
           e.consume();
         }
-        default -> {
-        }
+        default -> e.consume();
       }
     });
 

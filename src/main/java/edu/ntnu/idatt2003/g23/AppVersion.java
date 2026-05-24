@@ -17,7 +17,8 @@ public final class AppVersion {
         props.load(in);
         v = props.getProperty("app.version", "unknown");
       }
-    } catch (IOException ignored) {
+    } catch (IOException _) {
+      // If the file is missing or unreadable, VERSION remains "unknown".
     }
     VERSION = v;
   }

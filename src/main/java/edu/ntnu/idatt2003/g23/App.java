@@ -1077,7 +1077,7 @@ public class App extends Application {
   }
 
   private void showNoGamePage() {
-    Parent page = NoGameView.build(NoGameView.NO_CASH_MONOLOGUE, NoGameView.MSG_NO_CASH, true,
+    Parent page = NoGameView.build(NoGameView.noCashMonologue(), NoGameView.MSG_NO_CASH, true,
         withBack(this::goHome));
     navigateToGame(page);
     Platform.runLater(() -> {
@@ -1092,7 +1092,7 @@ public class App extends Application {
 
   private void showNoGamePage(boolean fromEditor) {
     String ctx = fromEditor ? NoGameView.MSG_SKIPPED : NoGameView.MSG_EMPTY;
-    Parent page = NoGameView.build(NoGameView.NO_STOCKS_MONOLOGUE, ctx, true, withBack(this::goHome));
+    Parent page = NoGameView.build(NoGameView.noStocksMonologue(), ctx, true, withBack(this::goHome));
     navigateToGame(page);
     Platform.runLater(() -> {
       if (musicMuted) {

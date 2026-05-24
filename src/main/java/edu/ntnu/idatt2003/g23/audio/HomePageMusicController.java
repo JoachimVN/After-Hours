@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -59,6 +60,7 @@ public class HomePageMusicController {
   private List<String> ambienceQueue = new ArrayList<>();
   private String lastGameStartTrack = null;
   private boolean eqFilterActive = false;
+  private final Random random = new Random();
 
   // Status-change low-pass gains (32 Hz ... 16 kHz).
   // Stronger cutoff: start attenuation earlier and cut highs harder.
@@ -88,7 +90,7 @@ public class HomePageMusicController {
       Media media = new Media(path);
       mediaCache.put(resourcePath, media);
       return media;
-    } catch (Exception e) {
+    } catch (Exception _) {
       return null;
     }
   }
@@ -110,7 +112,7 @@ public class HomePageMusicController {
         mediaPlayer.setOnPlaying(onPlaying);
       }
       mediaPlayer.play();
-    } catch (Exception exception) {
+    } catch (Exception _) {
       if (onFailure != null) {
         onFailure.run();
       }
@@ -168,7 +170,7 @@ public class HomePageMusicController {
       if (lastGameStartTrack != null && candidates.size() > 1) {
         candidates.remove(lastGameStartTrack);
       }
-      String randomTrack = candidates.get((int) (Math.random() * candidates.size()));
+      String randomTrack = candidates.get(random.nextInt(candidates.size()));
       lastGameStartTrack = randomTrack;
       Media media = cacheMedia(randomTrack);
       if (media == null) {
@@ -189,7 +191,7 @@ public class HomePageMusicController {
         }
       });
       sfxPlayer.play();
-    } catch (Exception ignored) {
+    } catch (Exception _) {
       if (continueWithAmbience) {
         fadeInAmbience();
       }
@@ -228,7 +230,7 @@ public class HomePageMusicController {
               new KeyValue(ambiencePlayer.volumeProperty(), targetVolume))
       );
       fadeTimeline.play();
-    } catch (Exception ignored) {
+    } catch (Exception _) {
       playNextAmbience();
     }
   }
@@ -280,7 +282,7 @@ public class HomePageMusicController {
       }
       mediaPlayer.setOnEndOfMedia(this::playNextAmbience);
       mediaPlayer.play();
-    } catch (Exception ignored) {
+    } catch (Exception _) {
       playNextAmbience();
     }
   }
