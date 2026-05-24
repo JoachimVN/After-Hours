@@ -249,7 +249,7 @@
                 <argument>--name</argument><argument>After Hours</argument>
                 <argument>--app-version</argument><argument>${project.version}</argument>
                 <argument>--vendor</argument><argument>NTNU</argument>
-                <argument>--description</argument><argument>After Hours stock trading game</argument>
+                <argument>--description</argument><argument>After Hours</argument>
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.ico</argument>
                 <argument>--input</argument><argument>${project.build.directory}/jpackage-input</argument>
@@ -282,7 +282,7 @@
                 <argument>--name</argument><argument>After Hours</argument>
                 <argument>--app-version</argument><argument>${project.version}</argument>
                 <argument>--vendor</argument><argument>NTNU</argument>
-                <argument>--description</argument><argument>After Hours stock trading game</argument>
+                <argument>--description</argument><argument>After Hours</argument>
                 <argument>--icon</argument>
                 <argument>${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.png</argument>
                 <argument>--input</argument><argument>${project.build.directory}/jpackage-input</argument>
@@ -307,7 +307,7 @@
               <executable>sh</executable>
               <arguments>
                 <argument>-c</argument>
-                <argument>rm -rf "${java.io.tmpdir}/afterhours-dist/After Hours.app" &amp;&amp; jpackage --type app-image --name "After Hours" --app-version ${project.version} --vendor NTNU --description "After Hours stock trading game" --icon "${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.icns" --input "${project.build.directory}/jpackage-input" --main-jar app-fat.jar --main-class edu.ntnu.idatt2003.g23.App --module-path "${project.build.directory}/javafx-mods" --add-modules javafx.controls,javafx.media --java-options '--enable-native-access=javafx.graphics,javafx.media' --java-options '-Dglass.mac.uiScale=1.25' --dest "${java.io.tmpdir}/afterhours-dist" &amp;&amp; rm -rf "${project.build.directory}/dist/After Hours.app" &amp;&amp; cp -R "${java.io.tmpdir}/afterhours-dist/After Hours.app" "${project.build.directory}/dist/"</argument>
+                <argument>rm -rf "${java.io.tmpdir}/afterhours-dist/After Hours.app" &amp;&amp; jpackage --type app-image --name "After Hours" --app-version ${project.version} --vendor NTNU --description "After Hours" --icon "${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.icns" --input "${project.build.directory}/jpackage-input" --main-jar app-fat.jar --main-class edu.ntnu.idatt2003.g23.App --module-path "${project.build.directory}/javafx-mods" --add-modules javafx.controls,javafx.media --java-options '--enable-native-access=javafx.graphics,javafx.media' --java-options '-Dglass.mac.uiScale=1.25' --dest "${java.io.tmpdir}/afterhours-dist" &amp;&amp; rm -rf "${project.build.directory}/dist/After Hours.app" &amp;&amp; cp -R "${java.io.tmpdir}/afterhours-dist/After Hours.app" "${project.build.directory}/dist/"</argument>
               </arguments>
             </configuration>
           </execution>
