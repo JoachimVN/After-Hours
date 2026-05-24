@@ -7,6 +7,7 @@ import java.util.Properties;
 public final class AppVersion {
 
   public static final String VERSION;
+  public static final int RELEASE_YEAR = 2026;
 
   static {
     String v = "unknown";

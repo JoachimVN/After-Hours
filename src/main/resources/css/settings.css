@@ -10,6 +10,32 @@
     -fx-background-color: transparent;
 }
 
+/* ── Bottom footer banner ───────────────────────────────────────────────── */
+
+.settings-footer-banner {
+    -fx-background-color: linear-gradient(to top, rgba(5, 9, 24, 0.86), rgba(5, 9, 24, 0.20));
+    -fx-border-color: rgba(30, 64, 128, 0.42) transparent transparent transparent;
+    -fx-border-width: 1px 0px 0px 0px;
+}
+
+.settings-footer-title {
+    -fx-font-size: 56px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e7ac15;
+    -fx-font-family: "Harlow Solid Italic";
+}
+
+.settings-footer-tagline {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7a9abf;
+}
+
+.settings-footer-meta {
+    -fx-font-size: 10px;
+    -fx-text-fill: #4a6899;
+    -fx-font-family: "Monospace";
+}
+
 /* ── Section cards ─ minimal, nearly transparent ─────────────────────────── */
 
 .settings-section-card {

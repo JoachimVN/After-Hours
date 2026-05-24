@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
+import edu.ntnu.idatt2003.g23.AppVersion;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
@@ -35,6 +36,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -215,7 +217,31 @@ public final class SettingsView {
       profileSection = buildProfileSection(currentPlayerName, onNameChanged);
     }
 
-    VBox allSections;
+    Label footerTitle = new Label("After Hours");
+    footerTitle.getStyleClass().add("settings-footer-title");
+    footerTitle.setTextAlignment(TextAlignment.CENTER);
+    footerTitle.setAlignment(Pos.CENTER);
+    footerTitle.setMaxWidth(Double.MAX_VALUE);
+
+    Label footerTagline = new Label("The market never sleeps. Neither do you.");
+    footerTagline.getStyleClass().add("settings-footer-tagline");
+    footerTagline.setTextAlignment(TextAlignment.CENTER);
+    footerTagline.setAlignment(Pos.CENTER);
+    footerTagline.setMaxWidth(Double.MAX_VALUE);
+
+    Label footerMeta = new Label("v" + AppVersion.VERSION + " \u2022 " + AppVersion.RELEASE_YEAR);
+    footerMeta.getStyleClass().add("settings-footer-meta");
+    footerMeta.setTextAlignment(TextAlignment.CENTER);
+    footerMeta.setAlignment(Pos.CENTER);
+    footerMeta.setMaxWidth(Double.MAX_VALUE);
+
+    VBox footerBanner = new VBox(4, footerTitle, footerTagline, footerMeta);
+    footerBanner.getStyleClass().add("settings-footer-banner");
+    footerBanner.setAlignment(Pos.CENTER);
+    footerBanner.setPadding(new Insets(8, 24, 20, 24));
+    footerBanner.setMaxWidth(Double.MAX_VALUE);
+
+        VBox allSections;
     if (profileSection != null) {
       allSections = new VBox(22,
           title, profileSection, audioSection, displaySection, gameSection, performanceSection,
@@ -231,15 +257,20 @@ public final class SettingsView {
 
     HBox centeringBox = new HBox(allSections);
     centeringBox.setAlignment(Pos.TOP_CENTER);
-    centeringBox.setPadding(new Insets(28, 48, 56, 48));
+        centeringBox.setPadding(new Insets(28, 48, 0, 48));
 
-    ScrollPane scroll = new ScrollPane(centeringBox);
+        VBox scrollContent = new VBox(52, centeringBox, footerBanner);
+        scrollContent.setFillWidth(true);
+        scrollContent.setAlignment(Pos.TOP_CENTER);
+
+        ScrollPane scroll = new ScrollPane(scrollContent);
     scroll.setFitToWidth(true);
     scroll.setFitToHeight(false);
     scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
     scroll.getStyleClass().add("settings-scroll");
 
     root.setCenter(scroll);
+
 
     // ── Key bindings
     // ────────────────────────────────────────────────────────────────
