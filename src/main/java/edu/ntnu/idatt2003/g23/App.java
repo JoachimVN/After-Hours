@@ -1256,22 +1256,24 @@ public class App extends Application {
       navigateKeepMusic(buildSettingsView(onBack, onSave));
     };
 
+    // Resolution controls should work in all settings contexts.
+    ctrl.onResolutionChange = dims -> {
+      primaryStage.setFullScreen(false);
+      primaryStage.setMaximized(false);
+      primaryStage.setWidth(dims[0]);
+      primaryStage.setHeight(dims[1]);
+    };
+    ctrl.onMaximize = () -> {
+      primaryStage.setFullScreen(false);
+      primaryStage.setMaximized(true);
+    };
+
     // ── In-game only ──────────────────────────────────────────────────────
     if (onSave != null) {
       ctrl.currentSavePath = currentSavePath;
       ctrl.onSave = () -> {
         onSave.run();
         navigateKeepMusic(buildSettingsView(onBack, onSave));
-      };
-      ctrl.onResolutionChange = dims -> {
-        primaryStage.setFullScreen(false);
-        primaryStage.setMaximized(false);
-        primaryStage.setWidth(dims[0]);
-        primaryStage.setHeight(dims[1]);
-      };
-      ctrl.onMaximize = () -> {
-        primaryStage.setFullScreen(false);
-        primaryStage.setMaximized(true);
       };
       ctrl.currentPlayerName = currentGameController != null
           ? currentGameController.getPlayerName() : null;
@@ -1300,9 +1302,9 @@ public class App extends Application {
     return settingsPage;
   }
 
-  private boolean exportSaveDataFromSettings(SaveMeta saveMeta, boolean latestOnly) {
+  private String exportSaveDataFromSettings(SaveMeta saveMeta, boolean latestOnly) {
     if (saveMeta == null) {
-      return false;
+      return null;
     }
     FileChooser chooser = new FileChooser();
     chooser.setTitle("Export Save Data (JSON + CSV)");
@@ -1311,20 +1313,20 @@ public class App extends Application {
     chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
     File destination = chooser.showSaveDialog(primaryStage);
     if (destination == null) {
-      return false;
+      return null;
     }
     try {
       GameSaveExporter.exportSaveDataFiles(saveMeta.saveDir(), destination.toPath(), latestOnly);
-      return true;
+      return destination.getName();
     } catch (IOException ex) {
       overlayService.showNotification("Export Failed", "Export failed: " + ex.getMessage(), false);
       throw new UncheckedIOException(ex);
     }
   }
 
-  private boolean exportSaveCsvFromSettings(SaveMeta saveMeta, boolean latestOnly) {
+  private String exportSaveCsvFromSettings(SaveMeta saveMeta, boolean latestOnly) {
     if (saveMeta == null) {
-      return false;
+      return null;
     }
     FileChooser chooser = new FileChooser();
     chooser.setTitle("Export Market CSV");
@@ -1333,11 +1335,11 @@ public class App extends Application {
     chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
     File destination = chooser.showSaveDialog(primaryStage);
     if (destination == null) {
-      return false;
+      return null;
     }
     try {
       GameSaveExporter.exportSaveCsvFile(saveMeta.saveDir(), destination.toPath(), latestOnly);
-      return true;
+      return destination.getName();
     } catch (IOException ex) {
       overlayService.showNotification("Export Failed", "Export failed: " + ex.getMessage(), false);
       throw new UncheckedIOException(ex);

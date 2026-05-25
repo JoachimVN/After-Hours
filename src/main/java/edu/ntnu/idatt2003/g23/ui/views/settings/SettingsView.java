@@ -127,9 +127,9 @@ public final class SettingsView {
       /** Called when user clicks "Maximize". Null-safe. */
       Runnable onMaximize,
       /** Exports selected save as JSON + CSV. Null-safe. */
-      BiFunction<SaveMeta, Boolean, Boolean> onExportJsonCsv,
+      BiFunction<SaveMeta, Boolean, String> onExportJsonCsv,
       /** Exports selected save as CSV only. Null-safe. */
-      BiFunction<SaveMeta, Boolean, Boolean> onExportCsvOnly,
+      BiFunction<SaveMeta, Boolean, String> onExportCsvOnly,
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
@@ -622,8 +622,8 @@ public final class SettingsView {
   }
 
   private static VBox buildDataSection(Path currentSavePath,
-      BiFunction<SaveMeta, Boolean, Boolean> onExportJsonCsv,
-      BiFunction<SaveMeta, Boolean, Boolean> onExportCsvOnly) {
+      BiFunction<SaveMeta, Boolean, String> onExportJsonCsv,
+      BiFunction<SaveMeta, Boolean, String> onExportCsvOnly) {
     Label label = new Label("Export Save Data");
     label.getStyleClass().add("settings-label");
 
@@ -641,7 +641,7 @@ public final class SettingsView {
     try {
       List<SaveMeta> saves = GameSaveLoader.listSaves();
       saveCombo.getItems().setAll(saves);
-    } catch (IOException _) {
+    } catch (IOException ignored) {
     }
 
     Button exportBtn = new Button("\u2B07  Export JSON + CSV");
@@ -674,11 +674,11 @@ public final class SettingsView {
       if (onExportJsonCsv != null) {
         try {
           boolean latestOnly = !keepHistoryCheck.isSelected();
-          boolean exported = Boolean.TRUE.equals(onExportJsonCsv.apply(selected, latestOnly));
-          if (exported) {
+          String exportedFileName = onExportJsonCsv.apply(selected, latestOnly);
+          if (exportedFileName != null && !exportedFileName.isBlank()) {
             statusLbl.setText(latestOnly
-                ? "\u2713  Export completed (JSON + latest-price CSV)."
-                : "\u2713  Export completed (JSON + full-history CSV).");
+                ? "\u2713  Export completed: " + exportedFileName + " (JSON + latest-price CSV)."
+                : "\u2713  Export completed: " + exportedFileName + " (JSON + full-history CSV).");
             statusLbl.setStyle("-fx-text-fill: #4ecb71;");
           }
         } catch (Exception ex) {
@@ -697,11 +697,11 @@ public final class SettingsView {
       if (onExportCsvOnly != null) {
         try {
           boolean latestOnly = !keepHistoryCheck.isSelected();
-          boolean exported = Boolean.TRUE.equals(onExportCsvOnly.apply(selected, latestOnly));
-          if (exported) {
+          String exportedFileName = onExportCsvOnly.apply(selected, latestOnly);
+          if (exportedFileName != null && !exportedFileName.isBlank()) {
             statusLbl.setText(latestOnly
-                ? "\u2713  Export completed (latest-price CSV)."
-                : "\u2713  Export completed (full-history CSV).");
+                ? "\u2713  Export completed: " + exportedFileName + " (latest-price CSV)."
+                : "\u2713  Export completed: " + exportedFileName + " (full-history CSV).");
             statusLbl.setStyle("-fx-text-fill: #4ecb71;");
           }
         } catch (Exception ex) {

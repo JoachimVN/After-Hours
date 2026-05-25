@@ -244,8 +244,12 @@
     -fx-padding: 5px 12px 5px 12px;
 }
 
+.settings-combo .list-cell:hover {
+    -fx-text-fill: #ecc576;
+    -fx-cursor: hand;
+}
+
 .settings-combo .list-cell:selected {
-    -fx-background-color: rgba(30, 58, 110, 0.65);
     -fx-text-fill: #f5a201;
 }
 

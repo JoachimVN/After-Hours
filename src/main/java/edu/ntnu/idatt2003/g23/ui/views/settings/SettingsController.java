@@ -70,14 +70,14 @@ public final class SettingsController {
   public Runnable onSave;
   /** Resets all settings to defaults and re-opens the settings page. */
   public Runnable onResetAll;
-  /** Allows the user to pick a preset window resolution. In-game only. */
+  /** Allows the user to pick a preset window resolution. */
   public Consumer<int[]> onResolutionChange;
-  /** Maximizes the window. In-game only. */
+  /** Maximizes the window. */
   public Runnable onMaximize;
-  /** Exports selected save as JSON + CSV. In-game only. */
-  public BiFunction<SaveMeta, Boolean, Boolean> onExportJsonCsv;
-  /** Exports selected save as CSV only. In-game only. */
-  public BiFunction<SaveMeta, Boolean, Boolean> onExportCsvOnly;
+  /** Exports selected save as JSON + CSV. Returns exported file name, null if canceled. */
+  public BiFunction<SaveMeta, Boolean, String> onExportJsonCsv;
+  /** Exports selected save as CSV only. Returns exported file name, null if canceled. */
+  public BiFunction<SaveMeta, Boolean, String> onExportCsvOnly;
   /** Current player name shown in the name-change field. In-game only. */
   public String currentPlayerName;
   /** Notified when the player changes their display name. In-game only. */
