@@ -37,6 +37,7 @@ public final class SetupView {
   private static final Duration VALIDATION_ANIM_DURATION = Duration.millis(220);
 
   private final SetupController controller;
+  private final Runnable onSelect;
   private final BorderPane root;
 
   /**
@@ -50,7 +51,16 @@ public final class SetupView {
                    MarketStartHandler onStartDefault,
                    BiConsumer<String, Double> onStartCsv,
                    String playerAvatar) {
+    this(onBack, onStartDefault, onStartCsv, playerAvatar, null);
+  }
+
+  public SetupView(Runnable onBack,
+                   MarketStartHandler onStartDefault,
+                   BiConsumer<String, Double> onStartCsv,
+                   String playerAvatar,
+                   Runnable onSelect) {
     this.controller = new SetupController(onBack, onStartDefault, onStartCsv);
+    this.onSelect = onSelect;
     this.root = buildUI(playerAvatar);
   }
 
@@ -126,6 +136,9 @@ public final class SetupView {
     boolean[] fromPreset = {false};
     presetGroup.selectedToggleProperty().addListener((obs, old, sel) -> {
       if (sel != null && sel.getUserData() instanceof Double amount) {
+        if (old != sel) {
+          notifySelect();
+        }
         fromPreset[0] = true;
         cashField.setText(String.valueOf(amount.longValue()));
         fromPreset[0] = false;
@@ -167,6 +180,9 @@ public final class SetupView {
         dataGroup.selectToggle(old);
         return;
       }
+      if (old != sel) {
+        notifySelect();
+      }
       controller.setUseDefaultStocks(sel == defaultBtn);
     });
 
@@ -180,9 +196,13 @@ public final class SetupView {
     marketBox.setMaxWidth(Double.MAX_VALUE);
     marketBox.setButtonCell(marketCell());
     marketBox.setCellFactory(lv -> marketCell());
+    marketBox.setOnShowing(e -> notifySelect());
 
     marketBox.valueProperty().addListener((obs, old, market) -> {
       if (market != null) {
+        if (old != market) {
+          notifySelect();
+        }
         controller.selectMarket(markets.indexOf(market));
       }
     });
@@ -306,6 +326,12 @@ public final class SetupView {
     });
 
     return root;
+  }
+
+  private void notifySelect() {
+    if (onSelect != null) {
+      onSelect.run();
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

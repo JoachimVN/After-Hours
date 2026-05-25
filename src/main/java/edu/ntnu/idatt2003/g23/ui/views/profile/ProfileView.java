@@ -2,8 +2,6 @@ package edu.ntnu.idatt2003.g23.ui.views.profile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -47,8 +45,8 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Path;
-import javafx.util.StringConverter;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
 
 public final class ProfileView {
 
@@ -203,6 +201,9 @@ public final class ProfileView {
           avatarBtn.setOnAction(e -> {
             if (!unlocked) {
               return;
+            }
+            if (onReplayControlSelect != null) {
+              onReplayControlSelect.run();
             }
             avatarButtons.forEach(node -> node.getStyleClass().remove("profile-avatar-btn-active"));
             if (avatar.equals(selectedAvatar[0])) {
@@ -537,52 +538,17 @@ public final class ProfileView {
       }
     });
 
-    double minNetWorth = replayPoints.stream()
-        .map(GameController.ReplayPoint::netWorth)
-        .mapToDouble(BigDecimal::doubleValue)
-        .min()
-        .orElse(startingCash.doubleValue());
-    double maxNetWorth = replayPoints.stream()
-        .map(GameController.ReplayPoint::netWorth)
-        .mapToDouble(BigDecimal::doubleValue)
-        .max()
-        .orElse(startingCash.doubleValue());
-    final boolean flatTimeline = Math.abs(maxNetWorth - minNetWorth) < 1e-9;
-    if (flatTimeline && !timelinePoints.isEmpty()) {
-      chartPoints.clear();
-      BigDecimal flatValue = timelinePoints.get(timelinePoints.size() - 1).netWorth();
-      for (int week = minWeek; week <= maxWeek; week++) {
-        chartPoints.add(new GameController.ReplayPoint(week, flatValue));
-      }
-    }
-    double yLowerBound = Math.max(0.0, minNetWorth);
-    double yUpperBound = Math.max(yLowerBound, maxNetWorth);
-
-    double range = yUpperBound - yLowerBound;
-    double pad = range > 0.0 ? range * 0.08 : Math.max(10.0, Math.abs(yUpperBound) * 0.05 + 1.0);
-
-    yLowerBound = Math.max(0.0, yLowerBound - pad);
-    yUpperBound = yUpperBound + pad;
-    if (yUpperBound <= yLowerBound) {
-      yUpperBound = yLowerBound + 1.0;
-    }
-
-    yAxis.setAutoRanging(false);
-    yAxis.setLowerBound(yLowerBound);
-    yAxis.setUpperBound(yUpperBound);
-    yAxis.setTickUnit(Math.max(1.0, (yUpperBound - yLowerBound) / 4.0));
-    DecimalFormat integerFormatter = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
-    yAxis.setTickLabelFormatter(new StringConverter<>() {
-      @Override
-      public String toString(Number object) {
-        return integerFormatter.format(object.doubleValue());
-      }
-
-      @Override
-      public Number fromString(String string) {
-        throw new UnsupportedOperationException("Axis label parsing is not supported.");
-      }
-    });
+    ProfileTimelineBuilder.AxisSetup axisSetup = ProfileTimelineBuilder.configureYAxis(
+        yAxis,
+        replayPoints,
+        timelinePoints,
+        chartPoints,
+        startingCash,
+        minWeek,
+        maxWeek);
+    double minNetWorth = axisSetup.minNetWorth();
+    double maxNetWorth = axisSetup.maxNetWorth();
+    final boolean flatTimeline = axisSetup.flatTimeline();
 
     LineChart<Number, Number> replayChart = new LineChart<>(xAxis, yAxis);
     replayChart.getStyleClass().add("profile-replay-chart");
@@ -1222,4 +1188,5 @@ public final class ProfileView {
     slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
     Platform.runLater(applyFill);
   }
+
 }

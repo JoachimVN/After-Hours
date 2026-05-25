@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -33,9 +34,11 @@ import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionFactory;
+import edu.ntnu.idatt2003.g23.session.GameSessionService;
 import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
 import edu.ntnu.idatt2003.g23.ui.overlay.AppOverlayService;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
+import edu.ntnu.idatt2003.g23.ui.navigation.NavigationCoordinator;
 import edu.ntnu.idatt2003.g23.ui.views.csveditor.CsvEditorView;
 import edu.ntnu.idatt2003.g23.ui.views.customstocks.CustomStocksView;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
@@ -69,6 +72,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 
@@ -93,6 +97,7 @@ public class App extends Application {
   private HomePageMusicController homePageMusicController;
   private BackgroundCanvas backgroundCanvas;
   private AppOverlayService overlayService;
+  private NavigationCoordinator navigationCoordinator;
 
   /**
    * Retained so back-navigation can return without recreating the form.
@@ -138,6 +143,7 @@ public class App extends Application {
   private String currentProfileAvatar = "bust-in-silhouette";
   private boolean currentFlagged = false;
   private boolean gameAudioContext = false;
+  private final GameSessionService gameSessionService = new GameSessionService();
 
   @Override
   public void start(Stage stage) {
@@ -189,6 +195,7 @@ public class App extends Application {
     backgroundCanvas = new BackgroundCanvas();
     backgroundCanvas.setAnimationsEnabled(animationsEnabled);
     root = new StackPane(backgroundCanvas, homePage);
+    navigationCoordinator = new NavigationCoordinator(root, backgroundCanvas);
     overlayService = new AppOverlayService(root);
     ColorAdjust globalFilter = new ColorAdjust();
     globalFilter.setBrightness(0.05);
@@ -301,18 +308,20 @@ public class App extends Application {
     java.nio.file.Path savePath = (java.nio.file.Path) data[2];
     GameUiState uiState = data.length > 3 ? (GameUiState) data[3] : null;
     currentFlagged = data.length > 4 && Boolean.TRUE.equals(data[4]);
+    gameSessionService.setFlagged(currentFlagged);
     buildAndStartGameFromSave(player, exchange, savePath, uiState, false);
   }
 
   private void goToSetup() {
     // Starting a new game — clear the in-memory session
+    gameSessionService.clearForNewGame();
     currentPlayer = null;
     currentExchange = null;
     currentSavePath = null;
     currentGameController = null;
     currentUiState = null;
     currentFlagged = false;
-    currentProfileAvatar = "bust-in-silhouette";
+    currentProfileAvatar = gameSessionService.getProfileAvatar();
     currentSetupPage = new SetupView(
         withBack(this::goToSaveSelect),
         (name, cash, csvResource) -> startGame(name, cash, csvResource),
@@ -320,7 +329,8 @@ public class App extends Application {
           sfxController.play(SfxController.PLAY3, Math.min(sfxController.getVolume() * 1.5, 1.0));
           goToCustomStocks(name, cash);
         },
-        currentProfileAvatar).getRoot();
+        currentProfileAvatar,
+        () -> sfxController.play(SfxController.SELECT)).getRoot();
     navigateKeepMusic(currentSetupPage);
   }
 
@@ -337,7 +347,8 @@ public class App extends Application {
         csvResource -> openCsvEditorFromBuiltInMarket(csvResource, name, cash),
         meta -> openCsvEditorFromSaveMeta(meta, name, cash),
         currentSavePath,
-        selectedFile);
+      selectedFile,
+      () -> sfxController.play(SfxController.SELECT));
     navigateKeepMusic(importPage);
     fadeInPage(importPage);
   }
@@ -626,6 +637,7 @@ public class App extends Application {
                   "CSV was edited, but flag metadata could not be updated:\n" + e.getMessage(), false);
             }
             currentFlagged = true;
+            gameSessionService.setFlagged(true);
             buildAndStartGameFromSave(updatedPlayer, updatedExchange, selectedSave.saveDir(),
                 loadedUiState, false);
           },
@@ -647,6 +659,7 @@ public class App extends Application {
               return;
             }
             currentFlagged = true;
+            gameSessionService.setFlagged(true);
             buildAndStartGameFromSave(updatedPlayer, updatedExchange, selectedSave.saveDir(),
                 loadedUiState, false);
           },
@@ -740,7 +753,8 @@ public class App extends Application {
         csvResource -> openCsvEditorFromBuiltInMarketStandalone(csvResource, returnToStockTools),
         meta -> openCsvEditorFromSaveMetaStandalone(meta, returnToStockTools),
         currentSavePath,
-        null);
+      null,
+      () -> sfxController.play(SfxController.SELECT));
     stockToolsPageRef[0] = stockToolsPage;
     navigateKeepMusic(stockToolsPage);
     fadeInPage(stockToolsPage);
@@ -775,6 +789,7 @@ public class App extends Application {
     buildAndStartGameFromSave(updatedPlayer, updatedExchange, currentSavePath, preservedUiState,
       false);
     currentFlagged = true;
+    gameSessionService.setFlagged(true);
     if (exportFile != null) {
       overlayService.showNotification("Saved", "Stock data exported to:\n" + exportFile.getName(), true);
     }
@@ -856,29 +871,19 @@ public class App extends Application {
     Exchange previousExchange = currentExchange;
     String previousAutosaveId = currentAutosaveId;
 
-    currentPlayer = player;
-    currentExchange = exchange;
-    currentSavePath = savePath;
-    currentProfileAvatar = player.getProfileAvatar();
-    // Each game instance gets a distinct autosave slot:
-    // • loaded saves → use the existing save folder name
-    // • new games → use playerName + start timestamp
-    if (savePath != null) {
-      currentAutosaveId = normalizeAutosaveSlotId(savePath.getFileName().toString());
-    } else {
-      boolean resumingSameInMemorySession = previousAutosaveId != null
-          && previousPlayer == player
-          && previousExchange == exchange;
-      if (resumingSameInMemorySession) {
-        currentAutosaveId = previousAutosaveId;
-      } else {
-        currentFlagged = false;
-        String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
-        currentAutosaveId = safeName + "_"
-            + java.time.LocalDateTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-      }
-    }
+    gameSessionService.startSession(
+        previousPlayer,
+        previousExchange,
+        previousAutosaveId,
+        player,
+        exchange,
+        savePath);
+    currentPlayer = gameSessionService.getPlayer();
+    currentExchange = gameSessionService.getExchange();
+    currentSavePath = gameSessionService.getSavePath();
+    currentProfileAvatar = gameSessionService.getProfileAvatar();
+    currentAutosaveId = gameSessionService.getAutosaveId();
+    currentFlagged = gameSessionService.isFlagged();
     GameController gameController = new GameController(player, exchange);
     final Runnable[] onGameProfileRef = new Runnable[1];
     final Runnable[] onGameSettingsRef = new Runnable[1];
@@ -886,6 +891,7 @@ public class App extends Application {
     onGameProfileRef[0] = () -> {
       sfxController.play(SfxController.PROFILE);
       currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
+      gameSessionService.setProfileAvatar(currentProfileAvatar);
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -993,6 +999,7 @@ public class App extends Application {
     Runnable onGameProfile = () -> {
       sfxController.play(SfxController.PROFILE);
       currentProfileAvatar = currentGameController.getSelectedPlayerAvatar();
+      gameSessionService.setProfileAvatar(currentProfileAvatar);
       navigateKeepMusic(buildProfileView(
           () -> {
             sfxController.play(SfxController.BACK,
@@ -1044,8 +1051,10 @@ public class App extends Application {
       } else {
         currentSavePath = GameSaveExporter.save(currentPlayer, currentExchange, uiState,
             flagged);
+        gameSessionService.setSavePath(currentSavePath);
       }
       currentFlagged = flagged;
+      gameSessionService.setFlagged(flagged);
       overlayService.showNotification("Game Saved", "Your progress has been saved.", true);
     } catch (IOException e) {
       overlayService.showNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
@@ -1063,6 +1072,7 @@ public class App extends Application {
       GameSaveExporter.autosave(currentPlayer, currentExchange, uiState, currentAutosaveId,
           flagged);
       currentFlagged = flagged;
+      gameSessionService.setFlagged(flagged);
       if (autosaveToast) {
         overlayService.showTimedNotification("Autosaved", "Progress autosaved.", true);
       }
@@ -1211,6 +1221,10 @@ public class App extends Application {
       saveSettings();
     };
 
+    // Export from Settings should work in both home/setup and in-game contexts.
+    ctrl.onExportJsonCsv = (meta, latestOnly) -> exportSaveDataFromSettings(meta, latestOnly);
+    ctrl.onExportCsvOnly = (meta, latestOnly) -> exportSaveCsvFromSettings(meta, latestOnly);
+
     // ── Reset all ────────────────────────────────────────────────────────
     ctrl.onResetAll = () -> {
       musicVolume = GlobalSettingsManager.DEFAULT_MUSIC_VOLUME;
@@ -1242,6 +1256,18 @@ public class App extends Application {
       navigateKeepMusic(buildSettingsView(onBack, onSave));
     };
 
+    // Resolution controls should work in all settings contexts.
+    ctrl.onResolutionChange = dims -> {
+      primaryStage.setFullScreen(false);
+      primaryStage.setMaximized(false);
+      primaryStage.setWidth(dims[0]);
+      primaryStage.setHeight(dims[1]);
+    };
+    ctrl.onMaximize = () -> {
+      primaryStage.setFullScreen(false);
+      primaryStage.setMaximized(true);
+    };
+
     // ── In-game only ──────────────────────────────────────────────────────
     if (onSave != null) {
       ctrl.currentSavePath = currentSavePath;
@@ -1249,17 +1275,6 @@ public class App extends Application {
         onSave.run();
         navigateKeepMusic(buildSettingsView(onBack, onSave));
       };
-      ctrl.onResolutionChange = dims -> {
-        primaryStage.setFullScreen(false);
-        primaryStage.setMaximized(false);
-        primaryStage.setWidth(dims[0]);
-        primaryStage.setHeight(dims[1]);
-      };
-      ctrl.onMaximize = () -> {
-        primaryStage.setFullScreen(false);
-        primaryStage.setMaximized(true);
-      };
-      ctrl.onExport = file -> { /* export already completed in view */ };
       ctrl.currentPlayerName = currentGameController != null
           ? currentGameController.getPlayerName() : null;
       ctrl.onNameChanged = currentGameController != null
@@ -1285,6 +1300,50 @@ public class App extends Application {
     Parent settingsPage = SettingsView.build(ctrl);
     settingsPageRef[0] = settingsPage;
     return settingsPage;
+  }
+
+  private String exportSaveDataFromSettings(SaveMeta saveMeta, boolean latestOnly) {
+    if (saveMeta == null) {
+      return null;
+    }
+    FileChooser chooser = new FileChooser();
+    chooser.setTitle("Export Save Data (JSON + CSV)");
+    chooser.setInitialFileName(
+        saveMeta.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_save_export");
+    chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
+    File destination = chooser.showSaveDialog(primaryStage);
+    if (destination == null) {
+      return null;
+    }
+    try {
+      GameSaveExporter.exportSaveDataFiles(saveMeta.saveDir(), destination.toPath(), latestOnly);
+      return destination.getName();
+    } catch (IOException ex) {
+      overlayService.showNotification("Export Failed", "Export failed: " + ex.getMessage(), false);
+      throw new UncheckedIOException(ex);
+    }
+  }
+
+  private String exportSaveCsvFromSettings(SaveMeta saveMeta, boolean latestOnly) {
+    if (saveMeta == null) {
+      return null;
+    }
+    FileChooser chooser = new FileChooser();
+    chooser.setTitle("Export Market CSV");
+    chooser.setInitialFileName(
+        saveMeta.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_market_data");
+    chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
+    File destination = chooser.showSaveDialog(primaryStage);
+    if (destination == null) {
+      return null;
+    }
+    try {
+      GameSaveExporter.exportSaveCsvFile(saveMeta.saveDir(), destination.toPath(), latestOnly);
+      return destination.getName();
+    } catch (IOException ex) {
+      overlayService.showNotification("Export Failed", "Export failed: " + ex.getMessage(), false);
+      throw new UncheckedIOException(ex);
+    }
   }
 
   private Parent buildProfileView(Runnable onBackToGame, Runnable onSave) {
@@ -1318,6 +1377,7 @@ public class App extends Application {
         currentProfileAvatar,
         avatar -> {
           currentProfileAvatar = avatar;
+          gameSessionService.setProfileAvatar(avatar);
           currentGameController.setPlayerAvatar(avatar);
           if (currentGameView != null) {
             currentGameView.updateData();
@@ -1375,17 +1435,6 @@ public class App extends Application {
     }
   }
 
-  private String normalizeAutosaveSlotId(String slotId) {
-    String safe = slotId == null ? "" : slotId.replaceAll("[^A-Za-z0-9_\\-]", "_");
-    while (safe.startsWith("autosave_")) {
-      safe = safe.substring("autosave_".length());
-    }
-    if (safe.isBlank()) {
-      return "slot";
-    }
-    return safe;
-  }
-
   // ── Music-aware navigation primitives ────────────────────────────────────
 
   private <T> void runWithLoadingOverlay(
@@ -1415,14 +1464,14 @@ public class App extends Application {
 
   private void navigateToGame(Parent page) {
     gameAudioContext = true;
-    root.getChildren().setAll(backgroundCanvas, page);
+    navigationCoordinator.navigate(page);
   }
 
   /**
    * Swap page without touching music (home, setup, CSV, settings contexts).
    */
   private void navigateKeepMusic(Parent page) {
-    root.getChildren().setAll(backgroundCanvas, page);
+    navigationCoordinator.navigate(page);
     if (!gameAudioContext) {
       updateHomeThemeContextLoudness(page, true);
     }
@@ -1432,12 +1481,7 @@ public class App extends Application {
    * Fade a page in from opacity 0 — use only when coming from the home page.
    */
   private void fadeInPage(Parent page) {
-    page.setOpacity(0);
-    FadeTransition ft = new FadeTransition(Duration.millis(500), page);
-    ft.setFromValue(0);
-    ft.setToValue(1);
-    ft.setInterpolator(Interpolator.EASE_BOTH);
-    ft.play();
+    navigationCoordinator.fadeIn(page);
   }
 
   /**
