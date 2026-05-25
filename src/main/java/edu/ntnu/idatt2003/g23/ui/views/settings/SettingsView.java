@@ -624,7 +624,7 @@ public final class SettingsView {
     Label label = new Label("Export Save Data");
     label.getStyleClass().add("settings-label");
 
-    Label subLabel = new Label("Pick a save to export it as two files: one JSON and one CSV.");
+    Label subLabel = new Label("Pick a save to export as JSON + CSV, or export only the market CSV.");
     subLabel.getStyleClass().add("settings-sublabel");
     subLabel.setWrapText(true);
 
@@ -644,6 +644,10 @@ public final class SettingsView {
     Button exportBtn = new Button("\u2B07  Export JSON + CSV");
     exportBtn.getStyleClass().add("settings-toggle");
     exportBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
+
+    Button exportCsvBtn = new Button("\u2B07  Export CSV Only");
+    exportCsvBtn.getStyleClass().add("settings-toggle");
+    exportCsvBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
 
     Label statusLbl = new Label();
     statusLbl.getStyleClass().add("settings-sublabel");
@@ -681,7 +685,36 @@ public final class SettingsView {
       }
     });
 
-    HBox btnRow = new HBox(exportBtn);
+    exportCsvBtn.setOnAction(e -> {
+      SaveMeta selected = saveCombo.getSelectionModel().getSelectedItem();
+      if (selected == null) {
+        return;
+      }
+
+      FileChooser fc = new FileChooser();
+      fc.setTitle("Export Market CSV");
+      fc.setInitialFileName(
+          selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_market_data");
+      fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
+      File dest = fc.showSaveDialog(stage);
+      if (dest == null) {
+        return;
+      }
+
+      if (onExport != null) {
+        try {
+          Path exported = GameSaveExporter.exportSaveCsvFile(selected.saveDir(), dest.toPath());
+          statusLbl.setText("\u2713  Exported: " + exported.getFileName());
+          statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+          onExport.accept(dest);
+        } catch (IOException ex) {
+          statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
+          statusLbl.setStyle("-fx-text-fill: #e05a5a;");
+        }
+      }
+    });
+
+    HBox btnRow = new HBox(10, exportBtn, exportCsvBtn);
     btnRow.setAlignment(Pos.CENTER_LEFT);
 
     VBox content = new VBox(8, subLabel, saveCombo, btnRow, statusLbl);

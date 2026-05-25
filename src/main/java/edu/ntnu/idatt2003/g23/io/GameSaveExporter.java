@@ -239,6 +239,45 @@ public final class GameSaveExporter {
     return new Path[] {jsonDest, csvDest};
   }
 
+  /**
+   * Exports only the stock history CSV from a selected save.
+   *
+   * @param saveDir         the save folder containing stocks.csv
+   * @param destinationBase chosen file path used as base name for output file
+   * @return destination path of the exported CSV
+   */
+  public static Path exportSaveCsvFile(Path saveDir, Path destinationBase) throws IOException {
+    if (saveDir == null) {
+      throw new IllegalArgumentException("saveDir cannot be null");
+    }
+    if (destinationBase == null) {
+      throw new IllegalArgumentException("destinationBase cannot be null");
+    }
+
+    Path stocksCsv = saveDir.resolve("stocks.csv");
+    if (!Files.exists(stocksCsv)) {
+      throw new IOException("Missing stocks.csv in selected save");
+    }
+
+    Path parent = destinationBase.getParent();
+    if (parent != null) {
+      Files.createDirectories(parent);
+    }
+
+    String fileName = destinationBase.getFileName().toString();
+    String stem;
+    int dot = fileName.lastIndexOf('.');
+    if (dot > 0) {
+      stem = fileName.substring(0, dot);
+    } else {
+      stem = fileName;
+    }
+
+    Path csvDest = (parent == null ? Path.of(stem + ".csv") : parent.resolve(stem + ".csv"));
+    Files.copy(stocksCsv, csvDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    return csvDest;
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   private static void writeJson(Path saveDir, Player player, Exchange exchange,
