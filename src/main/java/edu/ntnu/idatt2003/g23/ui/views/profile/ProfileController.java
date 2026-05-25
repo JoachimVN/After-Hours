@@ -19,6 +19,8 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
  * Controller for ProfileView (MVC).
  */
 public final class ProfileController {
+  private static final int MINI_CHART_MAX_POINTS = 26;
+
   private final GameController gameController;
   private final Supplier<List<String>> favoriteSymbolsSupplier;
   private final Consumer<String> favoriteToggleConsumer;
@@ -57,7 +59,19 @@ public final class ProfileController {
 
   public record FavoriteStockView(String symbol, String company,
                                   BigDecimal currentPrice, BigDecimal changePct,
-                                  boolean owned) {
+                                  boolean owned,
+                                  List<BigDecimal> priceHistory) {
+  }
+
+  public record PortfolioPositionView(String symbol,
+                                      String company,
+                                      BigDecimal quantity,
+                                      BigDecimal averagePrice,
+                                      BigDecimal currentPrice,
+                                      BigDecimal marketValue,
+                                      BigDecimal pnl,
+                                      BigDecimal pnlPct,
+                                      List<BigDecimal> priceHistory) {
   }
 
   public record StatusRequirementInfo(String statusName,
@@ -160,9 +174,39 @@ public final class ProfileController {
             stock.getCompany(),
             stock.getSalesPrice(),
             stock.percentageChange(),
-            gameController.isOwned(stock.getSymbol())))
+          gameController.isOwned(stock.getSymbol()),
+          compactHistory(stock.getHistoricalPrices())))
         .toList();
   }
+
+      public List<PortfolioPositionView> getPortfolioPositions() {
+      return gameController.getPortfolioShares().stream()
+        .sorted(java.util.Comparator.comparing(share -> share.getStock().getSymbol()))
+        .map(share -> {
+          BigDecimal quantity = share.getQuantity();
+          BigDecimal averagePrice = share.getPurchasePrice();
+          BigDecimal currentPrice = share.getStock().getSalesPrice();
+          BigDecimal marketValue = currentPrice.multiply(quantity);
+          BigDecimal costBasis = averagePrice.multiply(quantity);
+          BigDecimal pnl = marketValue.subtract(costBasis);
+          BigDecimal pnlPct = costBasis.compareTo(BigDecimal.ZERO) == 0
+            ? BigDecimal.ZERO
+            : pnl.divide(costBasis, 4, RoundingMode.HALF_UP)
+              .multiply(BigDecimal.valueOf(100));
+
+          return new PortfolioPositionView(
+            share.getStock().getSymbol(),
+            share.getStock().getCompany(),
+            quantity,
+            averagePrice,
+            currentPrice,
+            marketValue,
+            pnl,
+            pnlPct,
+            compactHistory(share.getStock().getHistoricalPrices()));
+        })
+        .toList();
+      }
 
   public StatusRequirementInfo getStatusRequirement(PlayerStatus status) {
     int weeksNow = Math.max(0, getPlayerWeeksTraded());
@@ -204,5 +248,15 @@ public final class ProfileController {
   private static String formatStatusName(PlayerStatus status) {
     String lower = status.name().toLowerCase(Locale.ROOT);
     return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+  }
+
+  private static List<BigDecimal> compactHistory(List<BigDecimal> history) {
+    if (history == null || history.isEmpty()) {
+      return List.of();
+    }
+    if (history.size() <= MINI_CHART_MAX_POINTS) {
+      return List.copyOf(history);
+    }
+    return List.copyOf(history.subList(history.size() - MINI_CHART_MAX_POINTS, history.size()));
   }
 }
