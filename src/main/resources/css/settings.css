@@ -87,6 +87,48 @@
     -fx-text-fill: #4a6899;
 }
 
+/* ── Export history checkbox ─────────────────────────────────────────────── */
+
+.settings-export-history-check {
+    -fx-text-fill: #9ec6e5;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+    -fx-label-padding: 0px 0px 0px 4px;
+}
+
+.settings-export-history-check:hover {
+    -fx-text-fill: #c8d8f0;
+}
+
+.settings-export-history-check .box {
+    -fx-background-color: rgba(15, 45, 94, 0.52);
+    -fx-border-color: rgba(30, 64, 128, 0.70);
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-pref-width: 17px;
+    -fx-pref-height: 17px;
+    -fx-padding: 1px;
+}
+
+.settings-export-history-check:hover .box {
+    -fx-background-color: rgba(30, 64, 128, 0.58);
+    -fx-border-color: rgba(103, 167, 235, 0.80);
+}
+
+.settings-export-history-check:selected .box {
+    -fx-background-color: rgba(245, 162, 1, 0.18);
+    -fx-border-color: rgba(245, 162, 1, 0.72);
+}
+
+.settings-export-history-check:selected .mark {
+    -fx-background-color: #f5a201;
+}
+
+.settings-export-history-check:focused .box {
+    -fx-effect: dropshadow(gaussian, rgba(103, 167, 235, 0.45), 8, 0, 0, 0);
+}
+
 /* ── Toggle button (pill shape, subtle glow on selected) ─────────────────── */
 
 .settings-toggle {

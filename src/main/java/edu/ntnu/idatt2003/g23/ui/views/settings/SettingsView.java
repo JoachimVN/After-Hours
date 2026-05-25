@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.AppVersion;
@@ -18,6 +18,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -126,9 +127,9 @@ public final class SettingsView {
       /** Called when user clicks "Maximize". Null-safe. */
       Runnable onMaximize,
       /** Exports selected save as JSON + CSV. Null-safe. */
-      Function<SaveMeta, Boolean> onExportJsonCsv,
+      BiFunction<SaveMeta, Boolean, Boolean> onExportJsonCsv,
       /** Exports selected save as CSV only. Null-safe. */
-      Function<SaveMeta, Boolean> onExportCsvOnly,
+      BiFunction<SaveMeta, Boolean, Boolean> onExportCsvOnly,
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
@@ -242,7 +243,7 @@ public final class SettingsView {
     footerBanner.setPadding(new Insets(8, 24, 20, 24));
     footerBanner.setMaxWidth(Double.MAX_VALUE);
 
-        VBox allSections;
+    VBox allSections;
     if (profileSection != null) {
       allSections = new VBox(22,
           title, profileSection, audioSection, displaySection, gameSection, performanceSection,
@@ -258,20 +259,19 @@ public final class SettingsView {
 
     HBox centeringBox = new HBox(allSections);
     centeringBox.setAlignment(Pos.TOP_CENTER);
-        centeringBox.setPadding(new Insets(28, 48, 0, 48));
+    centeringBox.setPadding(new Insets(28, 48, 0, 48));
 
-        VBox scrollContent = new VBox(52, centeringBox, footerBanner);
-        scrollContent.setFillWidth(true);
-        scrollContent.setAlignment(Pos.TOP_CENTER);
+    VBox scrollContent = new VBox(52, centeringBox, footerBanner);
+    scrollContent.setFillWidth(true);
+    scrollContent.setAlignment(Pos.TOP_CENTER);
 
-        ScrollPane scroll = new ScrollPane(scrollContent);
+    ScrollPane scroll = new ScrollPane(scrollContent);
     scroll.setFitToWidth(true);
     scroll.setFitToHeight(false);
     scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
     scroll.getStyleClass().add("settings-scroll");
 
     root.setCenter(scroll);
-
 
     // ── Key bindings
     // ────────────────────────────────────────────────────────────────
@@ -622,8 +622,8 @@ public final class SettingsView {
   }
 
   private static VBox buildDataSection(Path currentSavePath,
-      Function<SaveMeta, Boolean> onExportJsonCsv,
-      Function<SaveMeta, Boolean> onExportCsvOnly) {
+      BiFunction<SaveMeta, Boolean, Boolean> onExportJsonCsv,
+      BiFunction<SaveMeta, Boolean, Boolean> onExportCsvOnly) {
     Label label = new Label("Export Save Data");
     label.getStyleClass().add("settings-label");
 
@@ -641,7 +641,7 @@ public final class SettingsView {
     try {
       List<SaveMeta> saves = GameSaveLoader.listSaves();
       saveCombo.getItems().setAll(saves);
-    } catch (IOException ignored) {
+    } catch (IOException _) {
     }
 
     Button exportBtn = new Button("\u2B07  Export JSON + CSV");
@@ -651,6 +651,15 @@ public final class SettingsView {
     Button exportCsvBtn = new Button("\u2B07  Export CSV Only");
     exportCsvBtn.getStyleClass().add("settings-toggle");
     exportCsvBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
+
+    CheckBox keepHistoryCheck = new CheckBox("Keep price history");
+    keepHistoryCheck.setSelected(false);
+    keepHistoryCheck.getStyleClass().add("settings-export-history-check");
+
+    Label keepHistoryHint = new Label("Export full price history, or only the latest price per stock.");
+    keepHistoryHint.getStyleClass().add("settings-sublabel");
+    keepHistoryHint.setWrapText(true);
+    keepHistoryHint.setPadding(new Insets(0, 0, 8, 0));
 
     Label statusLbl = new Label();
     statusLbl.getStyleClass().add("settings-sublabel");
@@ -664,9 +673,12 @@ public final class SettingsView {
 
       if (onExportJsonCsv != null) {
         try {
-          boolean exported = Boolean.TRUE.equals(onExportJsonCsv.apply(selected));
+          boolean latestOnly = !keepHistoryCheck.isSelected();
+          boolean exported = Boolean.TRUE.equals(onExportJsonCsv.apply(selected, latestOnly));
           if (exported) {
-            statusLbl.setText("\u2713  Export completed (JSON + CSV).");
+            statusLbl.setText(latestOnly
+                ? "\u2713  Export completed (JSON + latest-price CSV)."
+                : "\u2713  Export completed (JSON + full-history CSV).");
             statusLbl.setStyle("-fx-text-fill: #4ecb71;");
           }
         } catch (Exception ex) {
@@ -684,9 +696,12 @@ public final class SettingsView {
 
       if (onExportCsvOnly != null) {
         try {
-          boolean exported = Boolean.TRUE.equals(onExportCsvOnly.apply(selected));
+          boolean latestOnly = !keepHistoryCheck.isSelected();
+          boolean exported = Boolean.TRUE.equals(onExportCsvOnly.apply(selected, latestOnly));
           if (exported) {
-            statusLbl.setText("\u2713  Export completed (CSV only).");
+            statusLbl.setText(latestOnly
+                ? "\u2713  Export completed (latest-price CSV)."
+                : "\u2713  Export completed (full-history CSV).");
             statusLbl.setStyle("-fx-text-fill: #4ecb71;");
           }
         } catch (Exception ex) {
@@ -699,7 +714,7 @@ public final class SettingsView {
     HBox btnRow = new HBox(10, exportBtn, exportCsvBtn);
     btnRow.setAlignment(Pos.CENTER_LEFT);
 
-    VBox content = new VBox(8, subLabel, saveCombo, btnRow, statusLbl);
+    VBox content = new VBox(8, subLabel, saveCombo, keepHistoryCheck, keepHistoryHint, btnRow, statusLbl);
     return sectionCard("\uD83D\uDCC4  Data", new VBox(6, label, content));
   }
 

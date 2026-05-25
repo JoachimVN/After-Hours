@@ -11,6 +11,7 @@ import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -201,6 +202,16 @@ public final class GameSaveExporter {
    * @return array where index 0 is json destination and index 1 is csv destination
    */
   public static Path[] exportSaveDataFiles(Path saveDir, Path destinationBase) throws IOException {
+    return exportSaveDataFiles(saveDir, destinationBase, false);
+  }
+
+  /**
+   * Exports a selected save to JSON + CSV.
+   *
+   * @param latestPriceOnly when true, the exported CSV includes only latest stock prices
+   */
+  public static Path[] exportSaveDataFiles(Path saveDir, Path destinationBase,
+                                           boolean latestPriceOnly) throws IOException {
     if (saveDir == null) {
       throw new IllegalArgumentException("saveDir cannot be null");
     }
@@ -235,7 +246,7 @@ public final class GameSaveExporter {
     Path csvDest = (parent == null ? Path.of(stem + ".csv") : parent.resolve(stem + ".csv"));
 
     Files.copy(saveJson, jsonDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-    Files.copy(stocksCsv, csvDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    exportStocksCsv(stocksCsv, csvDest, latestPriceOnly);
     return new Path[] {jsonDest, csvDest};
   }
 
@@ -247,6 +258,16 @@ public final class GameSaveExporter {
    * @return destination path of the exported CSV
    */
   public static Path exportSaveCsvFile(Path saveDir, Path destinationBase) throws IOException {
+    return exportSaveCsvFile(saveDir, destinationBase, false);
+  }
+
+  /**
+   * Exports stock CSV from a selected save.
+   *
+   * @param latestPriceOnly when true, exports one latest price per stock
+   */
+  public static Path exportSaveCsvFile(Path saveDir, Path destinationBase,
+                                       boolean latestPriceOnly) throws IOException {
     if (saveDir == null) {
       throw new IllegalArgumentException("saveDir cannot be null");
     }
@@ -274,8 +295,20 @@ public final class GameSaveExporter {
     }
 
     Path csvDest = (parent == null ? Path.of(stem + ".csv") : parent.resolve(stem + ".csv"));
-    Files.copy(stocksCsv, csvDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    exportStocksCsv(stocksCsv, csvDest, latestPriceOnly);
     return csvDest;
+  }
+
+  private static void exportStocksCsv(Path sourceStocksCsv, Path destinationCsv,
+                                      boolean latestPriceOnly) throws IOException {
+    if (!latestPriceOnly) {
+      Files.copy(sourceStocksCsv, destinationCsv, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+      return;
+    }
+
+    try (Reader reader = Files.newBufferedReader(sourceStocksCsv, StandardCharsets.UTF_8)) {
+      StockCsvExporter.writeCurrentPrices(destinationCsv, StockCsvLoader.parse(reader));
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

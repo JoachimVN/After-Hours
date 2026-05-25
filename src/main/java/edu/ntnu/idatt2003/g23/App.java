@@ -1222,8 +1222,8 @@ public class App extends Application {
     };
 
     // Export from Settings should work in both home/setup and in-game contexts.
-    ctrl.onExportJsonCsv = this::exportSaveDataFromSettings;
-    ctrl.onExportCsvOnly = this::exportSaveCsvFromSettings;
+    ctrl.onExportJsonCsv = (meta, latestOnly) -> exportSaveDataFromSettings(meta, latestOnly);
+    ctrl.onExportCsvOnly = (meta, latestOnly) -> exportSaveCsvFromSettings(meta, latestOnly);
 
     // ── Reset all ────────────────────────────────────────────────────────
     ctrl.onResetAll = () -> {
@@ -1300,7 +1300,7 @@ public class App extends Application {
     return settingsPage;
   }
 
-  private boolean exportSaveDataFromSettings(SaveMeta saveMeta) {
+  private boolean exportSaveDataFromSettings(SaveMeta saveMeta, boolean latestOnly) {
     if (saveMeta == null) {
       return false;
     }
@@ -1314,7 +1314,7 @@ public class App extends Application {
       return false;
     }
     try {
-      GameSaveExporter.exportSaveDataFiles(saveMeta.saveDir(), destination.toPath());
+      GameSaveExporter.exportSaveDataFiles(saveMeta.saveDir(), destination.toPath(), latestOnly);
       return true;
     } catch (IOException ex) {
       overlayService.showNotification("Export Failed", "Export failed: " + ex.getMessage(), false);
@@ -1322,7 +1322,7 @@ public class App extends Application {
     }
   }
 
-  private boolean exportSaveCsvFromSettings(SaveMeta saveMeta) {
+  private boolean exportSaveCsvFromSettings(SaveMeta saveMeta, boolean latestOnly) {
     if (saveMeta == null) {
       return false;
     }
@@ -1336,7 +1336,7 @@ public class App extends Application {
       return false;
     }
     try {
-      GameSaveExporter.exportSaveCsvFile(saveMeta.saveDir(), destination.toPath());
+      GameSaveExporter.exportSaveCsvFile(saveMeta.saveDir(), destination.toPath(), latestOnly);
       return true;
     } catch (IOException ex) {
       overlayService.showNotification("Export Failed", "Export failed: " + ex.getMessage(), false);
