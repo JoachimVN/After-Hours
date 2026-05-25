@@ -57,9 +57,12 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.effect.ColorAdjust;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
@@ -172,7 +175,7 @@ public class App extends Application {
     primaryStage = stage;
     homePage = LandingPageView.build(
         () -> {
-          sfxController.play(SfxController.PLAY, Math.min(sfxController.getVolume() * 1.5, 1.0));
+          sfxController.play(SfxController.PLAY1, Math.min(sfxController.getVolume() * 1.5, 1.0));
           goToSaveSelect();
         },
         () -> {
@@ -226,6 +229,11 @@ public class App extends Application {
         event.consume();
       }
     });
+    scene.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, event -> {
+      if (isTextInputTarget(event.getTarget())) {
+        event.consume();
+      }
+    });
 
     // Track window size changes so we can persist them
     stage.widthProperty().addListener((obs, o, w) -> {
@@ -244,8 +252,9 @@ public class App extends Application {
     if (musicMuted) {
       splashOverlayController.fadeAfterStartup();
     } else {
+      splashOverlayController.fadeAfterStartup();
       homePageMusicController.play(
-          splashOverlayController::fadeAfterStartup,
+          null,
           splashOverlayController::fadeAfterFailure);
     }
   }
@@ -1513,6 +1522,18 @@ public class App extends Application {
         ? LANDING_THEME_CONTEXT_MULTIPLIER
         : NON_LANDING_THEME_CONTEXT_MULTIPLIER;
     homePageMusicController.setContextVolumeMultiplier(contextMultiplier, smooth);
+  }
+
+  private static boolean isTextInputTarget(Object target) {
+    if (!(target instanceof Node node)) {
+      return false;
+    }
+    for (Node current = node; current != null; current = current.getParent()) {
+      if (current instanceof TextInputControl) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

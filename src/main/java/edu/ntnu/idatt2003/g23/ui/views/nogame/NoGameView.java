@@ -90,7 +90,7 @@ public final class NoGameView {
   public static final String MSG_EMPTY = "I know you tried to play with an empty CSV file.";
   public static final String MSG_NO_CASH = "I know you tried to play without cash.";
 
-  private static final String APPLAUSE_SOUND = "/audio/sfx/Applause.mp3";
+  private static final String APPLAUSE_SOUND = "/audio/sfx/Applause.wav";
 
   // Both monologues share every line — only the opening differs.
   private static List<Message> buildMonologue(String openingLine) {

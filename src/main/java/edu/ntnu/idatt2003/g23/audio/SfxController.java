@@ -13,17 +13,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SfxController {
 
-  public static final String SETTINGS = "/audio/sfx/Settings.mp3";
-  public static final String SETTINGS_ON = "/audio/sfx/Settings_On.mp3";
-  public static final String SETTINGS_OFF = "/audio/sfx/Settings_Off.mp3";
-  public static final String BACK = "/audio/sfx/Back.mp3";
-  public static final String PROFILE = "/audio/sfx/Profile.mp3";
-  public static final String Select = "/audio/sfx/Select.mp3";
-  public static final String SELECT = "/audio/sfx/Select.mp3";
-  public static final String PLAY = "/audio/sfx/play/Play.mp3";
-  public static final String PLAY2 = "/audio/sfx/play/Play2.mp3";
-  public static final String PLAY3 = "/audio/sfx/play/Play3.mp3";
-  public static final String LEVEL_UP = "/audio/sfx/Level_Up.mp3";
+  public static final String SETTINGS = "/audio/sfx/Settings.wav";
+  public static final String SETTINGS_ON = "/audio/sfx/Settings_On.wav";
+  public static final String SETTINGS_OFF = "/audio/sfx/Settings_Off.wav";
+  public static final String BACK = "/audio/sfx/Back.wav";
+  public static final String PROFILE = "/audio/sfx/Profile.wav";
+  public static final String SELECT = "/audio/sfx/Select.wav";
+  public static final String PLAY1 = "/audio/sfx/play/Play1.wav";
+  public static final String PLAY2 = "/audio/sfx/play/Play2.wav";
+  public static final String PLAY3 = "/audio/sfx/play/Play3.wav";
+  public static final String LEVEL_UP = "/audio/sfx/Level_Up.wav";
 
   private static final double DEFAULT_VOLUME = 0.5;
 
@@ -33,13 +32,13 @@ public class SfxController {
 
   public SfxController(Class<?> resourceOwner) {
     this.resourceOwner = resourceOwner;
-    preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY, PLAY2, PLAY3);
+    preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY1, PLAY2, PLAY3);
   }
 
   /**
    * Plays the sound effect at {@code resourcePath} at the current SFX volume.
    *
-   * @param resourcePath classpath-relative path, e.g. {@code "/audio/sfx/Back.mp3"}
+   * @param resourcePath classpath-relative path, e.g. {@code "/audio/sfx/Back.wav"}
    */
   public void play(String resourcePath) {
     play(resourcePath, volume);

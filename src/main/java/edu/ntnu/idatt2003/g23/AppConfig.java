@@ -16,10 +16,11 @@ public final class AppConfig {
   public static final double DEFAULT_HEIGHT = 768;
   public static final double MIN_WIDTH = 860;
   public static final double MIN_HEIGHT = 620;
+  public static final Duration SPLASH_LOGO_FADE_DURATION =
+      Duration.seconds((60.0 / 110.0) * 4.0); // One measure at 110 BPM
   public static final Duration SPLASH_FADE_DURATION = Duration.seconds(0.6);
   public static final Duration SPLASH_DELAY =
-      Duration.seconds(110.0 / 60.0 - (SPLASH_FADE_DURATION.toSeconds() * 0.25));
-  // 110 BPM (Song BPM) / 60 (seconds per beat) - quarter of the fade duration (aligns well)
+      Duration.seconds((60.0 / 110.0) * 4.0 * 2.0 - SPLASH_FADE_DURATION.toSeconds() / 2); // Two measures at 110 BPM - half the fade duration
   public static final Duration SPLASH_FALLBACK_DELAY = Duration.seconds(0.3);
 
   /**

@@ -7,7 +7,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -140,9 +142,7 @@ class GameControllerTest {
     BigDecimal cost = stock.getSalesPrice().multiply(new BigDecimal("1.005"));
     int byCash = player.getMoney()
         .divide(cost, 0, java.math.RoundingMode.DOWN).intValue();
-    int cap = controller.getStockOwnershipCap(stock).intValue();
-    int expected = Math.min(byCash, cap);
-    assertEquals(expected, controller.maxBuyQuantity(stock));
+    assertEquals(byCash, controller.maxBuyQuantity(stock));
   }
 
   @Test
@@ -310,6 +310,19 @@ class GameControllerTest {
   }
 
   @Test
+  void handleBuy_withNullQuantity_showsValidationError() {
+    controller.handleBuy(stock, null);
+    assertEquals("Enter at least 1 share to buy.", view.lastError);
+  }
+
+  @Test
+  void handleBuy_withInsufficientCash_showsTradeError() {
+    controller.handleBuy(stock, new BigDecimal("1000000"));
+    assertNotNull(view.lastError);
+    assertTrue(view.lastError.contains("Not enough cash"));
+  }
+
+  @Test
   void executeBuy_updatesViewOnSuccess() {
     controller.executeBuy(stock, BigDecimal.ONE,
         stock.getSalesPrice().multiply(new BigDecimal("1.005")),
@@ -325,6 +338,12 @@ class GameControllerTest {
         stock.getSalesPrice().multiply(new BigDecimal("2")).multiply(new BigDecimal("0.005")));
     assertTrue(controller.isOwned("AAPL"));
     assertEquals(0, new BigDecimal("2").compareTo(controller.getOwnedQuantity("AAPL")));
+  }
+
+  @Test
+  void executeBuy_whenUnderlyingBuyFails_showsError() {
+    controller.executeBuy(stock, new BigDecimal("1000000"), BigDecimal.ONE, BigDecimal.ZERO);
+    assertNotNull(view.lastError);
   }
 
   @Test
@@ -350,5 +369,92 @@ class GameControllerTest {
     view.lastConfirmAction = null;
     controller.handleSellAll(null);
     assertEquals("SELL ALL HOLDINGS", view.lastConfirmAction);
+  }
+
+  @Test
+  void executeSellAll_withShares_clearsPortfolioAndShowsBulkReceipt() {
+    controller.executeBuy(stock, new BigDecimal("2"),
+        stock.getSalesPrice().multiply(new BigDecimal("2")).multiply(new BigDecimal("1.005")),
+        stock.getSalesPrice().multiply(new BigDecimal("2")).multiply(new BigDecimal("0.005")));
+
+    controller.executeSellAll();
+
+    assertEquals("SELL ALL HOLDINGS", view.lastReceiptAction);
+    assertEquals(0, BigDecimal.ZERO.compareTo(controller.getOwnedQuantity("AAPL")));
+  }
+
+  @Test
+  void getTradePointsForStock_afterBuyAndSell_containsBothDirections() {
+    controller.executeBuy(stock, BigDecimal.ONE,
+        stock.getSalesPrice().multiply(new BigDecimal("1.005")),
+        stock.getSalesPrice().multiply(new BigDecimal("0.005")));
+    controller.executeSell(stock, BigDecimal.ONE);
+
+    List<GameController.StockTradePoint> points = controller.getTradePointsForStock("AAPL");
+    assertEquals(2, points.size());
+    assertTrue(points.stream().anyMatch(p -> !p.isSell()));
+    assertTrue(points.stream().anyMatch(GameController.StockTradePoint::isSell));
+  }
+
+  @Test
+  void getTransactionHistory_sortedByWeekDescending() {
+    controller.executeBuy(stock, BigDecimal.ONE,
+        stock.getSalesPrice().multiply(new BigDecimal("1.005")),
+        stock.getSalesPrice().multiply(new BigDecimal("0.005")));
+    controller.handleNextWeek();
+    controller.executeSell(stock, BigDecimal.ONE);
+
+    List<TxRow> history = controller.getTransactionHistory();
+    assertEquals(2, history.size());
+    assertTrue(history.get(0).week() >= history.get(1).week());
+  }
+
+  @Test
+  void replaySeries_isCachedUntilInvalidated() {
+    List<GameController.ReplayPoint> first = controller.getReplaySeries();
+    List<GameController.ReplayPoint> second = controller.getReplaySeries();
+    assertSame(first, second);
+
+    controller.handleNextWeek();
+
+    List<GameController.ReplayPoint> third = controller.getReplaySeries();
+    assertNotSame(second, third);
+  }
+
+  @Test
+  void refreshReplaySeriesForSettingsChange_rebuildsReplayCache() {
+    List<GameController.ReplayPoint> first = controller.getReplaySeries();
+    controller.refreshReplaySeriesForSettingsChange();
+    List<GameController.ReplayPoint> second = controller.getReplaySeries();
+    assertNotSame(first, second);
+  }
+
+  @Test
+  void playerIdentityMutators_updateNameAndAvatar() {
+    controller.setPlayerName("Updated Name");
+    controller.setPlayerAvatar("man-office-worker");
+
+    assertEquals("Updated Name", controller.getPlayerName());
+    assertEquals("man-office-worker", controller.getSelectedPlayerAvatar());
+    assertNotNull(controller.getPlayerAvatar());
+  }
+
+  @Test
+  void devModeMutationFlag_isRaisedByDevActions() {
+    assertFalse(controller.hasDevModeMutationsUsed());
+
+    controller.setFrozen(true);
+
+    assertTrue(controller.hasDevModeMutationsUsed());
+  }
+
+  @Test
+  void getTransactionCount_afterBuyAndSell_isTwo() {
+    controller.executeBuy(stock, BigDecimal.ONE,
+        stock.getSalesPrice().multiply(new BigDecimal("1.005")),
+        stock.getSalesPrice().multiply(new BigDecimal("0.005")));
+    controller.executeSell(stock, BigDecimal.ONE);
+
+    assertEquals(2, controller.getTransactionCount());
   }
 }

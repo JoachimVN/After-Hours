@@ -186,6 +186,97 @@ class GameSaveExporterTest {
     });
   }
 
+  @Test
+  @DisplayName("autosave normalizes empty slot IDs to default slot folder")
+  void autosaveEmptySlotUsesDefaultFolderName() throws IOException {
+    Path dir = GameSaveExporter.autosave(player, exchange, null, "");
+    assertEquals("autosave_slot", dir.getFileName().toString());
+
+    Files.walk(dir).sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+      try {
+        Files.delete(p);
+      } catch (IOException ignored) {
+      }
+    });
+  }
+
+  @Test
+  @DisplayName("autosave strips duplicated autosave_ prefixes from slot IDs")
+  void autosaveNormalizesPrefixedSlotId() throws IOException {
+    Path dir = GameSaveExporter.autosave(player, exchange, null, "autosave_autosave_demo");
+    assertEquals("autosave_demo", dir.getFileName().toString());
+
+    Files.walk(dir).sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+      try {
+        Files.delete(p);
+      } catch (IOException ignored) {
+      }
+    });
+  }
+
+  @Test
+  @DisplayName("markSaveAsFlagged sets flagged=true and removes legacy flags")
+  void markSaveAsFlaggedSetsUnifiedFlag() throws IOException {
+    GameSaveExporter.overwrite(tempDir, player, exchange);
+    Path jsonPath = tempDir.resolve("save.json");
+
+    JsonObject before = JsonParser.parseString(
+        Files.readString(jsonPath, StandardCharsets.UTF_8)).getAsJsonObject();
+    before.addProperty("flaggedDevMode", true);
+    before.addProperty("flaggedCsvEdited", true);
+    Files.writeString(jsonPath, before.toString(), StandardCharsets.UTF_8);
+
+    GameSaveExporter.markSaveAsFlagged(tempDir);
+
+    JsonObject after = JsonParser.parseString(
+        Files.readString(jsonPath, StandardCharsets.UTF_8)).getAsJsonObject();
+    assertTrue(after.get("flagged").getAsBoolean());
+    assertFalse(after.has("flaggedDevMode"));
+    assertFalse(after.has("flaggedCsvEdited"));
+  }
+
+  @Test
+  @DisplayName("markSaveAsFlagged throws when save.json is missing")
+  void markSaveAsFlaggedThrowsWithoutSaveJson() {
+    Path missing = tempDir.resolve("missing_save");
+    assertThrows(IOException.class, () -> GameSaveExporter.markSaveAsFlagged(missing));
+  }
+
+  @Test
+  @DisplayName("exportSaveDataFiles writes paired json and csv files")
+  void exportSaveDataFilesCopiesBothFiles() throws IOException {
+    GameSaveExporter.overwrite(tempDir, player, exchange);
+
+    Path destinationBase = tempDir.resolve("exports").resolve("session_export.any");
+    Path[] out = GameSaveExporter.exportSaveDataFiles(tempDir, destinationBase);
+
+    assertEquals(2, out.length);
+    assertTrue(Files.exists(out[0]));
+    assertTrue(Files.exists(out[1]));
+    assertTrue(out[0].toString().endsWith("session_export.json"));
+    assertTrue(out[1].toString().endsWith("session_export.csv"));
+  }
+
+  @Test
+  @DisplayName("exportSaveDataFiles validates null arguments")
+  void exportSaveDataFilesRejectsNullArguments() {
+    assertThrows(IllegalArgumentException.class,
+        () -> GameSaveExporter.exportSaveDataFiles(null, tempDir.resolve("x")));
+    assertThrows(IllegalArgumentException.class,
+        () -> GameSaveExporter.exportSaveDataFiles(tempDir, null));
+  }
+
+  @Test
+  @DisplayName("exportSaveDataFiles throws when required save files are missing")
+  void exportSaveDataFilesThrowsWhenRequiredFilesMissing() throws IOException {
+    Path incompleteSave = tempDir.resolve("incomplete-save");
+    Files.createDirectories(incompleteSave);
+    Files.writeString(incompleteSave.resolve("save.json"), "{}", StandardCharsets.UTF_8);
+
+    assertThrows(IOException.class,
+        () -> GameSaveExporter.exportSaveDataFiles(incompleteSave, tempDir.resolve("out")));
+  }
+
   // ─── Private constructor ──────────────────────────────────────────────────
 
   @Test

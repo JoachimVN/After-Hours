@@ -4,7 +4,7 @@
   <groupId>edu.ntnu.idatt2003.g23</groupId>
   <artifactId>app</artifactId>
   <name>app</name>
-  <version>1.0.1</version>
+  <version>1.2.1</version>
   <url>http://www.example.com</url>
   <build>
     <resources>
@@ -262,6 +262,26 @@
                 <argument>rm -rf "${java.io.tmpdir}/afterhours-dist/After Hours.app" &amp;&amp; jpackage --type app-image --name "After Hours" --app-version ${project.version} --vendor NTNU --description "After Hours" --icon "${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.icns" --input "${project.build.directory}/jpackage-input" --main-jar app-fat.jar --main-class edu.ntnu.idatt2003.g23.App --module-path "${project.build.directory}/javafx-mods" --add-modules javafx.controls,javafx.media --java-options '--enable-native-access=javafx.graphics,javafx.media' --java-options '-Dglass.mac.uiScale=1.25' --dest "${java.io.tmpdir}/afterhours-dist" &amp;&amp; rm -rf "${project.build.directory}/dist/After Hours.app" &amp;&amp; cp -R "${java.io.tmpdir}/afterhours-dist/After Hours.app" "${project.build.directory}/dist/"</argument>
               </arguments>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.14</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
