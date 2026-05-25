@@ -5500,6 +5500,8 @@ public final class GameView implements GameViewInterface {
         }
         tooltip.setLayoutX(tx);
         tooltip.setLayoutY(ty);
+        tooltip.applyCss();
+        tooltip.autosize();
         tooltip.setVisible(true);
         drawRef[0].run();
       } else {

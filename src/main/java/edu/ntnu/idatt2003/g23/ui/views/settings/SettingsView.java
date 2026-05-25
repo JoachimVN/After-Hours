@@ -225,7 +225,7 @@ public final class SettingsView {
     footerTitle.setAlignment(Pos.CENTER);
     footerTitle.setMaxWidth(Double.MAX_VALUE);
 
-    Label footerTagline = new Label("The market never sleeps. Neither do you.");
+    Label footerTagline = new Label("The market never sleeps. Neither should you.");
     footerTagline.getStyleClass().add("settings-footer-tagline");
     footerTagline.setTextAlignment(TextAlignment.CENTER);
     footerTagline.setAlignment(Pos.CENTER);

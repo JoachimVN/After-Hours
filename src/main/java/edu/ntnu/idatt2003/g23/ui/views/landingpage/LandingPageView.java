@@ -34,7 +34,7 @@ public final class LandingPageView {
     Label tagline = new Label("\u2726  NTNU \u2022 IDATT2003 \u2022 Millions \u2022 Group 23  \u2726");
     tagline.getStyleClass().add("tagline");
     tagline.setPadding(new Insets(2, 14, 4, 14));
-    Label subTagline = new Label("The market never sleeps. Neither do you.");
+    Label subTagline = new Label("The market never sleeps. Neither should you.");
     subTagline.getStyleClass().add("sub-tagline");
     subTagline.setPadding(new Insets(2, 14, 4, 14));
     VBox taglineBlock = new VBox(6, tagline, subTagline);
