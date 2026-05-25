@@ -9,13 +9,11 @@
 <p align="center">
 	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/releases">Releases</a>
 	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wikis/home">Wiki</a>
+	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki">Wiki</a>
 	|
 	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/issues">Issues</a>
 	|
 	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/merge_requests">Merge Requests</a>
-	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/pipelines">Pipelines</a>
 	|
 	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/milestones">Milestones</a>
 	|
@@ -35,22 +33,28 @@ You start with a fixed amount of cash, trade through weekly market updates, and 
 - Milestones: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/milestones
 
 ## Screenshots
-
-Add gameplay screenshots or GIFs here:
-
 <p align="center">
-	<img src="src/main/resources/images/screenshots/Landing_Page.png" alt="After Hours Landing Page" width="620" />
-    <img src="src/main/resources/images/screenshots/Game_Example.png" alt="After Hours Game Example" width="620" />
-    <img src="src/main/resources/images/screenshots/Profile_Example.png" alt="After Hours Profile Example" width="620" />
+	<img src="src/main/resources/images/screenshots/Landing_Page.png" alt="After Hours Landing Page"/>
+	<em>Landing Page</em>
+	<br>
+	<br>
+	<img src="src/main/resources/images/screenshots/Game_Example.png" alt="After Hours Game Example"/>
+	<em>In-game Page example</em>
+	<br>
+	<br>
+	<img src="src/main/resources/images/screenshots/Profile_Example.png" alt="After Hours Profile Example"/>
+	<em>Profile page example</em>
+	<br>
+	<br>
 </p>
 
 ## Why This Project
 
-The project was developed as part of IDATT2003 and focuses on:
+The project was developed as part of IDATT2003 at NTNU and focuses on:
 
 - object-oriented domain modeling
 - JavaFX UI architecture and navigation
-- robust persistence (save/load, settings, autosave)
+- robust persistence (save/load)
 - testability and maintainability
 
 ## Core Features
@@ -169,7 +173,8 @@ src/main/resources
 
 ## Team Members
 
-- Håvard Slettevoll Ellingsen
-- Joachim Valdersnes Nilsen
+[Håvard Slettevoll Ellingsen](https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki/Håvard-Slettevoll-Ellingsen)
+
+[Joachim Valdersnes Nilsen](https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki/Joachim-Valdersnes-Nilsen)
 
 Group 23, IDATT2003.
