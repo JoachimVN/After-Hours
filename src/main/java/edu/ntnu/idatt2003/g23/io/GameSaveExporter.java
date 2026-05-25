@@ -23,7 +23,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Saves a game to a folder under {@code ~/.afterhours/saves/}.
+ * Saves a game to a folder under the application's per-user data directory.
  *
  * <p>Each save is a directory named {@code <playerName>_<timestamp>} and
  * contains:
@@ -34,14 +34,14 @@ import java.util.List;
  */
 public final class GameSaveExporter {
 
-  public static final Path SAVES_DIR =
-      Path.of(System.getProperty("user.home"), ".afterhours", "saves");
+  private static final Path APP_DATA_DIR = AppDataPaths.appDataDir();
+
+  public static final Path SAVES_DIR = APP_DATA_DIR.resolve("saves");
 
   /**
    * Dedicated directory for autosave slots (one per player+exchange).
    */
-  public static final Path AUTOSAVE_DIR =
-      Path.of(System.getProperty("user.home"), ".afterhours", "autosaves");
+  public static final Path AUTOSAVE_DIR = APP_DATA_DIR.resolve("autosaves");
 
   private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
   private static final DateTimeFormatter FOLDER_FMT =

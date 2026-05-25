@@ -10,8 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Loads and saves global (cross-game) settings to
- * {@code ~/.afterhours/settings.json}.
+ * Loads and saves global (cross-game) settings from the application's per-user
+ * data directory.
  * <p>
  * Persisted fields:
  * - musicVolume
@@ -27,8 +27,8 @@ import java.nio.file.Path;
  */
 public final class GlobalSettingsManager {
 
-  private static final Path SETTINGS_FILE =
-      Path.of(System.getProperty("user.home"), ".afterhours", "settings.json");
+      private static final Path SETTINGS_FILE =
+        AppDataPaths.appDataDir().resolve("settings.json");
 
   private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

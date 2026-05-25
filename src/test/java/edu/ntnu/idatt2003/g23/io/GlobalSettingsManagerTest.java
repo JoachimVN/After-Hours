@@ -14,14 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link GlobalSettingsManager}.
  *
- * <p>The class writes to {@code ~/.afterhours/settings.json}. Tests that
- * exercise save/load back up any existing file before the test and restore it
- * afterwards so that developer settings are never clobbered.
+ * <p>The class writes to the application's per-user data directory. Tests
+ * that exercise save/load back up any existing file before the test and
+ * restore it afterwards so that developer settings are never clobbered.
  */
 class GlobalSettingsManagerTest {
 
   private static final Path SETTINGS_FILE =
-      Path.of(System.getProperty("user.home"), ".afterhours", "settings.json");
+      AppDataPaths.appDataDir().resolve("settings.json");
 
   private boolean hadExistingFile;
   private byte[] backup;
