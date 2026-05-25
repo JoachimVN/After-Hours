@@ -570,10 +570,23 @@ public final class ProfileView {
       yUpperBound = yLowerBound + 1.0;
     }
 
+    double tickUnit = niceTickUnit((yUpperBound - yLowerBound) / 4.0);
+    yLowerBound = Math.max(0.0, snapToNearestTick(yLowerBound, tickUnit));
+    yUpperBound = snapToNearestTick(yUpperBound, tickUnit);
+    if (yLowerBound > minNetWorth) {
+      yLowerBound = Math.max(0.0, yLowerBound - tickUnit);
+    }
+    if (yUpperBound < maxNetWorth) {
+      yUpperBound += tickUnit;
+    }
+    if (yUpperBound <= yLowerBound) {
+      yUpperBound = yLowerBound + tickUnit;
+    }
+
     yAxis.setAutoRanging(false);
     yAxis.setLowerBound(yLowerBound);
     yAxis.setUpperBound(yUpperBound);
-    yAxis.setTickUnit(Math.max(1.0, (yUpperBound - yLowerBound) / 4.0));
+    yAxis.setTickUnit(tickUnit);
     DecimalFormat integerFormatter = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
     yAxis.setTickLabelFormatter(new StringConverter<>() {
       @Override
@@ -1224,5 +1237,28 @@ public final class ProfileView {
     slider.skinProperty().addListener((obs, oldSkin, newSkin) -> Platform.runLater(applyFill));
     slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
     Platform.runLater(applyFill);
+  }
+
+  private static double niceTickUnit(double rawUnit) {
+    double unit = Math.max(1.0, rawUnit);
+    double exponent = Math.floor(Math.log10(unit));
+    double scale = Math.pow(10.0, exponent);
+    double normalized = unit / scale;
+
+    double[] candidates = {1.0, 2.0, 2.5, 5.0, 10.0};
+    double best = candidates[0];
+    double bestDistance = Math.abs(normalized - best);
+    for (double candidate : candidates) {
+      double distance = Math.abs(normalized - candidate);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = candidate;
+      }
+    }
+    return best * scale;
+  }
+
+  private static double snapToNearestTick(double value, double tickUnit) {
+    return Math.round(value / tickUnit) * tickUnit;
   }
 }
