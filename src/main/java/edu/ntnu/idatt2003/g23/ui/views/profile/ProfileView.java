@@ -204,6 +204,9 @@ public final class ProfileView {
             if (!unlocked) {
               return;
             }
+            if (onReplayControlSelect != null) {
+              onReplayControlSelect.run();
+            }
             avatarButtons.forEach(node -> node.getStyleClass().remove("profile-avatar-btn-active"));
             if (avatar.equals(selectedAvatar[0])) {
               selectedAvatar[0] = "bust-in-silhouette";

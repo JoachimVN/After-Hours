@@ -320,7 +320,8 @@ public class App extends Application {
           sfxController.play(SfxController.PLAY3, Math.min(sfxController.getVolume() * 1.5, 1.0));
           goToCustomStocks(name, cash);
         },
-        currentProfileAvatar).getRoot();
+        currentProfileAvatar,
+        () -> sfxController.play(SfxController.SELECT)).getRoot();
     navigateKeepMusic(currentSetupPage);
   }
 
@@ -337,7 +338,8 @@ public class App extends Application {
         csvResource -> openCsvEditorFromBuiltInMarket(csvResource, name, cash),
         meta -> openCsvEditorFromSaveMeta(meta, name, cash),
         currentSavePath,
-        selectedFile);
+      selectedFile,
+      () -> sfxController.play(SfxController.SELECT));
     navigateKeepMusic(importPage);
     fadeInPage(importPage);
   }
@@ -740,7 +742,8 @@ public class App extends Application {
         csvResource -> openCsvEditorFromBuiltInMarketStandalone(csvResource, returnToStockTools),
         meta -> openCsvEditorFromSaveMetaStandalone(meta, returnToStockTools),
         currentSavePath,
-        null);
+      null,
+      () -> sfxController.play(SfxController.SELECT));
     stockToolsPageRef[0] = stockToolsPage;
     navigateKeepMusic(stockToolsPage);
     fadeInPage(stockToolsPage);

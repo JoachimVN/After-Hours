@@ -33,6 +33,17 @@ public final class CustomStocksView {
                                  Consumer<SaveMeta> onEditSaveFile,
                                  Path currentSavePath,
                                  File initialFile) {
+    return build(onBack, onMakeOwn, onEditCsv, onContinue, onEditBuiltInMarket,
+        onEditSaveFile, currentSavePath, initialFile, null);
+  }
+
+  public static BorderPane build(Runnable onBack, Runnable onMakeOwn,
+                                 Consumer<File> onEditCsv, Consumer<File> onContinue,
+                                 Consumer<String> onEditBuiltInMarket,
+                                 Consumer<SaveMeta> onEditSaveFile,
+                                 Path currentSavePath,
+                                 File initialFile,
+                                 Runnable onSelect) {
     boolean editorOnlyMode = onContinue == null;
     boolean hasBuiltInMarkets = onEditBuiltInMarket != null && !AppConfig.BUILT_IN_MARKETS.isEmpty();
     List<SaveMeta> availableSaves = List.of();
@@ -128,6 +139,7 @@ public final class CustomStocksView {
 
     // File chooser (Browse button)
     browseBtn.setOnAction(e -> {
+      notifySelect(onSelect);
       FileChooser fc = new FileChooser();
       fc.setTitle("Select CSV File");
       fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
@@ -247,6 +259,12 @@ public final class CustomStocksView {
       saveCombo.setCellFactory(lv -> saveMetaCell(currentSavePath));
       saveCombo.setButtonCell(saveMetaCell(currentSavePath));
       saveCombo.getItems().setAll(availableSaves);
+      saveCombo.setOnShowing(e -> notifySelect(onSelect));
+      saveCombo.valueProperty().addListener((obs, oldValue, newValue) -> {
+        if (newValue != null && oldValue != newValue) {
+          notifySelect(onSelect);
+        }
+      });
 
       Button openSaveBtn = new Button("\uD83D\uDCBE  Open Save Data");
       openSaveBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
@@ -285,6 +303,7 @@ public final class CustomStocksView {
       builtInMarketBox.setMaxWidth(Double.MAX_VALUE);
       builtInMarketBox.setButtonCell(marketCell());
       builtInMarketBox.setCellFactory(listView -> marketCell());
+      builtInMarketBox.setOnShowing(e -> notifySelect(onSelect));
 
       Button editBuiltInBtn = new Button("\u270e  Open in Editor");
       editBuiltInBtn.getStyleClass().addAll("secondary-button", "import-csv-built-in-open-button");
@@ -292,6 +311,9 @@ public final class CustomStocksView {
 
       builtInMarketBox.valueProperty().addListener((obs, oldValue, newValue) -> {
         editBuiltInBtn.setDisable(newValue == null);
+        if (newValue != null && oldValue != newValue) {
+          notifySelect(onSelect);
+        }
       });
 
       editBuiltInBtn.setOnAction(e -> {
@@ -338,6 +360,12 @@ public final class CustomStocksView {
     selectFile.accept(initialFile);
 
     return root;
+  }
+
+  private static void notifySelect(Runnable onSelect) {
+    if (onSelect != null) {
+      onSelect.run();
+    }
   }
 
   private static HBox buildReqRow(String col, String desc) {

@@ -594,7 +594,10 @@ public final class GameView implements GameViewInterface {
     HBox portHeader = new HBox(8, portTitle, portHeaderSpacer, portSummaryHint);
     portHeader.getStyleClass().add("game-portfolio-header");
     portHeader.setAlignment(Pos.CENTER_LEFT);
-    portHeader.setOnMouseClicked(e -> showPortfolioSummary());
+    portHeader.setOnMouseClicked(e -> {
+      notifyPanelOpen();
+      showPortfolioSummary();
+    });
 
     portfolioTable =
         buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
@@ -1309,6 +1312,7 @@ public final class GameView implements GameViewInterface {
     if (tutorialStepIndex <= 0) {
       return;
     }
+    notifyPanelOpen();
     tutorialStepIndex--;
     updateTutorialStep();
   }
@@ -1317,6 +1321,7 @@ public final class GameView implements GameViewInterface {
     if (!isTutorialStepComplete(tutorialStepIndex)) {
       return;
     }
+    notifyPanelOpen();
     int last = tutorialStepCount() - 1;
     if (tutorialStepIndex >= last) {
       closeTutorial();
@@ -2571,6 +2576,7 @@ public final class GameView implements GameViewInterface {
       detailFavBtn.getStyleClass().add("detail-fav-btn-active");
     }
     detailFavBtn.setOnAction(ev -> {
+      notifyPanelOpen();
       if (favorites.contains(stock.getSymbol())) {
         favorites.remove(stock.getSymbol());
       } else {
@@ -3601,6 +3607,7 @@ public final class GameView implements GameViewInterface {
       StackPane avatarFrame = new StackPane(iv);
       avatarFrame.getStyleClass().addAll("level-up-avatar-frame", "level-up-avatar-frame-clickable");
       avatarFrame.setOnMouseClicked(e -> {
+        notifyPanelOpen();
         if (stem.equals(selectedPopupAvatar[0])) {
           selectedPopupAvatar[0] = null;
           gameController.setPlayerAvatar(previousAvatar);
@@ -4996,6 +5003,7 @@ public final class GameView implements GameViewInterface {
       favBtn.getStyleClass().add("stock-fav-btn-active");
     }
     favBtn.setOnAction(ev -> {
+      notifyPanelOpen();
       if (favorites.contains(stock.getSymbol())) {
         favorites.remove(stock.getSymbol());
       } else {
