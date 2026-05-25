@@ -1,10 +1,11 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
+import java.util.function.Function;
 
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import javafx.stage.Stage;
 
 /**
@@ -73,8 +74,10 @@ public final class SettingsController {
   public Consumer<int[]> onResolutionChange;
   /** Maximizes the window. In-game only. */
   public Runnable onMaximize;
-  /** Called with the chosen export file. In-game only. */
-  public Consumer<File> onExport;
+  /** Exports selected save as JSON + CSV. In-game only. */
+  public Function<SaveMeta, Boolean> onExportJsonCsv;
+  /** Exports selected save as CSV only. In-game only. */
+  public Function<SaveMeta, Boolean> onExportCsvOnly;
   /** Current player name shown in the name-change field. In-game only. */
   public String currentPlayerName;
   /** Notified when the player changes their display name. In-game only. */

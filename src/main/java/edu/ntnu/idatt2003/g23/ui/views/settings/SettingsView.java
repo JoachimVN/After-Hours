@@ -1,15 +1,14 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
+import java.util.function.Function;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.AppVersion;
-import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import javafx.application.Platform;
@@ -37,7 +36,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public final class SettingsView {
@@ -63,7 +61,8 @@ public final class SettingsView {
         ctrl.fullscreenEnabled, ctrl.onFullscreenChange,
         ctrl.onResolutionChange,
         ctrl.onMaximize,
-        ctrl.onExport,
+        ctrl.onExportJsonCsv,
+        ctrl.onExportCsvOnly,
         ctrl.onDevModeChange, ctrl.devModeEnabled,
         ctrl.onAutosaveChange, ctrl.autosaveEnabled,
         ctrl.onAutosaveToastChange, ctrl.autosaveToast,
@@ -101,7 +100,7 @@ public final class SettingsView {
         onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange,
         onAnimationsChange, animationsEnabled,
         initialFullscreen, onFullscreenChange,
-        null, null, null,
+        null, null, null, null,
         onDevModeChange, devModeEnabled,
         onAutosaveChange, autosaveEnabled,
         onAutosaveToastChange, autosaveToastEnabled,
@@ -126,8 +125,10 @@ public final class SettingsView {
       Consumer<int[]> onResolutionChange,
       /** Called when user clicks "Maximize". Null-safe. */
       Runnable onMaximize,
-      /** Called with the File chosen by the user for CSV export. Null-safe. */
-      Consumer<File> onExport,
+      /** Exports selected save as JSON + CSV. Null-safe. */
+      Function<SaveMeta, Boolean> onExportJsonCsv,
+      /** Exports selected save as CSV only. Null-safe. */
+      Function<SaveMeta, Boolean> onExportCsvOnly,
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
@@ -206,7 +207,7 @@ public final class SettingsView {
         maxHistoryWeeks,
         onMaxHistoryWeeksChange);
 
-    VBox dataSection = buildDataSection(stage, currentSavePath, onExport);
+    VBox dataSection = buildDataSection(currentSavePath, onExportJsonCsv, onExportCsvOnly);
     VBox csvEditorSection = buildCsvEditorSection(
         onOpenCsvTools, onEditCurrentMarketData, devModeProperty);
     VBox keybindsSection = buildKeybindsSection(overlay);
@@ -620,7 +621,9 @@ public final class SettingsView {
     return sectionCard("⚡  Performance", modeRow, performanceHelpText, capBlock);
   }
 
-  private static VBox buildDataSection(Stage stage, Path currentSavePath, Consumer<File> onExport) {
+  private static VBox buildDataSection(Path currentSavePath,
+      Function<SaveMeta, Boolean> onExportJsonCsv,
+      Function<SaveMeta, Boolean> onExportCsvOnly) {
     Label label = new Label("Export Save Data");
     label.getStyleClass().add("settings-label");
 
@@ -659,26 +662,14 @@ public final class SettingsView {
         return;
       }
 
-      // The view owns the file-chooser dialog (it needs an owner window).
-      // The actual file I/O is delegated to the controller via onExport.
-      FileChooser fc = new FileChooser();
-      fc.setTitle("Export Save Data (JSON + CSV)");
-      fc.setInitialFileName(
-          selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_save_export");
-      fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
-      File dest = fc.showSaveDialog(stage);
-      if (dest == null) {
-        return;
-      }
-
-      if (onExport != null) {
+      if (onExportJsonCsv != null) {
         try {
-          Path[] exported = GameSaveExporter.exportSaveDataFiles(selected.saveDir(), dest.toPath());
-          statusLbl.setText("\u2713  Exported: " + exported[0].getFileName() + " and " +
-              exported[1].getFileName());
-          statusLbl.setStyle("-fx-text-fill: #4ecb71;");
-          onExport.accept(dest);
-        } catch (IOException ex) {
+          boolean exported = Boolean.TRUE.equals(onExportJsonCsv.apply(selected));
+          if (exported) {
+            statusLbl.setText("\u2713  Export completed (JSON + CSV).");
+            statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+          }
+        } catch (Exception ex) {
           statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
           statusLbl.setStyle("-fx-text-fill: #e05a5a;");
         }
@@ -691,23 +682,14 @@ public final class SettingsView {
         return;
       }
 
-      FileChooser fc = new FileChooser();
-      fc.setTitle("Export Market CSV");
-      fc.setInitialFileName(
-          selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_market_data");
-      fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
-      File dest = fc.showSaveDialog(stage);
-      if (dest == null) {
-        return;
-      }
-
-      if (onExport != null) {
+      if (onExportCsvOnly != null) {
         try {
-          Path exported = GameSaveExporter.exportSaveCsvFile(selected.saveDir(), dest.toPath());
-          statusLbl.setText("\u2713  Exported: " + exported.getFileName());
-          statusLbl.setStyle("-fx-text-fill: #4ecb71;");
-          onExport.accept(dest);
-        } catch (IOException ex) {
+          boolean exported = Boolean.TRUE.equals(onExportCsvOnly.apply(selected));
+          if (exported) {
+            statusLbl.setText("\u2713  Export completed (CSV only).");
+            statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+          }
+        } catch (Exception ex) {
           statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
           statusLbl.setStyle("-fx-text-fill: #e05a5a;");
         }
