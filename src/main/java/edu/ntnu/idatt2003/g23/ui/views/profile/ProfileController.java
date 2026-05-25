@@ -19,7 +19,7 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
  * Controller for ProfileView (MVC).
  */
 public final class ProfileController {
-  private static final int MINI_CHART_MAX_POINTS = 26;
+  private static final int MINI_CHART_MAX_POINTS = 100;
 
   private final GameController gameController;
   private final Supplier<List<String>> favoriteSymbolsSupplier;
@@ -169,13 +169,18 @@ public final class ProfileController {
     return gameController.getStocks().stream()
         .filter(stock -> favorites.contains(stock.getSymbol()))
         .sorted(java.util.Comparator.comparing(Stock::getSymbol))
-        .map(stock -> new FavoriteStockView(
-            stock.getSymbol(),
-            stock.getCompany(),
-            stock.getSalesPrice(),
-            stock.percentageChange(),
-          gameController.isOwned(stock.getSymbol()),
-          compactHistory(stock.getHistoricalPrices())))
+        .map(stock -> {
+          List<BigDecimal> history = compactHistory(stock.getHistoricalPrices());
+          BigDecimal currentPrice = stock.getSalesPrice();
+          BigDecimal changePct = percentageChangeFromInitial(currentPrice, history);
+          return new FavoriteStockView(
+              stock.getSymbol(),
+              stock.getCompany(),
+              currentPrice,
+              changePct,
+              gameController.isOwned(stock.getSymbol()),
+              history);
+        })
         .toList();
   }
 
@@ -258,5 +263,28 @@ public final class ProfileController {
       return List.copyOf(history);
     }
     return List.copyOf(history.subList(history.size() - MINI_CHART_MAX_POINTS, history.size()));
+  }
+
+  private static BigDecimal percentageChangeFromInitial(BigDecimal currentPrice,
+                                                        List<BigDecimal> history) {
+    if (currentPrice == null) {
+      return BigDecimal.ZERO;
+    }
+
+    BigDecimal initialPrice = (history == null || history.isEmpty())
+        ? currentPrice
+        : history.get(0);
+
+    if (initialPrice == null || initialPrice.compareTo(BigDecimal.ZERO) == 0) {
+      return BigDecimal.ZERO;
+    }
+
+    BigDecimal delta = currentPrice.subtract(initialPrice);
+    if (delta.compareTo(BigDecimal.ZERO) == 0) {
+      return BigDecimal.ZERO;
+    }
+
+    return delta.divide(initialPrice, 6, RoundingMode.HALF_UP)
+        .multiply(BigDecimal.valueOf(100));
   }
 }

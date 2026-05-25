@@ -319,6 +319,11 @@
   -fx-spacing: 10px;
 }
 
+.profile-stock-grid {
+  -fx-hgap: 12px;
+  -fx-vgap: 10px;
+}
+
 .profile-position-row {
   -fx-padding: 12px 14px;
   -fx-min-height: 96px;
