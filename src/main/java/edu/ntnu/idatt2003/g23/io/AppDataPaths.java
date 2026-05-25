@@ -9,6 +9,7 @@ import java.util.Locale;
 public final class AppDataPaths {
 
   private static final String APP_NAME = "AfterHours";
+  private static final String USER_HOME_PROPERTY = "user.home";
 
   private AppDataPaths() {
   }
@@ -26,14 +27,14 @@ public final class AppDataPaths {
       return windowsAppDataDir(appName);
     }
     if (osName.contains("mac")) {
-      return Path.of(System.getProperty("user.home"), "Library", "Application Support", appName);
+      return Path.of(System.getProperty(USER_HOME_PROPERTY), "Library", "Application Support", appName);
     }
 
     String xdgDataHome = System.getenv("XDG_DATA_HOME");
     if (xdgDataHome != null && !xdgDataHome.isBlank()) {
       return Path.of(xdgDataHome, appName);
     }
-    return Path.of(System.getProperty("user.home"), ".local", "share", appName);
+    return Path.of(System.getProperty(USER_HOME_PROPERTY), ".local", "share", appName);
   }
 
   private static Path windowsAppDataDir(String appName) {
@@ -47,6 +48,6 @@ public final class AppDataPaths {
       return Path.of(appData, appName);
     }
 
-    return Path.of(System.getProperty("user.home"), "AppData", "Local", appName);
+    return Path.of(System.getProperty(USER_HOME_PROPERTY), "AppData", "Local", appName);
   }
 }
