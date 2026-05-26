@@ -6,7 +6,7 @@
 
   <groupId>edu.ntnu.idatt2003.g23</groupId>
   <artifactId>after-hours</artifactId>
-  <version>1.2.4-beta.2</version>
+  <version>1.2.3-beta.2</version>
 
   <name>After Hours</name>
   <url>https://git.ntnu.no/Gruppe-23/idatt2003_2026_23</url>
@@ -39,57 +39,6 @@
       <artifactId>javafx-media</artifactId>
       <version>25.0.1</version>
     </dependency>
-
-    <!-- Native libs: must be declared explicitly for each platform so the fat JAR is cross-platform -->
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-graphics</artifactId>
-      <version>25.0.1</version>
-      <classifier>win</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-graphics</artifactId>
-      <version>25.0.1</version>
-      <classifier>linux</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-graphics</artifactId>
-      <version>25.0.1</version>
-      <classifier>mac</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-graphics</artifactId>
-      <version>25.0.1</version>
-      <classifier>mac-aarch64</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-media</artifactId>
-      <version>25.0.1</version>
-      <classifier>win</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-media</artifactId>
-      <version>25.0.1</version>
-      <classifier>linux</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-media</artifactId>
-      <version>25.0.1</version>
-      <classifier>mac</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-media</artifactId>
-      <version>25.0.1</version>
-      <classifier>mac-aarch64</classifier>
-    </dependency>
-
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
@@ -181,9 +130,6 @@
                                 <manifest>
                                     <mainClass>edu.ntnu.idatt2003.g23.Launcher</mainClass>
                                 </manifest>
-                                <manifestEntries>
-                                    <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
-                                </manifestEntries>
                             </archive>
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
