@@ -115,116 +115,32 @@
     <!-- Plugins that are actively bound to lifecycle phases or run on demand -->
     <plugins>
 
-      <!--
-        Distribution step 1: fat JAR.
-        Bundles Gson and all non-JavaFX deps into target/app-fat.jar.
-        JavaFX is excluded — it contains native libs that cannot be shaded.
-        Runs during: mvn package
-      -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.6.0</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>shade</goal></goals>
-            <configuration>
-              <outputFile>${project.build.directory}/app-fat.jar</outputFile>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>edu.ntnu.idatt2003.g23.App</mainClass>
-                </transformer>
-              </transformers>
-              <filters>
-                <filter>
-                  <artifact>org.openjfx:*</artifact>
-                  <excludes><exclude>**</exclude></excludes>
-                </filter>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.8.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <mainClass>edu.ntnu.idatt2003.g23.Launcher</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
       <!--
-        Distribution step 2: copy platform-specific JavaFX JARs to target/javafx-mods/.
-        jpackage needs these on its module-path.
-        The classifier is selected from the active OS profile.
-        Runs during: mvn package
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.8.1</version>
-        <executions>
-          <execution>
-            <id>copy-javafx-mods</id>
-            <phase>package</phase>
-            <goals><goal>copy</goal></goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/javafx-mods</outputDirectory>
-              <artifactItems>
-                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId>
-                  <version>25.0.1</version><classifier>${javafx.platform.classifier}</classifier></artifactItem>
-                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId>
-                  <version>25.0.1</version><classifier>${javafx.platform.classifier}</classifier></artifactItem>
-                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId>
-                  <version>25.0.1</version><classifier>${javafx.platform.classifier}</classifier></artifactItem>
-                <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId>
-                  <version>25.0.1</version><classifier>${javafx.platform.classifier}</classifier></artifactItem>
-              </artifactItems>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!--
-        Distribution step 2.5: always copy a runnable JAR to target/dist/.
-        This is the cross-platform artifact your teacher asked for.
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>copy-dist-jar</id>
-            <phase>package</phase>
-            <goals><goal>run</goal></goals>
-            <configuration>
-              <target>
-                <mkdir dir="${project.build.directory}/dist"/>
-                <copy file="${project.build.directory}/app-fat.jar"
-                      tofile="${project.build.directory}/dist/AfterHours.jar"/>
-                  <delete dir="${project.build.directory}/jpackage-input"/>
-                  <mkdir dir="${project.build.directory}/jpackage-input"/>
-                  <copy file="${project.build.directory}/app-fat.jar"
-                    tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
-                <copy file="${project.basedir}/src/main/scripts/AfterHours.bat"
-                      todir="${project.build.directory}/dist"/>
-                <copy file="${project.basedir}/src/main/scripts/AfterHours.sh"
-                      todir="${project.build.directory}/dist"/>
-                <chmod file="${project.build.directory}/dist/AfterHours.sh" perm="755"/>
-                <copy todir="${project.build.directory}/dist/javafx-mods">
-                  <fileset dir="${project.build.directory}/javafx-mods"/>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!--
-        Distribution step 3: native installer via jpackage.
+        Distribution exe: native installer via jpackage.
         Produces a native package for the current OS.
         The installer bundles a JRE; recipients need nothing pre-installed.
 
@@ -336,54 +252,4 @@
 
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>windows</id>
-      <activation>
-        <os>
-          <family>Windows</family>
-        </os>
-      </activation>
-      <properties>
-        <javafx.platform.classifier>win</javafx.platform.classifier>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux</id>
-      <activation>
-        <os>
-          <family>unix</family>
-          <name>Linux</name>
-        </os>
-      </activation>
-      <properties>
-        <javafx.platform.classifier>linux</javafx.platform.classifier>
-      </properties>
-    </profile>
-    <profile>
-      <id>mac-arm64</id>
-      <activation>
-        <os>
-          <family>mac</family>
-          <arch>aarch64</arch>
-        </os>
-      </activation>
-      <properties>
-        <javafx.platform.classifier>mac-aarch64</javafx.platform.classifier>
-      </properties>
-    </profile>
-    <profile>
-      <id>mac-x64</id>
-      <activation>
-        <os>
-          <family>mac</family>
-          <arch>x86_64</arch>
-        </os>
-      </activation>
-      <properties>
-        <javafx.platform.classifier>mac</javafx.platform.classifier>
-      </properties>
-    </profile>
-  </profiles>
 </project>
