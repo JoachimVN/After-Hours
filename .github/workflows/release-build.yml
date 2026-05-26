@@ -58,23 +58,10 @@ jobs:
         run: |
           mvn --batch-mode package -DskipTests
 
-      - name: Set versioned JAR name
+      - name: Rename JAR for release
         shell: pwsh
         run: |
-          $jarName = "AfterHours-$env:APP_VERSION.jar"
-          "JAR_NAME=$jarName" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Rename to versioned JAR
-        shell: pwsh
-        run: |
-          Move-Item -Path target/dist/AfterHours.jar -Destination "target/dist/$env:JAR_NAME"
-
-      - name: Create portable zip
-        shell: pwsh
-        run: |
-          $zipName = "AfterHours-$env:APP_VERSION-portable.zip"
-          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Compress-Archive -Path "target/dist/$env:JAR_NAME", "target/dist/javafx-mods", "target/dist/AfterHours.bat", "target/dist/AfterHours.sh" -DestinationPath "target/dist/$zipName"
+          Rename-Item -Path "target/after-hours-$env:APP_VERSION-jar-with-dependencies.jar" -NewName "After Hours $env:APP_VERSION.jar"
 
       - name: Publish GitHub Release Assets
         uses: softprops/action-gh-release@v2
@@ -83,7 +70,7 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ env.PRE_RELEASE == 'true' }}
           files: |
-            target/dist/${{ env.ZIP_NAME }}
+            target/After Hours ${{ env.APP_VERSION }}.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

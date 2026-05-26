@@ -1,5 +1,5 @@
 <p align="center">
-	<img src="src/main/resources/images/logos/After_Hours_Logo_Full_White.png" alt="After Hours Title Logo"/>
+	<img src="src/main/resources/images/logos/After_Hours_Logo_Full.png" alt="After Hours Title Logo"/>
 </p>
 
 <p align="center">
@@ -121,21 +121,7 @@ mvn package
 
 This produces:
 
-- fat jar: target/app-fat.jar
-- runnable distribution folder: target/dist
-- launch scripts:
-	- target/dist/AfterHours.bat
-	- target/dist/AfterHours.sh
-
-Run from the distribution folder:
-
-```bash
-# Windows
-target/dist/AfterHours.bat
-
-# Linux/macOS
-./target/dist/AfterHours.sh
-```
+- fat runnable jar: target/after-hours-version-with-dependencies.jar
 
 ### Native Packaging (jpackage)
 
