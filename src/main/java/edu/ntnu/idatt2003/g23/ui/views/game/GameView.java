@@ -103,6 +103,8 @@ public final class GameView implements GameViewInterface {
   private static final String SELL_SOUND = "/audio/sfx/Sell.wav";
   private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
   private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
+  private static final String FAVORITE_SOUND = "/audio/sfx/Favorite.wav";
+  private static final String UNFAVORITE_SOUND = "/audio/sfx/Unfavorite.wav";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -186,6 +188,8 @@ public final class GameView implements GameViewInterface {
   private AudioClip sellClip = null;
   private AudioClip selectClip = null;
   private AudioClip cancelClip = null;
+  private AudioClip favoriteClip = null;
+  private AudioClip unfavoriteClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
   private StackPane tutorialOverlay = null;
   private Pane tutorialShadeLayer = null;
@@ -275,6 +279,8 @@ public final class GameView implements GameViewInterface {
     this.sellClip = loadAudioClip(SELL_SOUND);
     this.selectClip = loadAudioClip(SELECT_SOUND);
     this.cancelClip = loadAudioClip(CANCEL_SOUND);
+    this.favoriteClip = loadAudioClip(FAVORITE_SOUND);
+    this.unfavoriteClip = loadAudioClip(UNFAVORITE_SOUND);
     this.lastKnownStatus = gameController.getPlayerStatus();
 
     this.statusVal = new Label();
@@ -1851,11 +1857,13 @@ public final class GameView implements GameViewInterface {
     if (symbol == null || symbol.isBlank()) {
       return;
     }
-    if (favorites.contains(symbol)) {
+    boolean wasFavorite = favorites.contains(symbol);
+    if (wasFavorite) {
       favorites.remove(symbol);
     } else {
       favorites.add(symbol);
     }
+    playAudioClip(wasFavorite ? unfavoriteClip : favoriteClip, sfxVolumeSupplierField);
     applyFilter();
     rebuildDetail();
   }
@@ -2588,12 +2596,7 @@ public final class GameView implements GameViewInterface {
       detailFavBtn.getStyleClass().add("detail-fav-btn-active");
     }
     detailFavBtn.setOnAction(ev -> {
-      notifyPanelOpen();
-      if (favorites.contains(stock.getSymbol())) {
-        favorites.remove(stock.getSymbol());
-      } else {
-        favorites.add(stock.getSymbol());
-      }
+      toggleFavoriteSymbol(stock.getSymbol());
       boolean nowFav = favorites.contains(stock.getSymbol());
       detailFavBtn.setText(nowFav ? "\u2605" : "\u2606");
       if (nowFav) {
@@ -2601,7 +2604,6 @@ public final class GameView implements GameViewInterface {
       } else {
         detailFavBtn.getStyleClass().remove("detail-fav-btn-active");
       }
-      applyFilter();
     });
 
     Region symSpacer = new Region();
@@ -5027,13 +5029,7 @@ public final class GameView implements GameViewInterface {
       favBtn.getStyleClass().add("stock-fav-btn-active");
     }
     favBtn.setOnAction(ev -> {
-      notifyPanelOpen();
-      if (favorites.contains(stock.getSymbol())) {
-        favorites.remove(stock.getSymbol());
-      } else {
-        favorites.add(stock.getSymbol());
-      }
-      applyFilter();
+      toggleFavoriteSymbol(stock.getSymbol());
     });
     favBtn.setOnMouseClicked(e -> e.consume());
 
