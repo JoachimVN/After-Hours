@@ -3371,7 +3371,7 @@ public final class GameView implements GameViewInterface {
     boolean isBuy = action != null && action.startsWith("BUY");
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
-    Label titleLbl = new Label("PURCHASE COMPLETE");
+    Label titleLbl = new Label(isBuy ? "PURCHASE COMPLETE" : "SALE COMPLETE");
     titleLbl.getStyleClass().add("dialog-title");
     HBox header = new HBox(10, checkLbl, titleLbl);
     header.getStyleClass().add("dialog-header");
@@ -5081,7 +5081,7 @@ public final class GameView implements GameViewInterface {
 
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
-    Label titleLbl = new Label("PURCHASE COMPLETE");
+    Label titleLbl = new Label(isBuy ? "PURCHASE COMPLETE" : "SALE COMPLETE");
     titleLbl.getStyleClass().add("dialog-title");
     HBox header = new HBox(10, checkLbl, titleLbl);
     header.getStyleClass().add("dialog-header");
