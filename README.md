@@ -121,21 +121,7 @@ mvn package
 
 This produces:
 
-- fat jar: target/app-fat.jar
-- runnable distribution folder: target/dist
-- launch scripts:
-	- target/dist/AfterHours.bat
-	- target/dist/AfterHours.sh
-
-Run from the distribution folder:
-
-```bash
-# Windows
-target/dist/AfterHours.bat
-
-# Linux/macOS
-./target/dist/AfterHours.sh
-```
+- fat runnable jar: target/after-hours-version-with-dependencies.jar
 
 ### Native Packaging (jpackage)
 
