@@ -1,5 +1,5 @@
 <p align="center">
-	<img src="src/main/resources/images/logos/After_Hours_Logo_Full_White.png" alt="After Hours Title Logo"/>
+	<img src="src/main/resources/images/logos/After_Hours_Logo_Full.png" alt="After Hours Title Logo"/>
 </p>
 
 <p align="center">
