@@ -99,6 +99,10 @@ public final class GameView implements GameViewInterface {
   private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.wav";
   private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.wav";
   private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.wav";
+  private static final String BUY_SOUND = "/audio/sfx/Buy.wav";
+  private static final String SELL_SOUND = "/audio/sfx/Sell.wav";
+  private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
+  private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -178,6 +182,10 @@ public final class GameView implements GameViewInterface {
   private int lastDetailRebuildWeek = Integer.MIN_VALUE;
   private PlayerStatus lastKnownStatus = null;
   private AudioClip levelUpClip = null;
+  private AudioClip buyClip = null;
+  private AudioClip sellClip = null;
+  private AudioClip selectClip = null;
+  private AudioClip cancelClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
   private StackPane tutorialOverlay = null;
   private Pane tutorialShadeLayer = null;
@@ -263,6 +271,10 @@ public final class GameView implements GameViewInterface {
     this.gameController.setView(this);
     this.sfxVolumeSupplierField = sfxVolumeSupplier;
     this.levelUpClip = loadAudioClip(LEVEL_UP_SOUND);
+    this.buyClip = loadAudioClip(BUY_SOUND);
+    this.sellClip = loadAudioClip(SELL_SOUND);
+    this.selectClip = loadAudioClip(SELECT_SOUND);
+    this.cancelClip = loadAudioClip(CANCEL_SOUND);
     this.lastKnownStatus = gameController.getPlayerStatus();
 
     this.statusVal = new Label();
@@ -2664,6 +2676,7 @@ public final class GameView implements GameViewInterface {
     };
 
     decBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       amountTracksSell[0] = false;
       try {
         int v = Math.max(0, NumberParser.parse(quantityField.getText()).intValue() - 1);
@@ -2674,6 +2687,7 @@ public final class GameView implements GameViewInterface {
       normalizequantityAndAmount.run();
     });
     incBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       amountTracksSell[0] = false;
       try {
         quantityField.setText(
@@ -2754,6 +2768,7 @@ public final class GameView implements GameViewInterface {
     };
 
     maxBuyBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       applyMaxForBuy.run();
       if (rootRef != null) {
         rootRef.requestFocus();
@@ -2854,6 +2869,7 @@ public final class GameView implements GameViewInterface {
     buyBtn.setGraphic(buyGraphic);
     buyBtn.getStyleClass().add("trade-buy-button");
     buyBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
@@ -2891,6 +2907,7 @@ public final class GameView implements GameViewInterface {
     sellBtn.setGraphic(sellGraphic);
     sellBtn.getStyleClass().add("trade-sell-button");
     sellBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
@@ -3328,7 +3345,10 @@ public final class GameView implements GameViewInterface {
         updateTutorialStep();
       }
     };
-    cancelBtn.setOnAction(ev -> dismiss.run());
+    cancelBtn.setOnAction(ev -> {
+      playAudioClip(cancelClip, sfxVolumeSupplierField);
+      dismiss.run();
+    });
     confirmBtn.setOnAction(ev -> {
       dismiss.run();
       gameController.executeSellAll();
@@ -3490,8 +3510,12 @@ public final class GameView implements GameViewInterface {
         updateTutorialStep();
       }
     };
-    cancelBtn.setOnAction(ev -> dismiss.run());
+    cancelBtn.setOnAction(ev -> {
+      playAudioClip(cancelClip, sfxVolumeSupplierField);
+      dismiss.run();
+    });
     confirmBtn.setOnAction(ev -> {
+      playAudioClip(isBuy ? buyClip : sellClip, sfxVolumeSupplierField);
       dismiss.run();
       if (isBuy) {
         gameController.executeBuy(stock, quantity, total, fee);

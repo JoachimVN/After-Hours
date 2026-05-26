@@ -9,6 +9,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
+import javafx.scene.media.AudioClip;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -21,6 +22,11 @@ import java.util.List;
  * Each card has Load, Rename, and Delete actions.
  */
 public final class SaveSelectView {
+
+  private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
+  private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
+  private static final AudioClip CANCEL_CLIP = loadAudioClip(CANCEL_SOUND);
+  private static final AudioClip SELECT_CLIP = loadAudioClip(SELECT_SOUND);
 
   private final SaveSelectController controller;
   private final StackPane root;     // top-level — holds page + overlays
@@ -316,9 +322,13 @@ public final class SaveSelectView {
     StackPane.setAlignment(card, Pos.CENTER);
 
     Runnable dismiss = () -> overlay.getChildren().remove(popup);
-    cancelBtn.setOnAction(ev -> dismiss.run());
+    cancelBtn.setOnAction(ev -> {
+      playCancelSound();
+      dismiss.run();
+    });
     backdrop.setOnMouseClicked(ev -> dismiss.run());
     deleteBtn.setOnAction(ev -> {
+      playSelectSound();
       dismiss.run();
       String err = controller.deleteSave(meta.saveDir());
       if (err != null) {
@@ -351,6 +361,26 @@ public final class SaveSelectView {
       }
     }
     cardList.getChildren().add(buildNewGameCard());
+  }
+
+  private static AudioClip loadAudioClip(String resourcePath) {
+    var resource = SaveSelectView.class.getResource(resourcePath);
+    if (resource == null) {
+      return null;
+    }
+    return new AudioClip(resource.toExternalForm());
+  }
+
+  private static void playCancelSound() {
+    if (CANCEL_CLIP != null) {
+      CANCEL_CLIP.play();
+    }
+  }
+
+  private static void playSelectSound() {
+    if (SELECT_CLIP != null) {
+      SELECT_CLIP.play();
+    }
   }
 
   private void showError(String title, String message) {
