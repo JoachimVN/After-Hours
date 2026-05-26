@@ -2,8 +2,6 @@ package edu.ntnu.idatt2003.g23.ui.views.profile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +21,8 @@ import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -37,20 +37,27 @@ import javafx.scene.effect.ColorAdjust;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Path;
-import javafx.util.StringConverter;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
 
 public final class ProfileView {
+
+  private static final double PROFILE_GRID_MIN_CARD_WIDTH = 560;
+  private static final int PROFILE_GRID_MAX_COLUMNS = 4;
+  private static final double PROFILE_CARD_LEFT_COLUMN_WIDTH = 195;
+  private static final double PROFILE_CARD_RIGHT_COLUMN_WIDTH = 145;
 
   private ProfileView() {
   }
@@ -203,6 +210,9 @@ public final class ProfileView {
           avatarBtn.setOnAction(e -> {
             if (!unlocked) {
               return;
+            }
+            if (onReplayControlSelect != null) {
+              onReplayControlSelect.run();
             }
             avatarButtons.forEach(node -> node.getStyleClass().remove("profile-avatar-btn-active"));
             if (avatar.equals(selectedAvatar[0])) {
@@ -381,6 +391,10 @@ public final class ProfileView {
 
     VBox favorites = new VBox(8);
     favorites.getStyleClass().add("profile-list");
+    GridPane favoriteGrid = new GridPane();
+    favoriteGrid.getStyleClass().add("profile-stock-grid");
+    favoriteGrid.setHgap(12);
+    favoriteGrid.setVgap(10);
 
     Runnable[] refreshFavoriteRows = { null };
     refreshFavoriteRows[0] = () -> {
@@ -392,99 +406,155 @@ public final class ProfileView {
         favorites.getChildren().add(none);
         return;
       }
+      List<Node> favoriteCards = new ArrayList<>();
       for (ProfileController.FavoriteStockView favoriteStock : favoriteStocks) {
         Label symbol = badge(favoriteStock.symbol());
         Label company = new Label(favoriteStock.company());
         company.getStyleClass().add("profile-position-sub");
+        company.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(company, Priority.ALWAYS);
+        HBox header = new HBox(8, symbol, company);
+        header.getStyleClass().add("profile-stock-row-main");
+        header.setAlignment(Pos.CENTER_LEFT);
         Label owned = new Label(favoriteStock.owned() ? "Owned" : "Watchlist");
         owned.getStyleClass().add("profile-favorite-owned-chip");
         if (favoriteStock.owned()) {
           owned.getStyleClass().add("profile-favorite-owned-chip-owned");
         }
-        VBox left = new VBox(3, company, owned);
+        VBox left = new VBox(4, header, owned);
+        left.setAlignment(Pos.CENTER_LEFT);
+        left.setMinWidth(PROFILE_CARD_LEFT_COLUMN_WIDTH);
+        left.setPrefWidth(PROFILE_CARD_LEFT_COLUMN_WIDTH);
+        left.setMaxWidth(PROFILE_CARD_LEFT_COLUMN_WIDTH);
 
         Label price = new Label(CurrencyFormatter.format(favoriteStock.currentPrice()));
         price.getStyleClass().add("profile-position-value");
         BigDecimal pct = favoriteStock.changePct();
-        String pctText = (pct.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
-            + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%";
+        BigDecimal pctDisplay = pct.setScale(2, RoundingMode.HALF_UP);
+        int pctSign = pctDisplay.compareTo(BigDecimal.ZERO);
+        String pctText = pctSign == 0
+            ? "0.00%"
+            : (pctSign > 0 ? "+" : "") + pctDisplay.toPlainString() + "%";
         Label pctLabel = new Label(pctText);
         pctLabel.getStyleClass().add("profile-position-pnl");
-        pctLabel.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) >= 0
-            ? "profile-value-up"
-            : "profile-value-down");
-        VBox right = new VBox(3, price, pctLabel);
-        right.setAlignment(Pos.CENTER_RIGHT);
+        if (pctSign == 0) {
+          pctLabel.getStyleClass().add("profile-value-neutral");
+        } else {
+          pctLabel.getStyleClass().add(pctSign > 0
+              ? "profile-value-up"
+              : "profile-value-down");
+        }
+        int trendSign = trendSignFromHistory(favoriteStock.priceHistory());
+        StackPane trendChart = buildStockSparkline(
+          favoriteStock.priceHistory(),
+          trendSign);
+        VBox metricColumn = new VBox(4, price, pctLabel);
+        metricColumn.getStyleClass().add("profile-stock-metrics");
+        metricColumn.setAlignment(Pos.CENTER_RIGHT);
+        metricColumn.setMinWidth(PROFILE_CARD_RIGHT_COLUMN_WIDTH);
+        metricColumn.setPrefWidth(PROFILE_CARD_RIGHT_COLUMN_WIDTH);
+        metricColumn.setMaxWidth(PROFILE_CARD_RIGHT_COLUMN_WIDTH);
+        StackPane centeredChart = new StackPane(trendChart);
+        centeredChart.setMaxWidth(Double.MAX_VALUE);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox row = new HBox(10, symbol, left, spacer, right);
+        BorderPane row = new BorderPane();
+        row.setLeft(left);
+        row.setCenter(centeredChart);
+        row.setRight(metricColumn);
+        BorderPane.setAlignment(left, Pos.CENTER_LEFT);
+        BorderPane.setAlignment(centeredChart, Pos.CENTER);
+        BorderPane.setAlignment(metricColumn, Pos.CENTER_RIGHT);
+        row.setMaxWidth(Double.MAX_VALUE);
         row.getStyleClass().add("profile-favorite-row");
         row.setOnMouseClicked(e -> onOpenStockFromPortfolio.accept(favoriteStock.symbol()));
-        favorites.getChildren().add(row);
+        favoriteCards.add(row);
       }
+      bindResponsiveGrid(favoriteGrid, favoriteCards, PROFILE_GRID_MIN_CARD_WIDTH);
+      favorites.getChildren().add(favoriteGrid);
     };
     refreshFavoriteRows[0].run();
     VBox favoritesCard = statCard("Favorite Stocks", favorites);
 
     VBox holdings = new VBox(8);
     holdings.getStyleClass().add("profile-list");
-    List<Share> shares = controller.getPortfolioShares();
-    if (shares.isEmpty()) {
+    GridPane portfolioGrid = new GridPane();
+    portfolioGrid.getStyleClass().add("profile-stock-grid");
+    portfolioGrid.setHgap(12);
+    portfolioGrid.setVgap(10);
+    List<ProfileController.PortfolioPositionView> positions = controller.getPortfolioPositions();
+    if (positions.isEmpty()) {
       Label none = new Label("No open positions yet.");
       none.getStyleClass().add("profile-empty");
       holdings.getChildren().add(none);
     } else {
-      for (Share share : shares) {
-        BigDecimal quantity = share.getQuantity();
-        BigDecimal avgPrice = share.getPurchasePrice();
-        BigDecimal currentPrice = share.getStock().getSalesPrice();
-        BigDecimal costBasis = avgPrice.multiply(quantity);
-        BigDecimal marketValue = currentPrice.multiply(quantity);
-        BigDecimal pnl = marketValue.subtract(costBasis);
-        BigDecimal pnlPct = costBasis.compareTo(BigDecimal.ZERO) == 0
-            ? BigDecimal.ZERO
-            : pnl.divide(costBasis, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-
-        String symbolText = share.getStock().getSymbol();
+      List<Node> positionCards = new ArrayList<>();
+      for (ProfileController.PortfolioPositionView position : positions) {
+        String symbolText = position.symbol();
         Label symbol = badge(symbolText);
-        Label line1 = valueText("Quantity " + quantity.toPlainString() + "  •  Average "
-            + CurrencyFormatter.format(avgPrice));
-        Label line2 = new Label("Now " + CurrencyFormatter.format(currentPrice));
+        Label company = new Label(position.company());
+        company.getStyleClass().add("profile-position-sub");
+        company.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(company, Priority.ALWAYS);
+        HBox header = new HBox(8, symbol, company);
+        header.getStyleClass().add("profile-stock-row-main");
+        header.setAlignment(Pos.CENTER_LEFT);
+        Label line1 = valueText("Quantity " + position.quantity().toPlainString());
+        Label line2 = new Label("Now " + CurrencyFormatter.format(position.currentPrice()));
         line2.getStyleClass().add("profile-position-sub");
-        VBox left = new VBox(3, line1, line2);
+        VBox left = new VBox(4, header, line1, line2);
+        left.setAlignment(Pos.CENTER_LEFT);
+        left.setMinWidth(PROFILE_CARD_LEFT_COLUMN_WIDTH);
+        left.setPrefWidth(PROFILE_CARD_LEFT_COLUMN_WIDTH);
+        left.setMaxWidth(PROFILE_CARD_LEFT_COLUMN_WIDTH);
 
-        Label positionValue = new Label(CurrencyFormatter.format(marketValue));
+        Label positionValue = new Label(CurrencyFormatter.format(position.marketValue()));
         positionValue.getStyleClass().add("profile-position-value");
 
-        String pnlText;
-        if (pnl.compareTo(BigDecimal.ZERO) == 0) {
-          pnlText = "\u2014";
-        } else {
-          pnlText = (pnl.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
-              + CurrencyFormatter.format(pnl)
-              + " (" + pnlPct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%)";
-        }
+        BigDecimal pnlDisplay = position.pnl().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal pnlPctDisplay = position.pnlPct().setScale(2, RoundingMode.HALF_UP);
+        int pnlSign = pnlDisplay.compareTo(BigDecimal.ZERO);
+        String pnlText = pnlSign == 0
+            ? CurrencyFormatter.format(BigDecimal.ZERO) + " (0.00%)"
+            : (pnlSign > 0 ? "+" : "")
+                + CurrencyFormatter.format(pnlDisplay)
+                + " (" + pnlPctDisplay.toPlainString() + "%)";
         Label pnlLabel = new Label(pnlText);
         pnlLabel.getStyleClass().add("profile-position-pnl");
-        if (pnl.compareTo(BigDecimal.ZERO) == 0) {
+        if (pnlSign == 0) {
           pnlLabel.getStyleClass().add("profile-value-neutral");
         } else {
-          pnlLabel.getStyleClass().add(pnl.compareTo(BigDecimal.ZERO) > 0
+          pnlLabel.getStyleClass().add(pnlSign > 0
               ? "profile-value-up"
               : "profile-value-down");
         }
-        VBox right = new VBox(3, positionValue, pnlLabel);
-        right.setAlignment(Pos.CENTER_RIGHT);
+        int trendSign = trendSignFromHistory(position.priceHistory());
+        StackPane trendChart = buildStockSparkline(
+            position.priceHistory(),
+            trendSign);
+        VBox metricColumn = new VBox(4, positionValue, pnlLabel);
+        metricColumn.getStyleClass().add("profile-stock-metrics");
+        metricColumn.setAlignment(Pos.CENTER_RIGHT);
+        metricColumn.setMinWidth(PROFILE_CARD_RIGHT_COLUMN_WIDTH);
+        metricColumn.setPrefWidth(PROFILE_CARD_RIGHT_COLUMN_WIDTH);
+        metricColumn.setMaxWidth(PROFILE_CARD_RIGHT_COLUMN_WIDTH);
+        StackPane centeredChart = new StackPane(trendChart);
+        centeredChart.setMaxWidth(Double.MAX_VALUE);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox row = new HBox(10, symbol, left, spacer, right);
+        BorderPane row = new BorderPane();
+        row.setLeft(left);
+        row.setCenter(centeredChart);
+        row.setRight(metricColumn);
+        BorderPane.setAlignment(left, Pos.CENTER_LEFT);
+        BorderPane.setAlignment(centeredChart, Pos.CENTER);
+        BorderPane.setAlignment(metricColumn, Pos.CENTER_RIGHT);
+        row.setMaxWidth(Double.MAX_VALUE);
         row.getStyleClass().add("profile-position-row");
         row.getStyleClass().add("profile-stock-nav-row");
         row.setOnMouseClicked(e -> onOpenStockFromPortfolio.accept(symbolText));
-        holdings.getChildren().add(row);
+        positionCards.add(row);
       }
+      bindResponsiveGrid(portfolioGrid, positionCards, PROFILE_GRID_MIN_CARD_WIDTH);
+      holdings.getChildren().add(portfolioGrid);
     }
     VBox portfolioCard = statCard("Portfolio Positions", holdings);
 
@@ -537,52 +607,17 @@ public final class ProfileView {
       }
     });
 
-    double minNetWorth = replayPoints.stream()
-        .map(GameController.ReplayPoint::netWorth)
-        .mapToDouble(BigDecimal::doubleValue)
-        .min()
-        .orElse(startingCash.doubleValue());
-    double maxNetWorth = replayPoints.stream()
-        .map(GameController.ReplayPoint::netWorth)
-        .mapToDouble(BigDecimal::doubleValue)
-        .max()
-        .orElse(startingCash.doubleValue());
-    final boolean flatTimeline = Math.abs(maxNetWorth - minNetWorth) < 1e-9;
-    if (flatTimeline && !timelinePoints.isEmpty()) {
-      chartPoints.clear();
-      BigDecimal flatValue = timelinePoints.get(timelinePoints.size() - 1).netWorth();
-      for (int week = minWeek; week <= maxWeek; week++) {
-        chartPoints.add(new GameController.ReplayPoint(week, flatValue));
-      }
-    }
-    double yLowerBound = Math.max(0.0, minNetWorth);
-    double yUpperBound = Math.max(yLowerBound, maxNetWorth);
-
-    double range = yUpperBound - yLowerBound;
-    double pad = range > 0.0 ? range * 0.08 : Math.max(10.0, Math.abs(yUpperBound) * 0.05 + 1.0);
-
-    yLowerBound = Math.max(0.0, yLowerBound - pad);
-    yUpperBound = yUpperBound + pad;
-    if (yUpperBound <= yLowerBound) {
-      yUpperBound = yLowerBound + 1.0;
-    }
-
-    yAxis.setAutoRanging(false);
-    yAxis.setLowerBound(yLowerBound);
-    yAxis.setUpperBound(yUpperBound);
-    yAxis.setTickUnit(Math.max(1.0, (yUpperBound - yLowerBound) / 4.0));
-    DecimalFormat integerFormatter = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.US));
-    yAxis.setTickLabelFormatter(new StringConverter<>() {
-      @Override
-      public String toString(Number object) {
-        return integerFormatter.format(object.doubleValue());
-      }
-
-      @Override
-      public Number fromString(String string) {
-        throw new UnsupportedOperationException("Axis label parsing is not supported.");
-      }
-    });
+    ProfileTimelineBuilder.AxisSetup axisSetup = ProfileTimelineBuilder.configureYAxis(
+        yAxis,
+        replayPoints,
+        timelinePoints,
+        chartPoints,
+        startingCash,
+        minWeek,
+        maxWeek);
+    double minNetWorth = axisSetup.minNetWorth();
+    double maxNetWorth = axisSetup.maxNetWorth();
+    final boolean flatTimeline = axisSetup.flatTimeline();
 
     LineChart<Number, Number> replayChart = new LineChart<>(xAxis, yAxis);
     replayChart.getStyleClass().add("profile-replay-chart");
@@ -1123,6 +1158,41 @@ public final class ProfileView {
     return card;
   }
 
+  private static void bindResponsiveGrid(GridPane grid, List<Node> cards, double minCardWidth) {
+    Runnable relayout = () -> {
+      double hGap = grid.getHgap();
+      double available = grid.getWidth();
+      if (available <= 0) {
+        available = grid.prefWidth(-1);
+      }
+
+      int columns = Math.max(1, (int) Math.floor((available + hGap) / (minCardWidth + hGap)));
+      columns = Math.min(columns, Math.max(1, cards.size()));
+      columns = Math.min(columns, PROFILE_GRID_MAX_COLUMNS);
+
+      grid.getChildren().clear();
+      grid.getColumnConstraints().clear();
+      for (int i = 0; i < columns; i++) {
+        ColumnConstraints constraint = new ColumnConstraints();
+        constraint.setPercentWidth(100.0 / columns);
+        constraint.setHgrow(Priority.ALWAYS);
+        constraint.setFillWidth(true);
+        grid.getColumnConstraints().add(constraint);
+      }
+
+      for (int i = 0; i < cards.size(); i++) {
+        Node card = cards.get(i);
+        if (card instanceof Region region) {
+          region.setMaxWidth(Double.MAX_VALUE);
+        }
+        grid.add(card, i % columns, i / columns);
+      }
+    };
+
+    grid.widthProperty().addListener((obs, oldV, newV) -> relayout.run());
+    Platform.runLater(relayout);
+  }
+
   private static HBox statLine(String key, String value) {
     Label keyLbl = new Label(key);
     keyLbl.getStyleClass().add("profile-key");
@@ -1154,6 +1224,117 @@ public final class ProfileView {
     Label badge = new Label(value);
     badge.getStyleClass().add("profile-badge");
     return badge;
+  }
+
+  private static StackPane buildStockSparkline(List<BigDecimal> history, int trendSign) {
+    Canvas canvas = new Canvas();
+    StackPane frame = new StackPane(canvas);
+    frame.getStyleClass().add("profile-stock-sparkline");
+    frame.setMinWidth(120);
+    frame.setPrefWidth(220);
+    frame.setMaxWidth(Double.MAX_VALUE);
+    frame.setMinHeight(76);
+    frame.setPrefHeight(76);
+    frame.setMaxHeight(76);
+    canvas.setManaged(false);
+    canvas.widthProperty().bind(frame.widthProperty());
+    canvas.heightProperty().bind(frame.heightProperty());
+
+    Runnable draw = () -> {
+      double w = canvas.getWidth();
+      double h = canvas.getHeight();
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+
+      GraphicsContext gc = canvas.getGraphicsContext2D();
+      gc.clearRect(0, 0, w, h);
+
+      if (history == null || history.isEmpty()) {
+        gc.setStroke(Color.web("#4a6899", 0.5));
+        gc.setLineWidth(1.5);
+        gc.strokeLine(8, h / 2.0, w - 8, h / 2.0);
+        return;
+      }
+
+      if (history.size() == 1) {
+        gc.setStroke(Color.web("#8fb6da", 0.6));
+        gc.setLineWidth(1.8);
+        gc.strokeLine(8, h / 2.0, w - 8, h / 2.0);
+        return;
+      }
+
+      BigDecimal min = history.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+      BigDecimal max = history.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ONE);
+      BigDecimal range = max.subtract(min);
+      if (range.compareTo(BigDecimal.ZERO) == 0) {
+        range = BigDecimal.ONE;
+      }
+
+      double padL = 8;
+      double padR = 8;
+      double padT = 8;
+      double padB = 8;
+      double cW = w - padL - padR;
+      double cH = h - padT - padB;
+      int n = history.size();
+
+      double[] xs = new double[n];
+      double[] ys = new double[n];
+      for (int i = 0; i < n; i++) {
+        xs[i] = padL + (i / (double) (n - 1)) * cW;
+        double norm = history.get(i).subtract(min).divide(range, 6, RoundingMode.HALF_UP)
+            .doubleValue();
+        ys[i] = padT + cH - (norm * cH);
+      }
+
+        String lineHex = trendSign > 0 ? "#4ecb71" : trendSign < 0 ? "#e05a5a" : "#8fb6da";
+      gc.setFill(new LinearGradient(0, padT, 0, padT + cH, false, CycleMethod.NO_CYCLE,
+          new Stop(0, Color.web(lineHex, 0.30)),
+          new Stop(1, Color.web(lineHex, 0.04))));
+      gc.beginPath();
+      gc.moveTo(xs[0], padT + cH);
+      gc.lineTo(xs[0], ys[0]);
+      for (int i = 1; i < n; i++) {
+        gc.lineTo(xs[i], ys[i]);
+      }
+      gc.lineTo(xs[n - 1], padT + cH);
+      gc.closePath();
+      gc.fill();
+
+      gc.setStroke(Color.web(lineHex, 0.92));
+      gc.setLineWidth(2.2);
+      gc.beginPath();
+      gc.moveTo(xs[0], ys[0]);
+      for (int i = 1; i < n; i++) {
+        gc.lineTo(xs[i], ys[i]);
+      }
+      gc.stroke();
+
+      gc.setFill(Color.web(lineHex));
+      gc.fillOval(xs[n - 1] - 3.2, ys[n - 1] - 3.2, 6.4, 6.4);
+      gc.setStroke(Color.web("#eaf3ff", 0.75));
+      gc.setLineWidth(1.1);
+      gc.strokeOval(xs[n - 1] - 3.2, ys[n - 1] - 3.2, 6.4, 6.4);
+    };
+
+    canvas.widthProperty().addListener((obs, oldV, newV) -> draw.run());
+    canvas.heightProperty().addListener((obs, oldV, newV) -> draw.run());
+    Platform.runLater(draw);
+    return frame;
+  }
+
+  private static int trendSignFromHistory(List<BigDecimal> history) {
+    if (history == null || history.size() < 2) {
+      return 0;
+    }
+    BigDecimal first = history.get(0);
+    BigDecimal last = history.get(history.size() - 1);
+    if (first == null || last == null) {
+      return 0;
+    }
+    BigDecimal delta = last.subtract(first).setScale(2, RoundingMode.HALF_UP);
+    return delta.compareTo(BigDecimal.ZERO);
   }
 
   private static Label statusMetricChip(String text, boolean completed) {
@@ -1222,4 +1403,5 @@ public final class ProfileView {
     slider.valueProperty().addListener((obs, oldVal, newVal) -> applyFill.run());
     Platform.runLater(applyFill);
   }
+
 }

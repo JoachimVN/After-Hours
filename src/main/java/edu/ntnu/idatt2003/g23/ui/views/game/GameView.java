@@ -99,6 +99,12 @@ public final class GameView implements GameViewInterface {
   private static final String SPIKE_UP_SOUND = "/audio/sfx/Spike_Up.wav";
   private static final String SPIKE_DOWN_SOUND = "/audio/sfx/Spike_Down.wav";
   private static final String SPIKE_BOTH_SOUND = "/audio/sfx/Spike_Both.wav";
+  private static final String BUY_SOUND = "/audio/sfx/Buy.wav";
+  private static final String SELL_SOUND = "/audio/sfx/Sell.wav";
+  private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
+  private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
+  private static final String FAVORITE_SOUND = "/audio/sfx/Favorite.wav";
+  private static final String UNFAVORITE_SOUND = "/audio/sfx/Unfavorite.wav";
   private static final String ERROR_PAUSE_KEY = "errorPause";
   private static final String ERROR_FADE_KEY = "errorFade";
   private static final String ERROR_SIZE_KEY = "errorSize";
@@ -178,6 +184,12 @@ public final class GameView implements GameViewInterface {
   private int lastDetailRebuildWeek = Integer.MIN_VALUE;
   private PlayerStatus lastKnownStatus = null;
   private AudioClip levelUpClip = null;
+  private AudioClip buyClip = null;
+  private AudioClip sellClip = null;
+  private AudioClip selectClip = null;
+  private AudioClip cancelClip = null;
+  private AudioClip favoriteClip = null;
+  private AudioClip unfavoriteClip = null;
   private DoubleSupplier sfxVolumeSupplierField = null;
   private StackPane tutorialOverlay = null;
   private Pane tutorialShadeLayer = null;
@@ -263,6 +275,12 @@ public final class GameView implements GameViewInterface {
     this.gameController.setView(this);
     this.sfxVolumeSupplierField = sfxVolumeSupplier;
     this.levelUpClip = loadAudioClip(LEVEL_UP_SOUND);
+    this.buyClip = loadAudioClip(BUY_SOUND);
+    this.sellClip = loadAudioClip(SELL_SOUND);
+    this.selectClip = loadAudioClip(SELECT_SOUND);
+    this.cancelClip = loadAudioClip(CANCEL_SOUND);
+    this.favoriteClip = loadAudioClip(FAVORITE_SOUND);
+    this.unfavoriteClip = loadAudioClip(UNFAVORITE_SOUND);
     this.lastKnownStatus = gameController.getPlayerStatus();
 
     this.statusVal = new Label();
@@ -594,7 +612,10 @@ public final class GameView implements GameViewInterface {
     HBox portHeader = new HBox(8, portTitle, portHeaderSpacer, portSummaryHint);
     portHeader.getStyleClass().add("game-portfolio-header");
     portHeader.setAlignment(Pos.CENTER_LEFT);
-    portHeader.setOnMouseClicked(e -> showPortfolioSummary());
+    portHeader.setOnMouseClicked(e -> {
+      notifyPanelOpen();
+      showPortfolioSummary();
+    });
 
     portfolioTable =
         buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
@@ -1309,6 +1330,7 @@ public final class GameView implements GameViewInterface {
     if (tutorialStepIndex <= 0) {
       return;
     }
+    notifyPanelOpen();
     tutorialStepIndex--;
     updateTutorialStep();
   }
@@ -1317,6 +1339,7 @@ public final class GameView implements GameViewInterface {
     if (!isTutorialStepComplete(tutorialStepIndex)) {
       return;
     }
+    notifyPanelOpen();
     int last = tutorialStepCount() - 1;
     if (tutorialStepIndex >= last) {
       closeTutorial();
@@ -1834,11 +1857,13 @@ public final class GameView implements GameViewInterface {
     if (symbol == null || symbol.isBlank()) {
       return;
     }
-    if (favorites.contains(symbol)) {
+    boolean wasFavorite = favorites.contains(symbol);
+    if (wasFavorite) {
       favorites.remove(symbol);
     } else {
       favorites.add(symbol);
     }
+    playAudioClip(wasFavorite ? unfavoriteClip : favoriteClip, sfxVolumeSupplierField);
     applyFilter();
     rebuildDetail();
   }
@@ -2571,11 +2596,7 @@ public final class GameView implements GameViewInterface {
       detailFavBtn.getStyleClass().add("detail-fav-btn-active");
     }
     detailFavBtn.setOnAction(ev -> {
-      if (favorites.contains(stock.getSymbol())) {
-        favorites.remove(stock.getSymbol());
-      } else {
-        favorites.add(stock.getSymbol());
-      }
+      toggleFavoriteSymbol(stock.getSymbol());
       boolean nowFav = favorites.contains(stock.getSymbol());
       detailFavBtn.setText(nowFav ? "\u2605" : "\u2606");
       if (nowFav) {
@@ -2583,7 +2604,6 @@ public final class GameView implements GameViewInterface {
       } else {
         detailFavBtn.getStyleClass().remove("detail-fav-btn-active");
       }
-      applyFilter();
     });
 
     Region symSpacer = new Region();
@@ -2658,6 +2678,7 @@ public final class GameView implements GameViewInterface {
     };
 
     decBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       amountTracksSell[0] = false;
       try {
         int v = Math.max(0, NumberParser.parse(quantityField.getText()).intValue() - 1);
@@ -2668,6 +2689,7 @@ public final class GameView implements GameViewInterface {
       normalizequantityAndAmount.run();
     });
     incBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       amountTracksSell[0] = false;
       try {
         quantityField.setText(
@@ -2748,6 +2770,7 @@ public final class GameView implements GameViewInterface {
     };
 
     maxBuyBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       applyMaxForBuy.run();
       if (rootRef != null) {
         rootRef.requestFocus();
@@ -2848,6 +2871,7 @@ public final class GameView implements GameViewInterface {
     buyBtn.setGraphic(buyGraphic);
     buyBtn.getStyleClass().add("trade-buy-button");
     buyBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
@@ -2885,6 +2909,7 @@ public final class GameView implements GameViewInterface {
     sellBtn.setGraphic(sellGraphic);
     sellBtn.getStyleClass().add("trade-sell-button");
     sellBtn.setOnAction(e -> {
+      playAudioClip(selectClip, sfxVolumeSupplierField);
       int parsedquantity;
       String qText = quantityField.getText();
       if (qText == null || qText.isBlank()) {
@@ -3322,7 +3347,10 @@ public final class GameView implements GameViewInterface {
         updateTutorialStep();
       }
     };
-    cancelBtn.setOnAction(ev -> dismiss.run());
+    cancelBtn.setOnAction(ev -> {
+      playAudioClip(cancelClip, sfxVolumeSupplierField);
+      dismiss.run();
+    });
     confirmBtn.setOnAction(ev -> {
       dismiss.run();
       gameController.executeSellAll();
@@ -3345,7 +3373,7 @@ public final class GameView implements GameViewInterface {
     boolean isBuy = action != null && action.startsWith("BUY");
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
-    Label titleLbl = new Label("PURCHASE COMPLETE");
+    Label titleLbl = new Label(isBuy ? "PURCHASE COMPLETE" : "SALE COMPLETE");
     titleLbl.getStyleClass().add("dialog-title");
     HBox header = new HBox(10, checkLbl, titleLbl);
     header.getStyleClass().add("dialog-header");
@@ -3484,8 +3512,12 @@ public final class GameView implements GameViewInterface {
         updateTutorialStep();
       }
     };
-    cancelBtn.setOnAction(ev -> dismiss.run());
+    cancelBtn.setOnAction(ev -> {
+      playAudioClip(cancelClip, sfxVolumeSupplierField);
+      dismiss.run();
+    });
     confirmBtn.setOnAction(ev -> {
+      playAudioClip(isBuy ? buyClip : sellClip, sfxVolumeSupplierField);
       dismiss.run();
       if (isBuy) {
         gameController.executeBuy(stock, quantity, total, fee);
@@ -3601,6 +3633,7 @@ public final class GameView implements GameViewInterface {
       StackPane avatarFrame = new StackPane(iv);
       avatarFrame.getStyleClass().addAll("level-up-avatar-frame", "level-up-avatar-frame-clickable");
       avatarFrame.setOnMouseClicked(e -> {
+        notifyPanelOpen();
         if (stem.equals(selectedPopupAvatar[0])) {
           selectedPopupAvatar[0] = null;
           gameController.setPlayerAvatar(previousAvatar);
@@ -4996,12 +5029,7 @@ public final class GameView implements GameViewInterface {
       favBtn.getStyleClass().add("stock-fav-btn-active");
     }
     favBtn.setOnAction(ev -> {
-      if (favorites.contains(stock.getSymbol())) {
-        favorites.remove(stock.getSymbol());
-      } else {
-        favorites.add(stock.getSymbol());
-      }
-      applyFilter();
+      toggleFavoriteSymbol(stock.getSymbol());
     });
     favBtn.setOnMouseClicked(e -> e.consume());
 
@@ -5049,7 +5077,7 @@ public final class GameView implements GameViewInterface {
 
     Label checkLbl = new Label("\u2713");
     checkLbl.getStyleClass().add("receipt-check");
-    Label titleLbl = new Label("PURCHASE COMPLETE");
+    Label titleLbl = new Label(isBuy ? "PURCHASE COMPLETE" : "SALE COMPLETE");
     titleLbl.getStyleClass().add("dialog-title");
     HBox header = new HBox(10, checkLbl, titleLbl);
     header.getStyleClass().add("dialog-header");
@@ -5492,6 +5520,8 @@ public final class GameView implements GameViewInterface {
         }
         tooltip.setLayoutX(tx);
         tooltip.setLayoutY(ty);
+        tooltip.applyCss();
+        tooltip.autosize();
         tooltip.setVisible(true);
         drawRef[0].run();
       } else {

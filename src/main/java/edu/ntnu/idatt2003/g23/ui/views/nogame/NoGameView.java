@@ -115,10 +115,10 @@ public final class NoGameView {
     );
   }
 
-  public static final List<Message> NO_STOCKS_MONOLOGUE =
+    private static final List<Message> NO_STOCKS_MONOLOGUE =
       buildMonologue("You didn't import any stocks, silly.");
 
-  public static final List<Message> NO_CASH_MONOLOGUE =
+    private static final List<Message> NO_CASH_MONOLOGUE =
       buildMonologue("You can't play without cash, silly.");
 
   private NoGameView() {
@@ -137,6 +137,14 @@ public final class NoGameView {
    * @param onBack          called when the user presses Back
    * @return the page root
    */
+  public static List<Message> noStocksMonologue() {
+    return NO_STOCKS_MONOLOGUE;
+  }
+
+  public static List<Message> noCashMonologue() {
+    return NO_CASH_MONOLOGUE;
+  }
+
   public static Parent build(List<Message> monologue, String contextMessage,
                              boolean interactive, Runnable onBack) {
 
@@ -586,7 +594,7 @@ public final class NoGameView {
         return null;
       }
       return new MediaPlayer(new Media(url.toExternalForm()));
-    } catch (Exception e) {
+    } catch (Exception _) {
       return null;
     }
   }

@@ -10,6 +10,32 @@
     -fx-background-color: transparent;
 }
 
+/* ── Bottom footer banner ───────────────────────────────────────────────── */
+
+.settings-footer-banner {
+    -fx-background-color: linear-gradient(to top, rgba(5, 9, 24, 0.86), rgba(5, 9, 24, 0.20));
+    -fx-border-color: rgba(30, 64, 128, 0.42) transparent transparent transparent;
+    -fx-border-width: 1px 0px 0px 0px;
+}
+
+.settings-footer-title {
+    -fx-font-size: 56px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e7ac15;
+    -fx-font-family: "Harlow Solid Italic";
+}
+
+.settings-footer-tagline {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7a9abf;
+}
+
+.settings-footer-meta {
+    -fx-font-size: 10px;
+    -fx-text-fill: #4a6899;
+    -fx-font-family: "Monospace";
+}
+
 /* ── Section cards ─ minimal, nearly transparent ─────────────────────────── */
 
 .settings-section-card {
@@ -59,6 +85,48 @@
 .settings-sublabel {
     -fx-font-size: 12px;
     -fx-text-fill: #4a6899;
+}
+
+/* ── Export history checkbox ─────────────────────────────────────────────── */
+
+.settings-export-history-check {
+    -fx-text-fill: #9ec6e5;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+    -fx-label-padding: 0px 0px 0px 4px;
+}
+
+.settings-export-history-check:hover {
+    -fx-text-fill: #c8d8f0;
+}
+
+.settings-export-history-check .box {
+    -fx-background-color: rgba(15, 45, 94, 0.52);
+    -fx-border-color: rgba(30, 64, 128, 0.70);
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-pref-width: 17px;
+    -fx-pref-height: 17px;
+    -fx-padding: 1px;
+}
+
+.settings-export-history-check:hover .box {
+    -fx-background-color: rgba(30, 64, 128, 0.58);
+    -fx-border-color: rgba(103, 167, 235, 0.80);
+}
+
+.settings-export-history-check:selected .box {
+    -fx-background-color: rgba(245, 162, 1, 0.18);
+    -fx-border-color: rgba(245, 162, 1, 0.72);
+}
+
+.settings-export-history-check:selected .mark {
+    -fx-background-color: #f5a201;
+}
+
+.settings-export-history-check:focused .box {
+    -fx-effect: dropshadow(gaussian, rgba(103, 167, 235, 0.45), 8, 0, 0, 0);
 }
 
 /* ── Toggle button (pill shape, subtle glow on selected) ─────────────────── */
@@ -176,8 +244,12 @@
     -fx-padding: 5px 12px 5px 12px;
 }
 
+.settings-combo .list-cell:hover {
+    -fx-text-fill: #ecc576;
+    -fx-cursor: hand;
+}
+
 .settings-combo .list-cell:selected {
-    -fx-background-color: rgba(30, 58, 110, 0.65);
     -fx-text-fill: #f5a201;
 }
 

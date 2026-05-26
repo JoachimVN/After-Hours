@@ -1,14 +1,14 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
+import java.util.function.BiFunction;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
-import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
+import edu.ntnu.idatt2003.g23.AppVersion;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import javafx.application.Platform;
@@ -18,6 +18,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -35,7 +36,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 public final class SettingsView {
@@ -61,7 +62,8 @@ public final class SettingsView {
         ctrl.fullscreenEnabled, ctrl.onFullscreenChange,
         ctrl.onResolutionChange,
         ctrl.onMaximize,
-        ctrl.onExport,
+        ctrl.onExportJsonCsv,
+        ctrl.onExportCsvOnly,
         ctrl.onDevModeChange, ctrl.devModeEnabled,
         ctrl.onAutosaveChange, ctrl.autosaveEnabled,
         ctrl.onAutosaveToastChange, ctrl.autosaveToast,
@@ -99,7 +101,7 @@ public final class SettingsView {
         onSfxVolumeChange, initialSfxVolume, initialSfxMuted, onSfxMutedChange,
         onAnimationsChange, animationsEnabled,
         initialFullscreen, onFullscreenChange,
-        null, null, null,
+        null, null, null, null,
         onDevModeChange, devModeEnabled,
         onAutosaveChange, autosaveEnabled,
         onAutosaveToastChange, autosaveToastEnabled,
@@ -124,8 +126,10 @@ public final class SettingsView {
       Consumer<int[]> onResolutionChange,
       /** Called when user clicks "Maximize". Null-safe. */
       Runnable onMaximize,
-      /** Called with the File chosen by the user for CSV export. Null-safe. */
-      Consumer<File> onExport,
+      /** Exports selected save as JSON + CSV. Null-safe. */
+      BiFunction<SaveMeta, Boolean, String> onExportJsonCsv,
+      /** Exports selected save as CSV only. Null-safe. */
+      BiFunction<SaveMeta, Boolean, String> onExportCsvOnly,
       Consumer<Boolean> onDevModeChange, boolean devModeEnabled,
       Consumer<Boolean> onAutosaveChange, boolean autosaveEnabled,
       Consumer<Boolean> onAutosaveToastChange, boolean autosaveToastEnabled,
@@ -204,7 +208,7 @@ public final class SettingsView {
         maxHistoryWeeks,
         onMaxHistoryWeeksChange);
 
-    VBox dataSection = buildDataSection(stage, currentSavePath, onExport);
+    VBox dataSection = buildDataSection(currentSavePath, onExportJsonCsv, onExportCsvOnly);
     VBox csvEditorSection = buildCsvEditorSection(
         onOpenCsvTools, onEditCurrentMarketData, devModeProperty);
     VBox keybindsSection = buildKeybindsSection(overlay);
@@ -214,6 +218,30 @@ public final class SettingsView {
     if (currentPlayerName != null && onNameChanged != null) {
       profileSection = buildProfileSection(currentPlayerName, onNameChanged);
     }
+
+    Label footerTitle = new Label("After Hours");
+    footerTitle.getStyleClass().add("settings-footer-title");
+    footerTitle.setTextAlignment(TextAlignment.CENTER);
+    footerTitle.setAlignment(Pos.CENTER);
+    footerTitle.setMaxWidth(Double.MAX_VALUE);
+
+    Label footerTagline = new Label("The market never sleeps. Neither should you.");
+    footerTagline.getStyleClass().add("settings-footer-tagline");
+    footerTagline.setTextAlignment(TextAlignment.CENTER);
+    footerTagline.setAlignment(Pos.CENTER);
+    footerTagline.setMaxWidth(Double.MAX_VALUE);
+
+    Label footerMeta = new Label("v" + AppVersion.VERSION + " \u2022 " + AppVersion.RELEASE_YEAR);
+    footerMeta.getStyleClass().add("settings-footer-meta");
+    footerMeta.setTextAlignment(TextAlignment.CENTER);
+    footerMeta.setAlignment(Pos.CENTER);
+    footerMeta.setMaxWidth(Double.MAX_VALUE);
+
+    VBox footerBanner = new VBox(4, footerTitle, footerTagline, footerMeta);
+    footerBanner.getStyleClass().add("settings-footer-banner");
+    footerBanner.setAlignment(Pos.CENTER);
+    footerBanner.setPadding(new Insets(8, 24, 20, 24));
+    footerBanner.setMaxWidth(Double.MAX_VALUE);
 
     VBox allSections;
     if (profileSection != null) {
@@ -231,9 +259,13 @@ public final class SettingsView {
 
     HBox centeringBox = new HBox(allSections);
     centeringBox.setAlignment(Pos.TOP_CENTER);
-    centeringBox.setPadding(new Insets(28, 48, 56, 48));
+    centeringBox.setPadding(new Insets(28, 48, 0, 48));
 
-    ScrollPane scroll = new ScrollPane(centeringBox);
+    VBox scrollContent = new VBox(52, centeringBox, footerBanner);
+    scrollContent.setFillWidth(true);
+    scrollContent.setAlignment(Pos.TOP_CENTER);
+
+    ScrollPane scroll = new ScrollPane(scrollContent);
     scroll.setFitToWidth(true);
     scroll.setFitToHeight(false);
     scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -589,11 +621,13 @@ public final class SettingsView {
     return sectionCard("⚡  Performance", modeRow, performanceHelpText, capBlock);
   }
 
-  private static VBox buildDataSection(Stage stage, Path currentSavePath, Consumer<File> onExport) {
+  private static VBox buildDataSection(Path currentSavePath,
+      BiFunction<SaveMeta, Boolean, String> onExportJsonCsv,
+      BiFunction<SaveMeta, Boolean, String> onExportCsvOnly) {
     Label label = new Label("Export Save Data");
     label.getStyleClass().add("settings-label");
 
-    Label subLabel = new Label("Pick a save to export it as two files: one JSON and one CSV.");
+    Label subLabel = new Label("Pick a save to export as JSON + CSV, or export only the market CSV.");
     subLabel.getStyleClass().add("settings-sublabel");
     subLabel.setWrapText(true);
 
@@ -614,6 +648,19 @@ public final class SettingsView {
     exportBtn.getStyleClass().add("settings-toggle");
     exportBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
 
+    Button exportCsvBtn = new Button("\u2B07  Export CSV Only");
+    exportCsvBtn.getStyleClass().add("settings-toggle");
+    exportCsvBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
+
+    CheckBox keepHistoryCheck = new CheckBox("Keep price history");
+    keepHistoryCheck.setSelected(false);
+    keepHistoryCheck.getStyleClass().add("settings-export-history-check");
+
+    Label keepHistoryHint = new Label("Export full price history, or only the latest price per stock.");
+    keepHistoryHint.getStyleClass().add("settings-sublabel");
+    keepHistoryHint.setWrapText(true);
+    keepHistoryHint.setPadding(new Insets(0, 0, 8, 0));
+
     Label statusLbl = new Label();
     statusLbl.getStyleClass().add("settings-sublabel");
     statusLbl.setWrapText(true);
@@ -624,36 +671,50 @@ public final class SettingsView {
         return;
       }
 
-      // The view owns the file-chooser dialog (it needs an owner window).
-      // The actual file I/O is delegated to the controller via onExport.
-      FileChooser fc = new FileChooser();
-      fc.setTitle("Export Save Data (JSON + CSV)");
-      fc.setInitialFileName(
-          selected.displayName().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_save_export");
-      fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
-      File dest = fc.showSaveDialog(stage);
-      if (dest == null) {
-        return;
-      }
-
-      if (onExport != null) {
+      if (onExportJsonCsv != null) {
         try {
-          Path[] exported = GameSaveExporter.exportSaveDataFiles(selected.saveDir(), dest.toPath());
-          statusLbl.setText("\u2713  Exported: " + exported[0].getFileName() + " and " +
-              exported[1].getFileName());
-          statusLbl.setStyle("-fx-text-fill: #4ecb71;");
-          onExport.accept(dest);
-        } catch (IOException ex) {
+          boolean latestOnly = !keepHistoryCheck.isSelected();
+          String exportedFileName = onExportJsonCsv.apply(selected, latestOnly);
+          if (exportedFileName != null && !exportedFileName.isBlank()) {
+            statusLbl.setText(latestOnly
+                ? "\u2713  Export completed: " + exportedFileName + " (JSON + latest-price CSV)."
+                : "\u2713  Export completed: " + exportedFileName + " (JSON + full-history CSV).");
+            statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+          }
+        } catch (Exception ex) {
           statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
           statusLbl.setStyle("-fx-text-fill: #e05a5a;");
         }
       }
     });
 
-    HBox btnRow = new HBox(exportBtn);
+    exportCsvBtn.setOnAction(e -> {
+      SaveMeta selected = saveCombo.getSelectionModel().getSelectedItem();
+      if (selected == null) {
+        return;
+      }
+
+      if (onExportCsvOnly != null) {
+        try {
+          boolean latestOnly = !keepHistoryCheck.isSelected();
+          String exportedFileName = onExportCsvOnly.apply(selected, latestOnly);
+          if (exportedFileName != null && !exportedFileName.isBlank()) {
+            statusLbl.setText(latestOnly
+                ? "\u2713  Export completed: " + exportedFileName + " (latest-price CSV)."
+                : "\u2713  Export completed: " + exportedFileName + " (full-history CSV).");
+            statusLbl.setStyle("-fx-text-fill: #4ecb71;");
+          }
+        } catch (Exception ex) {
+          statusLbl.setText("\u2715  Export failed: " + ex.getMessage());
+          statusLbl.setStyle("-fx-text-fill: #e05a5a;");
+        }
+      }
+    });
+
+    HBox btnRow = new HBox(10, exportBtn, exportCsvBtn);
     btnRow.setAlignment(Pos.CENTER_LEFT);
 
-    VBox content = new VBox(8, subLabel, saveCombo, btnRow, statusLbl);
+    VBox content = new VBox(8, subLabel, saveCombo, keepHistoryCheck, keepHistoryHint, btnRow, statusLbl);
     return sectionCard("\uD83D\uDCC4  Data", new VBox(6, label, content));
   }
 

@@ -11,6 +11,8 @@ import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
 import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,7 +24,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Saves a game to a folder under {@code ~/.afterhours/saves/}.
+ * Saves a game to a folder under the application's per-user data directory.
  *
  * <p>Each save is a directory named {@code <playerName>_<timestamp>} and
  * contains:
@@ -33,14 +35,17 @@ import java.util.List;
  */
 public final class GameSaveExporter {
 
-  public static final Path SAVES_DIR =
-      Path.of(System.getProperty("user.home"), ".afterhours", "saves");
+  private static final Path APP_DATA_DIR = AppDataPaths.appDataDir();
+  private static final String SAVE_JSON_FILE = "save.json";
+  private static final String STOCKS_CSV_FILE = "stocks.csv";
+  private static final String AUTOSAVE_PREFIX = "autosave_";
+
+  public static final Path SAVES_DIR = APP_DATA_DIR.resolve("saves");
 
   /**
    * Dedicated directory for autosave slots (one per player+exchange).
    */
-  public static final Path AUTOSAVE_DIR =
-      Path.of(System.getProperty("user.home"), ".afterhours", "autosaves");
+  public static final Path AUTOSAVE_DIR = APP_DATA_DIR.resolve("autosaves");
 
   private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
   private static final DateTimeFormatter FOLDER_FMT =
@@ -118,7 +123,7 @@ public final class GameSaveExporter {
     Files.createDirectories(saveDir);
 
     writeJson(saveDir, player, exchange, now, uiState, false, flagged);
-    StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"),
+    StockCsvExporter.writeHistory(saveDir.resolve(STOCKS_CSV_FILE),
         exchange.getStocks());
 
     return saveDir;
@@ -140,12 +145,12 @@ public final class GameSaveExporter {
   public static Path autosave(Player player, Exchange exchange, GameUiState uiState,
                               String slotId, boolean flagged) throws IOException {
     String safeSlot = normalizeAutosaveSlotId(slotId);
-    String folderName = "autosave_" + safeSlot;
+    String folderName = AUTOSAVE_PREFIX + safeSlot;
     Path saveDir = AUTOSAVE_DIR.resolve(folderName);
     cleanupDuplicateAutosaveSlots(safeSlot, saveDir);
     Files.createDirectories(saveDir);
     writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, true, flagged);
-    StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"), exchange.getStocks());
+    StockCsvExporter.writeHistory(saveDir.resolve(STOCKS_CSV_FILE), exchange.getStocks());
     return saveDir;
   }
 
@@ -180,9 +185,9 @@ public final class GameSaveExporter {
    * Marks a save as edited via the CSV editor (manual market-data mutation).
    */
   public static void markSaveAsFlagged(Path saveDir) throws IOException {
-    Path jsonPath = saveDir.resolve("save.json");
+    Path jsonPath = saveDir.resolve(SAVE_JSON_FILE);
     if (!Files.exists(jsonPath)) {
-      throw new IOException("Missing save.json in selected save");
+      throw new IOException("Missing " + SAVE_JSON_FILE + " in selected save");
     }
     JsonObject obj = GSON.fromJson(Files.readString(jsonPath, StandardCharsets.UTF_8),
         JsonObject.class);
@@ -196,11 +201,21 @@ public final class GameSaveExporter {
    * Exports a selected save to two files (JSON + CSV), following the same
    * structure used internally by save folders.
    *
-   * @param saveDir         the save folder containing save.json and stocks.csv
+  * @param saveDir         the save folder containing save.json and stocks.csv
    * @param destinationBase chosen file path used as base name for output files
    * @return array where index 0 is json destination and index 1 is csv destination
    */
   public static Path[] exportSaveDataFiles(Path saveDir, Path destinationBase) throws IOException {
+    return exportSaveDataFiles(saveDir, destinationBase, false);
+  }
+
+  /**
+   * Exports a selected save to JSON + CSV.
+   *
+   * @param latestPriceOnly when true, the exported CSV includes only latest stock prices
+   */
+  public static Path[] exportSaveDataFiles(Path saveDir, Path destinationBase,
+                                           boolean latestPriceOnly) throws IOException {
     if (saveDir == null) {
       throw new IllegalArgumentException("saveDir cannot be null");
     }
@@ -208,13 +223,13 @@ public final class GameSaveExporter {
       throw new IllegalArgumentException("destinationBase cannot be null");
     }
 
-    Path saveJson = saveDir.resolve("save.json");
-    Path stocksCsv = saveDir.resolve("stocks.csv");
+    Path saveJson = saveDir.resolve(SAVE_JSON_FILE);
+    Path stocksCsv = saveDir.resolve(STOCKS_CSV_FILE);
     if (!Files.exists(saveJson)) {
-      throw new IOException("Missing save.json in selected save");
+      throw new IOException("Missing " + SAVE_JSON_FILE + " in selected save");
     }
     if (!Files.exists(stocksCsv)) {
-      throw new IOException("Missing stocks.csv in selected save");
+      throw new IOException("Missing " + STOCKS_CSV_FILE + " in selected save");
     }
 
     Path parent = destinationBase.getParent();
@@ -235,8 +250,69 @@ public final class GameSaveExporter {
     Path csvDest = (parent == null ? Path.of(stem + ".csv") : parent.resolve(stem + ".csv"));
 
     Files.copy(saveJson, jsonDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-    Files.copy(stocksCsv, csvDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    exportStocksCsv(stocksCsv, csvDest, latestPriceOnly);
     return new Path[] {jsonDest, csvDest};
+  }
+
+  /**
+   * Exports only the stock history CSV from a selected save.
+   *
+   * @param saveDir         the save folder containing stocks.csv
+   * @param destinationBase chosen file path used as base name for output file
+   * @return destination path of the exported CSV
+   */
+  public static Path exportSaveCsvFile(Path saveDir, Path destinationBase) throws IOException {
+    return exportSaveCsvFile(saveDir, destinationBase, false);
+  }
+
+  /**
+   * Exports stock CSV from a selected save.
+   *
+   * @param latestPriceOnly when true, exports one latest price per stock
+   */
+  public static Path exportSaveCsvFile(Path saveDir, Path destinationBase,
+                                       boolean latestPriceOnly) throws IOException {
+    if (saveDir == null) {
+      throw new IllegalArgumentException("saveDir cannot be null");
+    }
+    if (destinationBase == null) {
+      throw new IllegalArgumentException("destinationBase cannot be null");
+    }
+
+    Path stocksCsv = saveDir.resolve(STOCKS_CSV_FILE);
+    if (!Files.exists(stocksCsv)) {
+      throw new IOException("Missing " + STOCKS_CSV_FILE + " in selected save");
+    }
+
+    Path parent = destinationBase.getParent();
+    if (parent != null) {
+      Files.createDirectories(parent);
+    }
+
+    String fileName = destinationBase.getFileName().toString();
+    String stem;
+    int dot = fileName.lastIndexOf('.');
+    if (dot > 0) {
+      stem = fileName.substring(0, dot);
+    } else {
+      stem = fileName;
+    }
+
+    Path csvDest = (parent == null ? Path.of(stem + ".csv") : parent.resolve(stem + ".csv"));
+    exportStocksCsv(stocksCsv, csvDest, latestPriceOnly);
+    return csvDest;
+  }
+
+  private static void exportStocksCsv(Path sourceStocksCsv, Path destinationCsv,
+                                      boolean latestPriceOnly) throws IOException {
+    if (!latestPriceOnly) {
+      Files.copy(sourceStocksCsv, destinationCsv, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+      return;
+    }
+
+    try (Reader reader = Files.newBufferedReader(sourceStocksCsv, StandardCharsets.UTF_8)) {
+      StockCsvExporter.writeCurrentPrices(destinationCsv, StockCsvLoader.parse(reader));
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -301,7 +377,7 @@ public final class GameSaveExporter {
         player.getWeeksUsingChickAvatar(),
         flagged);
 
-    Path jsonFile = saveDir.resolve("save.json");
+    Path jsonFile = saveDir.resolve(SAVE_JSON_FILE);
     Files.writeString(jsonFile, GSON.toJson(json), StandardCharsets.UTF_8);
   }
 
@@ -328,8 +404,8 @@ public final class GameSaveExporter {
 
   private static String normalizeAutosaveSlotId(String slotId) {
     String safe = slotId == null ? "" : slotId.replaceAll("[^A-Za-z0-9_\\-]", "_");
-    while (safe.startsWith("autosave_")) {
-      safe = safe.substring("autosave_".length());
+    while (safe.startsWith(AUTOSAVE_PREFIX)) {
+      safe = safe.substring(AUTOSAVE_PREFIX.length());
     }
     if (safe.isBlank()) {
       return "slot";
@@ -339,13 +415,13 @@ public final class GameSaveExporter {
 
   private static String normalizeAutosaveFolderName(String folderName) {
     String normalized = folderName;
-    while (normalized.startsWith("autosave_")) {
-      normalized = normalized.substring("autosave_".length());
+    while (normalized.startsWith(AUTOSAVE_PREFIX)) {
+      normalized = normalized.substring(AUTOSAVE_PREFIX.length());
     }
     return normalized;
   }
 
-  private static void deleteDirectoryRecursively(Path directory) throws IOException {
+  protected static void deleteDirectoryRecursively(Path directory) throws IOException {
     if (!Files.exists(directory)) {
       return;
     }
@@ -355,12 +431,12 @@ public final class GameSaveExporter {
             try {
               Files.deleteIfExists(path);
             } catch (IOException e) {
-              throw new RuntimeException(e);
+              throw new UncheckedIOException(e);
             }
           });
-    } catch (RuntimeException e) {
-      if (e.getCause() instanceof IOException io) {
-        throw io;
+    } catch (UncheckedIOException e) {
+      if (e.getCause() != null) {
+        throw e.getCause();
       }
       throw e;
     }

@@ -14,6 +14,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.AudioClip;
 import javafx.util.Duration;
 
 /**
@@ -23,6 +24,11 @@ import javafx.util.Duration;
  * that the application controller stays focused on navigation and state management.
  */
 public final class AppOverlayService {
+
+  private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
+  private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
+  private static final AudioClip CANCEL_CLIP = loadAudioClip(CANCEL_SOUND);
+  private static final AudioClip SELECT_CLIP = loadAudioClip(SELECT_SOUND);
 
   private final StackPane root;
 
@@ -152,9 +158,18 @@ public final class AppOverlayService {
       return false;
     }, cancelBtn, proceedBtn);
 
+    cancelBtn.setOnAction(ev -> {
+      playCancelSound();
+      root.getChildren().stream()
+          .filter(n -> n instanceof StackPane && ((StackPane) n).getChildren().contains(card))
+          .findFirst()
+          .ifPresent(root.getChildren()::remove);
+    });
+
     // Wire proceed separately so the lambda can close over onProceed
     // (cancelBtn dismiss is wired by showPopup via the primary button)
     proceedBtn.setOnAction(ev -> {
+      playSelectSound();
       root.getChildren().stream()
           .filter(n -> n instanceof StackPane && ((StackPane) n).getChildren().contains(card))
           .findFirst()
@@ -193,5 +208,25 @@ public final class AppOverlayService {
 
     root.getChildren().add(popup);
     popup.requestFocus();
+  }
+
+  private static AudioClip loadAudioClip(String resourcePath) {
+    var resource = AppOverlayService.class.getResource(resourcePath);
+    if (resource == null) {
+      return null;
+    }
+    return new AudioClip(resource.toExternalForm());
+  }
+
+  private static void playCancelSound() {
+    if (CANCEL_CLIP != null) {
+      CANCEL_CLIP.play();
+    }
+  }
+
+  private static void playSelectSound() {
+    if (SELECT_CLIP != null) {
+      SELECT_CLIP.play();
+    }
   }
 }

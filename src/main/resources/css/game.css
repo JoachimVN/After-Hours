@@ -739,7 +739,7 @@
     -fx-background-radius: 8px;
     -fx-padding: 7px 10px 7px 10px;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.70), 12, 0, 0, 3);
-    -fx-min-width: 140px;
+    -fx-min-width: 220px;
 }
 
 .chart-tooltip-week {
@@ -1481,6 +1481,10 @@
     -fx-text-fill: #f5a201;
 }
 
+.stock-fav-btn-active:hover {
+    -fx-text-fill: #ffd27a;
+}
+
 /* ── Detail panel – fav button (inline with symbol) ─────────────────────── */
 
 .detail-fav-btn {
@@ -1498,6 +1502,10 @@
 
 .detail-fav-btn-active {
     -fx-text-fill: #f5a201;
+}
+
+.detail-fav-btn-active:hover {
+    -fx-text-fill: #ffd27a;
 }
 
 /* ── Detail panel – owned badge (next to price) ──────────────────────────── */

@@ -30,7 +30,8 @@ class GameSaveExporterTest {
 
   @BeforeEach
   void setUp() {
-    Stock stock = new Stock("AAPL", "Apple Inc.", new ArrayList<>(List.of(new BigDecimal("150"))));
+    Stock stock = new Stock("AAPL", "Apple Inc.",
+        new ArrayList<>(List.of(new BigDecimal("150"), new BigDecimal("160"))));
     player = new Player("TestPlayer", new BigDecimal("1000"));
     exchange = new Exchange("TestExchange", List.of(stock));
   }
@@ -255,6 +256,37 @@ class GameSaveExporterTest {
     assertTrue(Files.exists(out[1]));
     assertTrue(out[0].toString().endsWith("session_export.json"));
     assertTrue(out[1].toString().endsWith("session_export.csv"));
+  }
+
+  @Test
+  @DisplayName("exportSaveCsvFile can export latest price only")
+  void exportSaveCsvFileLatestPriceOnlyWritesSinglePriceColumn() throws IOException {
+    GameSaveExporter.overwrite(tempDir, player, exchange);
+
+    Path destinationBase = tempDir.resolve("exports").resolve("latest_only.any");
+    Path out = GameSaveExporter.exportSaveCsvFile(tempDir, destinationBase, true);
+
+    String csv = Files.readString(out, StandardCharsets.UTF_8);
+    assertTrue(csv.startsWith("symbol,company,price"));
+    assertTrue(csv.contains("AAPL,Apple Inc.,160.00"));
+    assertFalse(csv.contains(";"));
+  }
+
+  @Test
+  @DisplayName("exportSaveDataFiles can export json plus latest-price csv")
+  void exportSaveDataFilesLatestPriceOnlyWritesCurrentPriceCsv() throws IOException {
+    GameSaveExporter.overwrite(tempDir, player, exchange);
+
+    Path destinationBase = tempDir.resolve("exports").resolve("latest_bundle.any");
+    Path[] out = GameSaveExporter.exportSaveDataFiles(tempDir, destinationBase, true);
+
+    assertTrue(Files.exists(out[0]));
+    assertTrue(Files.exists(out[1]));
+
+    String csv = Files.readString(out[1], StandardCharsets.UTF_8);
+    assertTrue(csv.startsWith("symbol,company,price"));
+    assertTrue(csv.contains("AAPL,Apple Inc.,160.00"));
+    assertFalse(csv.contains(";"));
   }
 
   @Test
