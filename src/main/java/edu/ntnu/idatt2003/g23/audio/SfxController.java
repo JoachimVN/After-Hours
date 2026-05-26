@@ -32,7 +32,10 @@ public class SfxController {
 
   public SfxController(Class<?> resourceOwner) {
     this.resourceOwner = resourceOwner;
-    preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY1, PLAY2, PLAY3);
+    try {
+      preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY1, PLAY2, PLAY3);
+    } catch (Throwable ignored) {
+    }
   }
 
   /**
@@ -59,7 +62,7 @@ public class SfxController {
       }
       double clamped = Math.max(0.0, Math.min(1.0, volume));
       clip.play(clamped);
-    } catch (Exception ignored) {
+    } catch (Throwable ignored) {
     }
   }
 
@@ -75,7 +78,11 @@ public class SfxController {
       if (resource == null) {
         return null;
       }
-      return new AudioClip(resource.toExternalForm());
+      try {
+        return new AudioClip(resource.toExternalForm());
+      } catch (Throwable ignored) {
+        return null;
+      }
     });
   }
 
