@@ -19,6 +19,8 @@ import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
  * Controller for ProfileView (MVC).
  */
 public final class ProfileController {
+  private static final int MINI_CHART_MAX_POINTS = 100;
+
   private final GameController gameController;
   private final Supplier<List<String>> favoriteSymbolsSupplier;
   private final Consumer<String> favoriteToggleConsumer;
@@ -57,7 +59,19 @@ public final class ProfileController {
 
   public record FavoriteStockView(String symbol, String company,
                                   BigDecimal currentPrice, BigDecimal changePct,
-                                  boolean owned) {
+                                  boolean owned,
+                                  List<BigDecimal> priceHistory) {
+  }
+
+  public record PortfolioPositionView(String symbol,
+                                      String company,
+                                      BigDecimal quantity,
+                                      BigDecimal averagePrice,
+                                      BigDecimal currentPrice,
+                                      BigDecimal marketValue,
+                                      BigDecimal pnl,
+                                      BigDecimal pnlPct,
+                                      List<BigDecimal> priceHistory) {
   }
 
   public record StatusRequirementInfo(String statusName,
@@ -155,14 +169,49 @@ public final class ProfileController {
     return gameController.getStocks().stream()
         .filter(stock -> favorites.contains(stock.getSymbol()))
         .sorted(java.util.Comparator.comparing(Stock::getSymbol))
-        .map(stock -> new FavoriteStockView(
-            stock.getSymbol(),
-            stock.getCompany(),
-            stock.getSalesPrice(),
-            stock.percentageChange(),
-            gameController.isOwned(stock.getSymbol())))
+        .map(stock -> {
+          List<BigDecimal> history = compactHistory(stock.getHistoricalPrices());
+          BigDecimal currentPrice = stock.getSalesPrice();
+          BigDecimal changePct = percentageChangeFromInitial(currentPrice, history);
+          return new FavoriteStockView(
+              stock.getSymbol(),
+              stock.getCompany(),
+              currentPrice,
+              changePct,
+              gameController.isOwned(stock.getSymbol()),
+              history);
+        })
         .toList();
   }
+
+      public List<PortfolioPositionView> getPortfolioPositions() {
+      return gameController.getPortfolioShares().stream()
+        .sorted(java.util.Comparator.comparing(share -> share.getStock().getSymbol()))
+        .map(share -> {
+          BigDecimal quantity = share.getQuantity();
+          BigDecimal averagePrice = share.getPurchasePrice();
+          BigDecimal currentPrice = share.getStock().getSalesPrice();
+          BigDecimal marketValue = currentPrice.multiply(quantity);
+          BigDecimal costBasis = averagePrice.multiply(quantity);
+          BigDecimal pnl = marketValue.subtract(costBasis);
+          BigDecimal pnlPct = costBasis.compareTo(BigDecimal.ZERO) == 0
+            ? BigDecimal.ZERO
+            : pnl.divide(costBasis, 4, RoundingMode.HALF_UP)
+              .multiply(BigDecimal.valueOf(100));
+
+          return new PortfolioPositionView(
+            share.getStock().getSymbol(),
+            share.getStock().getCompany(),
+            quantity,
+            averagePrice,
+            currentPrice,
+            marketValue,
+            pnl,
+            pnlPct,
+            compactHistory(share.getStock().getHistoricalPrices()));
+        })
+        .toList();
+      }
 
   public StatusRequirementInfo getStatusRequirement(PlayerStatus status) {
     int weeksNow = Math.max(0, getPlayerWeeksTraded());
@@ -204,5 +253,38 @@ public final class ProfileController {
   private static String formatStatusName(PlayerStatus status) {
     String lower = status.name().toLowerCase(Locale.ROOT);
     return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+  }
+
+  private static List<BigDecimal> compactHistory(List<BigDecimal> history) {
+    if (history == null || history.isEmpty()) {
+      return List.of();
+    }
+    if (history.size() <= MINI_CHART_MAX_POINTS) {
+      return List.copyOf(history);
+    }
+    return List.copyOf(history.subList(history.size() - MINI_CHART_MAX_POINTS, history.size()));
+  }
+
+  private static BigDecimal percentageChangeFromInitial(BigDecimal currentPrice,
+                                                        List<BigDecimal> history) {
+    if (currentPrice == null) {
+      return BigDecimal.ZERO;
+    }
+
+    BigDecimal initialPrice = (history == null || history.isEmpty())
+        ? currentPrice
+        : history.get(0);
+
+    if (initialPrice == null || initialPrice.compareTo(BigDecimal.ZERO) == 0) {
+      return BigDecimal.ZERO;
+    }
+
+    BigDecimal delta = currentPrice.subtract(initialPrice);
+    if (delta.compareTo(BigDecimal.ZERO) == 0) {
+      return BigDecimal.ZERO;
+    }
+
+    return delta.divide(initialPrice, 6, RoundingMode.HALF_UP)
+        .multiply(BigDecimal.valueOf(100));
   }
 }

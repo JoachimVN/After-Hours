@@ -34,7 +34,7 @@ public final class LandingPageView {
     Label tagline = new Label("\u2726  NTNU \u2022 IDATT2003 \u2022 Millions \u2022 Group 23  \u2726");
     tagline.getStyleClass().add("tagline");
     tagline.setPadding(new Insets(2, 14, 4, 14));
-    Label subTagline = new Label("The market never sleeps. Neither do you.");
+    Label subTagline = new Label("The market never sleeps. Neither should you.");
     subTagline.getStyleClass().add("sub-tagline");
     subTagline.setPadding(new Insets(2, 14, 4, 14));
     VBox taglineBlock = new VBox(6, tagline, subTagline);
@@ -56,11 +56,10 @@ public final class LandingPageView {
 
     new AnimationTimer() {
       // Dark edges → warm gold center (baked gold-bar curve), light highlight
-      private final double[] dark = {0.62, 0.40, 0.00};
-      private final double[] mid = {0.95, 0.64, 0.05};
-      private final double[] hl = {1.00, 0.94, 0.68};
-      private final int[] stops =
-          {0, 6, 13, 19, 25, 31, 38, 44, 50, 56, 63, 69, 75, 81, 88, 94, 100};
+      private final double[] dark = { 0.62, 0.40, 0.00 };
+      private final double[] mid = { 0.95, 0.64, 0.05 };
+      private final double[] hl = { 1.00, 0.94, 0.68 };
+      private final int[] stops = { 0, 6, 13, 19, 25, 31, 38, 44, 50, 56, 63, 69, 75, 81, 88, 94, 100 };
 
       private double gauss(double x, double peak, double sigma) {
         double d = x - peak;
@@ -79,8 +78,8 @@ public final class LandingPageView {
         double t = now / 1_000_000_000.0;
         double pulse = (Math.sin(t * 0.9) + 1) / 2.0;
         // sin() path: eases in, slows, reverses — no hard wrap, fully organic
-        double sp = 50 + 80 * Math.sin(t * 0.52);          // −30→130, ~12 s cycle
-        double tiltY = 5 * Math.sin(t * 0.29);               // ±5% diagonal drift
+        double sp = 50 + 80 * Math.sin(t * 0.52); // −30→130, ~12 s cycle
+        double tiltY = 5 * Math.sin(t * 0.29); // ±5% diagonal drift
 
         StringBuilder sb = new StringBuilder(String.format(Locale.US,
             "linear-gradient(from 0%% %.1f%% to 100%% %.1f%%",
@@ -92,8 +91,8 @@ public final class LandingPageView {
           double bb = dark[2] + (mid[2] - dark[2]) * curve;
           double inf = gauss(p, sp, 16) * 0.56; // 25% brighter than before
           sb.append(", ").append(hex(br + (hl[0] - br) * inf,
-                  bg + (hl[1] - bg) * inf,
-                  bb + (hl[2] - bb) * inf))
+              bg + (hl[1] - bg) * inf,
+              bb + (hl[2] - bb) * inf))
               .append(" ").append(p).append("%");
         }
         sb.append(")");
