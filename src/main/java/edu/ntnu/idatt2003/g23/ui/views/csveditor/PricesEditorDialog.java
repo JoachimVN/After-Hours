@@ -21,6 +21,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.AudioClip;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +42,10 @@ public final class PricesEditorDialog {
   /** Warn the user when the list exceeds this many entries. */
   private static final int LARGE_LIST_THRESHOLD = 10_000;
   private static final String OPEN_FLAG_KEY = "csv.pricesDialogOpen";
+  private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
+  private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
+  private static final AudioClip CANCEL_CLIP = loadAudioClip(CANCEL_SOUND);
+  private static final AudioClip SELECT_CLIP = loadAudioClip(SELECT_SOUND);
 
   private PricesEditorDialog() {
   }
@@ -364,6 +369,7 @@ public final class PricesEditorDialog {
 
     cancelBtn.setOnAction(ev -> {
       ev.consume();
+      playCancelSound();
       dismiss.run();
     });
     backdrop.setOnMouseClicked(ev -> {
@@ -373,6 +379,7 @@ public final class PricesEditorDialog {
 
     okBtn.setOnAction(ev -> {
       ev.consume();
+      playSelectSound();
 
       refreshValidationUi.run();
       if (items.isEmpty()) {
@@ -405,6 +412,26 @@ public final class PricesEditorDialog {
     refreshValidationUi.run();
     container.getChildren().add(popup);
     popup.requestFocus();
+  }
+
+  private static AudioClip loadAudioClip(String resourcePath) {
+    var resource = PricesEditorDialog.class.getResource(resourcePath);
+    if (resource == null) {
+      return null;
+    }
+    return new AudioClip(resource.toExternalForm());
+  }
+
+  private static void playCancelSound() {
+    if (CANCEL_CLIP != null) {
+      CANCEL_CLIP.play();
+    }
+  }
+
+  private static void playSelectSound() {
+    if (SELECT_CLIP != null) {
+      SELECT_CLIP.play();
+    }
   }
 
   private static int findFirstInvalidPriceIndex(List<String> items) {
