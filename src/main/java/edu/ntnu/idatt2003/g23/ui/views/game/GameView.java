@@ -2,12 +2,15 @@ package edu.ntnu.idatt2003.g23.ui.views.game;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
+
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
@@ -40,6 +43,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -85,6 +89,7 @@ import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
@@ -616,7 +621,7 @@ public final class GameView implements GameViewInterface {
     });
 
     portfolioTable =
-        buildPortfolioTable(portfolioItems, selectedShareStock -> { // TODO: Rewrite this shit
+        buildPortfolioTable(portfolioItems, selectedShareStock -> {
           if (selectedShareStock == null) {
             return;
           }
@@ -704,7 +709,7 @@ public final class GameView implements GameViewInterface {
     }
     this.hSplitRef = hSplit;
 
-    // ── Sub-bar: combined week card (info + play button) ────────────────────
+    // ── Sub-bar: combined week card (info + skip button) ────────────────────
     VBox weekInfo = new VBox(2, labelSmall("WEEK"), weekNumLbl);
     weekInfo.setAlignment(Pos.CENTER);
     weekInfo.setPadding(new Insets(0, 8, 0, 8));
@@ -715,7 +720,10 @@ public final class GameView implements GameViewInterface {
     calmDownLbl.setMouseTransparent(true);
     calmDownLbl.setTranslateY(-2);
 
-    Button playBtn = new Button("\u25B6");
+    Button playBtn = new Button();
+    playBtn.setGraphic(buildNextWeekButtonGraphic(playBtn));
+    playBtn.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+    playBtn.setAccessibleText("Next Week");
     playBtn.getStyleClass().add("week-play-btn");
     this.tutorialNextWeekBtnTarget = playBtn;
 
@@ -734,9 +742,9 @@ public final class GameView implements GameViewInterface {
     colDivider.setPrefWidth(1);
     colDivider.setMaxWidth(1);
     ColumnConstraints colPlay = new ColumnConstraints();
-    colPlay.setMinWidth(54);
-    colPlay.setPrefWidth(54);
-    colPlay.setMaxWidth(54);
+    colPlay.setMinWidth(68);
+    colPlay.setPrefWidth(68);
+    colPlay.setMaxWidth(68);
 
     GridPane weekCard = new GridPane();
     weekCard.getStyleClass().add("week-card");
@@ -1404,7 +1412,7 @@ public final class GameView implements GameViewInterface {
       case 3 -> {
         setTutorialTitleText("Advance to Next Week");
         bodyText =
-            "Click the \u25B6 Play button to advance to the next week and simulate market movement.";
+            "Click the \u23E9 Skip button to advance to the next week and simulate market movement.";
         stepTarget = tutorialNextWeekBtnTarget;
         completionHint = "Advance at least one week to continue.";
         if (!tutorialSpikeScheduled) {
@@ -3145,6 +3153,69 @@ public final class GameView implements GameViewInterface {
       return;
     }
     showFadingInlineError(currentSellAllErrorLabel, message);
+  }
+
+  private Node buildNextWeekButtonGraphic(Button owner) {
+    var iconUrl = GameView.class.getResource("/images/icons/next-button.svg");
+    if (iconUrl == null) {
+      Label fallback = new Label("\u23E9");
+      fallback.textFillProperty().bind(owner.textFillProperty());
+      fallback.setStyle("-fx-font-size: 24px; -fx-font-weight: 700;");
+      return fallback;
+    }
+
+    try (InputStream in = iconUrl.openStream()) {
+      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+      factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+      factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+      factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+
+      var doc = factory.newDocumentBuilder().parse(in);
+      var pathNodes = doc.getElementsByTagName("path");
+      Group icon = new Group();
+
+      for (int i = 0; i < pathNodes.getLength(); i++) {
+        var attrs = pathNodes.item(i).getAttributes();
+        var dAttr = attrs == null ? null : attrs.getNamedItem("d");
+        if (dAttr == null) {
+          continue;
+        }
+        String content = dAttr.getNodeValue();
+        if (content == null || content.isBlank()) {
+          continue;
+        }
+
+        SVGPath path = new SVGPath();
+        path.setContent(content);
+        path.fillProperty().bind(owner.textFillProperty());
+        icon.getChildren().add(path);
+      }
+
+      if (!icon.getChildren().isEmpty()) {
+        double targetSize = 24.0;
+        Bounds bounds = icon.getLayoutBounds();
+        double maxDim = Math.max(bounds.getWidth(), bounds.getHeight());
+        if (maxDim > 0) {
+          double scale = targetSize / maxDim;
+          icon.setScaleX(scale);
+          icon.setScaleY(scale);
+        }
+
+        StackPane wrapper = new StackPane(icon);
+        wrapper.setMinSize(30, 30);
+        wrapper.setPrefSize(30, 30);
+        wrapper.setMaxSize(30, 30);
+        wrapper.setMouseTransparent(true);
+        return wrapper;
+      }
+    } catch (Exception ignored) {
+      // Fall back to a unicode icon if SVG parsing fails.
+    }
+
+    Label fallback = new Label("\u23E9");
+    fallback.textFillProperty().bind(owner.textFillProperty());
+    fallback.setStyle("-fx-font-size: 24px; -fx-font-weight: 700;");
+    return fallback;
   }
 
   private void showFadingInlineError(Label label, String message) {
