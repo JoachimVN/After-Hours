@@ -93,6 +93,13 @@ public class App extends Application {
 
   private static final double LANDING_THEME_CONTEXT_MULTIPLIER = 1.0;
   private static final double NON_LANDING_THEME_CONTEXT_MULTIPLIER = 0.35;
+  private static final String NOTIF_TITLE_CSV_ERROR = "CSV Error";
+  private static final String NOTIF_TITLE_SAVE_ERROR = "Save Error";
+  private static final String NOTIF_TITLE_EDIT_BLOCKED = "Edit Blocked";
+  private static final String EXCHANGE_NAME_CUSTOM_MARKET = "Custom Market";
+  private static final String MSG_COULD_NOT_LOAD_MARKET_DATA = "Could not load market data:\n";
+  private static final String MSG_COULD_NOT_READ_FILE = "Could not read file:\n";
+  private static final String MSG_COULD_NOT_SAVE_CSV = "Could not save CSV:\n";
 
   private StackPane root;
   private Parent homePage;
@@ -367,7 +374,7 @@ public class App extends Application {
             buildAndStartGame(name, cash, stocks, false, exchangeName);
           }
         },
-        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification(NOTIF_TITLE_CSV_ERROR, MSG_COULD_NOT_LOAD_MARKET_DATA + error.getMessage(), false));
   }
 
   private void startGameWithCsv(String name, double cash, File csvFile) {
@@ -383,10 +390,10 @@ public class App extends Application {
           if (result.hasErrors()) {
             openCsvEditorFromImport(result, name, cash, csvFile);
           } else {
-            buildAndStartGame(name, cash, StockCsvLoader.toStocks(result.getRows()), false, "Custom Market");
+            buildAndStartGame(name, cash, StockCsvLoader.toStocks(result.getRows()), false, EXCHANGE_NAME_CUSTOM_MARKET);
           }
         },
-        error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification(NOTIF_TITLE_CSV_ERROR, MSG_COULD_NOT_READ_FILE + error.getMessage(), false));
   }
 
   private void openCsvEditor(CsvParseResult result, String name, double cash) {
@@ -395,7 +402,7 @@ public class App extends Application {
       Parent editorPage = CsvEditorView.build(
           result,
           withBack(this::goHomeKeepMusic),
-          rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
+          rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, EXCHANGE_NAME_CUSTOM_MARKET),
           (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
           () -> openCsvEditor(result, name, cash));
       navigateKeepMusic(editorPage);
@@ -418,7 +425,7 @@ public class App extends Application {
           }
         },
         result -> openCsvEditorFromImport(result, name, cash, csvFile),
-        error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification(NOTIF_TITLE_CSV_ERROR, MSG_COULD_NOT_READ_FILE + error.getMessage(), false));
   }
 
   private void openCsvEditorFromImport(CsvParseResult result, String name, double cash,
@@ -428,7 +435,7 @@ public class App extends Application {
       Parent editorPage = CsvEditorView.build(
           result,
           withBack(() -> goToCustomStocks(name, cash, selectedFile)),
-          rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market"),
+          rows -> buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, EXCHANGE_NAME_CUSTOM_MARKET),
           (rows, file) -> saveCsvRowsAndStartGame(name, cash, rows, file),
           () -> openCsvEditorFromImport(result, name, cash, selectedFile));
       navigateKeepMusic(editorPage);
@@ -471,13 +478,13 @@ public class App extends Application {
             doOpen.run();
           }
         },
-        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification(NOTIF_TITLE_CSV_ERROR, MSG_COULD_NOT_LOAD_MARKET_DATA + error.getMessage(), false));
   }
 
   private void openCsvEditorFromSaveMeta(SaveMeta selectedSave, String name, double cash) {
     File saveStocksFile = resolveSaveStocksFile(selectedSave);
     if (saveStocksFile == null) {
-      overlayService.showNotification("Save Error", "Could not locate stocks.csv for that save.", false);
+      overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, "Could not locate stocks.csv for that save.", false);
       return;
     }
     openCsvEditorFromImport(saveStocksFile, name, cash);
@@ -488,10 +495,10 @@ public class App extends Application {
     try {
       edu.ntnu.idatt2003.g23.io.StockCsvExporter.writeCsvRows(file.toPath(), rows);
     } catch (IOException e) {
-      overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+      overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, MSG_COULD_NOT_SAVE_CSV + e.getMessage(), false);
       return;
     }
-    buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, "Custom Market");
+    buildAndStartGame(name, cash, StockCsvLoader.toStocks(rows), true, EXCHANGE_NAME_CUSTOM_MARKET);
   }
 
   private void openBlankCsvEditorStandalone(Runnable onBack) {
@@ -520,7 +527,7 @@ public class App extends Application {
               overlayService.showNotification("Saved", "Stock data exported to:\n" + file.getName(), true);
               onBack.run();
             } catch (IOException e) {
-              overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+              overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, MSG_COULD_NOT_SAVE_CSV + e.getMessage(), false);
             }
           },
           onReset);
@@ -551,7 +558,7 @@ public class App extends Application {
         result -> openCsvEditorStandalone(result, onBack,
             () -> openCsvEditorFromImportStandalone(csvFile, onBack, onSuccessfulSave),
             onSuccessfulSave),
-        error -> overlayService.showNotification("CSV Error", "Could not read file:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification(NOTIF_TITLE_CSV_ERROR, MSG_COULD_NOT_READ_FILE + error.getMessage(), false));
   }
 
   private void openCsvEditorFromBuiltInMarketStandalone(String csvResource, Runnable onBack) {
@@ -568,13 +575,13 @@ public class App extends Application {
         },
         result -> openCsvEditorStandalone(result, onBack,
             () -> openCsvEditorFromBuiltInMarketStandalone(csvResource, onBack)),
-        error -> overlayService.showNotification("CSV Error", "Could not load market data:\n" + error.getMessage(), false));
+        error -> overlayService.showNotification(NOTIF_TITLE_CSV_ERROR, MSG_COULD_NOT_LOAD_MARKET_DATA + error.getMessage(), false));
   }
 
   private void openCsvEditorFromSaveMetaStandalone(SaveMeta selectedSave, Runnable onBack) {
     File saveStocksFile = resolveSaveStocksFile(selectedSave);
     if (saveStocksFile == null) {
-      overlayService.showNotification("Save Error", "Could not locate stocks.csv for that save.", false);
+      overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, "Could not locate stocks.csv for that save.", false);
       return;
     }
     openCsvEditorFromImportStandalone(saveStocksFile, onBack, () -> {
@@ -589,7 +596,7 @@ public class App extends Application {
 
   private void openCsvEditorFromSaveMetaForContinue(SaveMeta selectedSave, Runnable onBack) {
     if (selectedSave == null || selectedSave.saveDir() == null) {
-      overlayService.showNotification("Save Error", "Could not locate that save.", false);
+      overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, "Could not locate that save.", false);
       return;
     }
 
@@ -597,7 +604,7 @@ public class App extends Application {
     try {
       loaded = GameSaveLoader.load(selectedSave.saveDir());
     } catch (IOException | IllegalStateException e) {
-      overlayService.showNotification("Save Error", "Could not load save:\n" + e.getMessage(), false);
+      overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, "Could not load save:\n" + e.getMessage(), false);
       return;
     }
 
@@ -617,7 +624,7 @@ public class App extends Application {
             try {
               updatedPlayer = rebuildPlayerForEditedExchange(loadedPlayer, updatedExchange);
             } catch (IllegalStateException e) {
-              overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+              overlayService.showNotification(NOTIF_TITLE_EDIT_BLOCKED, e.getMessage(), false);
               return;
             }
             try {
@@ -636,7 +643,7 @@ public class App extends Application {
               StockCsvExporter.writeCsvRows(file.toPath(), rows);
               GameSaveExporter.markSaveAsFlagged(selectedSave.saveDir());
             } catch (IOException e) {
-              overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+              overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, MSG_COULD_NOT_SAVE_CSV + e.getMessage(), false);
               return;
             }
             Exchange updatedExchange = new Exchange(loadedExchange.getName(), StockCsvLoader.toStocks(rows));
@@ -645,7 +652,7 @@ public class App extends Application {
             try {
               updatedPlayer = rebuildPlayerForEditedExchange(loadedPlayer, updatedExchange);
             } catch (IllegalStateException e) {
-              overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+              overlayService.showNotification(NOTIF_TITLE_EDIT_BLOCKED, e.getMessage(), false);
               return;
             }
             currentFlagged = true;
@@ -759,7 +766,7 @@ public class App extends Application {
       try {
         StockCsvExporter.writeCsvRows(exportFile.toPath(), rows);
       } catch (IOException e) {
-        overlayService.showNotification("Save Error", "Could not save CSV:\n" + e.getMessage(), false);
+        overlayService.showNotification(NOTIF_TITLE_SAVE_ERROR, MSG_COULD_NOT_SAVE_CSV + e.getMessage(), false);
         return;
       }
     }
@@ -771,7 +778,7 @@ public class App extends Application {
     try {
       updatedPlayer = rebuildPlayerForEditedExchange(currentPlayer, updatedExchange);
     } catch (IllegalStateException e) {
-      overlayService.showNotification("Edit Blocked", e.getMessage(), false);
+      overlayService.showNotification(NOTIF_TITLE_EDIT_BLOCKED, e.getMessage(), false);
       return;
     }
 
