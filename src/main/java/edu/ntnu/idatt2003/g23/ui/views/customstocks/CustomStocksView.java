@@ -27,6 +27,14 @@ import javafx.stage.FileChooser;
 
 public final class CustomStocksView {
 
+  private static final String SUB_TAGLINE_STYLE = "sub-tagline";
+  private static final String SECONDARY_BUTTON_STYLE = "secondary-button";
+  private static final String WARNING_TEXT_STYLE = "-fx-text-fill: #f5a201;";
+  private static final String IMPORT_CSV_ACTION_BUTTON_STYLE = "import-csv-action-button";
+  private static final String DRAG_OVER_STYLE = "drag-over";
+  private static final String SETUP_FIELD_LABEL_STYLE = "setup-field-label";
+  private static final String IMPORT_CSV_ACTION_HINT_STYLE = "import-csv-action-hint";
+
   public static BorderPane build(Runnable onBack, Runnable onMakeOwn,
                                  Consumer<File> onEditCsv, Consumer<File> onContinue,
                                  Consumer<String> onEditBuiltInMarket,
@@ -50,7 +58,7 @@ public final class CustomStocksView {
     if (onEditSaveFile != null) {
       try {
         availableSaves = GameSaveLoader.listSaves();
-      } catch (IOException ignored) {
+      } catch (IOException _) {
         availableSaves = List.of();
       }
     }
@@ -76,15 +84,15 @@ public final class CustomStocksView {
     dropLabel.getStyleClass().add("drop-zone-label");
 
     Label orLabel = new Label("\u2014  or  \u2014");
-    orLabel.getStyleClass().add("sub-tagline");
+    orLabel.getStyleClass().add(SUB_TAGLINE_STYLE);
 
     Button browseBtn = new Button("Browse Files");
-    browseBtn.getStyleClass().add("secondary-button");
+    browseBtn.getStyleClass().add(SECONDARY_BUTTON_STYLE);
     browseBtn.setStyle("-fx-pref-height: 38; -fx-font-size: 13;");
 
     Label fileNameLabel = new Label("");
-    fileNameLabel.getStyleClass().add("sub-tagline");
-    fileNameLabel.setStyle("-fx-text-fill: #f5a201;");
+    fileNameLabel.getStyleClass().add(SUB_TAGLINE_STYLE);
+    fileNameLabel.setStyle(WARNING_TEXT_STYLE);
 
     VBox dropZone = new VBox(12, dropIcon, dropLabel, orLabel, browseBtn, fileNameLabel);
     dropZone.getStyleClass().add("drop-zone");
@@ -95,14 +103,14 @@ public final class CustomStocksView {
     final File[] chosenFile = {null};
 
     Button makeOwnBtn = new Button("Make Your Own Stock Data");
-    makeOwnBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
+    makeOwnBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, IMPORT_CSV_ACTION_BUTTON_STYLE);
 
     Button editCsvBtn = new Button("Edit Stock Data");
-    editCsvBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
+    editCsvBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, IMPORT_CSV_ACTION_BUTTON_STYLE);
     editCsvBtn.setDisable(true);
 
     Button continueBtn = new Button("\u25B6   Start with this data");
-    continueBtn.getStyleClass().addAll("start-button", "import-csv-action-button");
+    continueBtn.getStyleClass().addAll("start-button", IMPORT_CSV_ACTION_BUTTON_STYLE);
     continueBtn.setMaxWidth(580);
     continueBtn.setStyle("-fx-pref-height: 58; -fx-font-size: 20;");
     continueBtn.setDisable(true);
@@ -112,7 +120,7 @@ public final class CustomStocksView {
     Runnable clearSelection = () -> {
       chosenFile[0] = null;
       fileNameLabel.setText("");
-      fileNameLabel.setStyle("-fx-text-fill: #f5a201;");
+      fileNameLabel.setStyle(WARNING_TEXT_STYLE);
       editCsvBtn.setDisable(true);
       continueBtn.setDisable(true);
     };
@@ -132,7 +140,7 @@ public final class CustomStocksView {
       }
       chosenFile[0] = file;
       fileNameLabel.setText("\u2714  " + file.getName());
-      fileNameLabel.setStyle("-fx-text-fill: #f5a201;");
+      fileNameLabel.setStyle(WARNING_TEXT_STYLE);
       editCsvBtn.setDisable(false);
       continueBtn.setDisable(false);
     };
@@ -153,15 +161,15 @@ public final class CustomStocksView {
     dropZone.setOnDragOver(e -> {
       if (e.getDragboard().hasFiles()) {
         e.acceptTransferModes(TransferMode.COPY);
-        dropZone.getStyleClass().remove("drag-over");
-        dropZone.getStyleClass().add("drag-over");
+        dropZone.getStyleClass().remove(DRAG_OVER_STYLE);
+        dropZone.getStyleClass().add(DRAG_OVER_STYLE);
       }
       e.consume();
     });
-    dropZone.setOnDragExited(e -> dropZone.getStyleClass().remove("drag-over"));
+    dropZone.setOnDragExited(e -> dropZone.getStyleClass().remove(DRAG_OVER_STYLE));
     dropZone.setOnDragDropped(e -> {
       var db = e.getDragboard();
-      dropZone.getStyleClass().remove("drag-over");
+      dropZone.getStyleClass().remove(DRAG_OVER_STYLE);
       if (db.hasFiles()) {
         File f = db.getFiles().get(0);
         selectFile.accept(f);
@@ -197,7 +205,7 @@ public final class CustomStocksView {
 
     // ── CSV Format Requirements ───────────────────────────────────────────
     Label reqTitle = new Label("CSV Format Requirements");
-    reqTitle.getStyleClass().add("setup-field-label");
+    reqTitle.getStyleClass().add(SETUP_FIELD_LABEL_STYLE);
 
     Label reqDesc = new Label("Your CSV file must include these columns:");
     reqDesc.setStyle("-fx-font-size: 12; -fx-text-fill: #4a6899;");
@@ -233,7 +241,7 @@ public final class CustomStocksView {
     Label actionHint = new Label(editorOnlyMode
         ? "Create a dataset, edit the current market, or open stock data in the editor."
         : "Create a fresh dataset or open the selected CSV in the editor.");
-    actionHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+    actionHint.getStyleClass().addAll(SUB_TAGLINE_STYLE, IMPORT_CSV_ACTION_HINT_STYLE);
 
     HBox editorBtnRow = new HBox(18, makeOwnBtn, editCsvBtn);
     editorBtnRow.getStyleClass().add("import-csv-action-row");
@@ -246,11 +254,11 @@ public final class CustomStocksView {
     VBox saveSection = null;
     if (hasSaveFiles) {
       Label saveTitle = new Label("Open stock data from a save");
-      saveTitle.getStyleClass().add("setup-field-label");
+      saveTitle.getStyleClass().add(SETUP_FIELD_LABEL_STYLE);
 
       Label saveHint = new Label(
           "Pick a save and load its saved stock history into the CSV editor.");
-      saveHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+        saveHint.getStyleClass().addAll(SUB_TAGLINE_STYLE, IMPORT_CSV_ACTION_HINT_STYLE);
 
       ComboBox<SaveMeta> saveCombo = new ComboBox<>();
       saveCombo.setPromptText("Select a save…");
@@ -267,7 +275,7 @@ public final class CustomStocksView {
       });
 
       Button openSaveBtn = new Button("\uD83D\uDCBE  Open Save Data");
-      openSaveBtn.getStyleClass().addAll("secondary-button", "import-csv-action-button");
+      openSaveBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, IMPORT_CSV_ACTION_BUTTON_STYLE);
       openSaveBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
       openSaveBtn.setOnAction(e -> {
         SaveMeta selected = saveCombo.getSelectionModel().getSelectedItem();
@@ -291,10 +299,10 @@ public final class CustomStocksView {
     VBox builtInSection = null;
     if (hasBuiltInMarkets) {
       Label builtInTitle = new Label("Edit a built-in market");
-      builtInTitle.getStyleClass().add("setup-field-label");
+      builtInTitle.getStyleClass().add(SETUP_FIELD_LABEL_STYLE);
 
       Label builtInHint = new Label("Pick one of the default markets and open it in the CSV editor.");
-      builtInHint.getStyleClass().addAll("sub-tagline", "import-csv-action-hint");
+      builtInHint.getStyleClass().addAll(SUB_TAGLINE_STYLE, IMPORT_CSV_ACTION_HINT_STYLE);
 
       ComboBox<MarketOption> builtInMarketBox = new ComboBox<>();
       builtInMarketBox.getItems().addAll(AppConfig.BUILT_IN_MARKETS);
@@ -306,7 +314,7 @@ public final class CustomStocksView {
       builtInMarketBox.setOnShowing(e -> notifySelect(onSelect));
 
       Button editBuiltInBtn = new Button("\u270e  Open in Editor");
-      editBuiltInBtn.getStyleClass().addAll("secondary-button", "import-csv-built-in-open-button");
+      editBuiltInBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, "import-csv-built-in-open-button");
       editBuiltInBtn.setDisable(true);
 
       builtInMarketBox.valueProperty().addListener((obs, oldValue, newValue) -> {
