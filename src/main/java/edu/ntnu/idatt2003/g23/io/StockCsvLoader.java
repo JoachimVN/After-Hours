@@ -1,6 +1,5 @@
 package edu.ntnu.idatt2003.g23.io;
 
-import edu.ntnu.idatt2003.g23.AppConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.model.Stock;
 
 // NOTE: Can currently handle multiple stock prices (logs), could be useful later
@@ -28,6 +28,10 @@ import edu.ntnu.idatt2003.g23.model.Stock;
  * <p>The first line is treated as a header when it starts with {@code symbol,}.</p>
  */
 public final class StockCsvLoader {
+
+  private static final String COL_SYMBOL = "symbol";
+  private static final String COL_PRICES = "prices";
+  private static final String MSG_NO_PRICE = "No price set — add at least one price (e.g. 214.10)";
 
   private StockCsvLoader() {
     // Utility class
@@ -218,11 +222,11 @@ public final class StockCsvLoader {
     String prices = row.getPrices().trim();
 
     if (symbol.isEmpty()) {
-      setError(row, "symbol", "Symbol must not be empty");
+      setError(row, COL_SYMBOL, "Symbol must not be empty");
       return;
     }
     if (!symbol.matches("[A-Z]+(\\.[A-Z]+)*")) {
-      setError(row, "symbol", buildSymbolError(symbol));
+      setError(row, COL_SYMBOL, buildSymbolError(symbol));
       return;
     }
     if (company.isEmpty()) {
@@ -230,7 +234,7 @@ public final class StockCsvLoader {
       return;
     }
     if (prices.isEmpty()) {
-      setError(row, "prices", "No price set — add at least one price (e.g. 214.10)");
+      setError(row, COL_PRICES, MSG_NO_PRICE);
       return;
     }
 
@@ -244,13 +248,13 @@ public final class StockCsvLoader {
         try {
           BigDecimal val = new BigDecimal(p);
           if (val.compareTo(BigDecimal.ZERO) <= 0) {
-            setError(row, "prices",
+            setError(row, COL_PRICES,
                 formatPriceError(p, week, "must be greater than zero"));
             return;
           }
           hasPrices = true;
-        } catch (NumberFormatException e) {
-          setError(row, "prices",
+        } catch (NumberFormatException _) {
+          setError(row, COL_PRICES,
               formatPriceError(p, week, "isn't a valid price — enter a number like 214.10"));
           return;
         }
@@ -258,7 +262,7 @@ public final class StockCsvLoader {
     }
 
     if (!hasPrices) {
-      setError(row, "prices", "No price set — add at least one price (e.g. 214.10)");
+      setError(row, COL_PRICES, MSG_NO_PRICE);
       return;
     }
 
@@ -329,11 +333,11 @@ public final class StockCsvLoader {
           "Row is incomplete — " + missing + " (format should be: symbol,company,price)");
     }
     if (symbol.isEmpty()) {
-      return rowWithError(lineNumber, symbol, company, prices, "symbol",
+      return rowWithError(lineNumber, symbol, company, prices, COL_SYMBOL,
           "Symbol must not be empty");
     }
     if (!symbol.matches("[A-Z]+(\\.[A-Z]+)*")) {
-      return rowWithError(lineNumber, symbol, company, prices, "symbol",
+      return rowWithError(lineNumber, symbol, company, prices, COL_SYMBOL,
           buildSymbolError(symbol));
     }
     if (company.isEmpty()) {
@@ -341,8 +345,8 @@ public final class StockCsvLoader {
           "Company name must not be empty");
     }
     if (prices.isEmpty()) {
-      return rowWithError(lineNumber, symbol, company, prices, "prices",
-          "No price set — add at least one price (e.g. 214.10)");
+      return rowWithError(lineNumber, symbol, company, prices, COL_PRICES,
+          MSG_NO_PRICE);
     }
 
     String[] rawPrices = prices.split(";");
@@ -355,20 +359,20 @@ public final class StockCsvLoader {
         try {
           BigDecimal val = new BigDecimal(p);
           if (val.compareTo(BigDecimal.ZERO) <= 0) {
-            return rowWithError(lineNumber, symbol, company, prices, "prices",
+            return rowWithError(lineNumber, symbol, company, prices, COL_PRICES,
                 formatPriceError(p, week, "must be greater than zero"));
           }
           hasPrices = true;
-        } catch (NumberFormatException e) {
-          return rowWithError(lineNumber, symbol, company, prices, "prices",
+        } catch (NumberFormatException _) {
+          return rowWithError(lineNumber, symbol, company, prices, COL_PRICES,
               formatPriceError(p, week, "isn't a valid price — enter a number like 214.10"));
         }
       }
     }
 
     if (!hasPrices) {
-      return rowWithError(lineNumber, symbol, company, prices, "prices",
-          "No price set — add at least one price (e.g. 214.10)");
+      return rowWithError(lineNumber, symbol, company, prices, COL_PRICES,
+          MSG_NO_PRICE);
     }
 
     return new CsvRow(lineNumber, symbol, company, prices, "");

@@ -1,18 +1,5 @@
 package edu.ntnu.idatt2003.g23.io;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-
-import edu.ntnu.idatt2003.g23.model.Exchange;
-import edu.ntnu.idatt2003.g23.model.Player;
-import edu.ntnu.idatt2003.g23.model.PlayerStatus;
-import edu.ntnu.idatt2003.g23.model.Share;
-import edu.ntnu.idatt2003.g23.model.Stock;
-import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
-import edu.ntnu.idatt2003.g23.model.transaction.Sale;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +11,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import edu.ntnu.idatt2003.g23.model.Exchange;
+import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.model.PlayerStatus;
+import edu.ntnu.idatt2003.g23.model.Share;
+import edu.ntnu.idatt2003.g23.model.Stock;
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+import edu.ntnu.idatt2003.g23.model.transaction.Sale;
 import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 
 /**
@@ -32,6 +31,19 @@ import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 public final class GameSaveLoader {
 
   private static final Gson GSON = new Gson();
+  private static final String SAVE_JSON_FILE = "save.json";
+  private static final String STOCKS_CSV_FILE = "stocks.csv";
+
+  private static final String KEY_DISPLAY_NAME = "displayName";
+  private static final String KEY_PLAYER_NAME = "playerName";
+  private static final String KEY_STATUS = "status";
+  private static final String KEY_PROFILE_AVATAR = "profileAvatar";
+  private static final String KEY_WEEKS_USING_CHICK_AVATAR = "weeksUsingChickAvatar";
+  private static final String KEY_QUANTITY = "quantity";
+  private static final String KEY_NET_WORTH = "netWorth";
+  private static final String KEY_UI_STATE = "uiState";
+  private static final String KEY_SELECTED_SYMBOL = "selectedSymbol";
+
 
   private GameSaveLoader() {
   }
@@ -74,13 +86,13 @@ public final class GameSaveLoader {
     if (Files.exists(dir)) {
       try (var stream = Files.list(dir)) {
         stream.filter(Files::isDirectory).forEach(saveDir -> {
-          Path json = saveDir.resolve("save.json");
+          Path json = saveDir.resolve(SAVE_JSON_FILE);
           if (!Files.exists(json)) {
             return;
           }
           try {
             result.add(readMeta(saveDir, json));
-          } catch (IOException ignored) {
+          } catch (IOException _) {
           }
         });
       }
@@ -94,7 +106,7 @@ public final class GameSaveLoader {
       List<Path> staleAutosaveDirs = new ArrayList<>();
       try (var stream = Files.list(autoDir)) {
         stream.filter(Files::isDirectory).forEach(saveDir -> {
-          Path json = saveDir.resolve("save.json");
+          Path json = saveDir.resolve(SAVE_JSON_FILE);
           if (!Files.exists(json)) {
             return;
           }
@@ -112,7 +124,7 @@ public final class GameSaveLoader {
             } else {
               staleAutosaveDirs.add(saveDir);
             }
-          } catch (IOException ignored) {
+          } catch (IOException _) {
           }
         });
       }
@@ -120,7 +132,7 @@ public final class GameSaveLoader {
       for (Path staleDir : staleAutosaveDirs) {
         try {
           deleteSave(staleDir);
-        } catch (IOException ignored) {
+        } catch (IOException _) {
         }
       }
     }
@@ -150,13 +162,13 @@ public final class GameSaveLoader {
     Path moved = Files.move(saveDir, target);
 
     if (newDisplayName != null && !newDisplayName.isBlank()) {
-      Path jsonPath = moved.resolve("save.json");
+      Path jsonPath = moved.resolve(SAVE_JSON_FILE);
       if (Files.exists(jsonPath)) {
         JsonObject obj =
             GSON.fromJson(Files.readString(jsonPath, StandardCharsets.UTF_8), JsonObject.class);
         String trimmedName = newDisplayName.strip();
-        obj.addProperty("displayName", trimmedName);
-        obj.addProperty("playerName", trimmedName);
+        obj.addProperty(KEY_DISPLAY_NAME, trimmedName);
+        obj.addProperty(KEY_PLAYER_NAME, trimmedName);
         Files.writeString(jsonPath, GSON.toJson(obj), StandardCharsets.UTF_8);
       }
     }
@@ -187,16 +199,16 @@ public final class GameSaveLoader {
    * @throws IllegalStateException if the save data is corrupt
    */
   public static Object[] load(Path saveDir) throws IOException {
-    Path jsonPath = saveDir.resolve("save.json");
-    Path csvPath = saveDir.resolve("stocks.csv");
+    Path jsonPath = saveDir.resolve(SAVE_JSON_FILE);
+    Path csvPath = saveDir.resolve(STOCKS_CSV_FILE);
 
     String raw = Files.readString(jsonPath, StandardCharsets.UTF_8);
     JsonObject obj = GSON.fromJson(raw, JsonObject.class);
 
-    String playerName = obj.get("playerName").getAsString();
+    String playerName = obj.get(KEY_PLAYER_NAME).getAsString();
     BigDecimal starting = new BigDecimal(obj.get("startingMoney").getAsString());
     BigDecimal money = new BigDecimal(obj.get("money").getAsString());
-    String statusStr = obj.get("status").getAsString();
+    String statusStr = obj.get(KEY_STATUS).getAsString();
     int week = obj.get("week").getAsInt();
     String exchangeName = obj.get("exchangeName").getAsString();
 
@@ -220,8 +232,8 @@ public final class GameSaveLoader {
     Player player = new Player(playerName, starting);
     player.setMoney(money);
     String savedProfileAvatar = null;
-    if (obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()) {
-      savedProfileAvatar = obj.get("profileAvatar").getAsString();
+    if (obj.has(KEY_PROFILE_AVATAR) && !obj.get(KEY_PROFILE_AVATAR).isJsonNull()) {
+      savedProfileAvatar = obj.get(KEY_PROFILE_AVATAR).getAsString();
       player.setProfileAvatar(savedProfileAvatar);
     }
     int derivedLegacyPhase = deriveLegacyChickPhase(savedProfileAvatar);
@@ -229,12 +241,12 @@ public final class GameSaveLoader {
       player.setWeeksUsingChickAvatar(derivedLegacyPhase * 10);
     }
     // Restore chicks avatar progression if present
-    if (obj.has("weeksUsingChickAvatar") && !obj.get("weeksUsingChickAvatar").isJsonNull()) {
-      player.setWeeksUsingChickAvatar(obj.get("weeksUsingChickAvatar").getAsInt());
+    if (obj.has(KEY_WEEKS_USING_CHICK_AVATAR) && !obj.get(KEY_WEEKS_USING_CHICK_AVATAR).isJsonNull()) {
+      player.setWeeksUsingChickAvatar(obj.get(KEY_WEEKS_USING_CHICK_AVATAR).getAsInt());
     }
     try {
       player.setStatus(PlayerStatus.valueOf(statusStr));
-    } catch (IllegalArgumentException ignored) {
+    } catch (IllegalArgumentException _) {
       // unknown status → keep default NOVICE
     }
 
@@ -244,7 +256,7 @@ public final class GameSaveLoader {
       for (JsonElement el : portfolio) {
         JsonObject s = el.getAsJsonObject();
         String symbol = s.get("symbol").getAsString();
-        BigDecimal quantity = new BigDecimal(s.get("quantity").getAsString());
+        BigDecimal quantity = new BigDecimal(s.get(KEY_QUANTITY).getAsString());
         BigDecimal purchase = new BigDecimal(s.get("purchasePrice").getAsString());
 
         // Find the matching Stock object from the exchange
@@ -263,7 +275,7 @@ public final class GameSaveLoader {
         JsonObject t = el.getAsJsonObject();
         String type = t.get("type").getAsString();
         String symbol = t.get("symbol").getAsString();
-        BigDecimal quantity = new BigDecimal(t.get("quantity").getAsString());
+        BigDecimal quantity = new BigDecimal(t.get(KEY_QUANTITY).getAsString());
         BigDecimal price = new BigDecimal(t.get("purchasePrice").getAsString());
         int txWeek = t.get("week").getAsInt();
 
@@ -289,7 +301,7 @@ public final class GameSaveLoader {
         int snapWeek = s.get("week").getAsInt();
         BigDecimal cashValue = new BigDecimal(s.get("cash").getAsString());
         BigDecimal portfolioValue = new BigDecimal(s.get("portfolioValue").getAsString());
-        BigDecimal netWorthValue = new BigDecimal(s.get("netWorth").getAsString());
+        BigDecimal netWorthValue = new BigDecimal(s.get(KEY_NET_WORTH).getAsString());
         snapshots.add(
             new Player.WeeklySnapshot(snapWeek, cashValue, portfolioValue, netWorthValue));
       }
@@ -301,8 +313,8 @@ public final class GameSaveLoader {
 
     // ── Restore UI state (optional — absent in saves from older versions) ──
     GameUiState uiState = null;
-    if (obj.has("uiState") && obj.get("uiState").isJsonObject()) {
-      JsonObject us = obj.getAsJsonObject("uiState");
+    if (obj.has(KEY_UI_STATE) && obj.get(KEY_UI_STATE).isJsonObject()) {
+      JsonObject us = obj.getAsJsonObject(KEY_UI_STATE);
       List<String> favs = new ArrayList<>();
       if (us.has("favorites")) {
         for (JsonElement el : us.getAsJsonArray("favorites")) {
@@ -322,8 +334,8 @@ public final class GameSaveLoader {
         }
       }
       String sort = us.has("stockSort") ? us.get("stockSort").getAsString() : "NAME";
-      String sel = us.has("selectedSymbol") && !us.get("selectedSymbol").isJsonNull()
-          ? us.get("selectedSymbol").getAsString() : null;
+      String sel = us.has(KEY_SELECTED_SYMBOL) && !us.get(KEY_SELECTED_SYMBOL).isJsonNull()
+          ? us.get(KEY_SELECTED_SYMBOL).getAsString() : null;
       double sidebarDivider = us.has("sidebarDivider") ? us.get("sidebarDivider").getAsDouble() : 0.125;
       double portfolioDivider = us.has("portfolioDivider") ? us.get("portfolioDivider").getAsDouble() : 0.85;
       uiState = new GameUiState(favs, filters, chips, sort, sel, sidebarDivider, portfolioDivider);
@@ -340,30 +352,36 @@ public final class GameSaveLoader {
     String raw = Files.readString(jsonPath, StandardCharsets.UTF_8);
     JsonObject obj = GSON.fromJson(raw, JsonObject.class);
 
-    String playerName = obj.get("playerName").getAsString();
-    String displayName = obj.has("displayName") && !obj.get("displayName").isJsonNull()
-        ? obj.get("displayName").getAsString().strip()
+    String playerName = obj.get(KEY_PLAYER_NAME).getAsString();
+    String displayName = obj.has(KEY_DISPLAY_NAME) && !obj.get(KEY_DISPLAY_NAME).isJsonNull()
+        ? obj.get(KEY_DISPLAY_NAME).getAsString().strip()
         : playerName;
     if (displayName.isBlank()) {
       displayName = playerName;
     }
-    String profileAvatar = obj.has("profileAvatar") && !obj.get("profileAvatar").isJsonNull()
-        ? obj.get("profileAvatar").getAsString()
+    String profileAvatar = obj.has(KEY_PROFILE_AVATAR) && !obj.get(KEY_PROFILE_AVATAR).isJsonNull()
+        ? obj.get(KEY_PROFILE_AVATAR).getAsString()
         : "\uD83E\uDDD1";
     int weeksUsingChick =
-        obj.has("weeksUsingChickAvatar") && !obj.get("weeksUsingChickAvatar").isJsonNull()
-            ? obj.get("weeksUsingChickAvatar").getAsInt()
+        obj.has(KEY_WEEKS_USING_CHICK_AVATAR) && !obj.get(KEY_WEEKS_USING_CHICK_AVATAR).isJsonNull()
+            ? obj.get(KEY_WEEKS_USING_CHICK_AVATAR).getAsInt()
             : deriveLegacyChickPhase(profileAvatar) * 10;
-    int chickPhaseUnlocked =
-        weeksUsingChick >= 30 ? 3 : weeksUsingChick >= 20 ? 2 : weeksUsingChick >= 10 ? 1 : 0;
+    int chickPhaseUnlocked = 0;
+    if (weeksUsingChick >= 30) {
+      chickPhaseUnlocked = 3;
+    } else if (weeksUsingChick >= 20) {
+      chickPhaseUnlocked = 2;
+    } else if (weeksUsingChick >= 10) {
+      chickPhaseUnlocked = 1;
+    }
     profileAvatar = AvatarUtil.getDisplayAvatarStem(profileAvatar, chickPhaseUnlocked);
     String exchangeName = obj.get("exchangeName").getAsString();
     String savedAt = obj.get("savedAt").getAsString();
     int week = obj.get("week").getAsInt();
     String money = obj.get("money").getAsString();
-    String netWorth = obj.has("netWorth") ? obj.get("netWorth").getAsString() : money;
+    String netWorth = obj.has(KEY_NET_WORTH) ? obj.get(KEY_NET_WORTH).getAsString() : money;
     boolean isAutosave = obj.has("autosave") && obj.get("autosave").getAsBoolean();
-    String status = obj.has("status") ? obj.get("status").getAsString() : "NOVICE";
+    String status = obj.has(KEY_STATUS) ? obj.get(KEY_STATUS).getAsString() : "NOVICE";
     boolean flagged = readFlagged(obj);
 
     JsonArray portfolio = obj.getAsJsonArray("portfolio");
@@ -372,10 +390,10 @@ public final class GameSaveLoader {
     if (portfolio != null) {
       for (JsonElement el : portfolio) {
         JsonObject s = el.getAsJsonObject();
-        if (s.has("quantity")) {
+        if (s.has(KEY_QUANTITY)) {
           try {
-            totalShares += new java.math.BigDecimal(s.get("quantity").getAsString()).intValue();
-          } catch (NumberFormatException ignored) {
+            totalShares += new java.math.BigDecimal(s.get(KEY_QUANTITY).getAsString()).intValue();
+          } catch (NumberFormatException _) {
           }
         }
       }

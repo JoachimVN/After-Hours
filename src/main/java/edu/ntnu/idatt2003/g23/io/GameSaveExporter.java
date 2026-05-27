@@ -1,18 +1,8 @@
 package edu.ntnu.idatt2003.g23.io;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-
-import edu.ntnu.idatt2003.g23.model.Exchange;
-import edu.ntnu.idatt2003.g23.model.Player;
-import edu.ntnu.idatt2003.g23.model.Share;
-import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
-import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
-
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,6 +12,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+
+import edu.ntnu.idatt2003.g23.model.Exchange;
+import edu.ntnu.idatt2003.g23.model.Player;
+import edu.ntnu.idatt2003.g23.model.Share;
+import edu.ntnu.idatt2003.g23.model.transaction.Purchase;
+import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 
 /**
  * Saves a game to a folder under the application's per-user data directory.
@@ -177,7 +177,7 @@ public final class GameSaveExporter {
                                GameUiState uiState, boolean flagged) throws IOException {
     Files.createDirectories(saveDir);
     writeJson(saveDir, player, exchange, LocalDateTime.now(), uiState, false, flagged);
-    StockCsvExporter.writeHistory(saveDir.resolve("stocks.csv"),
+    StockCsvExporter.writeHistory(saveDir.resolve(STOCKS_CSV_FILE),
         exchange.getStocks());
   }
 

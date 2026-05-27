@@ -1,7 +1,5 @@
 package edu.ntnu.idatt2003.g23.io;
 
-import edu.ntnu.idatt2003.g23.model.Stock;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -13,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+
+import edu.ntnu.idatt2003.g23.model.Stock;
 
 public final class StockCsvExporter {
 
@@ -63,7 +63,7 @@ public final class StockCsvExporter {
         BigDecimal price;
         try {
           price = stock.getSalesPrice();
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException _) {
           // If a stock has no prices, skip it (or choose to write empty price instead).
           continue;
         }
