@@ -14,14 +14,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import edu.ntnu.idatt2003.g23.audio.HomePageMusicController;
 import edu.ntnu.idatt2003.g23.audio.SfxController;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer;
-import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.CsvEditorLoadAnalyzer.LoadStats;
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.CsvRow;
 import edu.ntnu.idatt2003.g23.io.GameSaveExporter;
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.io.GlobalSettingsManager;
@@ -36,9 +37,9 @@ import edu.ntnu.idatt2003.g23.model.transaction.Transaction;
 import edu.ntnu.idatt2003.g23.model.transaction.TransactionFactory;
 import edu.ntnu.idatt2003.g23.session.GameSessionService;
 import edu.ntnu.idatt2003.g23.ui.BackgroundCanvas;
+import edu.ntnu.idatt2003.g23.ui.navigation.NavigationCoordinator;
 import edu.ntnu.idatt2003.g23.ui.overlay.AppOverlayService;
 import edu.ntnu.idatt2003.g23.ui.overlay.SplashOverlayController;
-import edu.ntnu.idatt2003.g23.ui.navigation.NavigationCoordinator;
 import edu.ntnu.idatt2003.g23.ui.views.csveditor.CsvEditorView;
 import edu.ntnu.idatt2003.g23.ui.views.customstocks.CustomStocksView;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
@@ -52,6 +53,7 @@ import edu.ntnu.idatt2003.g23.ui.views.saveselect.SaveSelectView;
 import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsController;
 import edu.ntnu.idatt2003.g23.ui.views.settings.SettingsView;
 import edu.ntnu.idatt2003.g23.ui.views.setup.SetupView;
+import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -63,17 +65,17 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.effect.ColorAdjust;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.effect.ColorAdjust;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.FileChooser;
-import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 /**
@@ -324,7 +326,7 @@ public class App extends Application {
     currentProfileAvatar = gameSessionService.getProfileAvatar();
     currentSetupPage = new SetupView(
         withBack(this::goToSaveSelect),
-        (name, cash, csvResource) -> startGame(name, cash, csvResource),
+        this::startGame,
         (name, cash) -> {
           sfxController.play(SfxController.PLAY3, Math.min(sfxController.getVolume() * 1.5, 1.0));
           goToCustomStocks(name, cash);
@@ -355,8 +357,6 @@ public class App extends Application {
 
   private void startGame(String name, double cash, String csvResource) {
     runWithLoadingOverlay(
-        "Loading Market",
-        "Parsing stock data...",
         () -> StockCsvLoader.loadFromResourceWithErrors(csvResource),
         result -> {
           if (result.hasErrors()) {
@@ -372,8 +372,6 @@ public class App extends Application {
 
   private void startGameWithCsv(String name, double cash, File csvFile) {
     runWithLoadingOverlay(
-        "Importing CSV",
-        "Reading and validating file...",
         () -> {
           try {
             return StockCsvLoader.parseWithErrors(new FileReader(csvFile, StandardCharsets.UTF_8));
@@ -412,8 +410,6 @@ public class App extends Application {
 
   private void openCsvEditorFromImport(File csvFile, String name, double cash) {
     runWithLoadingOverlay(
-        "Opening CSV Editor",
-        "Parsing CSV data...",
         () -> {
           try {
             return StockCsvLoader.parseWithErrors(new FileReader(csvFile, StandardCharsets.UTF_8));
@@ -447,8 +443,6 @@ public class App extends Application {
 
   private void openCsvEditorFromBuiltInMarket(String csvResource, String name, double cash) {
     runWithLoadingOverlay(
-        "Loading Market",
-        "Parsing stock data...",
         () -> {
           try (InputStream is = getClass().getClassLoader().getResourceAsStream(csvResource)) {
             if (is == null) {
@@ -547,8 +541,6 @@ public class App extends Application {
   private void openCsvEditorFromImportStandalone(File csvFile, Runnable onBack,
       Runnable onSuccessfulSave) {
     runWithLoadingOverlay(
-        "Opening CSV Editor",
-        "Parsing CSV data...",
         () -> {
           try {
             return StockCsvLoader.parseWithErrors(new FileReader(csvFile, StandardCharsets.UTF_8));
@@ -564,8 +556,6 @@ public class App extends Application {
 
   private void openCsvEditorFromBuiltInMarketStandalone(String csvResource, Runnable onBack) {
     runWithLoadingOverlay(
-        "Loading Market",
-        "Parsing stock data...",
         () -> {
           try (InputStream is = getClass().getClassLoader().getResourceAsStream(csvResource)) {
             if (is == null) {
@@ -687,7 +677,7 @@ public class App extends Application {
           result,
           withBack(onBack),
           rows -> applyEditedMarketToCurrentGame(rows, null),
-          (rows, file) -> applyEditedMarketToCurrentGame(rows, file),
+          this::applyEditedMarketToCurrentGame,
           () -> openCurrentMarketCsvEditorForGame(onBack));
       navigateKeepMusic(editorPage);
       fadeInPage(editorPage);
@@ -1084,7 +1074,7 @@ public class App extends Application {
   private void startAutosaveTimer() {
     stopAutosaveTimer();
     autosaveTimer = new Timeline(new KeyFrame(Duration.minutes(1), e -> performAutosave()));
-    autosaveTimer.setCycleCount(Timeline.INDEFINITE);
+    autosaveTimer.setCycleCount(Animation.INDEFINITE);
     autosaveTimer.play();
   }
 
@@ -1141,9 +1131,10 @@ public class App extends Application {
       saveSettings();
     };
     ctrl.onMusicMutedChange = muted -> {
-      playSettingsToggleSfx(!muted);
-      musicMuted = muted;
-      if (muted) homePageMusicController.stop();
+      boolean mutedValue = Boolean.TRUE.equals(muted);
+      playSettingsToggleSfx(!mutedValue);
+      musicMuted = mutedValue;
+      if (mutedValue) homePageMusicController.stop();
       else resumeMusicForContext();
       saveSettings();
     };
@@ -1155,9 +1146,10 @@ public class App extends Application {
       saveSettings();
     };
     ctrl.onSfxMutedChange = muted -> {
-      playSettingsToggleSfx(!muted);
-      sfxMuted = muted;
-      sfxController.setVolume(muted ? 0.0 : sfxVolume);
+      boolean mutedValue = Boolean.TRUE.equals(muted);
+      playSettingsToggleSfx(!mutedValue);
+      sfxMuted = mutedValue;
+      sfxController.setVolume(mutedValue ? 0.0 : sfxVolume);
       saveSettings();
     };
 
@@ -1187,9 +1179,10 @@ public class App extends Application {
     };
     ctrl.autosaveEnabled = autosaveEnabled;
     ctrl.onAutosaveChange = enabled -> {
-      playSettingsToggleSfx(enabled);
-      autosaveEnabled = enabled;
-      if (enabled) startAutosaveTimer();
+      boolean enabledValue = Boolean.TRUE.equals(enabled);
+      playSettingsToggleSfx(enabledValue);
+      autosaveEnabled = enabledValue;
+      if (enabledValue) startAutosaveTimer();
       else stopAutosaveTimer();
       saveSettings();
     };
@@ -1222,8 +1215,8 @@ public class App extends Application {
     };
 
     // Export from Settings should work in both home/setup and in-game contexts.
-    ctrl.onExportJsonCsv = (meta, latestOnly) -> exportSaveDataFromSettings(meta, latestOnly);
-    ctrl.onExportCsvOnly = (meta, latestOnly) -> exportSaveCsvFromSettings(meta, latestOnly);
+    ctrl.onExportJsonCsv = this::exportSaveDataFromSettings;
+    ctrl.onExportCsvOnly = this::exportSaveCsvFromSettings;
 
     // ── Reset all ────────────────────────────────────────────────────────
     ctrl.onResetAll = () -> {
@@ -1438,8 +1431,6 @@ public class App extends Application {
   // ── Music-aware navigation primitives ────────────────────────────────────
 
   private <T> void runWithLoadingOverlay(
-      String title,
-      String message,
       Supplier<T> work,
       Consumer<T> onSuccess,
       Consumer<Throwable> onError) {
@@ -1450,12 +1441,8 @@ public class App extends Application {
       }
     };
 
-    task.setOnSucceeded(e -> {
-      onSuccess.accept(task.getValue());
-    });
-    task.setOnFailed(e -> {
-      onError.accept(task.getException());
-    });
+    task.setOnSucceeded(e -> onSuccess.accept(task.getValue()));
+    task.setOnFailed(e -> onError.accept(task.getException()));
 
     Thread t = new Thread(task, "ui-background-loader");
     t.setDaemon(true);
