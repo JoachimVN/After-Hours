@@ -27,10 +27,11 @@ You start with a fixed amount of cash, trade through weekly market updates, and 
 
 - Repository: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23
 - Releases: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/releases
-- Wiki: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wikis/home
+- Wiki: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki
 - Issues: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/issues
 - Merge Requests: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/merge_requests
 - Milestones: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/milestones
+- Soundtrack: https://soundcloud.com/joavn/sets/after-hours
 
 ## Screenshots
 <p align="center">
@@ -85,6 +86,7 @@ The project was developed as part of IDATT2003 at NTNU and focuses on:
 - PowerPoint
 - Photopea
 - Soundation
+- Audacity
 
 ## Getting Started
 
