@@ -1071,7 +1071,7 @@ public class App extends Application {
       currentFlagged = flagged;
       gameSessionService.setFlagged(flagged);
       if (autosaveToast) {
-        overlayService.showTimedNotification("Autosaved", "Progress autosaved.", true);
+        overlayService.showTimedNotification("Progress autosaved.");
       }
     } catch (IOException e) {
       overlayService.showNotification("Autosave Failed", "Could not autosave:\n" + e.getMessage(), false);
