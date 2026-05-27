@@ -69,6 +69,7 @@ public class Stock {
   }
 
   private List<BigDecimal> priceData() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (pricesLoaded) {
       return prices;
     }
@@ -215,6 +216,7 @@ public class Stock {
    * @return the percentage change, or 0 if only one price available or previous price is zero
    */
   public BigDecimal percentageChange() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     List<BigDecimal> data = priceData();
     if (data.size() < 2) {
       return BigDecimal.ZERO;

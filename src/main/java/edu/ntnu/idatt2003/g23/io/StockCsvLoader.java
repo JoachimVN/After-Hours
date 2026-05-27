@@ -13,7 +13,7 @@ import java.util.List;
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.model.Stock;
 
-// NOTE: Can currently handle multiple stock prices (logs), could be useful later
+// AI-ASSISTED: Drafted/refined with AI support and validated by the team.
 
 /**
  * Utility class for creating {@link Stock} objects from CSV data.
@@ -131,6 +131,7 @@ public final class StockCsvLoader {
    * @return parse result containing all rows
    */
   public static CsvParseResult parseWithErrors(Reader reader) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     List<CsvRow> rows = new ArrayList<>();
     int[] lineCounter = {0};
 
@@ -217,6 +218,7 @@ public final class StockCsvLoader {
    * @param row the row to validate
    */
   public static void validateRow(CsvRow row) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     String symbol = row.getSymbol().trim();
     String company = row.getCompany().trim();
     String prices = row.getPrices().trim();

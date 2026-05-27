@@ -59,6 +59,7 @@ public class Player {
   }
 
   public void recordWeeklySnapshot(int week) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (week < 1) {
       throw new IllegalArgumentException("Week must be positive");
     }
@@ -98,6 +99,7 @@ public class Player {
   }
 
   private void compactAndCapSnapshots() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (weeklySnapshots.isEmpty()) {
       return;
     }
@@ -248,6 +250,7 @@ public class Player {
    * Calculates the player's status based on their net worth growth and amount of weeks traded
    */
   public void calculateStatus() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     int weeks = getWeeksTraded();
     BigDecimal netWorth = getNetWorth();
 

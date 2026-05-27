@@ -108,6 +108,7 @@ public class Exchange {
   }
 
   private void assignVolatilities(List<Stock> stocks) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     int total = stocks.size();
     Collections.shuffle(stocks, random);
     int remaining = total;
@@ -293,6 +294,7 @@ public class Exchange {
    * random percentage change.
    */
   public void advance() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     this.week++;
     lastSpikeSymbols.clear();
     if (frozen) {

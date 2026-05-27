@@ -159,6 +159,7 @@ public final class ProfileController {
   }
 
   public List<FavoriteStockView> getFavoriteStocks() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     Set<String> favorites = getFavoriteSymbols().stream()
         .filter(s -> s != null && !s.isBlank())
         .collect(Collectors.toSet());
@@ -185,6 +186,7 @@ public final class ProfileController {
   }
 
       public List<PortfolioPositionView> getPortfolioPositions() {
+      // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
       return gameController.getPortfolioShares().stream()
         .sorted(java.util.Comparator.comparing(share -> share.getStock().getSymbol()))
         .map(share -> {

@@ -26,6 +26,7 @@ public final class NumberParser {
    * @throws NumberFormatException if {@code text} is empty or not a valid number
    */
   public static BigDecimal parse(String text) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     String s = text.trim();
     if (s.isEmpty()) {
       throw new NumberFormatException("empty");

@@ -115,6 +115,7 @@ public final class GameSaveExporter {
   public static Path save(Player player, Exchange exchange, GameUiState uiState,
                           boolean flagged)
       throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     LocalDateTime now = LocalDateTime.now();
     String safeName = player.getName().replaceAll("[^A-Za-z0-9_\\-]", "_");
     String folderName = safeName + "_" + now.format(FOLDER_FMT);
@@ -144,6 +145,7 @@ public final class GameSaveExporter {
 
   public static Path autosave(Player player, Exchange exchange, GameUiState uiState,
                               String slotId, boolean flagged) throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     String safeSlot = normalizeAutosaveSlotId(slotId);
     String folderName = AUTOSAVE_PREFIX + safeSlot;
     Path saveDir = AUTOSAVE_DIR.resolve(folderName);
@@ -216,6 +218,7 @@ public final class GameSaveExporter {
    */
   public static Path[] exportSaveDataFiles(Path saveDir, Path destinationBase,
                                            boolean latestPriceOnly) throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (saveDir == null) {
       throw new IllegalArgumentException("saveDir cannot be null");
     }

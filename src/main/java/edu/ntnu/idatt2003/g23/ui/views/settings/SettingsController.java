@@ -21,6 +21,8 @@ import javafx.stage.Stage;
  */
 public final class SettingsController {
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
+
   // ── Navigation ───────────────────────────────────────────────────────────
 
   public final Runnable onBack;

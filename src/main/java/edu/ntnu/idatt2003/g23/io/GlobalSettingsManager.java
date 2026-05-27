@@ -95,6 +95,7 @@ public final class GlobalSettingsManager {
    * cannot be parsed.
    */
   public static Settings load() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (!Files.exists(SETTINGS_FILE)) {
       return defaults();
     }
@@ -145,6 +146,7 @@ public final class GlobalSettingsManager {
    * Persists settings to disk.
    */
   public static void save(Settings s) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     try {
       Files.createDirectories(SETTINGS_FILE.getParent());
       JsonObject obj = new JsonObject();

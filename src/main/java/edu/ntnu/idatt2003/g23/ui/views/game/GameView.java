@@ -249,6 +249,7 @@ public final class GameView implements GameViewInterface {
   private Runnable musicFilterOff = null;
 
   public void setMusicFilterCallbacks(Runnable onFilter, Runnable offFilter) {
+    // AI-ASSISTED: This callback wiring was drafted with AI support and then kept intentionally small.
     this.musicFilterOn = onFilter;
     this.musicFilterOff = offFilter;
   }
@@ -274,6 +275,7 @@ public final class GameView implements GameViewInterface {
                   boolean showTutorialOnStart,
                   Consumer<Boolean> onShowTutorialPreferenceChange,
                   Runnable onStartFreshFromTutorial) {
+            // AI-ASSISTED: The constructor body was drafted with AI help, then trimmed to the project's actual UI flow.
     this.gameController = gameController;
     this.gameController.setView(this);
     this.sfxVolumeSupplierField = sfxVolumeSupplier;
@@ -495,6 +497,7 @@ public final class GameView implements GameViewInterface {
       applyFilter();
     });
 
+    // AI-ASSISTED: The tutorial flow below was shaped with AI support, then aligned with the game's real steps.
     // ── Stock filter chips (multi-select, drag-reorderable) ───────────────
     rebuildFilterChips();
     Label filterLabel = new Label("FILTER");
@@ -709,6 +712,7 @@ public final class GameView implements GameViewInterface {
     }
     this.hSplitRef = hSplit;
 
+    // AI-ASSISTED: The week-card composition was drafted with AI support to keep the layout readable.
     // ── Sub-bar: combined week card (info + skip button) ────────────────────
     VBox weekInfo = new VBox(2, labelSmall("WEEK"), weekNumLbl);
     weekInfo.setAlignment(Pos.CENTER);
@@ -758,6 +762,7 @@ public final class GameView implements GameViewInterface {
     GridPane.setHalignment(playStack, javafx.geometry.HPos.CENTER);
     GridPane.setValignment(playStack, javafx.geometry.VPos.CENTER);
     GridPane.setFillWidth(weekInfo, true);
+    // AI-ASSISTED: The tutorial overlay methods were drafted with AI support and then manually simplified.
     GridPane.setFillWidth(playStack, true);
     GridPane.setFillHeight(weekInfo, true);
     GridPane.setFillHeight(playStack, true);
@@ -1027,6 +1032,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void maybeShowTutorial() {
+    // AI-ASSISTED: This tutorial entry logic was drafted with AI support and then tuned to our flow.
     if (!showTutorialOnStart || tutorialDismissedThisSession) {
       return;
     }
@@ -1045,6 +1051,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void openTutorial() {
+    // AI-ASSISTED: The open/bring-to-front sequence was drafted with AI support and then kept minimal.
     if (overlayRef == null) {
       return;
     }
@@ -1072,6 +1079,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void buildTutorialOverlay() {
+    // AI-ASSISTED: The overlay scaffold was drafted with AI support and then reorganized for readability.
     tutorialOverlay = new StackPane();
     tutorialOverlay.getStyleClass().add("game-tutorial-overlay");
     tutorialOverlay.setPickOnBounds(false);
@@ -1287,6 +1295,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void setTutorialBodyText(String text) {
+    // AI-ASSISTED: This text setter was drafted with AI support and then simplified to one clear path.
     if (tutorialBodyFrame == null || tutorialBodyLbl == null) {
       return;
     }
@@ -1305,6 +1314,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void setTutorialFinanceBody() {
+    // AI-ASSISTED: This explanatory copy was drafted with AI support and then rewritten in our wording.
     if (tutorialBodyFrame == null || tutorialBodyRichFlow == null) {
       return;
     }
@@ -1345,6 +1355,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void tutorialGoNext() {
+    // AI-ASSISTED: The step-advance rules were drafted with AI support and then matched to the tutorial flow.
     if (!isTutorialStepComplete(tutorialStepIndex)) {
       return;
     }
@@ -1359,6 +1370,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void updateTutorialStep() {
+    // AI-ASSISTED: This state-to-UI sync was drafted with AI support and then aligned to the layout.
     if (tutorialOverlay == null) {
       return;
     }
@@ -1522,6 +1534,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void refreshTutorialProgress() {
+    // AI-ASSISTED: Progress checks were drafted with AI support and then kept as a small gatekeeper.
     if (!isTutorialVisible() || tutorialSuspendDepth > 0) {
       return;
     }
@@ -1548,6 +1561,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void suspendTutorialOverlay() {
+    // AI-ASSISTED: Suspend/resume bookkeeping was drafted with AI support and then trimmed down.
     if (tutorialOverlay == null || overlayRef == null) {
       return;
     }
@@ -1563,6 +1577,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void resumeTutorialOverlay() {
+    // AI-ASSISTED: The restore path mirrors suspendTutorialOverlay() and was retained after review.
     if (tutorialSuspendDepth <= 0) {
       return;
     }
@@ -2542,6 +2557,7 @@ public final class GameView implements GameViewInterface {
   }
 
   public void selectStockBySymbol(String symbol) {
+    // AI-ASSISTED: The selection lookup path was drafted with AI support and then kept narrowly scoped.
     if (symbol == null || symbol.isBlank()) {
       return;
     }
@@ -2564,6 +2580,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void rebuildDetail() {
+    // AI-ASSISTED: Detail rebuilding was drafted with AI support and then tuned to the stock-panel flow.
     suspendPortfolioAutoResize = true;
     try {
     detailArea.getChildren().clear();
@@ -3088,6 +3105,7 @@ public final class GameView implements GameViewInterface {
   }
 
   public void showError(String message) {
+    // AI-ASSISTED: The modal error presentation was drafted with AI support and then normalized.
     if (overlayRef == null) {
       return;
     }
@@ -3363,6 +3381,7 @@ public final class GameView implements GameViewInterface {
 
   public void showBulkTradeConfirm(String action, BigDecimal quantity, BigDecimal gross,
                                    BigDecimal fee, BigDecimal tax, BigDecimal total) {
+    // AI-ASSISTED: The bulk-trade confirmation layout was drafted with AI support and then simplified.
     suspendTutorialOverlay();
     Label iconLbl = new Label("\u2198");
     iconLbl.getStyleClass().add("dialog-action-icon-sell");
@@ -3520,6 +3539,7 @@ public final class GameView implements GameViewInterface {
 
   public void showTradeConfirm(String action, Stock stock, BigDecimal quantity,
                                BigDecimal gross, BigDecimal fee, BigDecimal tax, BigDecimal total) {
+    // AI-ASSISTED: The single-trade confirmation dialog was drafted with AI support and then polished.
     suspendTutorialOverlay();
     boolean isBuy = action != null && action.startsWith("BUY");
 
@@ -3844,6 +3864,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void showMarketMovers() {
+    // AI-ASSISTED: The market-movers modal was drafted with AI support and then adapted to the game UI.
     suspendTutorialOverlay();
     GaussianBlur blur = new GaussianBlur(0);
     rootRef.setEffect(blur);
@@ -4054,6 +4075,7 @@ public final class GameView implements GameViewInterface {
 
   private VBox buildMoversColumn(String title, List<Stock> stocks, boolean isGainers, int weeks,
                                  Runnable[] dismissRef) {
+    // AI-ASSISTED: This movers-column builder was drafted with AI support and then kept data-driven.
     Label colTitle = new Label(title);
     colTitle.getStyleClass().add("market-movers-col-title");
     colTitle.getStyleClass()
@@ -4149,6 +4171,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void showTransactionHistory() {
+    // AI-ASSISTED: The history table flow was drafted with AI support and then aligned with existing rows.
     List<TxRow> allTx = gameController.getTransactionHistory();
 
     ObservableList<TxRow> txItems = FXCollections.observableArrayList(allTx);
@@ -4483,6 +4506,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void showPortfolioSummary() {
+    // AI-ASSISTED: The summary modal was drafted with AI support and then reduced to the essential stats.
     Runnable[] dismissRef = {null};
 
     // ── Summary stats ─────────────────────────────────────────────────────
@@ -5039,6 +5063,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private void rebuildStockList(java.util.Comparator<Stock> sortCmp) {
+    // AI-ASSISTED: The list rebuild path was drafted with AI support and then kept in sync with mode.
     if (performanceMode) {
       sortedStocks.setComparator(sortCmp);
       return;
@@ -5064,6 +5089,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private Node buildStockCard(Stock stock) {
+    // AI-ASSISTED: The card builder was drafted with AI support and then adapted to our styling rules.
     Label symLbl = new Label(stock.getSymbol());
     symLbl.getStyleClass().add("stock-card-symbol");
 
@@ -5144,6 +5170,7 @@ public final class GameView implements GameViewInterface {
 
   public void showReceipt(String action, Stock stock, BigDecimal quantity,
                           BigDecimal total, BigDecimal fee, BigDecimal tax, BigDecimal newCash) {
+    // AI-ASSISTED: The receipt dialog was drafted with AI support and then kept visually consistent.
     suspendTutorialOverlay();
     boolean isBuy = action != null && action.startsWith("BUY");
 
@@ -5204,6 +5231,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private Pane buildPriceChart(Stock stock) {
+    // AI-ASSISTED: The chart renderer was drafted with AI support and then adjusted for our tooltip flow.
     Canvas canvas = new Canvas();
     Pane pane = new Pane(canvas);
     pane.getStyleClass().add("price-chart-placeholder");
@@ -5690,6 +5718,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private static AudioClip loadAudioClip(String resourcePath) {
+    // AI-ASSISTED: The audio loader was drafted with AI support and then kept intentionally defensive.
     var resource = GameView.class.getResource(resourcePath);
     if (resource == null) {
       return null;
@@ -5698,6 +5727,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private static void playAudioClip(AudioClip clip, DoubleSupplier sfxVolumeSupplier) {
+    // AI-ASSISTED: The playback helper was drafted with AI support and then kept as a tiny utility.
     if (clip == null) {
       return;
     }

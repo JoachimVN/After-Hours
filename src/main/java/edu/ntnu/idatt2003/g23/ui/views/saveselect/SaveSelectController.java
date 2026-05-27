@@ -109,6 +109,7 @@ public final class SaveSelectController {
    * Fires {@code onLoad} with the in-memory session (no disk I/O).
    */
   public void resumeSession() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     onLoad.accept(new Object[] {sessionPlayer, sessionExchange, sessionSavePath, sessionUiState,
       sessionFlagged});
   }
@@ -120,6 +121,7 @@ public final class SaveSelectController {
    * @return error message, or {@code null} on success
    */
   public String loadSave(Path saveDir) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     try {
       Object[] result = GameSaveLoader.load(saveDir);
       // [0]=Player, [1]=Exchange, [2]=GameUiState (may be null)

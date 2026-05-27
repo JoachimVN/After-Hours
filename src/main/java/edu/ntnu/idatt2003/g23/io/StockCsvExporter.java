@@ -39,6 +39,7 @@ public final class StockCsvExporter {
    * Columns: symbol,company,price
    */
   public static void writeCurrentPrices(Path file, Collection<Stock> stocks) throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (file == null) {
       throw new IllegalArgumentException("file cannot be null");
     }
@@ -84,6 +85,7 @@ public final class StockCsvExporter {
    * This format is compatible with {@link StockCsvLoader}.
    */
   public static void writeHistory(Path file, Collection<Stock> stocks) throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (file == null) {
       throw new IllegalArgumentException("file cannot be null");
     }

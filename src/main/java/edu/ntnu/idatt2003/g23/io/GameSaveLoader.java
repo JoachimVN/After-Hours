@@ -79,6 +79,7 @@ public final class GameSaveLoader {
    * Returns all saves sorted newest-first.
    */
   public static List<SaveMeta> listSaves() throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     List<SaveMeta> result = new ArrayList<>();
 
     // Manual saves
@@ -199,6 +200,7 @@ public final class GameSaveLoader {
    * @throws IllegalStateException if the save data is corrupt
    */
   public static Object[] load(Path saveDir) throws IOException {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     Path jsonPath = saveDir.resolve(SAVE_JSON_FILE);
     Path csvPath = saveDir.resolve(STOCKS_CSV_FILE);
 
@@ -271,6 +273,7 @@ public final class GameSaveLoader {
     // ── Restore transaction history ────────────────────────────────────
     JsonArray transactions = obj.getAsJsonArray("transactions");
     if (transactions != null) {
+      // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
       for (JsonElement el : transactions) {
         JsonObject t = el.getAsJsonObject();
         String type = t.get("type").getAsString();
