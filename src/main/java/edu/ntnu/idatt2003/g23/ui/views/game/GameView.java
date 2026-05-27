@@ -16,9 +16,7 @@ import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.model.Stock;
 import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
-
 import static edu.ntnu.idatt2003.g23.ui.util.LabelUtil.labelSmall;
-
 import edu.ntnu.idatt2003.g23.util.NumberParser;
 import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
@@ -36,8 +34,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import javafx.geometry.Bounds;
 import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -1354,7 +1352,7 @@ public final class GameView implements GameViewInterface {
       return;
     }
     refreshTutorialProgressFlags();
-    int step = Math.max(0, Math.min(tutorialStepCount() - 1, tutorialStepIndex));
+    int step = Math.clamp(tutorialStepIndex, 0, tutorialStepCount() - 1);
     tutorialStepIndex = step;
     if (tutorialCard != null && tutorialCardDragStep != step) {
       tutorialCardDragStep = step;
@@ -1618,7 +1616,7 @@ public final class GameView implements GameViewInterface {
 
     double x = handleBounds.getMinX() + 28;
     double width = Math.max(24, handleBounds.getWidth() - 56);
-    double baseHighlightHeight = Math.max(8, Math.min(14, handleBounds.getHeight()));
+    double baseHighlightHeight = Math.clamp(handleBounds.getHeight(), 8, 14);
     double highlightHeight = baseHighlightHeight * 1.5;
     double centerY = handleBounds.getMinY() + handleBounds.getHeight() * 0.5;
     double y = centerY - highlightHeight * 0.5;
@@ -1656,12 +1654,12 @@ public final class GameView implements GameViewInterface {
     double minH = tutorialStepIndex == 5 ? 10 : 56;
     if (w < minW) {
       double centerX = x + w * 0.5;
-      x = Math.max(0, Math.min(overlayW - minW, centerX - minW * 0.5));
+      x = Math.clamp(centerX - minW * 0.5, 0, overlayW - minW);
       w = Math.min(minW, overlayW - x);
     }
     if (h < minH) {
       double centerY = y + h * 0.5;
-      y = Math.max(0, Math.min(overlayH - minH, centerY - minH * 0.5));
+      y = Math.clamp(centerY - minH * 0.5, 0, overlayH - minH);
       h = Math.min(minH, overlayH - y);
     }
 
@@ -2076,7 +2074,7 @@ public final class GameView implements GameViewInterface {
 
     double baseMinDetailHeight = PORTFOLIO_RESIZE_MIN_DETAIL_HEIGHT;
     double minPortfolioHeight = Math.min(PORTFOLIO_RESIZE_MIN_PORTFOLIO_HEIGHT, usableHeight);
-    double minDetailHeight = Math.max(0, Math.min(baseMinDetailHeight, usableHeight - minPortfolioHeight));
+    double minDetailHeight = Math.clamp(usableHeight - minPortfolioHeight, 0, baseMinDetailHeight);
     double minRatio = usableHeight > 0 ? (minDetailHeight / usableHeight) : 0.5;
     double maxRatio = usableHeight > 0 ? ((usableHeight - minPortfolioHeight) / usableHeight) : 0.5;
 
@@ -2237,7 +2235,7 @@ public final class GameView implements GameViewInterface {
     }
 
     double scale = availableHeight / glyphHeight;
-    scale = Math.max(0.86, Math.min(1.15, scale));
+    scale = Math.clamp(scale, 0.86, 1.15);
     profileNameText.setScaleX(scale);
     profileNameText.setScaleY(scale);
   }
@@ -4500,7 +4498,7 @@ public final class GameView implements GameViewInterface {
     popupSellAllBtn.getStyleClass().add("sell-all-holdings-button");
     popupSellAllBtn.setOnAction(ev -> {
       if (dismissRef[0] != null) dismissRef[0].run();
-      gameController.handleSellAll(overlayRef);
+      gameController.handleSellAll();
     });
     HBox titleRow = new HBox(12, titleLbl, titleSpacer, popupSellAllBtn, closeBtn);
     titleRow.getStyleClass().add("market-movers-header");
@@ -4636,7 +4634,7 @@ public final class GameView implements GameViewInterface {
   }
 
   private static double clamp(double value, double min, double max) {
-    return Math.max(min, Math.min(max, value));
+    return Math.clamp(value, min, max);
   }
 
   private static String formatStatus(PlayerStatus status) {
@@ -5533,7 +5531,7 @@ public final class GameView implements GameViewInterface {
           double cW = canvas.getWidth() - padL - padR;
           int n = xs.length;
           int idx = (int) Math.round((mx - padL) / cW * (n - 1));
-          hoverIdx[0] = Math.max(0, Math.min(n - 1, idx));
+          hoverIdx[0] = Math.clamp(idx, 0, n - 1);
         } else {
           hoverIdx[0] = -1;
         }

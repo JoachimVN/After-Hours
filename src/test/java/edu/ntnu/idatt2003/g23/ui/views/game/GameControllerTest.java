@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -357,7 +356,7 @@ class GameControllerTest {
 
   @Test
   void handleSellAll_withNoShares_showsError() {
-    controller.handleSellAll(null);
+    controller.handleSellAll();
     assertNotNull(view.lastError);
   }
 
@@ -367,7 +366,7 @@ class GameControllerTest {
         stock.getSalesPrice().multiply(new BigDecimal("1.005")),
         stock.getSalesPrice().multiply(new BigDecimal("0.005")));
     view.lastConfirmAction = null;
-    controller.handleSellAll(null);
+    controller.handleSellAll();
     assertEquals("SELL ALL HOLDINGS", view.lastConfirmAction);
   }
 

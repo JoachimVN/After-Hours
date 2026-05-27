@@ -1,15 +1,15 @@
 package edu.ntnu.idatt2003.g23.ui.views.saveselect;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.function.Consumer;
+
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * Controller for the save-selection screen.
@@ -139,7 +139,7 @@ public final class SaveSelectController {
   public List<SaveMeta> loadSaveList() {
     try {
       return GameSaveLoader.listSaves();
-    } catch (IOException e) {
+    } catch (IOException _) {
       return List.of();
     }
   }
@@ -167,7 +167,7 @@ public final class SaveSelectController {
   public Path renameSave(Path saveDir, String newFolderName, String newDisplayName) {
     try {
       return GameSaveLoader.renameSave(saveDir, newFolderName, newDisplayName);
-    } catch (IOException e) {
+    } catch (IOException _) {
       return null;
     }
   }

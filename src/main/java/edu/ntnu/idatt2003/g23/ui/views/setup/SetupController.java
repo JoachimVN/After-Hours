@@ -89,7 +89,7 @@ public final class SetupController {
     double val;
     try {
       val = NumberParser.parse(trimmed).doubleValue();
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       return "Not a valid number. Try: 2000, 8k, 12.5K";
     }
     if (val < 0) {
@@ -108,7 +108,7 @@ public final class SetupController {
         return -1;
       }
       return val;
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       return -1;
     }
   }

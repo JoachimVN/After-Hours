@@ -35,6 +35,7 @@ public class SfxController {
     try {
       preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY1, PLAY2, PLAY3);
     } catch (Exception _) {
+      // If preload fails, keep running and lazily load clips at first playback.
     }
   }
 
@@ -63,6 +64,7 @@ public class SfxController {
       double clamped = Math.clamp(volume, 0.0, 1.0);
       clip.play(clamped);
     } catch (Exception _) {
+      // Ignore transient media errors so SFX failure never blocks UI interaction.
     }
   }
 

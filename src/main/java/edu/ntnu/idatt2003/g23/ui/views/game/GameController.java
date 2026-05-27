@@ -19,8 +19,6 @@ import edu.ntnu.idatt2003.g23.model.transaction.calculator.SaleCalculator;
 import edu.ntnu.idatt2003.g23.model.transaction.calculator.TransactionCalculator;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 
-import javafx.scene.layout.StackPane;
-
 public final class GameController {
 
   private final Player player;
@@ -43,7 +41,9 @@ public final class GameController {
 
   public List<BigDecimal> previewSell(Stock stock, BigDecimal quantityToSell) {
     BigDecimal rem = quantityToSell;
-    BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
+    BigDecimal tGross = BigDecimal.ZERO;
+    BigDecimal tFee = BigDecimal.ZERO;
+    BigDecimal tTax = BigDecimal.ZERO;
 
     for (Share lot : player.getPortfolio().getShareBySymbol(stock.getSymbol())) {
       if (rem.compareTo(BigDecimal.ZERO) <= 0) {
@@ -147,7 +147,9 @@ public final class GameController {
 
   public List<BigDecimal> executeSell(Stock stock, BigDecimal quantityToSell) {
     BigDecimal remaining = quantityToSell;
-    BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
+    BigDecimal tGross = BigDecimal.ZERO;
+    BigDecimal tFee = BigDecimal.ZERO;
+    BigDecimal tTax = BigDecimal.ZERO;
     BigDecimal sellQuantity = BigDecimal.ZERO;
     for (Share lot : new ArrayList<>(player.getPortfolio().getShareBySymbol(stock.getSymbol()))) {
       if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
@@ -213,7 +215,7 @@ public final class GameController {
     }
   }
 
-  public void handleSellAll(StackPane overlay) {
+  public void handleSellAll() {
     BigDecimal totalOwnedquantity = player.getPortfolio().getShares().stream()
         .map(Share::getQuantity)
         .reduce(BigDecimal.ZERO, BigDecimal::add);
