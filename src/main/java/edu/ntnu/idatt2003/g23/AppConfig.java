@@ -1,5 +1,6 @@
 package edu.ntnu.idatt2003.g23;
 
+import java.util.Arrays;
 import java.util.List;
 
 import edu.ntnu.idatt2003.g23.model.MarketOption;
@@ -53,8 +54,22 @@ public final class AppConfig {
   /**
    * Preset starting-cash options shown on the setup screen.
    */
-    protected static final double[] PRESET_CASH_VALUES = {1_000, 5_000, 10_000, 50_000, 100_000};
-    protected static final String[] PRESET_CASH_LABELS = {"$1K", "$5K", "$10K", "$50K", "$100K"};
+    private static final double[] PRESET_CASH_VALUES = {1_000, 5_000, 10_000, 50_000, 100_000};
+    private static final String[] PRESET_CASH_LABELS = {"$1K", "$5K", "$10K", "$50K", "$100K"};
+
+    /**
+     * Returns preset starting-cash numeric values for setup.
+     */
+    public static double[] presetCashValues() {
+        return Arrays.copyOf(PRESET_CASH_VALUES, PRESET_CASH_VALUES.length);
+    }
+
+    /**
+     * Returns preset starting-cash labels for setup.
+     */
+    public static String[] presetCashLabels() {
+        return Arrays.copyOf(PRESET_CASH_LABELS, PRESET_CASH_LABELS.length);
+    }
 
   /**
    * Returns the display name of the built-in market matching the given CSV resource path,

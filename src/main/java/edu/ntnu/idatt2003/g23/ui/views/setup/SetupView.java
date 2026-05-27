@@ -99,8 +99,8 @@ public final class SetupView {
     Label cashLabel = new Label("STARTING CASH");
     cashLabel.getStyleClass().add("setup-field-label");
 
-    double[] presetValues = AppConfig.PRESET_CASH_VALUES;
-    String[] presetLabels = AppConfig.PRESET_CASH_LABELS;
+    double[] presetValues = AppConfig.presetCashValues();
+    String[] presetLabels = AppConfig.presetCashLabels();
 
     ToggleGroup presetGroup = new ToggleGroup();
     HBox presetRow = new HBox(8);
