@@ -750,6 +750,9 @@ public final class GameView implements GameViewInterface {
     weekCard.getStyleClass().add("week-card");
     weekCard.getColumnConstraints().addAll(colInfo, colDivider, colPlay);
     weekCard.setAlignment(Pos.CENTER);
+    // Keep the week segment square by default (1:1), but allow wider growth for larger values.
+    weekInfo.minWidthProperty().bind(weekCard.heightProperty());
+    colInfo.minWidthProperty().bind(weekCard.heightProperty());
     GridPane.setHalignment(weekInfo, javafx.geometry.HPos.CENTER);
     GridPane.setValignment(weekInfo, javafx.geometry.VPos.CENTER);
     GridPane.setHalignment(playStack, javafx.geometry.HPos.CENTER);
