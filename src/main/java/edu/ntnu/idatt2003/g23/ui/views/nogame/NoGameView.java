@@ -10,8 +10,8 @@ import javafx.animation.ParallelTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.TranslateTransition;
-import javafx.geometry.Bounds;
 import javafx.application.Platform;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -91,6 +91,7 @@ public final class NoGameView {
   public static final String MSG_NO_CASH = "I know you tried to play without cash.";
 
   private static final String APPLAUSE_SOUND = "/audio/sfx/Applause.wav";
+  private static final String NOGAME_BUTTON_STYLE = "nogame-btn";
 
   // Both monologues share every line — only the opening differs.
   private static List<Message> buildMonologue(String openingLine) {
@@ -221,8 +222,8 @@ public final class NoGameView {
     // Button bar — hidden by default, shown only during the interactive step
     Button yesBtn = new Button("Yes");
     Button noBtn = new Button("No");
-    yesBtn.getStyleClass().add("nogame-btn");
-    noBtn.getStyleClass().add("nogame-btn");
+    yesBtn.getStyleClass().add(NOGAME_BUTTON_STYLE);
+    noBtn.getStyleClass().add(NOGAME_BUTTON_STYLE);
     HBox buttonBar = new HBox(24, yesBtn, noBtn);
     buttonBar.setAlignment(Pos.CENTER);
     buttonBar.setVisible(false);
@@ -293,8 +294,8 @@ public final class NoGameView {
           btnDelay.setOnFinished(ev3 -> {
             Button yes1 = new Button("Yes");
             Button yes2 = new Button("Yes");
-            yes1.getStyleClass().add("nogame-btn");
-            yes2.getStyleClass().add("nogame-btn");
+            yes1.getStyleClass().add(NOGAME_BUTTON_STYLE);
+            yes2.getStyleClass().add(NOGAME_BUTTON_STYLE);
             yes1.setOnAction(ev4 -> onYes.run());
             yes2.setOnAction(ev4 -> onYes.run());
             buttonBar.getChildren().setAll(yes1, yes2);

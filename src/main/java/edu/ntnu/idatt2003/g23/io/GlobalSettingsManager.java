@@ -1,13 +1,13 @@
 package edu.ntnu.idatt2003.g23.io;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 
 /**
  * Loads and saves global (cross-game) settings from the application's per-user
@@ -29,6 +29,21 @@ public final class GlobalSettingsManager {
 
       private static final Path SETTINGS_FILE =
         AppDataPaths.appDataDir().resolve("settings.json");
+
+  private static final String KEY_MUSIC_VOLUME = "musicVolume";
+  private static final String KEY_SFX_VOLUME = "sfxVolume";
+  private static final String KEY_ANIMATIONS = "animations";
+  private static final String KEY_MUSIC_MUTED = "musicMuted";
+  private static final String KEY_SFX_MUTED = "sfxMuted";
+  private static final String KEY_AUTOSAVE = "autosave";
+  private static final String KEY_AUTOSAVE_TOAST = "autosaveToast";
+  private static final String KEY_SHOW_TUTORIAL = "showTutorial";
+  private static final String KEY_FULLSCREEN = "fullscreen";
+  private static final String KEY_DEV_MODE = "devMode";
+  private static final String KEY_PERFORMANCE_MODE = "performanceMode";
+  private static final String KEY_MAX_HISTORY_WEEKS = "maxHistoryWeeks";
+  private static final String KEY_WINDOW_WIDTH = "windowWidth";
+  private static final String KEY_WINDOW_HEIGHT = "windowHeight";
 
   private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -80,6 +95,7 @@ public final class GlobalSettingsManager {
    * cannot be parsed.
    */
   public static Settings load() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (!Files.exists(SETTINGS_FILE)) {
       return defaults();
     }
@@ -88,20 +104,20 @@ public final class GlobalSettingsManager {
       JsonObject obj = GSON.fromJson(raw, JsonObject.class);
 
       double music =
-          obj.has("musicVolume") ? obj.get("musicVolume").getAsDouble() : DEFAULT_MUSIC_VOLUME;
-      double sfx = obj.has("sfxVolume") ? obj.get("sfxVolume").getAsDouble() : DEFAULT_SFX_VOLUME;
-      boolean anim = !obj.has("animations") || obj.get("animations").getAsBoolean();
-      boolean musicMuted = obj.has("musicMuted") && obj.get("musicMuted").getAsBoolean();
-      boolean sfxMuted = obj.has("sfxMuted") && obj.get("sfxMuted").getAsBoolean();
-      boolean autosave = obj.has("autosave") && obj.get("autosave").getAsBoolean();
-      boolean autosaveToast = !obj.has("autosaveToast") || obj.get("autosaveToast").getAsBoolean();
-      boolean showTutorial = !obj.has("showTutorial") || obj.get("showTutorial").getAsBoolean();
-      boolean fullscreen = obj.has("fullscreen") && obj.get("fullscreen").getAsBoolean();
-      boolean devMode = obj.has("devMode") && obj.get("devMode").getAsBoolean();
+          obj.has(KEY_MUSIC_VOLUME) ? obj.get(KEY_MUSIC_VOLUME).getAsDouble() : DEFAULT_MUSIC_VOLUME;
+      double sfx = obj.has(KEY_SFX_VOLUME) ? obj.get(KEY_SFX_VOLUME).getAsDouble() : DEFAULT_SFX_VOLUME;
+      boolean anim = !obj.has(KEY_ANIMATIONS) || obj.get(KEY_ANIMATIONS).getAsBoolean();
+      boolean musicMuted = obj.has(KEY_MUSIC_MUTED) && obj.get(KEY_MUSIC_MUTED).getAsBoolean();
+      boolean sfxMuted = obj.has(KEY_SFX_MUTED) && obj.get(KEY_SFX_MUTED).getAsBoolean();
+      boolean autosave = obj.has(KEY_AUTOSAVE) && obj.get(KEY_AUTOSAVE).getAsBoolean();
+      boolean autosaveToast = !obj.has(KEY_AUTOSAVE_TOAST) || obj.get(KEY_AUTOSAVE_TOAST).getAsBoolean();
+      boolean showTutorial = !obj.has(KEY_SHOW_TUTORIAL) || obj.get(KEY_SHOW_TUTORIAL).getAsBoolean();
+      boolean fullscreen = obj.has(KEY_FULLSCREEN) && obj.get(KEY_FULLSCREEN).getAsBoolean();
+      boolean devMode = obj.has(KEY_DEV_MODE) && obj.get(KEY_DEV_MODE).getAsBoolean();
         boolean performanceMode =
-          obj.has("performanceMode") && obj.get("performanceMode").getAsBoolean();
-        int maxHistoryWeeks = obj.has("maxHistoryWeeks")
-          ? Math.max(50, obj.get("maxHistoryWeeks").getAsInt())
+          obj.has(KEY_PERFORMANCE_MODE) && obj.get(KEY_PERFORMANCE_MODE).getAsBoolean();
+        int maxHistoryWeeks = obj.has(KEY_MAX_HISTORY_WEEKS)
+          ? Math.max(50, obj.get(KEY_MAX_HISTORY_WEEKS).getAsInt())
           : DEFAULT_MAX_HISTORY_WEEKS;
 
       return new Settings(
@@ -121,7 +137,7 @@ public final class GlobalSettingsManager {
           windowHeight(obj)
       );
 
-    } catch (Exception e) {
+    } catch (Exception _) {
       return defaults();
     }
   }
@@ -130,27 +146,28 @@ public final class GlobalSettingsManager {
    * Persists settings to disk.
    */
   public static void save(Settings s) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     try {
       Files.createDirectories(SETTINGS_FILE.getParent());
       JsonObject obj = new JsonObject();
 
-      obj.addProperty("musicVolume", s.musicVolume());
-      obj.addProperty("sfxVolume", s.sfxVolume());
-      obj.addProperty("animations", s.animations());
-      obj.addProperty("musicMuted", s.musicMuted());
-      obj.addProperty("sfxMuted", s.sfxMuted());
-      obj.addProperty("autosave", s.autosave());
-      obj.addProperty("autosaveToast", s.autosaveToast());
-      obj.addProperty("showTutorial", s.showTutorial());
-      obj.addProperty("fullscreen", s.fullscreen());
-      obj.addProperty("devMode", s.devMode());
-      obj.addProperty("performanceMode", s.performanceMode());
-      obj.addProperty("maxHistoryWeeks", Math.max(50, s.maxHistoryWeeks()));
-      obj.addProperty("windowWidth", s.windowWidth());
-      obj.addProperty("windowHeight", s.windowHeight());
+      obj.addProperty(KEY_MUSIC_VOLUME, s.musicVolume());
+      obj.addProperty(KEY_SFX_VOLUME, s.sfxVolume());
+      obj.addProperty(KEY_ANIMATIONS, s.animations());
+      obj.addProperty(KEY_MUSIC_MUTED, s.musicMuted());
+      obj.addProperty(KEY_SFX_MUTED, s.sfxMuted());
+      obj.addProperty(KEY_AUTOSAVE, s.autosave());
+      obj.addProperty(KEY_AUTOSAVE_TOAST, s.autosaveToast());
+      obj.addProperty(KEY_SHOW_TUTORIAL, s.showTutorial());
+      obj.addProperty(KEY_FULLSCREEN, s.fullscreen());
+      obj.addProperty(KEY_DEV_MODE, s.devMode());
+      obj.addProperty(KEY_PERFORMANCE_MODE, s.performanceMode());
+      obj.addProperty(KEY_MAX_HISTORY_WEEKS, Math.max(50, s.maxHistoryWeeks()));
+      obj.addProperty(KEY_WINDOW_WIDTH, s.windowWidth());
+      obj.addProperty(KEY_WINDOW_HEIGHT, s.windowHeight());
 
       Files.writeString(SETTINGS_FILE, GSON.toJson(obj), StandardCharsets.UTF_8);
-    } catch (IOException ignored) {
+    } catch (IOException _) {
     }
   }
 
@@ -177,22 +194,22 @@ public final class GlobalSettingsManager {
   }
 
   private static double clamp(double v) {
-    return Math.max(0.0, Math.min(1.0, v));
+    return Math.clamp(v, 0.0, 1.0);
   }
 
   private static int windowWidth(JsonObject obj) {
-    if (!obj.has("windowWidth")) {
+    if (!obj.has(KEY_WINDOW_WIDTH)) {
       return DEFAULT_WINDOW_WIDTH;
     }
-    int v = obj.get("windowWidth").getAsInt();
+    int v = obj.get(KEY_WINDOW_WIDTH).getAsInt();
     return v >= 860 ? v : DEFAULT_WINDOW_WIDTH;
   }
 
   private static int windowHeight(JsonObject obj) {
-    if (!obj.has("windowHeight")) {
+    if (!obj.has(KEY_WINDOW_HEIGHT)) {
       return DEFAULT_WINDOW_HEIGHT;
     }
-    int v = obj.get("windowHeight").getAsInt();
+    int v = obj.get(KEY_WINDOW_HEIGHT).getAsInt();
     return v >= 620 ? v : DEFAULT_WINDOW_HEIGHT;
   }
 }

@@ -1,10 +1,16 @@
 package edu.ntnu.idatt2003.g23.ui.views.csveditor;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import edu.ntnu.idatt2003.g23.io.CsvRow;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -23,12 +29,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.AudioClip;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.math.BigDecimal;
-import java.util.stream.Collectors;
-
 /**
  * In-game overlay for editing the price list of a single {@link CsvRow}.
  *
@@ -42,6 +42,7 @@ public final class PricesEditorDialog {
   /** Warn the user when the list exceeds this many entries. */
   private static final int LARGE_LIST_THRESHOLD = 10_000;
   private static final String OPEN_FLAG_KEY = "csv.pricesDialogOpen";
+  private static final String TOOL_BTN_STYLE = "prices-dialog-tool-btn";
   private static final String CANCEL_SOUND = "/audio/sfx/Cancel.wav";
   private static final String SELECT_SOUND = "/audio/sfx/Select.wav";
   private static final AudioClip CANCEL_CLIP = loadAudioClip(CANCEL_SOUND);
@@ -150,7 +151,7 @@ public final class PricesEditorDialog {
         HBox.setHgrow(rowSpacer, Priority.ALWAYS);
         row.setAlignment(Pos.CENTER_LEFT);
 
-        removeBtn.getStyleClass().addAll("prices-dialog-tool-btn", "prices-dialog-delete-btn");
+        removeBtn.getStyleClass().addAll(TOOL_BTN_STYLE, "prices-dialog-delete-btn");
         removeBtn.setOnAction(ev -> {
           int idx = getIndex();
           if (idx >= 0 && idx < items.size()) {
@@ -225,7 +226,7 @@ public final class PricesEditorDialog {
           double thumbH = total > 0 ? Math.max(20, (va / total) * trackH) : 20;
           double range = vbar.getMax() - vbar.getMin();
           double pos = range > 0 ? (vbar.getValue() - vbar.getMin()) / range : 0;
-          double thumbY = Math.max(0, Math.min(trackH - thumbH, pos * (trackH - thumbH)));
+          double thumbY = Math.clamp(pos * (trackH - thumbH), 0, trackH - thumbH);
           overlayThumb.setPrefHeight(thumbH);
           StackPane.setMargin(overlayThumb, new Insets(thumbY, 0, 0, 0));
         };
@@ -244,8 +245,8 @@ public final class PricesEditorDialog {
           double usable = overlayTrack.getHeight() - overlayThumb.getPrefHeight();
           if (usable > 0) {
             double range2 = vbar.getMax() - vbar.getMin();
-            vbar.setValue(Math.max(vbar.getMin(), Math.min(vbar.getMax(),
-                drag[1] + (dy / usable) * range2)));
+            vbar.setValue(Math.clamp(drag[1] + (dy / usable) * range2,
+              vbar.getMin(), vbar.getMax()));
           }
           e.consume();
         });
@@ -257,7 +258,7 @@ public final class PricesEditorDialog {
     });
 
     Button jumpErrorBtn = new Button("Jump To Error");
-    jumpErrorBtn.getStyleClass().add("prices-dialog-tool-btn");
+    jumpErrorBtn.getStyleClass().add(TOOL_BTN_STYLE);
 
     Runnable refreshValidationUi = () -> {
       int badIndex = findFirstInvalidPriceIndex(items);
@@ -287,7 +288,7 @@ public final class PricesEditorDialog {
 
     // ── Toolbar: count + add ──────────────────────────────────────────────
     Button addBtn = new Button("+ Add");
-    addBtn.getStyleClass().add("prices-dialog-tool-btn");
+    addBtn.getStyleClass().add(TOOL_BTN_STYLE);
     addBtn.setOnAction(e -> {
       items.add("0.00");
       int last = items.size() - 1;
@@ -451,7 +452,7 @@ public final class PricesEditorDialog {
     try {
       BigDecimal bd = new BigDecimal(value);
       return bd.compareTo(BigDecimal.ZERO) <= 0;
-    } catch (NumberFormatException ex) {
+    } catch (NumberFormatException _) {
       return true;
     }
   }
@@ -467,7 +468,7 @@ public final class PricesEditorDialog {
         detail = bd.compareTo(BigDecimal.ZERO) <= 0
             ? "must be greater than zero"
             : "is invalid";
-      } catch (NumberFormatException ex) {
+      } catch (NumberFormatException _) {
         detail = "isn't a valid number";
       }
     }

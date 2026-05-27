@@ -1,15 +1,15 @@
 package edu.ntnu.idatt2003.g23.ui.views.saveselect;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.function.Consumer;
+
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader;
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import edu.ntnu.idatt2003.g23.io.GameUiState;
 import edu.ntnu.idatt2003.g23.model.Exchange;
 import edu.ntnu.idatt2003.g23.model.Player;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * Controller for the save-selection screen.
@@ -109,6 +109,7 @@ public final class SaveSelectController {
    * Fires {@code onLoad} with the in-memory session (no disk I/O).
    */
   public void resumeSession() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     onLoad.accept(new Object[] {sessionPlayer, sessionExchange, sessionSavePath, sessionUiState,
       sessionFlagged});
   }
@@ -120,6 +121,7 @@ public final class SaveSelectController {
    * @return error message, or {@code null} on success
    */
   public String loadSave(Path saveDir) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     try {
       Object[] result = GameSaveLoader.load(saveDir);
       // [0]=Player, [1]=Exchange, [2]=GameUiState (may be null)
@@ -139,7 +141,7 @@ public final class SaveSelectController {
   public List<SaveMeta> loadSaveList() {
     try {
       return GameSaveLoader.listSaves();
-    } catch (IOException e) {
+    } catch (IOException _) {
       return List.of();
     }
   }
@@ -167,7 +169,7 @@ public final class SaveSelectController {
   public Path renameSave(Path saveDir, String newFolderName, String newDisplayName) {
     try {
       return GameSaveLoader.renameSave(saveDir, newFolderName, newDisplayName);
-    } catch (IOException e) {
+    } catch (IOException _) {
       return null;
     }
   }

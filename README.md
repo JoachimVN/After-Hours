@@ -118,7 +118,7 @@ mvn verify
 Create package artifacts:
 
 ```bash
-mvn package
+mvn package -Pportable-jar
 ```
 
 This produces:

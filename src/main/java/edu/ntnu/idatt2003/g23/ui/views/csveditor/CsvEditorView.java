@@ -4,13 +4,11 @@ import java.io.File;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import javafx.application.Platform;
 
 import edu.ntnu.idatt2003.g23.io.CsvParseResult;
 import edu.ntnu.idatt2003.g23.io.CsvRow;
 import edu.ntnu.idatt2003.g23.io.StockCsvLoader;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -54,6 +52,11 @@ public final class CsvEditorView {
    * Key stored in {@link TableView#getProperties()} to allow a programmatic edit to start.
    */
   private static final String EDIT_ALLOWED_KEY = "csv-edit-allowed";
+  private static final String CSV_PRICES_SUMMARY_STYLE = "csv-prices-summary";
+  private static final String CSV_PRICES_SINGLE_STYLE = "csv-prices-single";
+  private static final String CSV_NAV_BUTTON_STYLE = "csv-nav-button";
+  private static final String SECONDARY_BUTTON_STYLE = "secondary-button";
+  private static final String CSV_CONTROL_BUTTON_STYLE = "-fx-pref-height: 44; -fx-font-size: 13;";
 
   /**
    * Builds the CSV editor view.
@@ -263,7 +266,7 @@ public final class CsvEditorView {
       {
         box.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        summaryLbl.getStyleClass().add("csv-prices-summary");
+        summaryLbl.getStyleClass().add(CSV_PRICES_SUMMARY_STYLE);
         editBtn.getStyleClass().addAll("csv-inline-icon-btn", "csv-inline-edit-btn");
         editBtn.setTooltip(new Tooltip("Edit price history"));
         editBtn.setOnAction(e -> openPricesEditor());
@@ -354,15 +357,15 @@ public final class CsvEditorView {
 
       private void applyPriceLabelStyle(Label label, String raw) {
         if (countPrices(raw) <= 1) {
-          label.getStyleClass().remove("csv-prices-summary");
-          if (!label.getStyleClass().contains("csv-prices-single")) {
-            label.getStyleClass().add("csv-prices-single");
+          label.getStyleClass().remove(CSV_PRICES_SUMMARY_STYLE);
+          if (!label.getStyleClass().contains(CSV_PRICES_SINGLE_STYLE)) {
+            label.getStyleClass().add(CSV_PRICES_SINGLE_STYLE);
           }
-        } else if (!label.getStyleClass().contains("csv-prices-summary")) {
-          label.getStyleClass().remove("csv-prices-single");
-          label.getStyleClass().add("csv-prices-summary");
+        } else if (!label.getStyleClass().contains(CSV_PRICES_SUMMARY_STYLE)) {
+          label.getStyleClass().remove(CSV_PRICES_SINGLE_STYLE);
+          label.getStyleClass().add(CSV_PRICES_SUMMARY_STYLE);
         } else {
-          label.getStyleClass().remove("csv-prices-single");
+          label.getStyleClass().remove(CSV_PRICES_SINGLE_STYLE);
         }
       }
     });
@@ -501,12 +504,12 @@ public final class CsvEditorView {
 
     // ── Navigation toolbar ────────────────────────────────────────────────
     Button prevErrBtn = new Button("\u2191 Prev Error");
-    prevErrBtn.getStyleClass().addAll("secondary-button", "csv-nav-button");
+    prevErrBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, CSV_NAV_BUTTON_STYLE);
     prevErrBtn.disableProperty().bind(hasErrors.not());
     prevErrBtn.setOnAction(e -> navigateError(table, rows, -1));
 
     Button nextErrBtn = new Button("Next Error \u2193");
-    nextErrBtn.getStyleClass().addAll("secondary-button", "csv-nav-button");
+    nextErrBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, CSV_NAV_BUTTON_STYLE);
     nextErrBtn.disableProperty().bind(hasErrors.not());
     nextErrBtn.setOnAction(e -> navigateError(table, rows, +1));
 
@@ -523,7 +526,7 @@ public final class CsvEditorView {
     });
 
     Button jumpBtn = new Button("Go \u2192");
-    jumpBtn.getStyleClass().addAll("secondary-button", "csv-nav-button");
+    jumpBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, CSV_NAV_BUTTON_STYLE);
     jumpBtn.setOnAction(e -> {
       handleJumpToLine(table, rows, jumpField.getText().trim());
       jumpField.clear();
@@ -540,8 +543,8 @@ public final class CsvEditorView {
 
     // Add Row button
     Button addRowBtn = new Button("+ Add Row");
-    addRowBtn.getStyleClass().add("secondary-button");
-    addRowBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+    addRowBtn.getStyleClass().add(SECONDARY_BUTTON_STYLE);
+    addRowBtn.setStyle(CSV_CONTROL_BUTTON_STYLE);
     addRowBtn.setOnAction(e -> {
       int nextLine = rows.size() + 1;
       CsvRow newRow = new CsvRow(nextLine, "", "", "", "");
@@ -554,8 +557,8 @@ public final class CsvEditorView {
 
     // "Skip all broken rows" — removes every row that still has an error
     Button skipAllBtn = new Button("\u2715  Skip All Broken Rows");
-    skipAllBtn.getStyleClass().addAll("secondary-button", "csv-skip-button");
-    skipAllBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+    skipAllBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, "csv-skip-button");
+    skipAllBtn.setStyle(CSV_CONTROL_BUTTON_STYLE);
     skipAllBtn.disableProperty().bind(hasErrors.not());
     skipAllBtn.setOnAction(e -> {
       rows.removeIf(CsvRow::hasError);
@@ -564,16 +567,16 @@ public final class CsvEditorView {
 
     // "Reset to Defaults" — reloads the original parse result
     Button resetBtn = new Button("\u27F3  Reset to Defaults");
-    resetBtn.getStyleClass().addAll("secondary-button", "csv-skip-button");
-    resetBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+    resetBtn.getStyleClass().addAll(SECONDARY_BUTTON_STYLE, "csv-skip-button");
+    resetBtn.setStyle(CSV_CONTROL_BUTTON_STYLE);
     resetBtn.setOnAction(e -> onReset.run());
 
     // "Continue without saving" — starts game in memory, no file picker
     Button continueBtn = null;
     if (showContinueAction) {
       continueBtn = new Button(continueButtonText);
-      continueBtn.getStyleClass().add("secondary-button");
-      continueBtn.setStyle("-fx-pref-height: 44; -fx-font-size: 13;");
+      continueBtn.getStyleClass().add(SECONDARY_BUTTON_STYLE);
+      continueBtn.setStyle(CSV_CONTROL_BUTTON_STYLE);
       continueBtn.disableProperty().bind(hasErrors);
       Button finalContinueBtn = continueBtn;
       finalContinueBtn.setOnAction(e -> {
@@ -642,7 +645,7 @@ public final class CsvEditorView {
     return FXCollections.observableArrayList(
         result.getRows().stream()
             .map(CsvEditorView::copyRow)
-            .collect(Collectors.toList()));
+            .toList());
   }
 
   private static CsvRow copyRow(CsvRow source) {
@@ -940,7 +943,7 @@ public final class CsvEditorView {
           return;
         }
       }
-    } catch (NumberFormatException ignored) {
+    } catch (NumberFormatException _) {
       // non-numeric input — ignore silently
     }
   }

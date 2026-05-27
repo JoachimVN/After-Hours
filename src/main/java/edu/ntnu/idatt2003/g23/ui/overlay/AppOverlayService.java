@@ -80,7 +80,7 @@ public final class AppOverlayService {
   /**
    * Shows a non-blocking toast that auto-dismisses after 2 seconds.
    */
-  public void showTimedNotification(String title, String message, boolean success) {
+  public void showTimedNotification(String message) {
     Label msgLbl = new Label(message);
     msgLbl.getStyleClass().add("toast-message");
     msgLbl.setWrapText(false);
@@ -122,8 +122,10 @@ public final class AppOverlayService {
           .append(String.format("%,d", stats.priceCharCount()))
           .append(" characters");
     }
-    message.append("\n\nDo you want to proceed?\nYour computer may explode."
-        + "\nDon't say we didn't warn you!");
+    message.append("""
+  Do you want to proceed?
+  Your computer may explode.
+  Don't say we didn't warn you!""");
 
     Label msgLbl = new Label(message.toString());
     msgLbl.getStyleClass().add("error-dialog-message");
@@ -161,7 +163,7 @@ public final class AppOverlayService {
     cancelBtn.setOnAction(ev -> {
       playCancelSound();
       root.getChildren().stream()
-          .filter(n -> n instanceof StackPane && ((StackPane) n).getChildren().contains(card))
+          .filter(n -> n instanceof StackPane stackPane && stackPane.getChildren().contains(card))
           .findFirst()
           .ifPresent(root.getChildren()::remove);
     });
@@ -171,7 +173,7 @@ public final class AppOverlayService {
     proceedBtn.setOnAction(ev -> {
       playSelectSound();
       root.getChildren().stream()
-          .filter(n -> n instanceof StackPane && ((StackPane) n).getChildren().contains(card))
+          .filter(n -> n instanceof StackPane stackPane && stackPane.getChildren().contains(card))
           .findFirst()
           .ifPresent(root.getChildren()::remove);
       onProceed.run();

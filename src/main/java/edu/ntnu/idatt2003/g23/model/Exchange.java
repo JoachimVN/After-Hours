@@ -108,10 +108,11 @@ public class Exchange {
   }
 
   private void assignVolatilities(List<Stock> stocks) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     int total = stocks.size();
     Collections.shuffle(stocks, random);
     int remaining = total;
-    int nChaotic = Math.min(remaining, Math.max(1, (int) Math.round(total * 0.01)));
+    int nChaotic = Math.clamp((int) Math.round(total * 0.01), 1, remaining);
     remaining -= nChaotic;
     int nFast = Math.min(remaining, (int) Math.round(total * 0.10));
     remaining -= nFast;
@@ -122,7 +123,6 @@ public class Exchange {
     int nNormRise = Math.min(remaining, (int) Math.round(total * 0.25));
     remaining -= nNormRise;
     int nNormFall = Math.min(remaining, (int) Math.round(total * 0.18));
-    remaining -= nNormFall;
     int i = 0;
     for (int c = 0; c < nChaotic; c++, i++) {
       stocks.get(i).setVolatility(Stock.Volatility.CHAOTIC);
@@ -294,6 +294,7 @@ public class Exchange {
    * random percentage change.
    */
   public void advance() {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     this.week++;
     lastSpikeSymbols.clear();
     if (frozen) {
@@ -415,7 +416,7 @@ public class Exchange {
     BigDecimal initialPrice = stock.getHistoricalPrices().get(0);
     double logRatio = Math.log(price.doubleValue() / initialPrice.doubleValue());
     double reversionFactor = 1.0 - logRatio * ExchangeSimulationConfig.MEAN_REVERSION_STRENGTH;
-    reversionFactor = Math.max(0.50, Math.min(1.50, reversionFactor));
+    reversionFactor = Math.clamp(reversionFactor, 0.50, 1.50);
     return price.multiply(BigDecimal.valueOf(reversionFactor)).setScale(6, RoundingMode.HALF_UP);
   }
 
@@ -523,7 +524,7 @@ public class Exchange {
     return stockMap.values().stream()
         .sorted((s1, s2) -> s2.getSalesPrice().compareTo(s1.getSalesPrice()))
         .limit(limit)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /**
@@ -540,7 +541,7 @@ public class Exchange {
     return stockMap.values().stream()
         .sorted((s1, s2) -> s1.getSalesPrice().compareTo(s2.getSalesPrice()))
         .limit(limit)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   public List<Stock> getStocks() {

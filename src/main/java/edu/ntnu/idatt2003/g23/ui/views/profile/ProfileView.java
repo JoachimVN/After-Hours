@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.model.PlayerStatus;
-import edu.ntnu.idatt2003.g23.model.Share;
 import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 import edu.ntnu.idatt2003.g23.ui.views.game.GameController;
@@ -17,8 +16,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Bounds;
-import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
@@ -38,8 +37,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -132,7 +131,7 @@ public final class ProfileView {
     try {
       chickPhaseUnlocked = controller.getChickPhaseUnlocked();
       controller.getWeeksUsingChickAvatar();
-    } catch (Exception ignored) {
+    } catch (Exception _) {
     }
     final int chickPhaseUnlockedValue = chickPhaseUnlocked;
     Label avatarDisplay = new Label();
@@ -679,10 +678,10 @@ public final class ProfileView {
           return;
         }
 
-        double minOffset = Math.max(0.0, Math.min(1.0,
-            (minNetWorth - yAxis.getLowerBound()) / valueRange));
-        double maxOffset = Math.max(0.0, Math.min(1.0,
-            (maxNetWorth - yAxis.getLowerBound()) / valueRange));
+        double minOffset = Math.clamp(
+          (minNetWorth - yAxis.getLowerBound()) / valueRange, 0.0, 1.0);
+        double maxOffset = Math.clamp(
+          (maxNetWorth - yAxis.getLowerBound()) / valueRange, 0.0, 1.0);
 
         Bounds plotBoundsScene = plotBackground.localToScene(plotBackground.getBoundsInLocal());
         Point2D bottomInPath = path.sceneToLocal(plotBoundsScene.getMinX(), plotBoundsScene.getMaxY());
@@ -769,7 +768,7 @@ public final class ProfileView {
       if (timelinePoints.isEmpty()) {
         return BigDecimal.ZERO;
       }
-      int targetWeek = Math.max(minWeek, Math.min(maxWeek, week));
+      int targetWeek = Math.clamp(week, minWeek, maxWeek);
       BigDecimal value = replayNetWorthByWeek[targetWeek - minWeek];
       return value != null ? value : BigDecimal.ZERO;
     };
@@ -823,7 +822,7 @@ public final class ProfileView {
 
         double yRange = yAxis.getUpperBound() - yAxis.getLowerBound();
         double yFrac = yRange <= 0 ? 0.5 : (markerWorth.doubleValue() - yAxis.getLowerBound()) / yRange;
-        yFrac = Math.max(0.0, Math.min(1.0, yFrac));
+        yFrac = Math.clamp(yFrac, 0.0, 1.0);
         double lineY = plotBounds.getMaxY() - yFrac * plotBounds.getHeight();
 
         hoverValueChip.applyCss();
@@ -831,10 +830,14 @@ public final class ProfileView {
 
         double chipW = hoverValueChip.prefWidth(-1);
         double chipH = hoverValueChip.prefHeight(-1);
-        double chipX = Math.min(Math.max(lineX + 8, plotBounds.getMinX() + 4),
-            plotBounds.getMaxX() - chipW - 4);
-        double chipY = Math.min(Math.max(lineY - chipH - 8, plotBounds.getMinY() + 4),
-            plotBounds.getMaxY() - chipH - 4);
+        double chipX = Math.clamp(
+          lineX + 8,
+          plotBounds.getMinX() + 4,
+          plotBounds.getMaxX() - chipW - 4);
+        double chipY = Math.clamp(
+          lineY - chipH - 8,
+          plotBounds.getMinY() + 4,
+          plotBounds.getMaxY() - chipH - 4);
 
         hoverValueChip.resizeRelocate(chipX, chipY, chipW, chipH);
         hoverValueChip.setVisible(true);
@@ -926,7 +929,7 @@ public final class ProfileView {
       }
       double frac = (sceneX - plotBounds.getMinX()) / plotBounds.getWidth();
       int week = (int) Math.round(minWeek + frac * (maxWeek - minWeek));
-      week = Math.max(minWeek, Math.min(maxWeek, week));
+      week = Math.clamp(week, minWeek, maxWeek);
       if (hoverWeekRef[0] != week) {
         hoverWeekRef[0] = week;
         refreshMarkerAndHover.run();
@@ -1167,7 +1170,7 @@ public final class ProfileView {
       }
 
       int columns = Math.max(1, (int) Math.floor((available + hGap) / (minCardWidth + hGap)));
-      columns = Math.min(columns, Math.max(1, cards.size()));
+      columns = Math.clamp(Math.max(1, cards.size()), 1, columns);
       columns = Math.min(columns, PROFILE_GRID_MAX_COLUMNS);
 
       grid.getChildren().clear();
@@ -1392,7 +1395,7 @@ public final class ProfileView {
       double min = slider.getMin();
       double max = slider.getMax();
       double pct = max <= min ? 0.0 : (slider.getValue() - min) / (max - min);
-      pct = Math.max(0.0, Math.min(1.0, pct));
+      pct = Math.clamp(pct, 0.0, 1.0);
       double stop = pct * 100.0;
       trackRegion.setStyle("-fx-background-color: linear-gradient(to right, "
           + "#f5a201 " + stop + "%, "

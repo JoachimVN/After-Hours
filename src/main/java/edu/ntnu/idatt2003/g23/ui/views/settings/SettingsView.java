@@ -3,9 +3,9 @@ package edu.ntnu.idatt2003.g23.ui.views.settings;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
-import java.util.function.BiFunction;
 
 import edu.ntnu.idatt2003.g23.AppConfig;
 import edu.ntnu.idatt2003.g23.AppVersion;
@@ -40,6 +40,15 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 public final class SettingsView {
+
+  private static final String SETTINGS_LABEL_STYLE = "settings-label";
+  private static final String SETTINGS_TOGGLE_STYLE = "settings-toggle";
+  private static final String SETTINGS_RESOLUTION_FIELD_STYLE = "settings-resolution-field";
+  private static final String SETTINGS_SUBLABEL_STYLE = "settings-sublabel";
+  private static final String SETTINGS_DEFAULT_TAG_STYLE = "settings-default-tag";
+  private static final String EXPORT_COMPLETED_PREFIX = "\u2713  Export completed: ";
+  private static final String KEY_ENTER = "Enter";
+  private static final String ACTION_OPEN_SETTINGS = "Open Settings";
 
   private SettingsView() {
   }
@@ -324,7 +333,7 @@ public final class SettingsView {
     });
 
     Label label = new Label("Player Name");
-    label.getStyleClass().add("settings-label");
+    label.getStyleClass().add(SETTINGS_LABEL_STYLE);
     return sectionCard("👤  Profile", label, nameField);
   }
 
@@ -392,7 +401,7 @@ public final class SettingsView {
       Runnable onMaximize,
       ToggleButton fullscreenToggle) {
     Label label = new Label("Window Size");
-    label.getStyleClass().add("settings-label");
+    label.getStyleClass().add(SETTINGS_LABEL_STYLE);
 
     String[] presetLabels = { "1280 \u00d7 720", "1600 \u00d7 900", "1920 \u00d7 1080", "2560 \u00d7 1440",
         "Custom\u2026" };
@@ -407,20 +416,20 @@ public final class SettingsView {
     HBox.setHgrow(presetBox, Priority.ALWAYS);
 
     Button maximizeBtn = new Button("\u26F6  Maximize");
-    maximizeBtn.getStyleClass().add("settings-toggle");
+    maximizeBtn.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
 
     TextField wField = new TextField();
     wField.setPromptText("W");
-    wField.getStyleClass().add("settings-resolution-field");
+    wField.getStyleClass().add(SETTINGS_RESOLUTION_FIELD_STYLE);
     wField.setPrefWidth(65);
 
     TextField hField = new TextField();
     hField.setPromptText("H");
-    hField.getStyleClass().add("settings-resolution-field");
+    hField.getStyleClass().add(SETTINGS_RESOLUTION_FIELD_STYLE);
     hField.setPrefWidth(65);
 
     Label xLabel = new Label("\u00d7");
-    xLabel.getStyleClass().add("settings-label");
+    xLabel.getStyleClass().add(SETTINGS_LABEL_STYLE);
 
     Button applyBtn = new Button("Apply");
     applyBtn.getStyleClass().add("settings-apply-btn");
@@ -451,7 +460,7 @@ public final class SettingsView {
             && onResolutionChange != null) {
           onResolutionChange.accept(new int[] { w, h });
         }
-      } catch (NumberFormatException ignored) {
+      } catch (NumberFormatException _) {
       }
     });
 
@@ -505,11 +514,11 @@ public final class SettingsView {
       BooleanProperty devModeEnabled) {
     Label subLabel = new Label(
         "Open the CSV editor tools to build, import, or edit stock datasets without starting a new game.");
-    subLabel.getStyleClass().add("settings-sublabel");
+    subLabel.getStyleClass().add(SETTINGS_SUBLABEL_STYLE);
     subLabel.setWrapText(true);
 
     Button openToolsBtn = new Button("🔧  Open CSV Editing Tools");
-    openToolsBtn.getStyleClass().add("settings-toggle");
+    openToolsBtn.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
     openToolsBtn.setDisable(onOpenCsvTools == null);
     if (onOpenCsvTools != null) {
       openToolsBtn.setOnAction(e -> onOpenCsvTools.run());
@@ -519,7 +528,7 @@ public final class SettingsView {
 
     if (onEditCurrentMarketData != null) {
       Button editCurrentBtn = new Button("✎  Edit Current Market Data");
-      editCurrentBtn.getStyleClass().add("settings-toggle");
+      editCurrentBtn.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
       editCurrentBtn.visibleProperty().bind(devModeEnabled);
       editCurrentBtn.managedProperty().bind(devModeEnabled);
       editCurrentBtn.setOnAction(e -> onEditCurrentMarketData.run());
@@ -543,13 +552,13 @@ public final class SettingsView {
         onPerformanceModeChange);
 
     Label helpLabel = new Label("?");
-    helpLabel.getStyleClass().addAll("settings-default-tag", "settings-performance-help");
+    helpLabel.getStyleClass().addAll(SETTINGS_DEFAULT_TAG_STYLE, "settings-performance-help");
 
     Label performanceHelpText = new Label(
         "Performance mode helps the game stay smooth on larger saves. It loads the stock list "
             + "more efficiently and keeps less history in memory. Turn it on for faster scrolling "
             + "and lower lag, or raise Max History Weeks if you want more historical detail.");
-    performanceHelpText.getStyleClass().addAll("settings-sublabel", "settings-performance-help-text");
+    performanceHelpText.getStyleClass().addAll(SETTINGS_SUBLABEL_STYLE, "settings-performance-help-text");
     performanceHelpText.setWrapText(true);
     performanceHelpText.setMaxWidth(520);
     performanceHelpText.setVisible(false);
@@ -575,17 +584,17 @@ public final class SettingsView {
     HBox modeLabelRow = new HBox(8, modeLabel, helpLabel);
     modeLabelRow.setAlignment(Pos.CENTER_LEFT);
     Label modeDefaultTag = new Label("Default: OFF");
-    modeDefaultTag.getStyleClass().add("settings-default-tag");
+    modeDefaultTag.getStyleClass().add(SETTINGS_DEFAULT_TAG_STYLE);
     labelCol.getChildren().setAll(modeLabelRow, modeDefaultTag);
 
     Label capLabel = new Label("Max History Weeks (performance mode)");
-    capLabel.getStyleClass().add("settings-label");
+    capLabel.getStyleClass().add(SETTINGS_LABEL_STYLE);
 
     Label capDefault = new Label("Default: 500");
-    capDefault.getStyleClass().add("settings-default-tag");
+    capDefault.getStyleClass().add(SETTINGS_DEFAULT_TAG_STYLE);
 
     TextField capField = new TextField(String.valueOf(Math.max(50, maxHistoryWeeks)));
-    capField.getStyleClass().add("settings-resolution-field");
+    capField.getStyleClass().add(SETTINGS_RESOLUTION_FIELD_STYLE);
     capField.setPrefWidth(120);
 
     Button applyCapBtn = new Button("Apply");
@@ -625,10 +634,10 @@ public final class SettingsView {
       BiFunction<SaveMeta, Boolean, String> onExportJsonCsv,
       BiFunction<SaveMeta, Boolean, String> onExportCsvOnly) {
     Label label = new Label("Export Save Data");
-    label.getStyleClass().add("settings-label");
+    label.getStyleClass().add(SETTINGS_LABEL_STYLE);
 
     Label subLabel = new Label("Pick a save to export as JSON + CSV, or export only the market CSV.");
-    subLabel.getStyleClass().add("settings-sublabel");
+    subLabel.getStyleClass().add(SETTINGS_SUBLABEL_STYLE);
     subLabel.setWrapText(true);
 
     ComboBox<SaveMeta> saveCombo = new ComboBox<>();
@@ -641,15 +650,15 @@ public final class SettingsView {
     try {
       List<SaveMeta> saves = GameSaveLoader.listSaves();
       saveCombo.getItems().setAll(saves);
-    } catch (IOException ignored) {
+    } catch (IOException _) {
     }
 
     Button exportBtn = new Button("\u2B07  Export JSON + CSV");
-    exportBtn.getStyleClass().add("settings-toggle");
+    exportBtn.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
     exportBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
 
     Button exportCsvBtn = new Button("\u2B07  Export CSV Only");
-    exportCsvBtn.getStyleClass().add("settings-toggle");
+    exportCsvBtn.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
     exportCsvBtn.disableProperty().bind(saveCombo.getSelectionModel().selectedItemProperty().isNull());
 
     CheckBox keepHistoryCheck = new CheckBox("Keep price history");
@@ -657,12 +666,12 @@ public final class SettingsView {
     keepHistoryCheck.getStyleClass().add("settings-export-history-check");
 
     Label keepHistoryHint = new Label("Export full price history, or only the latest price per stock.");
-    keepHistoryHint.getStyleClass().add("settings-sublabel");
+    keepHistoryHint.getStyleClass().add(SETTINGS_SUBLABEL_STYLE);
     keepHistoryHint.setWrapText(true);
     keepHistoryHint.setPadding(new Insets(0, 0, 8, 0));
 
     Label statusLbl = new Label();
-    statusLbl.getStyleClass().add("settings-sublabel");
+    statusLbl.getStyleClass().add(SETTINGS_SUBLABEL_STYLE);
     statusLbl.setWrapText(true);
 
     exportBtn.setOnAction(e -> {
@@ -677,8 +686,8 @@ public final class SettingsView {
           String exportedFileName = onExportJsonCsv.apply(selected, latestOnly);
           if (exportedFileName != null && !exportedFileName.isBlank()) {
             statusLbl.setText(latestOnly
-                ? "\u2713  Export completed: " + exportedFileName + " (JSON + latest-price CSV)."
-                : "\u2713  Export completed: " + exportedFileName + " (JSON + full-history CSV).");
+                ? EXPORT_COMPLETED_PREFIX + exportedFileName + " (JSON + latest-price CSV)."
+                : EXPORT_COMPLETED_PREFIX + exportedFileName + " (JSON + full-history CSV).");
             statusLbl.setStyle("-fx-text-fill: #4ecb71;");
           }
         } catch (Exception ex) {
@@ -700,8 +709,8 @@ public final class SettingsView {
           String exportedFileName = onExportCsvOnly.apply(selected, latestOnly);
           if (exportedFileName != null && !exportedFileName.isBlank()) {
             statusLbl.setText(latestOnly
-                ? "\u2713  Export completed: " + exportedFileName + " (latest-price CSV)."
-                : "\u2713  Export completed: " + exportedFileName + " (full-history CSV).");
+                ? EXPORT_COMPLETED_PREFIX + exportedFileName + " (latest-price CSV)."
+                : EXPORT_COMPLETED_PREFIX + exportedFileName + " (full-history CSV).");
             statusLbl.setStyle("-fx-text-fill: #4ecb71;");
           }
         } catch (Exception ex) {
@@ -720,7 +729,7 @@ public final class SettingsView {
 
   private static VBox buildKeybindsSection(StackPane overlay) {
     Button viewBtn = new Button("\u2328  View All Keybinds");
-    viewBtn.getStyleClass().add("settings-toggle");
+    viewBtn.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
     viewBtn.setOnAction(e -> showKeybindsPopup(overlay));
 
     HBox btnRow = new HBox(viewBtn);
@@ -753,15 +762,15 @@ public final class SettingsView {
 
     VBox content = new VBox(20,
         keybindGroup("Main Menu", new String[][] {
-            { "Enter", "Start / Continue game" },
-            { "S", "Open Settings" },
+            { KEY_ENTER, "Start / Continue game" },
+            { "S", ACTION_OPEN_SETTINGS },
         }),
         keybindGroup("Navigation (All Pages)", new String[][] {
             { "Esc", "Go back / close popup" },
             { "F11", "Toggle fullscreen" },
         }),
         keybindGroup("New Game Setup", new String[][] {
-            { "Enter", "Confirm / advance step" },
+            { KEY_ENTER, "Confirm / advance step" },
         }),
         keybindGroup("Custom Stocks / Save Select", new String[][] {
             { "Enter / Space", "Confirm selection" },
@@ -771,7 +780,7 @@ public final class SettingsView {
             { "↑ / ↓", "Move to row above / below" },
             { "← / →", "Move to column left / right" },
             { "Tab / Shift+Tab", "Move to next / previous editable cell" },
-            { "Enter", "Start editing selected cell" },
+            { KEY_ENTER, "Start editing selected cell" },
             { "Enter (editing)", "Commit edit and move down" },
             { "Shift+Enter (editing)", "Commit edit and move up" },
             { "Esc", "Cancel edit" },
@@ -779,7 +788,7 @@ public final class SettingsView {
         }),
         keybindGroup("In-Game", new String[][] {
             { "N / Space", "Advance to next week" },
-            { "S", "Open Settings" },
+            { "S", ACTION_OPEN_SETTINGS },
             { "P", "Open Profile" },
             { "/", "Focus stock search" },
             { "Ctrl + F", "Focus stock search" },
@@ -789,7 +798,7 @@ public final class SettingsView {
             { "Esc", "Clear search / close tutorial / go back" },
         }),
         keybindGroup("Profile", new String[][] {
-            { "S", "Open Settings" },
+            { "S", ACTION_OPEN_SETTINGS },
             { "Esc", "Back to market" },
         }));
     content.setPadding(new Insets(4, 0, 4, 0));
@@ -851,7 +860,7 @@ public final class SettingsView {
       }
     });
     Label note = new Label("Shows extra debug information during gameplay.");
-    note.getStyleClass().add("settings-sublabel");
+    note.getStyleClass().add(SETTINGS_SUBLABEL_STYLE);
     return sectionCard("\uD83D\uDEE0  Developer", devRow, new VBox(note));
   }
 
@@ -879,17 +888,17 @@ public final class SettingsView {
       boolean isDanger, boolean defaultOn,
       Consumer<Boolean> onChange) {
     Label label = new Label(labelText);
-    label.getStyleClass().add("settings-label");
+    label.getStyleClass().add(SETTINGS_LABEL_STYLE);
 
     Label defaultTag = new Label("Default: " + (defaultOn ? "ON" : "OFF"));
-    defaultTag.getStyleClass().add("settings-default-tag");
+    defaultTag.getStyleClass().add(SETTINGS_DEFAULT_TAG_STYLE);
 
     VBox labelCol = new VBox(2, label, defaultTag);
     HBox.setHgrow(labelCol, Priority.ALWAYS);
 
     ToggleButton toggle = new ToggleButton(initialOn ? "ON" : "OFF");
     toggle.setSelected(initialOn);
-    toggle.getStyleClass().add("settings-toggle");
+    toggle.getStyleClass().add(SETTINGS_TOGGLE_STYLE);
     if (isDanger) {
       toggle.getStyleClass().add("settings-toggle-danger");
     }
@@ -910,10 +919,10 @@ public final class SettingsView {
       DoubleConsumer onVolumeChange,
       Consumer<Boolean> onMuteChange) {
     Label label = new Label(labelText);
-    label.getStyleClass().add("settings-label");
+    label.getStyleClass().add(SETTINGS_LABEL_STYLE);
 
     Label defaultVolumeTag = new Label("Default: 50%");
-    defaultVolumeTag.getStyleClass().add("settings-default-tag");
+    defaultVolumeTag.getStyleClass().add(SETTINGS_DEFAULT_TAG_STYLE);
 
     Slider slider = new Slider(0.0, 100.0, initialValue);
     slider.getStyleClass().add("settings-slider");
@@ -925,7 +934,7 @@ public final class SettingsView {
 
     ToggleButton muteToggle = new ToggleButton(initialMuted ? "MUTED" : "ON");
     muteToggle.setSelected(initialMuted);
-    muteToggle.getStyleClass().addAll("settings-toggle", "settings-mute-toggle");
+    muteToggle.getStyleClass().addAll(SETTINGS_TOGGLE_STYLE, "settings-mute-toggle");
     muteToggle.setMinWidth(80);
     muteToggle.setMaxWidth(80);
 
@@ -956,7 +965,7 @@ public final class SettingsView {
       double min = slider.getMin();
       double max = slider.getMax();
       double pct = max <= min ? 0.0 : (slider.getValue() - min) / (max - min);
-      pct = Math.max(0.0, Math.min(1.0, pct));
+      pct = Math.clamp(pct, 0.0, 1.0);
       double stop = pct * 100.0;
       trackRegion.setStyle("-fx-background-color: linear-gradient(to right, "
           + "#f5a201 " + stop + "%, "

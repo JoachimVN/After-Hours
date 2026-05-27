@@ -56,7 +56,7 @@ jobs:
       - name: Build Artifacts
         shell: pwsh
         run: |
-          mvn --batch-mode package -DskipTests
+          mvn --batch-mode package -Pportable-jar -DskipTests
 
       - name: Rename JAR for release
         shell: pwsh

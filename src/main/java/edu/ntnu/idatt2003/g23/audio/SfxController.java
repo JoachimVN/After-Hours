@@ -1,10 +1,10 @@
 package edu.ntnu.idatt2003.g23.audio;
 
-import javafx.scene.media.AudioClip;
-
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javafx.scene.media.AudioClip;
 
 /**
  * Manages sound-effect playback and the global SFX volume.
@@ -34,7 +34,8 @@ public class SfxController {
     this.resourceOwner = resourceOwner;
     try {
       preload(SELECT, SETTINGS, SETTINGS_ON, SETTINGS_OFF, BACK, PROFILE, PLAY1, PLAY2, PLAY3);
-    } catch (Throwable ignored) {
+    } catch (Exception _) {
+      // If preload fails, keep running and lazily load clips at first playback.
     }
   }
 
@@ -60,9 +61,10 @@ public class SfxController {
       if (clip == null) {
         return;
       }
-      double clamped = Math.max(0.0, Math.min(1.0, volume));
+      double clamped = Math.clamp(volume, 0.0, 1.0);
       clip.play(clamped);
-    } catch (Throwable ignored) {
+    } catch (Exception _) {
+      // Ignore transient media errors so SFX failure never blocks UI interaction.
     }
   }
 
@@ -80,7 +82,7 @@ public class SfxController {
       }
       try {
         return new AudioClip(resource.toExternalForm());
-      } catch (Throwable ignored) {
+      } catch (Exception _) {
         return null;
       }
     });

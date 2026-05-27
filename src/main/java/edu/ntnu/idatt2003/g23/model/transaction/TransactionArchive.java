@@ -2,7 +2,6 @@ package edu.ntnu.idatt2003.g23.model.transaction;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * A class used to store and manage transactions
@@ -52,7 +51,7 @@ public class TransactionArchive {
     }
     return transactions.stream()
         .filter(t -> t.getWeek() == week)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /**
@@ -69,7 +68,7 @@ public class TransactionArchive {
     return transactions.stream()                                        // AI
         .filter(t -> t instanceof Purchase && t.getWeek() == week)
         .map(t -> (Purchase) t)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /**
@@ -86,7 +85,7 @@ public class TransactionArchive {
     return transactions.stream()                                        // AI
         .filter(t -> t instanceof Sale && t.getWeek() == week)
         .map(t -> (Sale) t)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /**
@@ -96,9 +95,9 @@ public class TransactionArchive {
    */
   public List<Purchase> getAllPurchases() {
     return transactions.stream()
-        .filter(t -> t instanceof Purchase)
+        .filter(Purchase.class::isInstance)
         .map(t -> (Purchase) t)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /**
@@ -108,9 +107,9 @@ public class TransactionArchive {
    */
   public List<Sale> getAllSales() {
     return transactions.stream()
-        .filter(t -> t instanceof Sale)
+        .filter(Sale.class::isInstance)
         .map(t -> (Sale) t)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   /**

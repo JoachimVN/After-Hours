@@ -25,6 +25,7 @@ public final class NavigationCoordinator {
   }
 
   public void fadeIn(Parent page) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     page.setOpacity(0);
     FadeTransition transition = new FadeTransition(Duration.millis(500), page);
     transition.setFromValue(0);
