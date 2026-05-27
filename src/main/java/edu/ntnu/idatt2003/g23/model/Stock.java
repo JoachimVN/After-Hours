@@ -1,11 +1,12 @@
 package edu.ntnu.idatt2003.g23.model;
 
-import edu.ntnu.idatt2003.g23.AppConfig;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+
+import edu.ntnu.idatt2003.g23.AppConfig;
 
 // Represents a stock with its symbol, company name, and a list of historical prices. Provides methods to retrieve stock information and add new sales prices.
 public class Stock {
