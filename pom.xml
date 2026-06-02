@@ -6,7 +6,7 @@
 
   <groupId>edu.ntnu.idatt2003.g23</groupId>
   <artifactId>after-hours</artifactId>
-  <version>1.2.4-beta.2</version>
+  <version>1.3.0</version>
 
   <name>After Hours</name>
   <url>https://github.com/JoachimVN/After-Hours</url>
@@ -303,6 +303,127 @@
           <classifier>mac-aarch64</classifier>
         </dependency>
       </dependencies>
+    </profile>
+
+    <!--
+      Windows EXE installer via jpackage.
+      Requires WiX Toolset v3 on PATH (https://wixtoolset.org/).
+      Bundles a JRE — recipients need nothing pre-installed.
+
+      Enable with: -Pexe
+    -->
+    <profile>
+      <id>exe</id>
+      <build>
+        <plugins>
+          <!-- Strip pre-release suffix from project.version for jpackage (e.g. 1.3.0-beta.2 → 1.3.0) -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <id>strip-version-qualifier</id>
+                <phase>validate</phase>
+                <goals><goal>regex-property</goal></goals>
+                <configuration>
+                  <name>jpackage.version</name>
+                  <value>${project.version}</value>
+                  <regex>^(\d+\.\d+\.\d+).*$</regex>
+                  <replacement>$1</replacement>
+                  <failIfNoMatch>false</failIfNoMatch>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Step 1: copy Windows modular JavaFX JARs into target/javafx-mods -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>3.8.1</version>
+            <executions>
+              <execution>
+                <id>copy-javafx-mods</id>
+                <phase>package</phase>
+                <goals><goal>copy</goal></goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId>
+                      <version>25.0.1</version><classifier>win</classifier>
+                      <destFileName>javafx-base-25.0.1-win.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId>
+                      <version>25.0.1</version><classifier>win</classifier>
+                      <destFileName>javafx-graphics-25.0.1-win.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId>
+                      <version>25.0.1</version><classifier>win</classifier>
+                      <destFileName>javafx-controls-25.0.1-win.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId>
+                      <version>25.0.1</version><classifier>win</classifier>
+                      <destFileName>javafx-media-25.0.1-win.jar</destFileName>
+                    </artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}/javafx-mods</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Step 2: stage fat JAR then run jpackage -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>build-exe</id>
+                <phase>package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/jpackage-input"/>
+                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
+                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
+                    <exec executable="jpackage" failonerror="true">
+                      <arg value="--type"/><arg value="exe"/>
+                      <arg value="--name"/><arg value="After Hours"/>
+                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
+                      <arg value="--vendor"/><arg value="NTNU"/>
+                      <arg value="--description"/><arg value="After Hours"/>
+                      <arg value="--icon"/>
+                      <arg value="${project.basedir}/src/main/resources/images/logos/After_Hours_Logo_Square.ico"/>
+                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
+                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
+                      <arg value="--main-class"/><arg value="edu.ntnu.idatt2003.g23.App"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
+                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
+                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
+                      <arg value="--java-options"/><arg value="-Dglass.win.uiScale=1.25"/>
+                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
+                      <arg value="--win-dir-chooser"/>
+                      <arg value="--win-shortcut"/>
+                      <arg value="--win-shortcut-prompt"/>
+                      <arg value="--win-menu"/>
+                      <arg value="--win-menu-group"/><arg value="After Hours"/>
+                    </exec>
+                    <!-- Rename to include full project version (e.g. After Hours-1.3.0-beta.2.exe) -->
+                    <move file="${project.build.directory}/dist/After Hours-${jpackage.version}.exe"
+                          tofile="${project.build.directory}/dist/After Hours-${project.version}.exe"
+                          failonerror="false"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>

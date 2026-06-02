@@ -114,30 +114,23 @@ mvn verify
 
 ## Build and Distribution
 
-Create package artifacts:
+### Portable JAR (cross-platform)
 
 ```bash
 mvn package -Pportable-jar
 ```
 
-This produces:
+Produces a fat runnable JAR at `target/after-hours-<version>-jar-with-dependencies.jar` that runs on Windows, Linux, and macOS without any additional install.
 
-- fat runnable jar: target/after-hours-version-with-dependencies.jar
+### Windows EXE installer
 
-### Native Packaging (jpackage)
-
-After mvn package:
+Requires [WiX Toolset v3](https://wixtoolset.org/) installed and on PATH.
 
 ```bash
-# Windows EXE
-mvn exec:exec@jpackage
-
-# Linux app-image
-mvn exec:exec@jpackage-linux
-
-# macOS app-image
-mvn exec:exec@jpackage-mac
+mvn package -Pexe
 ```
+
+Produces a Windows installer at `target/dist/After Hours-<version>.exe`. The installer bundles a JRE — recipients need nothing pre-installed.
 
 ## Project Structure
 
