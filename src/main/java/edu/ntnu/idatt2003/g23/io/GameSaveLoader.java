@@ -207,12 +207,12 @@ public final class GameSaveLoader {
     String raw = Files.readString(jsonPath, StandardCharsets.UTF_8);
     JsonObject obj = GSON.fromJson(raw, JsonObject.class);
 
-    String playerName = obj.get(KEY_PLAYER_NAME).getAsString();
-    BigDecimal starting = new BigDecimal(obj.get("startingMoney").getAsString());
-    BigDecimal money = new BigDecimal(obj.get("money").getAsString());
-    String statusStr = obj.get(KEY_STATUS).getAsString();
-    int week = obj.get("week").getAsInt();
-    String exchangeName = obj.get("exchangeName").getAsString();
+    String playerName = requireString(obj, KEY_PLAYER_NAME);
+    BigDecimal starting = new BigDecimal(requireString(obj, "startingMoney"));
+    BigDecimal money = new BigDecimal(requireString(obj, "money"));
+    String statusStr = requireString(obj, KEY_STATUS);
+    int week = requireInt(obj, "week");
+    String exchangeName = requireString(obj, "exchangeName");
 
     // ── Restore stocks (full price history) from CSV ───────────────────
     CsvParseResult csvResult = StockCsvLoader.parseWithErrors(
@@ -405,6 +405,20 @@ public final class GameSaveLoader {
     return new SaveMeta(saveDir, displayName, profileAvatar, exchangeName, savedAt,
       week, money, netWorth, portfolioSize, totalShares, status, isAutosave,
       flagged);
+  }
+
+  private static String requireString(JsonObject obj, String key) {
+    if (!obj.has(key) || obj.get(key).isJsonNull()) {
+      throw new IllegalStateException("Save is missing required field: " + key);
+    }
+    return obj.get(key).getAsString();
+  }
+
+  private static int requireInt(JsonObject obj, String key) {
+    if (!obj.has(key) || obj.get(key).isJsonNull()) {
+      throw new IllegalStateException("Save is missing required field: " + key);
+    }
+    return obj.get(key).getAsInt();
   }
 
   private static boolean readFlagged(JsonObject obj) {
