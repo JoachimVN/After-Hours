@@ -114,30 +114,50 @@ mvn verify
 
 ## Build and Distribution
 
-Create package artifacts:
+### Releases
+
+Pushing a `v*` tag triggers the release workflow, which builds and uploads all distribution artifacts automatically:
+
+| Asset | Platform |
+|---|---|
+| `After Hours-<version>.exe` | Windows installer (bundles JRE) |
+| `After Hours-<version>-linux.zip` | Linux app-image |
+| `After Hours-<version>.dmg` | macOS disk image (Apple Silicon) |
+| `After Hours <version>.jar` | Portable fat JAR (all platforms) |
+
+### Portable JAR (cross-platform)
 
 ```bash
 mvn package -Pportable-jar
 ```
 
-This produces:
+Produces a fat runnable JAR at `target/after-hours-<version>-jar-with-dependencies.jar` that runs on Windows, Linux, and macOS without any additional install.
 
-- fat runnable jar: target/after-hours-version-with-dependencies.jar
+### Windows EXE installer
 
-### Native Packaging (jpackage)
-
-After mvn package:
+Requires [WiX Toolset v3](https://wixtoolset.org/) installed and on PATH.
 
 ```bash
-# Windows EXE
-mvn exec:exec@jpackage
-
-# Linux app-image
-mvn exec:exec@jpackage-linux
-
-# macOS app-image
-mvn exec:exec@jpackage-mac
+mvn package -Pexe
 ```
+
+Produces a Windows installer at `target/dist/After Hours-<version>.exe`. The installer bundles a JRE — recipients need nothing pre-installed.
+
+### Linux app-image
+
+```bash
+mvn package -Plinux
+```
+
+Produces a zipped app-image at `target/dist/After Hours-<version>-linux.zip`. Extract and run `"After Hours/bin/After Hours"`.
+
+### macOS DMG (Apple Silicon)
+
+```bash
+mvn package -Pmac
+```
+
+Produces a disk image at `target/dist/After Hours-<version>.dmg`. Intel Mac users should replace the `mac-aarch64` classifier with `mac` in the `mac` profile in `pom.xml`.
 
 ## Project Structure
 
