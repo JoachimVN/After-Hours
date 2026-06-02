@@ -423,7 +423,8 @@
                     <move file="${project.build.directory}/dist/After Hours-${jpackage.version}.exe"
                           tofile="${project.build.directory}/dist/After Hours-${project.version}.exe"
                           failonerror="true"
-                          if="exe.rename.needed"/>
+                          xmlns:if="ant:if"
+                          if:set="exe.rename.needed"/>
                   </target>
                 </configuration>
               </execution>
@@ -530,9 +531,9 @@
                       <arg value="--java-options"/><arg value="-Dglass.gtk.uiScale=1.25"/>
                       <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
                     </exec>
-                    <zip destfile="${project.build.directory}/dist/After Hours-${project.version}-linux.zip"
-                         basedir="${project.build.directory}/dist"
-                         includes="After Hours/**"/>
+                    <zip destfile="${project.build.directory}/dist/After Hours-${project.version}-linux.zip">
+                      <zipfileset dir="${project.build.directory}/dist/After Hours" prefix="After Hours"/>
+                    </zip>
                   </target>
                 </configuration>
               </execution>
@@ -649,7 +650,8 @@
                     <move file="${project.build.directory}/dist/After Hours-${jpackage.version}.dmg"
                           tofile="${project.build.directory}/dist/After Hours-${project.version}.dmg"
                           failonerror="true"
-                          if="dmg.rename.needed"/>
+                          xmlns:if="ant:if"
+                          if:set="dmg.rename.needed"/>
                   </target>
                 </configuration>
               </execution>
