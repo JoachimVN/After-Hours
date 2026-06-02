@@ -40,7 +40,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $tag = "${{ inputs.tag }}"
+          $tag = "${{ github.event.inputs.tag }}"
           if ([string]::IsNullOrWhiteSpace($tag)) {
             $tag = "${{ github.ref_name }}"
           }
