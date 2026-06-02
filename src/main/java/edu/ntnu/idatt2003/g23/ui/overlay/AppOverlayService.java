@@ -229,6 +229,14 @@ public final class AppOverlayService {
       return false;
     }, cancelBtn);
 
+    cancelBtn.setOnAction(ev -> {
+      playCancelSound();
+      root.getChildren().stream()
+          .filter(n -> n instanceof StackPane sp && sp.getChildren().contains(card))
+          .findFirst()
+          .ifPresent(root.getChildren()::remove);
+    });
+
     quitBtn.setOnAction(ev -> {
       playSelectSound();
       root.getChildren().stream()
