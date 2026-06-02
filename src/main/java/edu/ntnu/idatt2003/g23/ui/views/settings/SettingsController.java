@@ -1,9 +1,9 @@
 package edu.ntnu.idatt2003.g23.ui.views.settings;
 
 import java.nio.file.Path;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
-import java.util.function.BiFunction;
 
 import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
 import javafx.stage.Stage;
@@ -20,6 +20,8 @@ import javafx.stage.Stage;
  * {@code null} in the home/setup context).
  */
 public final class SettingsController {
+
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
 
   // ── Navigation ───────────────────────────────────────────────────────────
 

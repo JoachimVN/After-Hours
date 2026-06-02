@@ -19,8 +19,6 @@ import edu.ntnu.idatt2003.g23.model.transaction.calculator.SaleCalculator;
 import edu.ntnu.idatt2003.g23.model.transaction.calculator.TransactionCalculator;
 import edu.ntnu.idatt2003.g23.ui.util.CurrencyFormatter;
 
-import javafx.scene.layout.StackPane;
-
 public final class GameController {
 
   private final Player player;
@@ -41,9 +39,12 @@ public final class GameController {
     this.view = view;
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<BigDecimal> previewSell(Stock stock, BigDecimal quantityToSell) {
     BigDecimal rem = quantityToSell;
-    BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
+    BigDecimal tGross = BigDecimal.ZERO;
+    BigDecimal tFee = BigDecimal.ZERO;
+    BigDecimal tTax = BigDecimal.ZERO;
 
     for (Share lot : player.getPortfolio().getShareBySymbol(stock.getSymbol())) {
       if (rem.compareTo(BigDecimal.ZERO) <= 0) {
@@ -66,6 +67,7 @@ public final class GameController {
     return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax));
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<BigDecimal> previewSellAll() {
     BigDecimal tGross = BigDecimal.ZERO;
     BigDecimal tFee = BigDecimal.ZERO;
@@ -88,6 +90,7 @@ public final class GameController {
     return stock.getSalesPrice().multiply(new BigDecimal("1.005"));
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public int maxSellQuantity(Stock stock) {
     return player.getPortfolio().getShareBySymbol(stock.getSymbol())
         .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -99,6 +102,7 @@ public final class GameController {
         .stream().map(Share::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void handleNextWeek() {
     exchange.advance();
     player.recordWeeklySnapshot(Math.max(1, exchange.getWeek()));
@@ -110,6 +114,7 @@ public final class GameController {
     exchange.scheduleTutorialMomentumNudge();
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void executeSellAll() {
     Map<String, BigDecimal> quantityBySymbol = new LinkedHashMap<>();
     Map<String, Stock> stockBySymbol = new LinkedHashMap<>();
@@ -145,9 +150,12 @@ public final class GameController {
   }
 
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<BigDecimal> executeSell(Stock stock, BigDecimal quantityToSell) {
     BigDecimal remaining = quantityToSell;
-    BigDecimal tGross = BigDecimal.ZERO, tFee = BigDecimal.ZERO, tTax = BigDecimal.ZERO;
+    BigDecimal tGross = BigDecimal.ZERO;
+    BigDecimal tFee = BigDecimal.ZERO;
+    BigDecimal tTax = BigDecimal.ZERO;
     BigDecimal sellQuantity = BigDecimal.ZERO;
     for (Share lot : new ArrayList<>(player.getPortfolio().getShareBySymbol(stock.getSymbol()))) {
       if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
@@ -181,6 +189,7 @@ public final class GameController {
     return List.of(tGross, tFee, tTax, tGross.subtract(tFee).subtract(tTax));
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void handleBuy(Stock stock, BigDecimal quantity) {
     if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
       view.showTradeError("Enter at least 1 share to buy.");
@@ -200,6 +209,7 @@ public final class GameController {
     view.showTradeConfirm("BUY", stock, quantity, gross, fee, BigDecimal.ZERO, total);
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void executeBuy(Stock stock, BigDecimal quantity, BigDecimal total, BigDecimal fee) {
     try {
       Transaction tx = exchange.buy(stock.getSymbol(), quantity, player);
@@ -213,7 +223,7 @@ public final class GameController {
     }
   }
 
-  public void handleSellAll(StackPane overlay) {
+  public void handleSellAll() {
     BigDecimal totalOwnedquantity = player.getPortfolio().getShares().stream()
         .map(Share::getQuantity)
         .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -267,6 +277,7 @@ public final class GameController {
     return getPlayerStatus().getTaxRate();
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public PlayerStatus getPlayerStatus() {
     if (statusOverride != null) {
       return statusOverride;
@@ -339,6 +350,7 @@ public final class GameController {
     return player.calculateNetWorthProgress(targetStatus);
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<Share> getPortfolioShares() {
     Map<String, BigDecimal> quantityBySymbol = new LinkedHashMap<>();
     Map<String, BigDecimal> costBySymbol = new LinkedHashMap<>();
@@ -381,6 +393,7 @@ public final class GameController {
     return getOwnedQuantity(symbol).compareTo(BigDecimal.ZERO) > 0;
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public int maxBuyQuantity(Stock stock) {
     BigDecimal cost = unitCostWithFee(stock);
     return player.getMoney().divide(cost, 0, RoundingMode.DOWN).max(BigDecimal.ZERO).intValue();
@@ -393,6 +406,7 @@ public final class GameController {
     devModeMutationsUsed = true;
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void setCash(BigDecimal amount) {
     BigDecimal current = player.getMoney();
     if (amount.compareTo(current) > 0) {
@@ -403,6 +417,7 @@ public final class GameController {
     devModeMutationsUsed = true;
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void advanceWeeks(int n) {
     for (int i = 0; i < n; i++) {
       exchange.advance();
@@ -427,6 +442,7 @@ public final class GameController {
   public record StockTradePoint(int week, BigDecimal quantity, BigDecimal price, boolean isSell) {
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<StockTradePoint> getTradePointsForStock(String symbol) {
     List<StockTradePoint> result = new ArrayList<>();
     for (var p : player.getTransactionArchive().getAllPurchases()) {
@@ -444,6 +460,7 @@ public final class GameController {
     return result;
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<TxRow> getTransactionHistory() {
     List<TxRow> allTx = new ArrayList<>();
     for (Purchase p : player.getTransactionArchive().getAllPurchases()) {
@@ -512,6 +529,7 @@ public final class GameController {
   /**
    * Reconstructs a weekly net-worth timeline from transaction flows and historical prices.
    */
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public List<ReplayPoint> getReplaySeries() {
     if (!replaySeriesDirty && replaySeriesCache != null) {
       return replaySeriesCache;
@@ -523,6 +541,7 @@ public final class GameController {
       for (Player.WeeklySnapshot s : snapshots) {
         netWorthByWeek.put(s.week(), s.netWorth());
       }
+      // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
       int lastWeek = Math.max(1, exchange.getWeek());
       BigDecimal carry = player.getStartingMoney();
       List<ReplayPoint> points = new ArrayList<>();
@@ -551,6 +570,7 @@ public final class GameController {
     List<ReplayPoint> points = new ArrayList<>();
       BigDecimal prevNetWorth = null;
 
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     for (int week = 1; week <= lastWeek; week++) {
       while (txIndex < tx.size() && tx.get(txIndex).getWeek() == week) {
         Transaction t = tx.get(txIndex++);
@@ -599,20 +619,24 @@ public final class GameController {
   /**
    * Re-applies performance-mode snapshot capping and forces replay reconstruction.
    */
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public void refreshReplaySeriesForSettingsChange() {
     player.setWeeklySnapshots(player.getWeeklySnapshots());
     invalidateReplaySeries();
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   private void invalidateReplaySeries() {
     replaySeriesDirty = true;
     replaySeriesCache = null;
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public int getChickPhaseUnlocked() {
     return player.getChickPhaseUnlocked();
   }
 
+  // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
   public int getWeeksUsingChickAvatar() {
     return player.getWeeksUsingChickAvatar();
   }

@@ -1,18 +1,26 @@
 package edu.ntnu.idatt2003.g23.ui.views.saveselect;
 
-import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
-import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
-
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.*;
-import javafx.scene.media.AudioClip;
-
 import java.nio.file.Path;
 import java.util.List;
+
+import edu.ntnu.idatt2003.g23.io.GameSaveLoader.SaveMeta;
+import edu.ntnu.idatt2003.g23.ui.util.AvatarUtil;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.media.AudioClip;
 
 /**
  * View for the save-selection screen.
@@ -52,7 +60,7 @@ public final class SaveSelectView {
 
     // ── Top bar ───────────────────────────────────────────────────────────
     Button backBtn = new Button("\u2190 Back");
-    backBtn.getStyleClass().add("back-button");;
+    backBtn.getStyleClass().add("back-button");
     backBtn.setOnAction(e -> controller.handleBack());
 
     Button newGameBtn = new Button("+ New Game");
@@ -440,7 +448,7 @@ public final class SaveSelectView {
         return String.format("%.2fK", val / 1_000);
       }
       return String.format("%.2f", val);
-    } catch (NumberFormatException e) {
+    } catch (NumberFormatException _) {
       return raw;
     }
   }

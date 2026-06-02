@@ -24,7 +24,6 @@ After Hours is a desktop stock-trading simulation game built with Java and JavaF
 You start with a fixed amount of cash, trade through weekly market updates, and try to grow your net worth while managing risk.
 
 ## Project Links
-
 - Repository: https://github.com/JoachimVN/After-Hours
 - Releases: https://github.com/JoachimVN/After-Hours/releases
 - Wiki: https://github.com/JoachimVN/After-Hours/wiki
@@ -86,6 +85,7 @@ The project was developed as part of IDATT2003 at NTNU and focuses on:
 - PowerPoint
 - Photopea
 - Soundation
+- Audacity
 
 ## Getting Started
 

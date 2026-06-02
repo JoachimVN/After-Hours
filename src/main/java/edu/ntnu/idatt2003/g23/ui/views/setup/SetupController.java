@@ -53,6 +53,7 @@ public final class SetupController {
   }
 
   public void handleStart(String nameText, String cashText) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     String name = (nameText == null || nameText.isBlank()) ? "Player" : nameText.trim();
     double cash = parseCash(cashText);
     if (cash < 0) {
@@ -82,6 +83,7 @@ public final class SetupController {
    * Returns {@code null} for blank/null input (treated as "not yet entered").
    */
   static String cashValidationMessage(String text) {
+    // AI-ASSISTED: Drafted/refined with AI support and validated by the team.
     if (text == null || text.isBlank()) {
       return null;
     }
@@ -89,7 +91,7 @@ public final class SetupController {
     double val;
     try {
       val = NumberParser.parse(trimmed).doubleValue();
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       return "Not a valid number. Try: 2000, 8k, 12.5K";
     }
     if (val < 0) {
@@ -108,7 +110,7 @@ public final class SetupController {
         return -1;
       }
       return val;
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       return -1;
     }
   }

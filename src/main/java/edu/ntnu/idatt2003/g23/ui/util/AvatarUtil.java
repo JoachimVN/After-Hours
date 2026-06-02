@@ -2,13 +2,13 @@ package edu.ntnu.idatt2003.g23.ui.util;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.SequencedSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javafx.scene.image.Image;
@@ -53,7 +53,7 @@ public final class AvatarUtil {
             .distinct()
             .collect(Collectors.toCollection(ArrayList::new));
       }
-    } catch (Exception e) {
+    } catch (Exception _) {
       return List.of(DEFAULT_AVATAR);
     }
   }
@@ -93,7 +93,7 @@ public final class AvatarUtil {
             .distinct()
             .forEach(names::add);
       }
-    } catch (Exception e) {
+    } catch (Exception _) {
       return List.of(DEFAULT_AVATAR);
     }
 
