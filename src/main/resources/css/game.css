@@ -2216,11 +2216,15 @@
     -fx-background-color: rgba(30, 64, 128, 0.30);
 }
 
+.market-overview-sort-bar {
+    -fx-padding: 10px 16px;
+    -fx-border-color: rgba(30, 64, 128, 0.20);
+    -fx-border-width: 0px 0px 1px 0px;
+}
+
 .market-overview-flow {
     -fx-padding: 12px;
     -fx-background-color: transparent;
-    -fx-hgap: 10;
-    -fx-vgap: 10;
 }
 
 .market-overview-scroll {

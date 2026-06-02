@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -4532,78 +4533,158 @@ public final class GameView implements GameViewInterface {
     titleRow.setAlignment(Pos.CENTER_LEFT);
 
     Runnable[] dismissRef = {null};
+    String[] sortRef = {"NAME"};
 
-    FlowPane grid = new FlowPane(10, 10);
+    // ── Sort chips ────────────────────────────────────────────────────────
+    Button sortName = new Button("Name ▲");
+    Button sortPrice = new Button("Price");
+    Button sortChange = new Button("Change");
+    for (Button b : new Button[]{sortName, sortPrice, sortChange}) {
+      b.getStyleClass().add("stock-sort-chip");
+    }
+    sortName.getStyleClass().add("stock-sort-chip-active");
+
+    // ── Grid ──────────────────────────────────────────────────────────────
+    GridPane grid = new GridPane();
+    grid.setHgap(10);
+    grid.setVgap(10);
     grid.getStyleClass().add("market-overview-flow");
 
-    for (Stock stock : gameController.getStocks()) {
-      List<BigDecimal> full = stock.getHistoricalPrices();
-      List<BigDecimal> history = (full != null && full.size() > 100)
-          ? full.subList(full.size() - 100, full.size()) : full;
-      int trendSign = (history != null && history.size() >= 2)
-          ? history.get(history.size() - 1).compareTo(history.get(0))
-          : 0;
+    List<Stock> stockPool = new ArrayList<>(gameController.getStocks());
 
-      Label symLbl = new Label(stock.getSymbol());
-      symLbl.getStyleClass().add("stock-card-symbol");
-      Label compLbl = new Label(stock.getCompany());
-      compLbl.getStyleClass().add("stock-card-company");
-      compLbl.setMaxWidth(Double.MAX_VALUE);
-
-      Label priceLbl = new Label(CurrencyFormatter.format(stock.getSalesPrice()));
-      priceLbl.getStyleClass().add("stock-card-price");
-
-      BigDecimal pct = stock.percentageChange();
-      Label pctLbl;
-      if (pct.compareTo(BigDecimal.ZERO) == 0) {
-        pctLbl = new Label("—");
-        pctLbl.getStyleClass().add("stock-pct-neutral");
-      } else {
-        String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-        pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
-        pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+    Runnable[] rebuild = {null};
+    rebuild[0] = () -> {
+      List<Stock> sorted = new ArrayList<>(stockPool);
+      switch (sortRef[0]) {
+        case "NAME"       -> sorted.sort(Comparator.comparing(Stock::getSymbol));
+        case "NAME_DESC"  -> sorted.sort(Comparator.comparing(Stock::getSymbol).reversed());
+        case "PRICE"      -> sorted.sort(Comparator.comparing(Stock::getSalesPrice).reversed());
+        case "PRICE_ASC"  -> sorted.sort(Comparator.comparing(Stock::getSalesPrice));
+        case "CHG"        -> sorted.sort(Comparator.comparing(Stock::percentageChange).reversed());
+        case "CHG_ASC"    -> sorted.sort(Comparator.comparing(Stock::percentageChange));
       }
 
-      VBox left = new VBox(2, symLbl, compLbl);
-      if (gameController.isOwned(stock.getSymbol())) {
-        Label ownedChip = new Label("Owned");
-        ownedChip.getStyleClass().add("stock-owned-label");
-        left.getChildren().add(ownedChip);
+      List<Node> cards = new ArrayList<>();
+      for (Stock stock : sorted) {
+        List<BigDecimal> full = stock.getHistoricalPrices();
+        List<BigDecimal> history = (full != null && full.size() > 100)
+            ? full.subList(full.size() - 100, full.size()) : full;
+        int trendSign = (history != null && history.size() >= 2)
+            ? history.get(history.size() - 1).compareTo(history.get(0)) : 0;
+
+        Label symLbl = new Label(stock.getSymbol());
+        symLbl.getStyleClass().add("stock-card-symbol");
+        Label compLbl = new Label(stock.getCompany());
+        compLbl.getStyleClass().add("stock-card-company");
+        compLbl.setMaxWidth(Double.MAX_VALUE);
+
+        Label priceLbl = new Label(CurrencyFormatter.format(stock.getSalesPrice()));
+        priceLbl.getStyleClass().add("stock-card-price");
+
+        BigDecimal pct = stock.percentageChange();
+        Label pctLbl;
+        if (pct.compareTo(BigDecimal.ZERO) == 0) {
+          pctLbl = new Label("—");
+          pctLbl.getStyleClass().add("stock-pct-neutral");
+        } else {
+          String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+          pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+          pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+        }
+
+        VBox left = new VBox(2, symLbl, compLbl);
+        if (gameController.isOwned(stock.getSymbol())) {
+          Label ownedChip = new Label("Owned");
+          ownedChip.getStyleClass().add("stock-owned-label");
+          left.getChildren().add(ownedChip);
+        }
+        VBox right = new VBox(2, priceLbl, pctLbl);
+        right.setAlignment(Pos.TOP_RIGHT);
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+        HBox header = new HBox(8, left, headerSpacer, right);
+        header.setAlignment(Pos.TOP_LEFT);
+
+        StackPane sparkline = buildOverviewSparkline(history, trendSign);
+
+        VBox stockCard = new VBox(6, header, sparkline);
+        stockCard.getStyleClass().add("market-overview-stock-card");
+        stockCard.setPadding(new Insets(10, 10, 6, 10));
+        stockCard.setMaxWidth(Double.MAX_VALUE);
+        stockCard.setOnMouseClicked(ev -> {
+          if (dismissRef[0] != null) dismissRef[0].run();
+          String sym = stock.getSymbol();
+          if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
+            searchField.setText("");
+          }
+          Stock target = allStocks.stream()
+              .filter(st -> st.getSymbol().equals(sym))
+              .findFirst().orElse(stock);
+          if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
+            notifyStockSelectionChanged();
+          }
+          selectedStock.set(target);
+          focusStockCardInList(sym);
+        });
+        cards.add(stockCard);
       }
-      VBox right = new VBox(2, priceLbl, pctLbl);
-      right.setAlignment(Pos.TOP_RIGHT);
-      Region headerSpacer = new Region();
-      HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-      HBox header = new HBox(8, left, headerSpacer, right);
-      header.setAlignment(Pos.TOP_LEFT);
 
-      StackPane sparkline = buildOverviewSparkline(history, trendSign);
+      // Responsive columns: fill row, min 220px per card
+      double available = grid.getWidth() > 0 ? grid.getWidth() : 900;
+      int cols = Math.max(1, (int) Math.floor((available + grid.getHgap()) / (220 + grid.getHgap())));
+      cols = Math.min(cols, cards.size());
+      grid.getChildren().clear();
+      grid.getColumnConstraints().clear();
+      for (int i = 0; i < cols; i++) {
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setPercentWidth(100.0 / cols);
+        cc.setHgrow(Priority.ALWAYS);
+        cc.setFillWidth(true);
+        grid.getColumnConstraints().add(cc);
+      }
+      for (int i = 0; i < cards.size(); i++) {
+        grid.add(cards.get(i), i % cols, i / cols);
+      }
+    };
 
-      VBox card = new VBox(6, header, sparkline);
-      card.getStyleClass().add("market-overview-stock-card");
-      card.setPadding(new Insets(10, 10, 6, 10));
-      card.setPrefWidth(240);
-      card.setMinWidth(200);
-      card.setMaxWidth(300);
-      card.setOnMouseClicked(ev -> {
-        if (dismissRef[0] != null) {
-          dismissRef[0].run();
-        }
-        String sym = stock.getSymbol();
-        if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
-          searchField.setText("");
-        }
-        Stock target = allStocks.stream()
-            .filter(st -> st.getSymbol().equals(sym))
-            .findFirst().orElse(stock);
-        if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
-          notifyStockSelectionChanged();
-        }
-        selectedStock.set(target);
-        focusStockCardInList(sym);
-      });
-      grid.getChildren().add(card);
-    }
+    sortName.setOnAction(ev -> {
+      sortRef[0] = sortRef[0].equals("NAME") ? "NAME_DESC" : "NAME";
+      sortName.setText(sortRef[0].equals("NAME") ? "Name ▲" : "Name ▼");
+      sortName.getStyleClass().add("stock-sort-chip-active");
+      sortPrice.getStyleClass().remove("stock-sort-chip-active");
+      sortPrice.setText("Price");
+      sortChange.getStyleClass().remove("stock-sort-chip-active");
+      sortChange.setText("Change");
+      rebuild[0].run();
+    });
+    sortPrice.setOnAction(ev -> {
+      sortRef[0] = sortRef[0].equals("PRICE") ? "PRICE_ASC" : "PRICE";
+      sortPrice.setText(sortRef[0].equals("PRICE") ? "Price ▼" : "Price ▲");
+      sortPrice.getStyleClass().add("stock-sort-chip-active");
+      sortName.getStyleClass().remove("stock-sort-chip-active");
+      sortName.setText("Name");
+      sortChange.getStyleClass().remove("stock-sort-chip-active");
+      sortChange.setText("Change");
+      rebuild[0].run();
+    });
+    sortChange.setOnAction(ev -> {
+      sortRef[0] = sortRef[0].equals("CHG") ? "CHG_ASC" : "CHG";
+      sortChange.setText(sortRef[0].equals("CHG") ? "Change ▼" : "Change ▲");
+      sortChange.getStyleClass().add("stock-sort-chip-active");
+      sortName.getStyleClass().remove("stock-sort-chip-active");
+      sortName.setText("Name");
+      sortPrice.getStyleClass().remove("stock-sort-chip-active");
+      sortPrice.setText("Price");
+      rebuild[0].run();
+    });
+
+    // Reflow columns when the grid is resized
+    grid.widthProperty().addListener((obs, oldV, newV) -> rebuild[0].run());
+    rebuild[0].run();
+
+    HBox sortBar = new HBox(8, sortName, sortPrice, sortChange);
+    sortBar.getStyleClass().add("market-overview-sort-bar");
+    sortBar.setAlignment(Pos.CENTER_LEFT);
 
     ScrollPane scroll = new ScrollPane(grid);
     scroll.getStyleClass().add("market-overview-scroll");
@@ -4611,15 +4692,15 @@ public final class GameView implements GameViewInterface {
     scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
     VBox.setVgrow(scroll, Priority.ALWAYS);
 
-    VBox card = new VBox(0, titleRow, scroll);
-    card.getStyleClass().add("market-overview-card");
-    card.setMaxWidth(Double.MAX_VALUE);
-    card.setMaxHeight(Double.MAX_VALUE);
-    card.setOpacity(0);
+    VBox dialogCard = new VBox(0, titleRow, sortBar, scroll);
+    dialogCard.getStyleClass().add("market-overview-card");
+    dialogCard.setMaxWidth(Double.MAX_VALUE);
+    dialogCard.setMaxHeight(Double.MAX_VALUE);
+    dialogCard.setOpacity(0);
 
-    StackPane popup = new StackPane(dimBackdrop, card);
-    StackPane.setAlignment(card, Pos.CENTER);
-    StackPane.setMargin(card, new Insets(40));
+    StackPane popup = new StackPane(dimBackdrop, dialogCard);
+    StackPane.setAlignment(dialogCard, Pos.CENTER);
+    StackPane.setMargin(dialogCard, new Insets(40));
     overlayRef.getChildren().add(popup);
 
     Timeline blurIn = new Timeline(
@@ -4629,7 +4710,7 @@ public final class GameView implements GameViewInterface {
     FadeTransition dimIn = new FadeTransition(Duration.millis(300), dimBackdrop);
     dimIn.setFromValue(0);
     dimIn.setToValue(1);
-    FadeTransition cardIn = new FadeTransition(Duration.millis(220), card);
+    FadeTransition cardIn = new FadeTransition(Duration.millis(220), dialogCard);
     cardIn.setFromValue(0);
     cardIn.setToValue(1);
     cardIn.setDelay(Duration.millis(80));
@@ -4645,7 +4726,7 @@ public final class GameView implements GameViewInterface {
       FadeTransition dimOut = new FadeTransition(Duration.millis(250), dimBackdrop);
       dimOut.setFromValue(1);
       dimOut.setToValue(0);
-      FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), dialogCard);
       cardOut.setFromValue(1);
       cardOut.setToValue(0);
       blurOut.play();
