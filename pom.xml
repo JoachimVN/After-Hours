@@ -634,7 +634,7 @@
                     </exec>
                     <move file="${project.build.directory}/dist/After Hours-${jpackage.version}.dmg"
                           tofile="${project.build.directory}/dist/After Hours-${project.version}.dmg"
-                          failonerror="false"/>
+                          failonerror="true"/>
                   </target>
                 </configuration>
               </execution>
