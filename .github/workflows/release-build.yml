@@ -92,6 +92,11 @@ jobs:
         run: |
           mvn --batch-mode package -Pexe -DskipTests
 
+      - name: Rename Windows EXE for release
+        shell: pwsh
+        run: |
+          Rename-Item -Path "target/dist/After Hours-$env:APP_VERSION.exe" -NewName "After Hours-$env:APP_VERSION-windows.exe"
+
       - name: Publish Release with Windows Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -100,7 +105,7 @@ jobs:
           prerelease: ${{ env.PRE_RELEASE == 'true' }}
           files: |
             target/After Hours ${{ env.APP_VERSION }}.jar
-            target/dist/After Hours-${{ env.APP_VERSION }}.exe
+            target/dist/After Hours-${{ env.APP_VERSION }}-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -161,11 +166,14 @@ jobs:
       - name: Build macOS DMG
         run: mvn --batch-mode package -Pmac -DskipTests
 
+      - name: Rename macOS DMG for release
+        run: mv "target/dist/After Hours-${{ needs.build-windows.outputs.app_version }}.dmg" "target/dist/After Hours-${{ needs.build-windows.outputs.app_version }}-macos.dmg"
+
       - name: Upload macOS Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.build-windows.outputs.tag_name }}
           files: |
-            target/dist/After Hours-${{ needs.build-windows.outputs.app_version }}.dmg
+            target/dist/After Hours-${{ needs.build-windows.outputs.app_version }}-macos.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
