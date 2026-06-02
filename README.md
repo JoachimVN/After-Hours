@@ -143,6 +143,22 @@ mvn package -Pexe
 
 Produces a Windows installer at `target/dist/After Hours-<version>.exe`. The installer bundles a JRE — recipients need nothing pre-installed.
 
+### Linux app-image
+
+```bash
+mvn package -Plinux
+```
+
+Produces a zipped app-image at `target/dist/After Hours-<version>-linux.zip`. Extract and run `After Hours/bin/After Hours`.
+
+### macOS DMG (Apple Silicon)
+
+```bash
+mvn package -Pmac
+```
+
+Produces a disk image at `target/dist/After Hours-<version>.dmg`. Intel Mac users should replace the `mac-aarch64` classifier with `mac` in the `mac` profile in `pom.xml`.
+
 ## Project Structure
 
 ```text
