@@ -184,7 +184,7 @@ public final class AppOverlayService {
    * Shows a modal dialog asking the user to save, discard, or cancel before quitting.
    * Backdrop click and ESC both act as cancel.
    */
-  public void showSaveOnExitDialog(Runnable onSaveAndQuit, Runnable onQuitWithoutSaving) {
+  public void showSaveOnExitDialog(java.util.function.BooleanSupplier onSaveAndQuit, Runnable onQuitWithoutSaving) {
     Label iconLbl = new Label("⚠");
     iconLbl.getStyleClass().add("error-dialog-icon");
     Label titleLbl = new Label("Save Before Quitting?");
@@ -240,11 +240,12 @@ public final class AppOverlayService {
 
     saveBtn.setOnAction(ev -> {
       playSelectSound();
-      root.getChildren().stream()
-          .filter(n -> n instanceof StackPane sp && sp.getChildren().contains(card))
-          .findFirst()
-          .ifPresent(root.getChildren()::remove);
-      onSaveAndQuit.run();
+      if (onSaveAndQuit.getAsBoolean()) {
+        root.getChildren().stream()
+            .filter(n -> n instanceof StackPane sp && sp.getChildren().contains(card))
+            .findFirst()
+            .ifPresent(root.getChildren()::remove);
+      }
     });
   }
 

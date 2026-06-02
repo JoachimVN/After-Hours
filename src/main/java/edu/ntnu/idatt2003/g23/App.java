@@ -1042,11 +1042,17 @@ public class App extends Application {
   }
 
   private void handleQuitRequest() {
-    if (currentPlayer == null) {
+    if (currentPlayer == null || currentExchange == null) {
       Platform.exit();
     } else {
       overlayService.showSaveOnExitDialog(
-          () -> { if (performSave()) Platform.exit(); },
+          () -> {
+            if (performSave()) {
+              Platform.exit();
+              return true;
+            }
+            return false;
+          },
           Platform::exit);
     }
   }
