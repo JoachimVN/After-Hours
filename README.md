@@ -114,6 +114,17 @@ mvn verify
 
 ## Build and Distribution
 
+### Releases
+
+Pushing a `v*` tag triggers the release workflow, which builds and uploads all distribution artifacts automatically:
+
+| Asset | Platform |
+|---|---|
+| `After Hours-<version>.exe` | Windows installer (bundles JRE) |
+| `After Hours-<version>-linux.zip` | Linux app-image |
+| `After Hours-<version>.dmg` | macOS disk image (Apple Silicon) |
+| `After Hours <version>.jar` | Portable fat JAR (all platforms) |
+
 ### Portable JAR (cross-platform)
 
 ```bash
