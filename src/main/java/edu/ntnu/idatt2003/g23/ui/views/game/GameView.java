@@ -836,7 +836,14 @@ public final class GameView implements GameViewInterface {
       showTransactionHistory();
     });
 
-    HBox marketActionRow = new HBox(10, historyBtn, marketMoversBtn);
+    Button overviewBtn = new Button("\uD83D\uDCCA  Overview");
+    overviewBtn.getStyleClass().add("market-overview-button");
+    overviewBtn.setOnAction(e -> {
+      notifyPanelOpen();
+      showMarketOverview();
+    });
+
+    HBox marketActionRow = new HBox(10, historyBtn, overviewBtn, marketMoversBtn);
     marketActionRow.setAlignment(Pos.CENTER_RIGHT);
 
     VBox marketActionBox = new VBox(8, marketActionRow);
@@ -4505,6 +4512,163 @@ public final class GameView implements GameViewInterface {
     popup.requestFocus();
   }
 
+  private void showMarketOverview() {
+    suspendTutorialOverlay();
+    GaussianBlur blur = new GaussianBlur(0);
+    rootRef.setEffect(blur);
+
+    Region dimBackdrop = new Region();
+    dimBackdrop.getStyleClass().add("backdrop");
+    dimBackdrop.setOpacity(0);
+
+    Label titleLbl = new Label("📊  Market Overview");
+    titleLbl.getStyleClass().add("market-overview-title");
+    Button closeBtn = new Button("✕");
+    closeBtn.getStyleClass().add("market-overview-close-btn");
+    Region titleSpacer = new Region();
+    HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+    HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+    titleRow.getStyleClass().add("market-overview-header");
+    titleRow.setAlignment(Pos.CENTER_LEFT);
+
+    Runnable[] dismissRef = {null};
+
+    FlowPane grid = new FlowPane(10, 10);
+    grid.getStyleClass().add("market-overview-flow");
+
+    for (Stock stock : gameController.getStocks()) {
+      List<BigDecimal> full = stock.getHistoricalPrices();
+      List<BigDecimal> history = (full != null && full.size() > 100)
+          ? full.subList(full.size() - 100, full.size()) : full;
+      int trendSign = (history != null && history.size() >= 2)
+          ? history.get(history.size() - 1).compareTo(history.get(0))
+          : 0;
+
+      Label symLbl = new Label(stock.getSymbol());
+      symLbl.getStyleClass().add("stock-card-symbol");
+      Label compLbl = new Label(stock.getCompany());
+      compLbl.getStyleClass().add("stock-card-company");
+      compLbl.setMaxWidth(Double.MAX_VALUE);
+
+      Label priceLbl = new Label(CurrencyFormatter.format(stock.getSalesPrice()));
+      priceLbl.getStyleClass().add("stock-card-price");
+
+      BigDecimal pct = stock.percentageChange();
+      Label pctLbl;
+      if (pct.compareTo(BigDecimal.ZERO) == 0) {
+        pctLbl = new Label("—");
+        pctLbl.getStyleClass().add("stock-pct-neutral");
+      } else {
+        String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+        pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+        pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+      }
+
+      VBox left = new VBox(2, symLbl, compLbl);
+      if (gameController.isOwned(stock.getSymbol())) {
+        Label ownedChip = new Label("Owned");
+        ownedChip.getStyleClass().add("stock-owned-label");
+        left.getChildren().add(ownedChip);
+      }
+      VBox right = new VBox(2, priceLbl, pctLbl);
+      right.setAlignment(Pos.TOP_RIGHT);
+      Region headerSpacer = new Region();
+      HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+      HBox header = new HBox(8, left, headerSpacer, right);
+      header.setAlignment(Pos.TOP_LEFT);
+
+      StackPane sparkline = buildOverviewSparkline(history, trendSign);
+
+      VBox card = new VBox(6, header, sparkline);
+      card.getStyleClass().add("market-overview-stock-card");
+      card.setPadding(new Insets(10, 10, 6, 10));
+      card.setPrefWidth(240);
+      card.setMinWidth(200);
+      card.setMaxWidth(300);
+      card.setOnMouseClicked(ev -> {
+        if (dismissRef[0] != null) {
+          dismissRef[0].run();
+        }
+        String sym = stock.getSymbol();
+        if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
+          searchField.setText("");
+        }
+        Stock target = allStocks.stream()
+            .filter(st -> st.getSymbol().equals(sym))
+            .findFirst().orElse(stock);
+        if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
+          notifyStockSelectionChanged();
+        }
+        selectedStock.set(target);
+        focusStockCardInList(sym);
+      });
+      grid.getChildren().add(card);
+    }
+
+    ScrollPane scroll = new ScrollPane(grid);
+    scroll.getStyleClass().add("market-overview-scroll");
+    scroll.setFitToWidth(true);
+    scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    VBox.setVgrow(scroll, Priority.ALWAYS);
+
+    VBox card = new VBox(0, titleRow, scroll);
+    card.getStyleClass().add("market-overview-card");
+    card.setMaxWidth(Double.MAX_VALUE);
+    card.setMaxHeight(Double.MAX_VALUE);
+    card.setOpacity(0);
+
+    StackPane popup = new StackPane(dimBackdrop, card);
+    StackPane.setAlignment(card, Pos.CENTER);
+    StackPane.setMargin(card, new Insets(40));
+    overlayRef.getChildren().add(popup);
+
+    Timeline blurIn = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(300), new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT))
+    );
+    FadeTransition dimIn = new FadeTransition(Duration.millis(300), dimBackdrop);
+    dimIn.setFromValue(0);
+    dimIn.setToValue(1);
+    FadeTransition cardIn = new FadeTransition(Duration.millis(220), card);
+    cardIn.setFromValue(0);
+    cardIn.setToValue(1);
+    cardIn.setDelay(Duration.millis(80));
+    blurIn.play();
+    dimIn.play();
+    cardIn.play();
+
+    Runnable dismiss = () -> {
+      Timeline blurOut = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 8)),
+          new KeyFrame(Duration.millis(250), new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
+      );
+      FadeTransition dimOut = new FadeTransition(Duration.millis(250), dimBackdrop);
+      dimOut.setFromValue(1);
+      dimOut.setToValue(0);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), card);
+      cardOut.setFromValue(1);
+      cardOut.setToValue(0);
+      blurOut.play();
+      dimOut.play();
+      cardOut.play();
+      blurOut.setOnFinished(ev -> {
+        overlayRef.getChildren().remove(popup);
+        rootRef.setEffect(null);
+        resumeTutorialOverlay();
+      });
+    };
+    dismissRef[0] = dismiss;
+    closeBtn.setOnAction(ev -> dismiss.run());
+    dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+        dismiss.run();
+        ev.consume();
+      }
+    });
+    popup.requestFocus();
+  }
+
   private void showPortfolioSummary() {
     // AI-ASSISTED: The summary modal was drafted with AI support and then reduced to the essential stats.
     Runnable[] dismissRef = {null};
@@ -5715,6 +5879,89 @@ public final class GameView implements GameViewInterface {
     c.setMinWidth(min);
     c.setMaxWidth(max);
     return c;
+  }
+
+  private static StackPane buildOverviewSparkline(List<BigDecimal> history, int trendSign) {
+    Canvas canvas = new Canvas();
+    StackPane frame = new StackPane(canvas);
+    frame.setMinHeight(70);
+    frame.setPrefHeight(70);
+    frame.setMaxHeight(70);
+    frame.setMaxWidth(Double.MAX_VALUE);
+    canvas.setManaged(false);
+    canvas.widthProperty().bind(frame.widthProperty());
+    canvas.heightProperty().bind(frame.heightProperty());
+
+    Runnable draw = () -> {
+      double w = canvas.getWidth();
+      double h = canvas.getHeight();
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+      GraphicsContext gc = canvas.getGraphicsContext2D();
+      gc.clearRect(0, 0, w, h);
+      if (history == null || history.isEmpty()) {
+        gc.setStroke(Color.web("#4a6899", 0.5));
+        gc.setLineWidth(1.5);
+        gc.strokeLine(6, h / 2.0, w - 6, h / 2.0);
+        return;
+      }
+      if (history.size() == 1) {
+        gc.setStroke(Color.web("#8fb6da", 0.6));
+        gc.setLineWidth(1.8);
+        gc.strokeLine(6, h / 2.0, w - 6, h / 2.0);
+        return;
+      }
+      BigDecimal min = history.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+      BigDecimal max = history.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ONE);
+      BigDecimal range = max.subtract(min);
+      if (range.compareTo(BigDecimal.ZERO) == 0) {
+        range = BigDecimal.ONE;
+      }
+      double padL = 6, padR = 6, padT = 6, padB = 6;
+      double cW = w - padL - padR;
+      double cH = h - padT - padB;
+      int n = history.size();
+      double[] xs = new double[n];
+      double[] ys = new double[n];
+      for (int i = 0; i < n; i++) {
+        xs[i] = padL + (i / (double) (n - 1)) * cW;
+        double norm = history.get(i).subtract(min)
+            .divide(range, 6, RoundingMode.HALF_UP).doubleValue();
+        ys[i] = padT + cH - (norm * cH);
+      }
+      String lineHex = trendSign > 0 ? "#4ecb71" : trendSign < 0 ? "#e05a5a" : "#8fb6da";
+      gc.setFill(new LinearGradient(0, padT, 0, padT + cH, false, CycleMethod.NO_CYCLE,
+          new Stop(0, Color.web(lineHex, 0.30)),
+          new Stop(1, Color.web(lineHex, 0.04))));
+      gc.beginPath();
+      gc.moveTo(xs[0], padT + cH);
+      gc.lineTo(xs[0], ys[0]);
+      for (int i = 1; i < n; i++) {
+        gc.lineTo(xs[i], ys[i]);
+      }
+      gc.lineTo(xs[n - 1], padT + cH);
+      gc.closePath();
+      gc.fill();
+      gc.setStroke(Color.web(lineHex, 0.92));
+      gc.setLineWidth(2.0);
+      gc.beginPath();
+      gc.moveTo(xs[0], ys[0]);
+      for (int i = 1; i < n; i++) {
+        gc.lineTo(xs[i], ys[i]);
+      }
+      gc.stroke();
+      gc.setFill(Color.web(lineHex));
+      gc.fillOval(xs[n - 1] - 3, ys[n - 1] - 3, 6, 6);
+      gc.setStroke(Color.web("#eaf3ff", 0.75));
+      gc.setLineWidth(1.0);
+      gc.strokeOval(xs[n - 1] - 3, ys[n - 1] - 3, 6, 6);
+    };
+
+    canvas.widthProperty().addListener((obs, oldV, newV) -> draw.run());
+    canvas.heightProperty().addListener((obs, oldV, newV) -> draw.run());
+    Platform.runLater(draw);
+    return frame;
   }
 
   private static AudioClip loadAudioClip(String resourcePath) {
