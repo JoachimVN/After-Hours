@@ -414,9 +414,16 @@
                       <arg value="--win-menu-group"/><arg value="After Hours"/>
                     </exec>
                     <!-- Rename to include full project version (e.g. After Hours-1.3.0-beta.2.exe) -->
+                    <!-- Only rename when the qualifier makes the versions differ (e.g. pre-release) -->
+                    <condition property="exe.rename.needed">
+                      <not>
+                        <equals arg1="${jpackage.version}" arg2="${project.version}"/>
+                      </not>
+                    </condition>
                     <move file="${project.build.directory}/dist/After Hours-${jpackage.version}.exe"
                           tofile="${project.build.directory}/dist/After Hours-${project.version}.exe"
-                          failonerror="true"/>
+                          failonerror="true"
+                          if="exe.rename.needed"/>
                   </target>
                 </configuration>
               </execution>
@@ -632,9 +639,17 @@
                       <arg value="--java-options"/><arg value="-Dglass.mac.uiScale=1.25"/>
                       <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
                     </exec>
+                    <!-- Rename to include full project version (e.g. After Hours-1.3.0-beta.2.dmg) -->
+                    <!-- Only rename when the qualifier makes the versions differ (e.g. pre-release) -->
+                    <condition property="dmg.rename.needed">
+                      <not>
+                        <equals arg1="${jpackage.version}" arg2="${project.version}"/>
+                      </not>
+                    </condition>
                     <move file="${project.build.directory}/dist/After Hours-${jpackage.version}.dmg"
                           tofile="${project.build.directory}/dist/After Hours-${project.version}.dmg"
-                          failonerror="true"/>
+                          failonerror="true"
+                          if="dmg.rename.needed"/>
                   </target>
                 </configuration>
               </execution>

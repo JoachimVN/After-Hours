@@ -149,7 +149,7 @@ Produces a Windows installer at `target/dist/After Hours-<version>.exe`. The ins
 mvn package -Plinux
 ```
 
-Produces a zipped app-image at `target/dist/After Hours-<version>-linux.zip`. Extract and run `After Hours/bin/After Hours`.
+Produces a zipped app-image at `target/dist/After Hours-<version>-linux.zip`. Extract and run `"After Hours/bin/After Hours"`.
 
 ### macOS DMG (Apple Silicon)
 
