@@ -4657,13 +4657,22 @@ public final class GameView implements GameViewInterface {
               pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
             }
 
+            boolean isOwned = gameController.isOwned(stock.getSymbol());
+            boolean isFav = favorites.contains(stock.getSymbol());
+
             VBox left = new VBox(2, symLbl, compLbl);
-            if (gameController.isOwned(stock.getSymbol())) {
+            if (isOwned) {
               Label ownedChip = new Label("Owned");
               ownedChip.getStyleClass().add("stock-owned-label");
               left.getChildren().add(ownedChip);
             }
-            VBox right = new VBox(2, priceLbl, pctLbl);
+            VBox right = new VBox(2);
+            if (isFav) {
+              Label favIcon = new Label("★");
+              favIcon.getStyleClass().add("overview-card-fav-icon");
+              right.getChildren().add(favIcon);
+            }
+            right.getChildren().addAll(priceLbl, pctLbl);
             right.setAlignment(Pos.TOP_RIGHT);
             Region hSpacer = new Region();
             HBox.setHgrow(hSpacer, Priority.ALWAYS);
@@ -4678,6 +4687,13 @@ public final class GameView implements GameViewInterface {
 
             VBox stockCard = new VBox(6, header, buildOverviewSparkline(history, trendSign));
             stockCard.getStyleClass().add("market-overview-stock-card");
+            if (isOwned && isFav) {
+              stockCard.getStyleClass().add("market-overview-stock-card-owned-and-fav");
+            } else if (isOwned) {
+              stockCard.getStyleClass().add("market-overview-stock-card-owned");
+            } else if (isFav) {
+              stockCard.getStyleClass().add("market-overview-stock-card-fav");
+            }
             stockCard.setPadding(new Insets(10, 10, 6, 10));
             stockCard.setMaxWidth(Double.MAX_VALUE);
             stockCard.setOnMouseClicked(ev -> {
