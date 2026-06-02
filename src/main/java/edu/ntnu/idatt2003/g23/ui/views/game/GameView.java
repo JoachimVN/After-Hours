@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -836,7 +837,14 @@ public final class GameView implements GameViewInterface {
       showTransactionHistory();
     });
 
-    HBox marketActionRow = new HBox(10, historyBtn, marketMoversBtn);
+    Button overviewBtn = new Button("\uD83D\uDCCA  Overview");
+    overviewBtn.getStyleClass().add("market-overview-button");
+    overviewBtn.setOnAction(e -> {
+      notifyPanelOpen();
+      showMarketOverview();
+    });
+
+    HBox marketActionRow = new HBox(10, historyBtn, overviewBtn, marketMoversBtn);
     marketActionRow.setAlignment(Pos.CENTER_RIGHT);
 
     VBox marketActionBox = new VBox(8, marketActionRow);
@@ -4505,6 +4513,316 @@ public final class GameView implements GameViewInterface {
     popup.requestFocus();
   }
 
+  private void showMarketOverview() {
+    suspendTutorialOverlay();
+    GaussianBlur blur = new GaussianBlur(0);
+    rootRef.setEffect(blur);
+
+    Region dimBackdrop = new Region();
+    dimBackdrop.getStyleClass().add("backdrop");
+    dimBackdrop.setOpacity(0);
+
+    Label titleLbl = new Label("📊  Market Overview");
+    titleLbl.getStyleClass().add("market-overview-title");
+    Button closeBtn = new Button("✕");
+    closeBtn.getStyleClass().add("market-overview-close-btn");
+    Region titleSpacer = new Region();
+    HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+    HBox titleRow = new HBox(12, titleLbl, titleSpacer, closeBtn);
+    titleRow.getStyleClass().add("market-overview-header");
+    titleRow.setAlignment(Pos.CENTER_LEFT);
+
+    Runnable[] dismissRef = {null};
+    String[] sortRef = {"NAME"};
+
+    // ── Sort chips ────────────────────────────────────────────────────────
+    Button sortName = new Button("Name ▲");
+    Button sortPrice = new Button("Price");
+    Button sortChange = new Button("Change");
+    for (Button b : new Button[]{sortName, sortPrice, sortChange}) {
+      b.getStyleClass().add("stock-sort-chip");
+    }
+    sortName.getStyleClass().add("stock-sort-chip-active");
+
+    // ── Grid ──────────────────────────────────────────────────────────────
+    GridPane grid = new GridPane();
+    grid.setHgap(10);
+    grid.setVgap(10);
+    grid.getStyleClass().add("market-overview-flow");
+
+    List<Stock> stockPool = new ArrayList<>(gameController.getStocks());
+
+    @SuppressWarnings("unchecked")
+    List<Node>[] cardCache = new List[]{new ArrayList<>()};
+    AnimationTimer[] activeLoader = {null};
+    // Set true from the moment buildCards starts until loading finishes or is
+    // interrupted — used to suppress spurious width-listener reflows.
+    boolean[] loading = {false};
+
+    // Stops any in-progress loader and re-adds all cached cards with the correct
+    // column count. Called on sort change or window resize.
+    Runnable reflowGrid = () -> {
+      loading[0] = false;
+      if (activeLoader[0] != null) {
+        activeLoader[0].stop();
+        activeLoader[0] = null;
+      }
+      List<Node> cached = cardCache[0];
+      if (cached.isEmpty()) return;
+      int cols = Math.max(1, (int) Math.floor(
+          (overlayRef.getWidth() > 100 ? overlayRef.getWidth() - 95 : 900)
+          / (220 + grid.getHgap()) + grid.getHgap() / (220 + grid.getHgap())));
+      cols = Math.min(cols, cached.size());
+      grid.getChildren().clear();
+      grid.getColumnConstraints().clear();
+      for (int i = 0; i < cols; i++) {
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setPercentWidth(100.0 / cols);
+        cc.setHgrow(Priority.ALWAYS);
+        cc.setFillWidth(true);
+        grid.getColumnConstraints().add(cc);
+      }
+      for (int i = 0; i < cached.size(); i++) {
+        cached.get(i).setOpacity(1);
+        grid.add(cached.get(i), i % cols, i / cols);
+      }
+    };
+
+    // Sorts the stock list, sets up columns from overlayRef (always correct),
+    // then builds and adds cards one-per-frame inside AnimationTimer.
+    Runnable[] buildCards = {null};
+    buildCards[0] = () -> {
+      loading[0] = true;
+      if (activeLoader[0] != null) {
+        activeLoader[0].stop();
+        activeLoader[0] = null;
+      }
+
+      List<Stock> sorted = new ArrayList<>(stockPool);
+      switch (sortRef[0]) {
+        case "NAME"       -> sorted.sort(Comparator.comparing(Stock::getSymbol));
+        case "NAME_DESC"  -> sorted.sort(Comparator.comparing(Stock::getSymbol).reversed());
+        case "PRICE"      -> sorted.sort(Comparator.comparing(Stock::getSalesPrice).reversed());
+        case "PRICE_ASC"  -> sorted.sort(Comparator.comparing(Stock::getSalesPrice));
+        case "CHG"        -> sorted.sort(Comparator.comparing(Stock::percentageChange).reversed());
+        case "CHG_ASC"    -> sorted.sort(Comparator.comparing(Stock::percentageChange));
+      }
+
+      cardCache[0] = new ArrayList<>();
+      double available = overlayRef.getWidth() > 100 ? overlayRef.getWidth() - 95 : 900;
+      int cols = Math.max(1, (int) Math.floor((available + grid.getHgap()) / (220 + grid.getHgap())));
+      int finalCols = Math.min(cols, sorted.isEmpty() ? 1 : sorted.size());
+      grid.getChildren().clear();
+      grid.getColumnConstraints().clear();
+      for (int i = 0; i < finalCols; i++) {
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setPercentWidth(100.0 / finalCols);
+        cc.setHgrow(Priority.ALWAYS);
+        cc.setFillWidth(true);
+        grid.getColumnConstraints().add(cc);
+      }
+
+      int[] idx = {0};
+      activeLoader[0] = new AnimationTimer() {
+        @Override
+        public void handle(long now) {
+          if (idx[0] >= sorted.size()) {
+            stop();
+            activeLoader[0] = null;
+            loading[0] = false;
+            return;
+          }
+          int perFrame = idx[0] < 30 ? 1 : 5;
+          int end = Math.min(idx[0] + perFrame, sorted.size());
+          for (int i = idx[0]; i < end; i++) {
+            Stock stock = sorted.get(i);
+
+            Label symLbl = new Label(stock.getSymbol());
+            symLbl.getStyleClass().add("stock-card-symbol");
+            Label compLbl = new Label(stock.getCompany());
+            compLbl.getStyleClass().add("stock-card-company");
+            compLbl.setMaxWidth(Double.MAX_VALUE);
+
+            Label priceLbl = new Label(CurrencyFormatter.format(stock.getSalesPrice()));
+            priceLbl.getStyleClass().add("stock-card-price");
+
+            BigDecimal pct = stock.percentageChange();
+            Label pctLbl;
+            if (pct.compareTo(BigDecimal.ZERO) == 0) {
+              pctLbl = new Label("—");
+              pctLbl.getStyleClass().add("stock-pct-neutral");
+            } else {
+              String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+              pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+              pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+            }
+
+            VBox left = new VBox(2, symLbl, compLbl);
+            if (gameController.isOwned(stock.getSymbol())) {
+              Label ownedChip = new Label("Owned");
+              ownedChip.getStyleClass().add("stock-owned-label");
+              left.getChildren().add(ownedChip);
+            }
+            VBox right = new VBox(2, priceLbl, pctLbl);
+            right.setAlignment(Pos.TOP_RIGHT);
+            Region hSpacer = new Region();
+            HBox.setHgrow(hSpacer, Priority.ALWAYS);
+            HBox header = new HBox(8, left, hSpacer, right);
+            header.setAlignment(Pos.TOP_LEFT);
+
+            List<BigDecimal> full = stock.getHistoricalPrices();
+            List<BigDecimal> history = (full != null && full.size() > 100)
+                ? full.subList(full.size() - 100, full.size()) : full;
+            int trendSign = (history != null && history.size() >= 2)
+                ? history.get(history.size() - 1).compareTo(history.get(0)) : 0;
+
+            VBox stockCard = new VBox(6, header, buildOverviewSparkline(history, trendSign));
+            stockCard.getStyleClass().add("market-overview-stock-card");
+            stockCard.setPadding(new Insets(10, 10, 6, 10));
+            stockCard.setMaxWidth(Double.MAX_VALUE);
+            stockCard.setOnMouseClicked(ev -> {
+              if (dismissRef[0] != null) dismissRef[0].run();
+              String sym = stock.getSymbol();
+              if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
+                searchField.setText("");
+              }
+              Stock target = allStocks.stream()
+                  .filter(st -> st.getSymbol().equals(sym))
+                  .findFirst().orElse(stock);
+              if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
+                notifyStockSelectionChanged();
+              }
+              selectedStock.set(target);
+              focusStockCardInList(sym);
+            });
+
+            cardCache[0].add(stockCard);
+            grid.add(stockCard, i % finalCols, i / finalCols);
+            if (i < 30) {
+              stockCard.setOpacity(0);
+              FadeTransition ft = new FadeTransition(Duration.millis(140), stockCard);
+              ft.setToValue(1);
+              ft.play();
+            }
+          }
+          idx[0] = end;
+        }
+      };
+      activeLoader[0].start();
+    };
+
+    sortName.setOnAction(ev -> {
+      sortRef[0] = sortRef[0].equals("NAME") ? "NAME_DESC" : "NAME";
+      sortName.setText(sortRef[0].equals("NAME") ? "Name ▲" : "Name ▼");
+      sortName.getStyleClass().add("stock-sort-chip-active");
+      sortPrice.getStyleClass().remove("stock-sort-chip-active");
+      sortPrice.setText("Price");
+      sortChange.getStyleClass().remove("stock-sort-chip-active");
+      sortChange.setText("Change");
+      buildCards[0].run();
+    });
+    sortPrice.setOnAction(ev -> {
+      sortRef[0] = sortRef[0].equals("PRICE") ? "PRICE_ASC" : "PRICE";
+      sortPrice.setText(sortRef[0].equals("PRICE") ? "Price ▼" : "Price ▲");
+      sortPrice.getStyleClass().add("stock-sort-chip-active");
+      sortName.getStyleClass().remove("stock-sort-chip-active");
+      sortName.setText("Name");
+      sortChange.getStyleClass().remove("stock-sort-chip-active");
+      sortChange.setText("Change");
+      buildCards[0].run();
+    });
+    sortChange.setOnAction(ev -> {
+      sortRef[0] = sortRef[0].equals("CHG") ? "CHG_ASC" : "CHG";
+      sortChange.setText(sortRef[0].equals("CHG") ? "Change ▼" : "Change ▲");
+      sortChange.getStyleClass().add("stock-sort-chip-active");
+      sortName.getStyleClass().remove("stock-sort-chip-active");
+      sortName.setText("Name");
+      sortPrice.getStyleClass().remove("stock-sort-chip-active");
+      sortPrice.setText("Price");
+      buildCards[0].run();
+    });
+
+    // Reflow on window resize, but never while loading is in progress.
+    PauseTransition reflowDebounce = new PauseTransition(Duration.millis(120));
+    reflowDebounce.setOnFinished(e -> reflowGrid.run());
+    grid.widthProperty().addListener((obs, oldV, newV) -> {
+      if (!loading[0]) reflowDebounce.playFromStart();
+    });
+    buildCards[0].run();
+
+    HBox sortBar = new HBox(8, sortName, sortPrice, sortChange);
+    sortBar.getStyleClass().add("market-overview-sort-bar");
+    sortBar.setAlignment(Pos.CENTER_LEFT);
+
+    ScrollPane scroll = new ScrollPane(grid);
+    scroll.getStyleClass().add("market-overview-scroll");
+    scroll.setFitToWidth(true);
+    scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    VBox.setVgrow(scroll, Priority.ALWAYS);
+
+    VBox dialogCard = new VBox(0, titleRow, sortBar, scroll);
+    dialogCard.getStyleClass().add("market-overview-card");
+    dialogCard.setMaxWidth(Double.MAX_VALUE);
+    dialogCard.setMaxHeight(Double.MAX_VALUE);
+    dialogCard.setOpacity(0);
+
+    StackPane popup = new StackPane(dimBackdrop, dialogCard);
+    StackPane.setAlignment(dialogCard, Pos.CENTER);
+    StackPane.setMargin(dialogCard, new Insets(40));
+    overlayRef.getChildren().add(popup);
+
+    Timeline blurIn = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(300), new KeyValue(blur.radiusProperty(), 8, Interpolator.EASE_OUT))
+    );
+    FadeTransition dimIn = new FadeTransition(Duration.millis(300), dimBackdrop);
+    dimIn.setFromValue(0);
+    dimIn.setToValue(1);
+    FadeTransition cardIn = new FadeTransition(Duration.millis(220), dialogCard);
+    cardIn.setFromValue(0);
+    cardIn.setToValue(1);
+    cardIn.setDelay(Duration.millis(80));
+    blurIn.play();
+    dimIn.play();
+    cardIn.play();
+
+    Runnable dismiss = () -> {
+      loading[0] = false;
+      if (activeLoader[0] != null) {
+        activeLoader[0].stop();
+        activeLoader[0] = null;
+      }
+      Timeline blurOut = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 8)),
+          new KeyFrame(Duration.millis(250), new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
+      );
+      FadeTransition dimOut = new FadeTransition(Duration.millis(250), dimBackdrop);
+      dimOut.setFromValue(1);
+      dimOut.setToValue(0);
+      FadeTransition cardOut = new FadeTransition(Duration.millis(180), dialogCard);
+      cardOut.setFromValue(1);
+      cardOut.setToValue(0);
+      blurOut.play();
+      dimOut.play();
+      cardOut.play();
+      blurOut.setOnFinished(ev -> {
+        overlayRef.getChildren().remove(popup);
+        rootRef.setEffect(null);
+        resumeTutorialOverlay();
+      });
+    };
+    dismissRef[0] = dismiss;
+    closeBtn.setOnAction(ev -> dismiss.run());
+    dimBackdrop.setOnMouseClicked(ev -> dismiss.run());
+    popup.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+      if (ev.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+        dismiss.run();
+        ev.consume();
+      }
+    });
+    popup.requestFocus();
+  }
+
   private void showPortfolioSummary() {
     // AI-ASSISTED: The summary modal was drafted with AI support and then reduced to the essential stats.
     Runnable[] dismissRef = {null};
@@ -5715,6 +6033,88 @@ public final class GameView implements GameViewInterface {
     c.setMinWidth(min);
     c.setMaxWidth(max);
     return c;
+  }
+
+  private static StackPane buildOverviewSparkline(List<BigDecimal> history, int trendSign) {
+    Canvas canvas = new Canvas();
+    StackPane frame = new StackPane(canvas);
+    frame.setMinHeight(70);
+    frame.setPrefHeight(70);
+    frame.setMaxHeight(70);
+    frame.setMaxWidth(Double.MAX_VALUE);
+    canvas.setManaged(false);
+    canvas.widthProperty().bind(frame.widthProperty());
+    canvas.heightProperty().bind(frame.heightProperty());
+
+    Runnable draw = () -> {
+      double w = canvas.getWidth();
+      double h = canvas.getHeight();
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+      GraphicsContext gc = canvas.getGraphicsContext2D();
+      gc.clearRect(0, 0, w, h);
+      if (history == null || history.isEmpty()) {
+        gc.setStroke(Color.web("#4a6899", 0.5));
+        gc.setLineWidth(1.5);
+        gc.strokeLine(6, h / 2.0, w - 6, h / 2.0);
+        return;
+      }
+      if (history.size() == 1) {
+        gc.setStroke(Color.web("#8fb6da", 0.6));
+        gc.setLineWidth(1.8);
+        gc.strokeLine(6, h / 2.0, w - 6, h / 2.0);
+        return;
+      }
+      BigDecimal min = history.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+      BigDecimal max = history.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ONE);
+      BigDecimal range = max.subtract(min);
+      if (range.compareTo(BigDecimal.ZERO) == 0) {
+        range = BigDecimal.ONE;
+      }
+      double padL = 6, padR = 6, padT = 6, padB = 6;
+      double cW = w - padL - padR;
+      double cH = h - padT - padB;
+      int n = history.size();
+      double[] xs = new double[n];
+      double[] ys = new double[n];
+      for (int i = 0; i < n; i++) {
+        xs[i] = padL + (i / (double) (n - 1)) * cW;
+        double norm = history.get(i).subtract(min)
+            .divide(range, 6, RoundingMode.HALF_UP).doubleValue();
+        ys[i] = padT + cH - (norm * cH);
+      }
+      String lineHex = trendSign > 0 ? "#4ecb71" : trendSign < 0 ? "#e05a5a" : "#8fb6da";
+      gc.setFill(new LinearGradient(0, padT, 0, padT + cH, false, CycleMethod.NO_CYCLE,
+          new Stop(0, Color.web(lineHex, 0.30)),
+          new Stop(1, Color.web(lineHex, 0.04))));
+      gc.beginPath();
+      gc.moveTo(xs[0], padT + cH);
+      gc.lineTo(xs[0], ys[0]);
+      for (int i = 1; i < n; i++) {
+        gc.lineTo(xs[i], ys[i]);
+      }
+      gc.lineTo(xs[n - 1], padT + cH);
+      gc.closePath();
+      gc.fill();
+      gc.setStroke(Color.web(lineHex, 0.92));
+      gc.setLineWidth(2.0);
+      gc.beginPath();
+      gc.moveTo(xs[0], ys[0]);
+      for (int i = 1; i < n; i++) {
+        gc.lineTo(xs[i], ys[i]);
+      }
+      gc.stroke();
+      gc.setFill(Color.web(lineHex));
+      gc.fillOval(xs[n - 1] - 3, ys[n - 1] - 3, 6, 6);
+      gc.setStroke(Color.web("#eaf3ff", 0.75));
+      gc.setLineWidth(1.0);
+      gc.strokeOval(xs[n - 1] - 3, ys[n - 1] - 3, 6, 6);
+    };
+
+    canvas.widthProperty().addListener((obs, oldV, newV) -> draw.run());
+    canvas.heightProperty().addListener((obs, oldV, newV) -> draw.run());
+    return frame;
   }
 
   private static AudioClip loadAudioClip(String resourcePath) {

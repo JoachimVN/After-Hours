@@ -1092,7 +1092,8 @@
 /* ── Market Movers Panel ─────────────────────────────────────────────────── */
 
 .market-movers-button,
-.transaction-history-button {
+.transaction-history-button,
+.market-overview-button {
     -fx-background-color: linear-gradient(to right, rgba(15, 45, 94, 0.70), rgba(10, 31, 65, 0.7));
     -fx-text-fill: #7a9fc8;
     -fx-font-size: 12px;
@@ -1106,7 +1107,8 @@
 }
 
 .market-movers-button:hover,
-.transaction-history-button:hover {
+.transaction-history-button:hover,
+.market-overview-button:hover {
     -fx-background-color: linear-gradient(to top right, rgba(245, 162, 1, 0.20), rgba(245, 162, 1, 0.10));
     -fx-text-fill: #f5a201;
     -fx-border-color: rgba(245, 162, 1, 0.35);
@@ -2175,4 +2177,76 @@
 
 .portfolio-summary-pnl-down {
     -fx-text-fill: #e05a5a;
+}
+
+/* ── Market Overview ─────────────────────────────────────────────────── */
+
+.market-overview-card {
+    -fx-background-color: rgba(7, 12, 32, 0.98);
+    -fx-border-color: rgba(30, 64, 128, 0.50);
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    -fx-background-radius: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.85), 48, 0, 0, 10);
+}
+
+.market-overview-header {
+    -fx-padding: 18px 20px 14px 20px;
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 0px 0px 1px 0px;
+}
+
+.market-overview-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #e8d8b0;
+}
+
+.market-overview-close-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4a6899;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-background-radius: 6px;
+    -fx-padding: 2px 8px;
+}
+
+.market-overview-close-btn:hover {
+    -fx-text-fill: #e8d8b0;
+    -fx-background-color: rgba(30, 64, 128, 0.30);
+}
+
+.market-overview-sort-bar {
+    -fx-padding: 10px 16px;
+    -fx-border-color: rgba(30, 64, 128, 0.20);
+    -fx-border-width: 0px 0px 1px 0px;
+}
+
+.market-overview-flow {
+    -fx-padding: 12px;
+    -fx-background-color: transparent;
+}
+
+.market-overview-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.market-overview-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.market-overview-stock-card {
+    -fx-background-color: rgba(10, 20, 45, 0.75);
+    -fx-border-color: rgba(30, 64, 128, 0.30);
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.market-overview-stock-card:hover {
+    -fx-background-color: rgba(18, 38, 80, 0.90);
+    -fx-border-color: rgba(60, 120, 220, 0.55);
 }

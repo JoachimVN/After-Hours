@@ -1008,9 +1008,12 @@ public class App extends Application {
           },
           this::performSave));
     };
-    Runnable onGameSettings = () -> navigateKeepMusic(buildSettingsView(
-        () -> navigateKeepMusic(currentGamePage),
-        this::performSave));
+    Runnable onGameSettings = () -> {
+      sfxController.play(SfxController.SETTINGS);
+      navigateKeepMusic(buildSettingsView(
+          () -> navigateKeepMusic(currentGamePage),
+          this::performSave));
+    };
 
     GameView refreshed = new GameView(
         currentGameController,
