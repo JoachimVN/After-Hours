@@ -402,7 +402,7 @@
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="edu.ntnu.idatt2003.g23.App"/>
-                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods/javafx-base-25.0.1-win.jar;${project.build.directory}/javafx-mods/javafx-graphics-25.0.1-win.jar;${project.build.directory}/javafx-mods/javafx-controls-25.0.1-win.jar;${project.build.directory}/javafx-mods/javafx-media-25.0.1-win.jar"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
                       <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
                       <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
                       <arg value="--java-options"/><arg value="-Dglass.win.uiScale=1.25"/>
@@ -524,7 +524,7 @@
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="edu.ntnu.idatt2003.g23.App"/>
-                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods/javafx-base-25.0.1-linux.jar:${project.build.directory}/javafx-mods/javafx-graphics-25.0.1-linux.jar:${project.build.directory}/javafx-mods/javafx-controls-25.0.1-linux.jar:${project.build.directory}/javafx-mods/javafx-media-25.0.1-linux.jar"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
                       <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
                       <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
                       <arg value="--java-options"/><arg value="-Dglass.gtk.uiScale=1.25"/>
@@ -633,7 +633,7 @@
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="edu.ntnu.idatt2003.g23.App"/>
-                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods/javafx-base-25.0.1-mac-aarch64.jar:${project.build.directory}/javafx-mods/javafx-graphics-25.0.1-mac-aarch64.jar:${project.build.directory}/javafx-mods/javafx-controls-25.0.1-mac-aarch64.jar:${project.build.directory}/javafx-mods/javafx-media-25.0.1-mac-aarch64.jar"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
                       <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
                       <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
                       <arg value="--java-options"/><arg value="-Dglass.mac.uiScale=1.25"/>
