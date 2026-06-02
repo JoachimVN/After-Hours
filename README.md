@@ -7,30 +7,29 @@
 </p>
 
 <p align="center">
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/releases">Releases</a>
+	<a href="https://github.com/JoachimVN/After-Hours/releases">Releases</a>
 	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki">Wiki</a>
+	<a href="https://github.com/JoachimVN/After-Hours/wiki">Wiki</a>
 	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/issues">Issues</a>
+	<a href="https://github.com/JoachimVN/After-Hours/issues">Issues</a>
 	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/merge_requests">Merge Requests</a>
+	<a href="https://github.com/JoachimVN/After-Hours/pulls">Pull Requests</a>
 	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/milestones">Milestones</a>
+	<a href="https://github.com/JoachimVN/After-Hours/milestones">Milestones</a>
 	|
-	<a href="https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/commits/main">Commits</a>
+	<a href="https://github.com/JoachimVN/After-Hours/commits/main">Commits</a>
 </p>
 
 After Hours is a desktop stock-trading simulation game built with Java and JavaFX.
 You start with a fixed amount of cash, trade through weekly market updates, and try to grow your net worth while managing risk.
 
 ## Project Links
-
-- Repository: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23
-- Releases: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/releases
-- Wiki: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki
-- Issues: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/issues
-- Merge Requests: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/merge_requests
-- Milestones: https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/milestones
+- Repository: https://github.com/JoachimVN/After-Hours
+- Releases: https://github.com/JoachimVN/After-Hours/releases
+- Wiki: https://github.com/JoachimVN/After-Hours/wiki
+- Issues: https://github.com/JoachimVN/After-Hours/issues
+- Pull Requests: https://github.com/JoachimVN/After-Hours/pulls
+- Milestones: https://github.com/JoachimVN/After-Hours/milestones
 - Soundtrack: https://soundcloud.com/joavn/sets/after-hours
 
 ## Screenshots
@@ -161,8 +160,8 @@ src/main/resources
 
 ## Team Members
 
-[Håvard Slettevoll Ellingsen](https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki/Håvard-Slettevoll-Ellingsen)
+[Håvard Slettevoll Ellingsen](https://github.com/JoachimVN/After-Hours/wiki/Håvard-Slettevoll-Ellingsen)
 
-[Joachim Valdersnes Nilsen](https://git.ntnu.no/Gruppe-23/idatt2003_2026_23/wiki/Joachim-Valdersnes-Nilsen)
+[Joachim Valdersnes Nilsen](https://github.com/JoachimVN/After-Hours/wiki/Joachim-Valdersnes-Nilsen)
 
 Group 23, IDATT2003.
