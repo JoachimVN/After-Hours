@@ -531,9 +531,9 @@
                       <arg value="--java-options"/><arg value="-Dglass.gtk.uiScale=1.25"/>
                       <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
                     </exec>
-                    <zip destfile="${project.build.directory}/dist/After Hours-${project.version}-linux.zip"
-                         basedir="${project.build.directory}/dist"
-                         includes="After Hours/**"/>
+                    <zip destfile="${project.build.directory}/dist/After Hours-${project.version}-linux.zip">
+                      <zipfileset dir="${project.build.directory}/dist/After Hours" prefix="After Hours"/>
+                    </zip>
                   </target>
                 </configuration>
               </execution>
