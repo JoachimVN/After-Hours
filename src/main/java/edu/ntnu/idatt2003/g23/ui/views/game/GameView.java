@@ -4552,8 +4552,52 @@ public final class GameView implements GameViewInterface {
 
     List<Stock> stockPool = new ArrayList<>(gameController.getStocks());
 
-    Runnable[] rebuild = {null};
-    rebuild[0] = () -> {
+    @SuppressWarnings("unchecked")
+    List<Node>[] cardCache = new List[]{new ArrayList<>()};
+    AnimationTimer[] activeLoader = {null};
+    // Set true from the moment buildCards starts until loading finishes or is
+    // interrupted — used to suppress spurious width-listener reflows.
+    boolean[] loading = {false};
+
+    // Stops any in-progress loader and re-adds all cached cards with the correct
+    // column count. Called on sort change or window resize.
+    Runnable reflowGrid = () -> {
+      loading[0] = false;
+      if (activeLoader[0] != null) {
+        activeLoader[0].stop();
+        activeLoader[0] = null;
+      }
+      List<Node> cached = cardCache[0];
+      if (cached.isEmpty()) return;
+      int cols = Math.max(1, (int) Math.floor(
+          (overlayRef.getWidth() > 100 ? overlayRef.getWidth() - 95 : 900)
+          / (220 + grid.getHgap()) + grid.getHgap() / (220 + grid.getHgap())));
+      cols = Math.min(cols, cached.size());
+      grid.getChildren().clear();
+      grid.getColumnConstraints().clear();
+      for (int i = 0; i < cols; i++) {
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setPercentWidth(100.0 / cols);
+        cc.setHgrow(Priority.ALWAYS);
+        cc.setFillWidth(true);
+        grid.getColumnConstraints().add(cc);
+      }
+      for (int i = 0; i < cached.size(); i++) {
+        cached.get(i).setOpacity(1);
+        grid.add(cached.get(i), i % cols, i / cols);
+      }
+    };
+
+    // Sorts the stock list, sets up columns from overlayRef (always correct),
+    // then builds and adds cards one-per-frame inside AnimationTimer.
+    Runnable[] buildCards = {null};
+    buildCards[0] = () -> {
+      loading[0] = true;
+      if (activeLoader[0] != null) {
+        activeLoader[0].stop();
+        activeLoader[0] = null;
+      }
+
       List<Stock> sorted = new ArrayList<>(stockPool);
       switch (sortRef[0]) {
         case "NAME"       -> sorted.sort(Comparator.comparing(Stock::getSymbol));
@@ -4564,87 +4608,107 @@ public final class GameView implements GameViewInterface {
         case "CHG_ASC"    -> sorted.sort(Comparator.comparing(Stock::percentageChange));
       }
 
-      List<Node> cards = new ArrayList<>();
-      for (Stock stock : sorted) {
-        List<BigDecimal> full = stock.getHistoricalPrices();
-        List<BigDecimal> history = (full != null && full.size() > 100)
-            ? full.subList(full.size() - 100, full.size()) : full;
-        int trendSign = (history != null && history.size() >= 2)
-            ? history.get(history.size() - 1).compareTo(history.get(0)) : 0;
-
-        Label symLbl = new Label(stock.getSymbol());
-        symLbl.getStyleClass().add("stock-card-symbol");
-        Label compLbl = new Label(stock.getCompany());
-        compLbl.getStyleClass().add("stock-card-company");
-        compLbl.setMaxWidth(Double.MAX_VALUE);
-
-        Label priceLbl = new Label(CurrencyFormatter.format(stock.getSalesPrice()));
-        priceLbl.getStyleClass().add("stock-card-price");
-
-        BigDecimal pct = stock.percentageChange();
-        Label pctLbl;
-        if (pct.compareTo(BigDecimal.ZERO) == 0) {
-          pctLbl = new Label("—");
-          pctLbl.getStyleClass().add("stock-pct-neutral");
-        } else {
-          String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-          pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
-          pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
-        }
-
-        VBox left = new VBox(2, symLbl, compLbl);
-        if (gameController.isOwned(stock.getSymbol())) {
-          Label ownedChip = new Label("Owned");
-          ownedChip.getStyleClass().add("stock-owned-label");
-          left.getChildren().add(ownedChip);
-        }
-        VBox right = new VBox(2, priceLbl, pctLbl);
-        right.setAlignment(Pos.TOP_RIGHT);
-        Region headerSpacer = new Region();
-        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-        HBox header = new HBox(8, left, headerSpacer, right);
-        header.setAlignment(Pos.TOP_LEFT);
-
-        StackPane sparkline = buildOverviewSparkline(history, trendSign);
-
-        VBox stockCard = new VBox(6, header, sparkline);
-        stockCard.getStyleClass().add("market-overview-stock-card");
-        stockCard.setPadding(new Insets(10, 10, 6, 10));
-        stockCard.setMaxWidth(Double.MAX_VALUE);
-        stockCard.setOnMouseClicked(ev -> {
-          if (dismissRef[0] != null) dismissRef[0].run();
-          String sym = stock.getSymbol();
-          if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
-            searchField.setText("");
-          }
-          Stock target = allStocks.stream()
-              .filter(st -> st.getSymbol().equals(sym))
-              .findFirst().orElse(stock);
-          if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
-            notifyStockSelectionChanged();
-          }
-          selectedStock.set(target);
-          focusStockCardInList(sym);
-        });
-        cards.add(stockCard);
-      }
-
-      // Responsive columns: fill row, min 220px per card
-      double available = grid.getWidth() > 0 ? grid.getWidth() : 900;
+      cardCache[0] = new ArrayList<>();
+      double available = overlayRef.getWidth() > 100 ? overlayRef.getWidth() - 95 : 900;
       int cols = Math.max(1, (int) Math.floor((available + grid.getHgap()) / (220 + grid.getHgap())));
-      cols = Math.min(cols, cards.size());
+      int finalCols = Math.min(cols, sorted.isEmpty() ? 1 : sorted.size());
       grid.getChildren().clear();
       grid.getColumnConstraints().clear();
-      for (int i = 0; i < cols; i++) {
+      for (int i = 0; i < finalCols; i++) {
         ColumnConstraints cc = new ColumnConstraints();
-        cc.setPercentWidth(100.0 / cols);
+        cc.setPercentWidth(100.0 / finalCols);
         cc.setHgrow(Priority.ALWAYS);
         cc.setFillWidth(true);
         grid.getColumnConstraints().add(cc);
       }
-      for (int i = 0; i < cards.size(); i++) {
-        grid.add(cards.get(i), i % cols, i / cols);
-      }
+
+      int[] idx = {0};
+      activeLoader[0] = new AnimationTimer() {
+        @Override
+        public void handle(long now) {
+          if (idx[0] >= sorted.size()) {
+            stop();
+            activeLoader[0] = null;
+            loading[0] = false;
+            return;
+          }
+          int perFrame = idx[0] < 30 ? 1 : 5;
+          int end = Math.min(idx[0] + perFrame, sorted.size());
+          for (int i = idx[0]; i < end; i++) {
+            Stock stock = sorted.get(i);
+
+            Label symLbl = new Label(stock.getSymbol());
+            symLbl.getStyleClass().add("stock-card-symbol");
+            Label compLbl = new Label(stock.getCompany());
+            compLbl.getStyleClass().add("stock-card-company");
+            compLbl.setMaxWidth(Double.MAX_VALUE);
+
+            Label priceLbl = new Label(CurrencyFormatter.format(stock.getSalesPrice()));
+            priceLbl.getStyleClass().add("stock-card-price");
+
+            BigDecimal pct = stock.percentageChange();
+            Label pctLbl;
+            if (pct.compareTo(BigDecimal.ZERO) == 0) {
+              pctLbl = new Label("—");
+              pctLbl.getStyleClass().add("stock-pct-neutral");
+            } else {
+              String sign = pct.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+              pctLbl = new Label(sign + pct.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
+              pctLbl.getStyleClass().add(pct.compareTo(BigDecimal.ZERO) > 0 ? "stock-pct-up" : "stock-pct-down");
+            }
+
+            VBox left = new VBox(2, symLbl, compLbl);
+            if (gameController.isOwned(stock.getSymbol())) {
+              Label ownedChip = new Label("Owned");
+              ownedChip.getStyleClass().add("stock-owned-label");
+              left.getChildren().add(ownedChip);
+            }
+            VBox right = new VBox(2, priceLbl, pctLbl);
+            right.setAlignment(Pos.TOP_RIGHT);
+            Region hSpacer = new Region();
+            HBox.setHgrow(hSpacer, Priority.ALWAYS);
+            HBox header = new HBox(8, left, hSpacer, right);
+            header.setAlignment(Pos.TOP_LEFT);
+
+            List<BigDecimal> full = stock.getHistoricalPrices();
+            List<BigDecimal> history = (full != null && full.size() > 100)
+                ? full.subList(full.size() - 100, full.size()) : full;
+            int trendSign = (history != null && history.size() >= 2)
+                ? history.get(history.size() - 1).compareTo(history.get(0)) : 0;
+
+            VBox stockCard = new VBox(6, header, buildOverviewSparkline(history, trendSign));
+            stockCard.getStyleClass().add("market-overview-stock-card");
+            stockCard.setPadding(new Insets(10, 10, 6, 10));
+            stockCard.setMaxWidth(Double.MAX_VALUE);
+            stockCard.setOnMouseClicked(ev -> {
+              if (dismissRef[0] != null) dismissRef[0].run();
+              String sym = stock.getSymbol();
+              if (filteredStocks.stream().noneMatch(st -> st.getSymbol().equals(sym))) {
+                searchField.setText("");
+              }
+              Stock target = allStocks.stream()
+                  .filter(st -> st.getSymbol().equals(sym))
+                  .findFirst().orElse(stock);
+              if (selectedStock.get() == null || !sym.equals(selectedStock.get().getSymbol())) {
+                notifyStockSelectionChanged();
+              }
+              selectedStock.set(target);
+              focusStockCardInList(sym);
+            });
+
+            cardCache[0].add(stockCard);
+            grid.add(stockCard, i % finalCols, i / finalCols);
+            if (i < 30) {
+              stockCard.setOpacity(0);
+              FadeTransition ft = new FadeTransition(Duration.millis(140), stockCard);
+              ft.setToValue(1);
+              ft.play();
+            }
+          }
+          idx[0] = end;
+        }
+      };
+      activeLoader[0].start();
     };
 
     sortName.setOnAction(ev -> {
@@ -4655,7 +4719,7 @@ public final class GameView implements GameViewInterface {
       sortPrice.setText("Price");
       sortChange.getStyleClass().remove("stock-sort-chip-active");
       sortChange.setText("Change");
-      rebuild[0].run();
+      buildCards[0].run();
     });
     sortPrice.setOnAction(ev -> {
       sortRef[0] = sortRef[0].equals("PRICE") ? "PRICE_ASC" : "PRICE";
@@ -4665,7 +4729,7 @@ public final class GameView implements GameViewInterface {
       sortName.setText("Name");
       sortChange.getStyleClass().remove("stock-sort-chip-active");
       sortChange.setText("Change");
-      rebuild[0].run();
+      buildCards[0].run();
     });
     sortChange.setOnAction(ev -> {
       sortRef[0] = sortRef[0].equals("CHG") ? "CHG_ASC" : "CHG";
@@ -4675,12 +4739,16 @@ public final class GameView implements GameViewInterface {
       sortName.setText("Name");
       sortPrice.getStyleClass().remove("stock-sort-chip-active");
       sortPrice.setText("Price");
-      rebuild[0].run();
+      buildCards[0].run();
     });
 
-    // Reflow columns when the grid is resized
-    grid.widthProperty().addListener((obs, oldV, newV) -> rebuild[0].run());
-    rebuild[0].run();
+    // Reflow on window resize, but never while loading is in progress.
+    PauseTransition reflowDebounce = new PauseTransition(Duration.millis(120));
+    reflowDebounce.setOnFinished(e -> reflowGrid.run());
+    grid.widthProperty().addListener((obs, oldV, newV) -> {
+      if (!loading[0]) reflowDebounce.playFromStart();
+    });
+    buildCards[0].run();
 
     HBox sortBar = new HBox(8, sortName, sortPrice, sortChange);
     sortBar.getStyleClass().add("market-overview-sort-bar");
@@ -4719,6 +4787,11 @@ public final class GameView implements GameViewInterface {
     cardIn.play();
 
     Runnable dismiss = () -> {
+      loading[0] = false;
+      if (activeLoader[0] != null) {
+        activeLoader[0].stop();
+        activeLoader[0] = null;
+      }
       Timeline blurOut = new Timeline(
           new KeyFrame(Duration.ZERO, new KeyValue(blur.radiusProperty(), 8)),
           new KeyFrame(Duration.millis(250), new KeyValue(blur.radiusProperty(), 0, Interpolator.EASE_IN))
@@ -6041,7 +6114,6 @@ public final class GameView implements GameViewInterface {
 
     canvas.widthProperty().addListener((obs, oldV, newV) -> draw.run());
     canvas.heightProperty().addListener((obs, oldV, newV) -> draw.run());
-    Platform.runLater(draw);
     return frame;
   }
 
