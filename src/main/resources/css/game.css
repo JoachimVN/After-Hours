@@ -2250,3 +2250,35 @@
     -fx-background-color: rgba(18, 38, 80, 0.90);
     -fx-border-color: rgba(60, 120, 220, 0.55);
 }
+
+.market-overview-stock-card-owned {
+    -fx-border-color: rgba(40, 180, 100, 0.55);
+    -fx-border-width: 1.5px;
+}
+
+.market-overview-stock-card-owned:hover {
+    -fx-border-color: rgba(60, 210, 130, 0.75);
+}
+
+.market-overview-stock-card-fav {
+    -fx-border-color: rgba(245, 162, 1, 0.60);
+    -fx-border-width: 1.5px;
+}
+
+.market-overview-stock-card-fav:hover {
+    -fx-border-color: rgba(245, 162, 1, 0.90);
+}
+
+.market-overview-stock-card-owned-and-fav {
+    -fx-border-color: rgba(245, 162, 1, 0.85);
+    -fx-border-width: 2px;
+}
+
+.market-overview-stock-card-owned-and-fav:hover {
+    -fx-border-color: rgba(255, 185, 40, 0.98);
+}
+
+.overview-card-fav-icon {
+    -fx-text-fill: #f5a201;
+    -fx-font-size: 10px;
+}

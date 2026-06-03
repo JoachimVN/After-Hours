@@ -180,6 +180,83 @@ public final class AppOverlayService {
     });
   }
 
+  /**
+   * Shows a modal dialog asking the user to save, discard, or cancel before quitting.
+   * Backdrop click and ESC both act as cancel.
+   */
+  public void showSaveOnExitDialog(java.util.function.BooleanSupplier onSaveAndQuit, Runnable onQuitWithoutSaving) {
+    Label iconLbl = new Label("⚠");
+    iconLbl.getStyleClass().add("error-dialog-icon");
+    Label titleLbl = new Label("Save Before Quitting?");
+    titleLbl.getStyleClass().add("error-dialog-title");
+
+    HBox header = new HBox(12, iconLbl, titleLbl);
+    header.getStyleClass().add("error-dialog-header");
+    header.setAlignment(Pos.CENTER_LEFT);
+
+    Label msgLbl = new Label("Your unsaved progress will be lost if you quit now.");
+    msgLbl.getStyleClass().add("error-dialog-message");
+    msgLbl.setWrapText(true);
+    msgLbl.setMaxWidth(320);
+
+    VBox body = new VBox(msgLbl);
+    body.getStyleClass().add("error-dialog-body");
+
+    Button cancelBtn = new Button("Cancel");
+    cancelBtn.getStyleClass().add("dialog-cancel-btn");
+    Button quitBtn = new Button("Quit Without Saving");
+    quitBtn.getStyleClass().add("dialog-confirm-error-btn");
+    Button saveBtn = new Button("Save & Quit");
+    saveBtn.getStyleClass().add("dialog-confirm-buy-btn");
+
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    HBox btnRow = new HBox(8, cancelBtn, spacer, quitBtn, saveBtn);
+    btnRow.setAlignment(Pos.CENTER_RIGHT);
+    btnRow.getStyleClass().add("dialog-btn-row");
+
+    VBox card = new VBox(0, header, body, btnRow);
+    card.getStyleClass().add("error-dialog-root");
+    card.setMaxWidth(440);
+    card.setMaxHeight(Region.USE_PREF_SIZE);
+
+    showPopup(card, ev -> {
+      if (ev.getCode() == KeyCode.ESCAPE) {
+        ev.consume();
+        return true;
+      }
+      return false;
+    }, cancelBtn);
+
+    cancelBtn.setOnAction(ev -> {
+      playCancelSound();
+      root.getChildren().stream()
+          .filter(n -> n instanceof StackPane sp && sp.getChildren().contains(card))
+          .findFirst()
+          .ifPresent(root.getChildren()::remove);
+    });
+
+    quitBtn.setOnAction(ev -> {
+      playSelectSound();
+      root.getChildren().stream()
+          .filter(n -> n instanceof StackPane sp && sp.getChildren().contains(card))
+          .findFirst()
+          .ifPresent(root.getChildren()::remove);
+      onQuitWithoutSaving.run();
+    });
+
+    saveBtn.setOnAction(ev -> {
+      playSelectSound();
+      if (onSaveAndQuit.getAsBoolean()) {
+        root.getChildren().stream()
+            .filter(n -> n instanceof StackPane sp && sp.getChildren().contains(card))
+            .findFirst()
+            .ifPresent(root.getChildren()::remove);
+      }
+    });
+  }
+
   // ── Internal helpers ──────────────────────────────────────────────────────
 
   /**

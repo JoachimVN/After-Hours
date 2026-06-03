@@ -199,7 +199,7 @@ public class App extends Application {
           navigateKeepMusic(s);
           fadeInPage(s);
         },
-        Platform::exit);
+        this::handleQuitRequest);
 
     backgroundCanvas = new BackgroundCanvas();
     backgroundCanvas.setAnimationsEnabled(animationsEnabled);
@@ -239,6 +239,10 @@ public class App extends Application {
       stage.setFullScreen(true);
     }
     stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+    stage.setOnCloseRequest(event -> {
+      event.consume();
+      handleQuitRequest();
+    });
     scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
       if (event.getCode() == KeyCode.F11) {
         toggleFullscreen();
@@ -1037,9 +1041,25 @@ public class App extends Application {
     currentGamePage = refreshed.getRoot();
   }
 
-  private void performSave() {
+  private void handleQuitRequest() {
     if (currentPlayer == null || currentExchange == null) {
-      return;
+      Platform.exit();
+    } else {
+      overlayService.showSaveOnExitDialog(
+          () -> {
+            if (performSave()) {
+              Platform.exit();
+              return true;
+            }
+            return false;
+          },
+          Platform::exit);
+    }
+  }
+
+  private boolean performSave() {
+    if (currentPlayer == null || currentExchange == null) {
+      return false;
     }
     GameUiState uiState = currentGameView != null ? currentGameView.getUiState() : null;
     boolean flagged = currentFlagged
@@ -1056,8 +1076,10 @@ public class App extends Application {
       currentFlagged = flagged;
       gameSessionService.setFlagged(flagged);
       overlayService.showNotification("Game Saved", "Your progress has been saved.", true);
+      return true;
     } catch (IOException e) {
       overlayService.showNotification("Save Failed", "Could not save the game:\n" + e.getMessage(), false);
+      return false;
     }
   }
 
